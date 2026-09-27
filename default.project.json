@@ -1,0 +1,43 @@
+{
+  "name": "SwampArchipelago",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": { "$path": "src/ReplicatedStorage/Shared" },
+      "SwampAssets": { "$path": "assets/rbxm/replicated" }
+    },
+    "ServerScriptService": {
+      "Server": { "$path": "src/ServerScriptService/Server" }
+    },
+    "ServerStorage": {
+      "SwampAssets": { "$path": "assets/rbxm/server" },
+      "SwampTools": { "$path": "src/ServerStorage/SwampTools" }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "CameraMaxZoomDistance": 80,
+        "CharacterWalkSpeed": 16
+      },
+      "StarterPlayerScripts": {
+        "Client": { "$path": "src/StarterPlayer/StarterPlayerScripts/Client" }
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future",
+        "ClockTime": 16.6,
+        "Brightness": 2.4,
+        "EnvironmentDiffuseScale": 1,
+        "EnvironmentSpecularScale": 1,
+        "GlobalShadows": true,
+        "OutdoorAmbient": [0.5, 0.52, 0.5],
+        "Ambient": [0.2, 0.22, 0.2]
+      }
+    },
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": false
+      }
+    }
+  }
+}

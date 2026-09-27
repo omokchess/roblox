@@ -1,0 +1,10 @@
+# 빌드 산출물
+/build/*.rbxlx
+/build/*.rbxlx.lock
+sourcemap.json
+__pycache__/
+*.pyc
+*.blend1
+/assets/level_cache.json
+/assets/terrain_*.npz
+.DS_Store
