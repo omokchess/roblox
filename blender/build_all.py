@@ -59,6 +59,7 @@ def parse():
     ap.add_argument("--samples", type=int, default=None)
     ap.add_argument("--save-blend", action="store_true")
     ap.add_argument("--quick", action="store_true", help="저해상도 빠른 렌더 (검토용)")
+    ap.add_argument("--skip-done", action="store_true", help="미리보기/.blend 가 이미 있는 에셋은 렌더·저장 생략 (중단된 렌더 이어하기)")
     return ap.parse_args(argv)
 
 
@@ -99,10 +100,12 @@ def main():
         manifest[a.name] = info
         print(f"[build] {a.name:<22} parts(mesh)={len(info['parts']):>3} tris={info['triCount']:>6} "
               f"prims={info['partCount']:>5} colliders={len(info['colliders']):>3} ({time.time() - t0:.1f}s)")
-        if args.save_blend:
+        blend_path = config.BLEND_DIR / f"{a.name}.blend"
+        preview_path = config.PREVIEW_DIR / f"{a.name}.jpg"
+        if args.save_blend and not (args.skip_done and blend_path.exists()):
             config.BLEND_DIR.mkdir(parents=True, exist_ok=True)
-            bpy.ops.wm.save_as_mainfile(filepath=str(config.BLEND_DIR / f"{a.name}.blend"), compress=True)
-        if args.render:
+            bpy.ops.wm.save_as_mainfile(filepath=str(blend_path), compress=True)
+        if args.render and not (args.skip_done and preview_path.exists()):
             pv = dict(PREVIEW["default"])
             pv.update(getattr(fn, "preview", {}) or {})
             render.setup_world()
@@ -115,9 +118,9 @@ def main():
             config.PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
             t1 = time.time()
             if args.quick:
-                render.render(config.PREVIEW_DIR / f"{a.name}.jpg", samples=args.samples or 20, res=(960, 540))
+                render.render(preview_path, samples=args.samples or 20, res=(960, 540))
             else:
-                render.render(config.PREVIEW_DIR / f"{a.name}.jpg", samples=args.samples)
+                render.render(preview_path, samples=args.samples)
             print(f"[render] {a.name} ({time.time() - t1:.1f}s)")
     config.MANIFEST_PATH.write_text(json.dumps(manifest, indent=1, ensure_ascii=False))
     print("[build] manifest ->", config.MANIFEST_PATH)
