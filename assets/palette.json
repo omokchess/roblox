@@ -1,0 +1,950 @@
+{
+ "wood_a": {
+  "material": "Wood",
+  "color": [
+   112,
+   92,
+   72
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "wood_b": {
+  "material": "Wood",
+  "color": [
+   96,
+   82,
+   66
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "wood_c": {
+  "material": "Wood",
+  "color": [
+   126,
+   108,
+   86
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "wood_dark": {
+  "material": "Wood",
+  "color": [
+   66,
+   52,
+   42
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "wood_wet": {
+  "material": "Wood",
+  "color": [
+   48,
+   42,
+   35
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "wood_pale": {
+  "material": "Wood",
+  "color": [
+   150,
+   136,
+   112
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "wood_red": {
+  "material": "Wood",
+  "color": [
+   124,
+   64,
+   50
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "wood_teal": {
+  "material": "Wood",
+  "color": [
+   70,
+   104,
+   98
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "wood_moss": {
+  "material": "Wood",
+  "color": [
+   84,
+   92,
+   62
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "planks_hull": {
+  "material": "WoodPlanks",
+  "color": [
+   104,
+   76,
+   54
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "planks_hull_dk": {
+  "material": "WoodPlanks",
+  "color": [
+   58,
+   44,
+   36
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "hull_paint": {
+  "material": "WoodPlanks",
+  "color": [
+   44,
+   70,
+   68
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "deck": {
+  "material": "WoodPlanks",
+  "color": [
+   142,
+   118,
+   88
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "shingle_a": {
+  "material": "Wood",
+  "color": [
+   78,
+   74,
+   64
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "shingle_b": {
+  "material": "Wood",
+  "color": [
+   92,
+   84,
+   70
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "shingle_c": {
+  "material": "Wood",
+  "color": [
+   66,
+   66,
+   58
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "thatch": {
+  "material": "Grass",
+  "color": [
+   150,
+   128,
+   82
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "thatch_dk": {
+  "material": "Grass",
+  "color": [
+   118,
+   100,
+   66
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "stone": {
+  "material": "Slate",
+  "color": [
+   104,
+   104,
+   96
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "stone_dk": {
+  "material": "Slate",
+  "color": [
+   72,
+   74,
+   70
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "stone_moss": {
+  "material": "Cobblestone",
+  "color": [
+   90,
+   100,
+   78
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "stone_ruin": {
+  "material": "Limestone",
+  "color": [
+   148,
+   144,
+   128
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "stone_rune": {
+  "material": "Neon",
+  "color": [
+   90,
+   255,
+   170
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": false,
+  "doubleSided": false
+ },
+ "brick": {
+  "material": "Brick",
+  "color": [
+   126,
+   84,
+   66
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "iron": {
+  "material": "CorrodedMetal",
+  "color": [
+   72,
+   66,
+   60
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "brass": {
+  "material": "Metal",
+  "color": [
+   168,
+   128,
+   62
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "gold": {
+  "material": "Metal",
+  "color": [
+   196,
+   156,
+   70
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "steel": {
+  "material": "Metal",
+  "color": [
+   150,
+   154,
+   158
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "rope": {
+  "material": "Fabric",
+  "color": [
+   158,
+   134,
+   94
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "rope_dk": {
+  "material": "Fabric",
+  "color": [
+   110,
+   92,
+   66
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "sail": {
+  "material": "Fabric",
+  "color": [
+   216,
+   204,
+   178
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "sail_patch": {
+  "material": "Fabric",
+  "color": [
+   184,
+   164,
+   128
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "cloth_red": {
+  "material": "Fabric",
+  "color": [
+   142,
+   54,
+   46
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "cloth_green": {
+  "material": "Fabric",
+  "color": [
+   72,
+   100,
+   74
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "cloth_purple": {
+  "material": "Fabric",
+  "color": [
+   92,
+   64,
+   110
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "leather": {
+  "material": "Leather",
+  "color": [
+   96,
+   62,
+   42
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "net": {
+  "material": "Fabric",
+  "color": [
+   120,
+   112,
+   90
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "glow_lantern": {
+  "material": "Neon",
+  "color": [
+   255,
+   184,
+   104
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": false,
+  "doubleSided": false
+ },
+ "glow_mushroom": {
+  "material": "Neon",
+  "color": [
+   110,
+   255,
+   205
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": false,
+  "doubleSided": false
+ },
+ "glow_potion": {
+  "material": "Neon",
+  "color": [
+   180,
+   110,
+   255
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": false,
+  "doubleSided": false
+ },
+ "glow_fire": {
+  "material": "Neon",
+  "color": [
+   255,
+   120,
+   40
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": false,
+  "doubleSided": false
+ },
+ "glass": {
+  "material": "Glass",
+  "color": [
+   170,
+   200,
+   190
+  ],
+  "transparency": 0.45,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "glass_green": {
+  "material": "Glass",
+  "color": [
+   96,
+   160,
+   96
+  ],
+  "transparency": 0.3,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "candle": {
+  "material": "SmoothPlastic",
+  "color": [
+   232,
+   220,
+   190
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "bark": {
+  "material": "Wood",
+  "color": [
+   74,
+   64,
+   54
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "bark_dead": {
+  "material": "Wood",
+  "color": [
+   104,
+   98,
+   88
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "bark_cypress": {
+  "material": "Wood",
+  "color": [
+   96,
+   74,
+   58
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "moss": {
+  "material": "LeafyGrass",
+  "color": [
+   80,
+   104,
+   54
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "moss_hang": {
+  "material": "Fabric",
+  "color": [
+   118,
+   128,
+   94
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "leaf": {
+  "material": "LeafyGrass",
+  "color": [
+   70,
+   98,
+   50
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "leaf_dk": {
+  "material": "LeafyGrass",
+  "color": [
+   52,
+   74,
+   42
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "reed": {
+  "material": "Grass",
+  "color": [
+   126,
+   132,
+   72
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "cattail": {
+  "material": "Fabric",
+  "color": [
+   96,
+   62,
+   40
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "lily": {
+  "material": "LeafyGrass",
+  "color": [
+   76,
+   122,
+   62
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": true
+ },
+ "flower_pink": {
+  "material": "SmoothPlastic",
+  "color": [
+   236,
+   180,
+   204
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "flower_white": {
+  "material": "SmoothPlastic",
+  "color": [
+   236,
+   232,
+   214
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "mushroom_cap": {
+  "material": "SmoothPlastic",
+  "color": [
+   150,
+   72,
+   60
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "mushroom_stem": {
+  "material": "SmoothPlastic",
+  "color": [
+   220,
+   208,
+   180
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "skin_bog": {
+  "material": "SmoothPlastic",
+  "color": [
+   84,
+   112,
+   70
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "skin_bog_lt": {
+  "material": "SmoothPlastic",
+  "color": [
+   150,
+   164,
+   112
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "skin_mud": {
+  "material": "Mud",
+  "color": [
+   96,
+   78,
+   58
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "skin_witch": {
+  "material": "SmoothPlastic",
+  "color": [
+   132,
+   150,
+   118
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "skin_lord": {
+  "material": "Slate",
+  "color": [
+   58,
+   70,
+   56
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "eye_glow": {
+  "material": "Neon",
+  "color": [
+   255,
+   222,
+   90
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": false,
+  "doubleSided": false
+ },
+ "eye_red": {
+  "material": "Neon",
+  "color": [
+   255,
+   90,
+   60
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": false,
+  "doubleSided": false
+ },
+ "claw": {
+  "material": "Limestone",
+  "color": [
+   40,
+   36,
+   32
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "mouth": {
+  "material": "SmoothPlastic",
+  "color": [
+   40,
+   20,
+   24
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "robe": {
+  "material": "Fabric",
+  "color": [
+   70,
+   52,
+   84
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "robe_dk": {
+  "material": "Fabric",
+  "color": [
+   44,
+   36,
+   54
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "hair": {
+  "material": "Fabric",
+  "color": [
+   170,
+   176,
+   160
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "bone": {
+  "material": "Limestone",
+  "color": [
+   222,
+   212,
+   188
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "mud": {
+  "material": "Mud",
+  "color": [
+   72,
+   60,
+   46
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "sand": {
+  "material": "Sand",
+  "color": [
+   196,
+   178,
+   136
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "straw": {
+  "material": "Grass",
+  "color": [
+   190,
+   168,
+   104
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "fish": {
+  "material": "SmoothPlastic",
+  "color": [
+   150,
+   160,
+   150
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "cauldron_brew": {
+  "material": "Neon",
+  "color": [
+   120,
+   230,
+   90
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": false,
+  "doubleSided": false
+ },
+ "paper": {
+  "material": "SmoothPlastic",
+  "color": [
+   220,
+   206,
+   172
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "paint_white": {
+  "material": "SmoothPlastic",
+  "color": [
+   226,
+   222,
+   210
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ },
+ "paint_red": {
+  "material": "SmoothPlastic",
+  "color": [
+   170,
+   48,
+   40
+  ],
+  "transparency": 0.0,
+  "reflectance": 0.0,
+  "castShadow": true,
+  "doubleSided": false
+ }
+}
