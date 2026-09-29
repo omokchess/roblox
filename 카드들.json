@@ -1,0 +1,2459 @@
+{
+  "version": 2,
+  "cards": {
+    "Musician_E_LongBreath": {
+      "Description": "크레셴도를 쓰지 않은 턴마다 자신이 주는 버프 효과가 {5}%씩, 최대 {40}%까지 증가하며, 크레셴도를 사용하면 초기화된다.\n아군에게 [브릴란테]효과를 부여할 때마다 체력을 {5}% 회복한다."
+    },
+    "Musician_E_Resonance": {
+      "Art": "음악가_8분음표",
+      "Description": "음표를 초과하여 얻었을 때, 최대 {2}개까지 추가로 소지한다.\n음표를 소모할 때마다 아군의 [치명타 피해량]량과 자신의 [치명타 확률]이 {5}%씩 증가한다.\n[치명타 피해량]은 최대 {30}%, [치명타 확률]은 {15}%까지 증가한다."
+    },
+    "Musician_E_Accompanist": {
+      "Description": "딜링 스킬의 기본 피해량이 {60}% 줄어들고 [음표]와 [브릴란테]의 버프량이 {1.5}배 증가한다."
+    },
+    "Musician_E_Concertist": {
+      "Description": "[음표]와 [브릴란테]의 아군 버프 효과가 삭제되는 대신, 버프가 자신에게 {1.5}배 향상된 상태로 적용된다."
+    },
+    "Musician_R_Metronome": {
+      "Art": "음악가_8분음표",
+      "Description": "{3}턴마다 무작위 [음표]를 {1}개 얻는다.",
+      "MaxLevel": 3
+    },
+    "Musician_R_Sustain": {
+      "MaxLevel": 3
+    },
+    "Musician_R_Modulation": {
+      "Description": "[박자표]를 얻을 때마다, 모든 적에게 소모 [음표]수x{3}만큼 피해를 입힌다."
+    },
+    "Musician_R_Cadenza": {
+      "MaxLevel": 5
+    },
+    "Musician_R_Tutti": {
+      "Description": "아군이 {3}명 이상 살아 있으면, [음표] 획득량이 {1} 증가한다.",
+      "MaxLevel": 3
+    },
+    "Musician_R_Fermata": {
+      "Description": "공격하지 않고 턴을 마치면, 무작위 [음표]를 {1}개 얻고 [브릴란테] 지속이 {1}턴 늘어난다.",
+      "MaxLevel": 4
+    },
+    "Musician_R_Harmonic": {
+      "Art": "음악가_8분음표",
+      "Description": "16분음표 1개당 아군의 [치명타 피해량]이 {1}% 더 증가한다."
+    },
+    "Musician_R_Ostinato": {
+      "Description": "전투당 최대 {1}회, 같은 스킬을 연속으로 쓰면 그 스킬의 [음표]를 하나 더 얻는다.",
+      "MaxLevel": 3
+    },
+    "Musician_R_Overture": {
+      "Description": "[브릴란테]를 쓴 턴에 가장 가까운 적의 다음 행동이 {1} 턴 늦어진다.",
+      "MaxLevel": 1
+    },
+    "Musician_R_Descant": {
+      "Description": "[브릴란테]를 받은 아군이 치명타를 내면 턴당 최대 {1}회 [음표]를 1개 얻는다. [브릴란테]를 받은 아군의 [치명타 확률]이 {3}% 증가한다.",
+      "MaxLevel": 4
+    },
+    "Musician_C_HalfSpend": {
+      "Art": "음악가_8분음표",
+      "Description": "[음표]를 두 번째로 소모할 때마다 {1}개 덜 소모한다. `크레셴도`의 소모한 [음표] 판정은 받는다.",
+      "MaxLevel": 3
+    },
+    "Musician_C_BarLine": {
+      "Description": "[박자표] 값이 오를 때마다 아군에게 [보호막] {5}를 제공한다."
+    },
+    "Musician_C_Prelude": {
+      "Art": "음악가_8분음표",
+      "Description": "전투당 각 [음표]들을 처음 얻을 때, 체력을 {2}% 회복한다."
+    },
+    "Musician_C_Rest": {
+      "Name": "온쉼표",
+      "Description": "공격하지 않고 턴을 넘기면, 스테미나를 {6} 더 회복한다."
+    },
+    "Musician_C_Quarter": {
+      "Art": "음악가_8분음표",
+      "Description": "4분음표의 스테미나 획복량 증가가 개수당 {0.5}% 더 증가한다."
+    },
+    "Musician_C_Eighth": {
+      "Art": "음악가_8분음표"
+    },
+    "Musician_C_Sixteenth": {
+      "Art": "음악가_8분음표",
+      "Description": "16분음표의 치명타 확률 감소가 개수당 {0.2}% 감소한다.",
+      "MaxLevel": 5
+    },
+    "Musician_C_Rosin": {
+      "Description": "`벨로체`의 보호막 부여량이 {2}에서 {4}로 증가한다."
+    },
+    "Musician_C_Staccato": {
+      "Description": "음표를 소모하면, 그 턴 동안 [가하는 피해량]이 {8}% 증가한다."
+    },
+    "Musician_C_Bowing": {
+      "Art": "음악가_8분음표",
+      "Description": "전투당 {1}회, 평타 사용 후 무작위 [음표]를 1개 얻는다.",
+      "MaxLevel": 3
+    },
+    "Musician_C_Tuning": {
+      "Description": "박자표 값 1당 자신이 [받는 피해량]이 {4}% 감소한다.",
+      "MaxLevel": 5
+    },
+    "Musician_C_Applause": {
+      "Art": "음악가_8분음표",
+      "Description": "적을 처치하면 무작위 [음표]를 {1}개 얻는다.",
+      "MaxLevel": 4
+    },
+    "Musician_C_Lullaby": {
+      "Description": "전투당 {1}회, 처음 사용하는 공격 스킬의 피해량이 {10}% 증가한다."
+    },
+    "Musician_C_Score": {
+      "Art": "음악가_8분음표",
+      "Description": "2회 이상 같은 스킬을 연달아 사용하면, 그 스킬의 피해량이 {5}% 증가한다."
+    },
+    "Musician_C_Echo": {
+      "Description": "[음표] 수가 최대일 때, [가하는 피해량]이 {15}% 증가한다."
+    },
+    "Musician_C_Crescendo": {
+      "Art": "음악가_8분음표",
+      "Description": "`크레셴도`의 [음표]당 [가하는 피해량] 증가가 {0.5}% 증가한다."
+    },
+    "Musician_C_Encore": {
+      "Description": "[박자표]가 {3}일 때, [가하는 피해량]이 {7}% 증가한다."
+    },
+    "Musician_C_Chord": {
+      "Description": "둘 이상의 아군에게 [브릴란테]가 있으면, 자신의 `벨로체` 또한 [브릴란테] 효과를 일부 받는다."
+    },
+    "Musician_C_Refrain": {
+      "Art": "음악가_8분음표",
+      "Description": "[음표]를 {4}개 얻을 때마다 회복하는 체력이 최대 체력의 {1}% 더 증가한다."
+    },
+    "Duelist_E_IronWall": {
+      "Description": "공격 태세가 사라지고 공격 스킬을 사용할 수 없게 된다. 매 턴마다 갱신되는 [도발]을 {1} 얻는다.\n피격 시 패링하지 못 했다면, [집중]을 {1} 얻고 반드시 방어한다.\n피격 시 받은 스킬의 기본 피해량의 {25}%를 공격자에게 반사하고, 패링 불가 스킬을 전투당 {1}회 패링할 수 있게 된다."
+    },
+    "Duelist_E_LightBlade": {
+      "Art": "결투사의_레이피어",
+      "Description": "방어 태세가 사라진다. [받는 피해량]이 {25}% 늘어나는 대신 [가하는 피해량]이 {40}%, [치명타 피해량]이 {15}% 증가한다. 공격 스킬로 적을 처치하면, [가하는 피해량]이 {75}% 줄어든 채 무작위 대상에게 한 번 더 사용한다."
+    },
+    "Duelist_E_DoubleEdge": {
+      "Art": "결투사_양날의_검",
+      "Name": "양날의 검",
+      "Description": "매 턴, 태세가 강제로 바뀐다.\n바뀔 때마다 [집중]을 {1} 소모하는 대신, 태세의 효과가 {30}% 증가하고, 변경되는 태세마다 효과를 얻는다.\n공격 태세: 스테미나를 {5} 얻고 공격 스킬의 기본 피해량이 {3} 증가한다.\n방어 태세: 보호막을 {5} 얻는다. 자동 패링 확률이 {10}% 증가하고, 자신이 공격 대상이라면, 공격자에게 [출혈]을 {5} 부여한다."
+    },
+    "Duelist_E_NamelessBlade": {
+      "Art": "결투사의_레이피어"
+    },
+    "Duelist_R_Bloodletting": {
+      "Description": "[출혈]을 부여할 때마다 {3}턴 간 [치명타 피해량]이 {2.5}% 증가한다.\n최대 {5}중첩까지 증가한다."
+    },
+    "Duelist_R_NoSpend": {
+      "Art": "결투사의_레이피어",
+      "Description": "[집중]이 최대치일 때, 패링에 성공하면 스택을 {3}턴 당 한 번 소모하지 않는다."
+    },
+    "Duelist_R_Counter": {
+      "Name": "기회 노리기",
+      "Description": "패링 성공 시 `앞뒤관통` 스킬을 공격자에게 사용한다.",
+      "MaxLevel": 1
+    },
+    "Duelist_R_Pivot": {
+      "Description": "태세가 변경된 턴에 피격시, [패링 범위]가 {5}% 증가한다."
+    },
+    "Duelist_R_FocusBreath": {
+      "Art": "결투사의_레이피어",
+      "MaxLevel": 3
+    },
+    "Duelist_R_Feint": {
+      "Description": "태세를 바꾼 직후 처음 하는 공격은 회피가 불가능하며, [가하는 피해량]이 {20}% 증가한다."
+    },
+    "Duelist_R_BloodLoss": {
+      "Description": "[출혈] 상태의 적에게 [가하는 피해량]이 {15}% 증가한다."
+    },
+    "Duelist_R_Slip": {
+      "Description": "패링 실패 시 [받는 피해량]이 {20}% 감소한다."
+    },
+    "Duelist_R_HonedEdge": {
+      "Art": "결투사의_레이피어",
+      "Description": "[집중] 스택이 {5} 이상일 때, 적의 [받는 피해량] 감소를 {25}% 무시한다.\n위 효과는 합연산으로 계산된다."
+    },
+    "Duelist_R_Vigil": {
+      "Description": "`신경을 곤두세우고 깊은 호흡을 들여` 사용 후 준비자세를 취하는동안 패링을 성공시킬 시 [집중]을 {1} 얻는다.\n(턴당 {1}회)",
+      "MaxLevel": 4
+    },
+    "Duelist_C_CatchBreath": {
+      "Description": "패링을 할 때마다 스테미나를 {2} 얻는다."
+    },
+    "Duelist_C_SwitchGuard": {
+      "Description": "태세를 바꾼 턴에 [받는 피해량]이 {8}% 감소한다.",
+      "MaxLevel": 5
+    },
+    "Duelist_C_WarmUp": {
+      "Art": "결투사의_레이피어",
+      "MaxLevel": 2
+    },
+    "Duelist_C_ShallowCut": {
+      "Description": "`앞뒤관통` 스킬이 [출혈]을 {1} 부여한다.",
+      "MaxLevel": 4
+    },
+    "Duelist_C_Composure": {
+      "Art": "결투사의_레이피어",
+      "Description": "[집중] 수치당 [받는 피해량]이 {0.2}% 더 감소한다.",
+      "MaxLevel": 5
+    },
+    "Duelist_C_FlowThrough": {
+      "Name": "반동"
+    },
+    "Duelist_C_FindTheSpot": {
+      "Description": "[출혈] 상태의 적을 처치하면, 다음 공격의 치명타 확률이 {5}% 증가한다."
+    },
+    "Duelist_C_Offense": {
+      "Description": "공격 태세의 [받는 피해량] 증가가 {5}% 감소한다.\n위 효과는 합연산으로 계산된다.",
+      "MaxLevel": 2
+    },
+    "Duelist_C_Defense": {
+      "Description": "방어 태세의 [가하는 피해량] 감소가 {5}% 감소한다.",
+      "MaxLevel": 4
+    },
+    "Duelist_C_Conclusion": {
+      "Art": "결투사의_레이피어",
+      "Description": "적을 처치하면, [집중]을 {2} 추가로 얻는다.",
+      "MaxLevel": 1
+    },
+    "Duelist_C_Sentry": {
+      "Description": "아군이 인접해 있을 때, [패링 범위]가 {8}% 증가한다.\n인접한 아군의 [패링 범위]가 {4}% 증가한다."
+    },
+    "Duelist_C_LowStance": {
+      "Description": "같은 태세를 두 턴 이상 유지하면 그 태세 효과가 턴당 {10}%씩, 최대 {30}%까지 증가한다.\n위 효과는 곱연산으로 계산된다."
+    },
+    "Duelist_C_Restraint": {
+      "Art": "결투사의_레이피어",
+      "Description": "공격을 하지 않고 턴을 마치면, 자신의 모든 스킬의 쿨타임이 {1}턴 감소한다.",
+      "MaxLevel": 1
+    },
+    "Duelist_C_Retribution": {
+      "Name": "복수",
+      "Description": "자신을 공격한 적에게 다음 턴에 [가하는 피해량]이 {12}% 증가한다.",
+      "MaxLevel": 5
+    },
+    "Duelist_C_Bond": {
+      "Description": "자신이 얻는 [패링 범위] 증가의 {10}%를 인접한 아군 또한 받는다.\n위 효과는 곱연산으로 계산된다."
+    },
+    "Duelist_C_BleedInduce": {
+      "Name": "깊은 상처",
+      "Description": "[출혈]을 부여할 때, {1} 추가로 부여한다.\n(턴당 {1}회)",
+      "MaxLevel": 5
+    },
+    "Duelist_C_Steady": {
+      "Description": "`신경을 곤두세우고 깊은 호흡을 들여 사용 후 준비 자세를 취하는 동안 [받는 피해량]이 {8}% 더 감소한다.\n위 효과는 합연산으로 계산된다."
+    },
+    "Duelist_C_BladeTip": {
+      "Art": "결투사의_레이피어",
+      "Description": "[집중] 수치당 [치명타 확률]이 {0.5}% 증가한다.",
+      "MaxLevel": 3
+    },
+    "Duelist_C_StepBack": {
+      "Description": "패링에 성공하면, 이번 전투동안 [패링 범위]가 {2.5}% 증가한다.\n(최대 {25}%)\n위 효과는 합연산으로 계산된다."
+    },
+    "Duelist_C_GripWrap": {
+      "Description": "자동 패링 발동 시 공격자에게 [출혈]을 {1} 부여한다.",
+      "MaxLevel": 3
+    },
+    "Berserker_E_BloodPrice": {
+      "Art": "광전사가_광광",
+      "Description": "`종베기`의 체력 소모가 {5}에서 10으로 늘고, 소모한 체력 {2}당 기본 피해가 {3} 증가한다.\n소모량은 {10}에서 {30} 사이로 직접 정할 수 있으며, 체력 소모로 체력이 {1}에 도달하더라도 소모될 체력만큼의 버프를 받는다."
+    },
+    "Berserker_E_Brink": {
+      "Description": "[받는 회복량]이 {35}% 줄어든다.\n자신의 [받는 피해량]이 {25}%를 초과할 수 없게 되고, 모든 [받는 피해량] 감소의 {1.5}배 만큼 [가하는 피해량] 증가로 치환시킨다."
+    },
+    "Berserker_E_Vampire": {
+      "Art": "광전사가_광광",
+      "Name": "흡혈",
+      "Description": "최대 체력이 {10}% 증가하고, 가한 피해량의 {25}%만큼 체력을 회복한다.\n대신 [분노]를 얻을 수 없게 된다."
+    },
+    "Berserker_E_Undying": {
+      "Name": "불굴",
+      "Description": "전투당 한 번, HP가 {1} 이하가 되는 공격을 받았을 때, HP {1}로 버틴 후 다음 턴부터 전투 종료까지 [가하는 피해량]이 {30}% 증가한다."
+    },
+    "Berserker_R_Frenzy": {
+      "Description": "적 처치 시 `횡베기` 스킬로 무작위 적을 공격한다.",
+      "MaxLevel": 1
+    },
+    "Berserker_R_Wrath": {
+      "Description": "직접 피해를 받을 때, [분노]를 {1} 추가로 얻는다.",
+      "MaxLevel": 2
+    },
+    "Berserker_R_ScentOfBlood": {
+      "Art": "광전사가_광광",
+      "Name": "처형",
+      "Description": "체력이 절반 이하인 적에게 [가하는 피해량]이 {20}% 증가한다."
+    },
+    "Berserker_R_Reckless": {
+      "Name": "무모",
+      "Description": "[받는 피해량]이 {20}% 증가한다.\n[가하는 피해량]이 {20}% 증가한다.",
+      "MaxLevel": 4
+    },
+    "Berserker_R_SecondWind": {
+      "Description": "전투당 한 번, HP가 {25}% 이하로 감소할 경우 최대 체력의 {25}%만큼 회복한다.\n위 효과는 불굴 효과보다 먼저 발동된다."
+    },
+    "Berserker_R_Sweep": {
+      "Description": "[분노] 수치가 최대치일 때, `분쇄` 스킬의 범위가 3 x 3 범위로 증가한다.\n메인 대상이 아닌 대상에게 가하는 피해는 최종 피해량의 {50}%이다."
+    },
+    "Berserker_R_PainTolerance": {
+      "Name": "견딤",
+      "Description": "HP가 {25}% 이하일 경우 [받는 피해량]이 {30}% 감소한다."
+    },
+    "Berserker_R_Momentum": {
+      "Description": "공격 스킬을 사용하는 턴이 연속될 때마다 스테미나 소모가 {10}%씩 감소한다.\n`가드` 혹은 `명상` 시 스테미나 소모량 감소는 초기화 된다.",
+      "MaxLevel": 5
+    },
+    "Berserker_R_Scars": {
+      "Description": "잃은 체력 {10}%마다 [받는 피해량]이 {4}%씩, 최대 {40}%까지 줄어든다."
+    },
+    "Berserker_R_Roar": {
+      "Name": "히스테릭",
+      "Description": "[받는 피해량] 증가량만큼 [가하는 피해량]이 증가한다.",
+      "MaxLevel": 1
+    },
+    "Berserker_C_Ember": {
+      "MaxLevel": 3
+    },
+    "Berserker_C_Bite": {
+      "Art": "광전사가_광광",
+      "Description": "모든 공격 스킬이 [출혈]을 {1} 추가로 부여한다."
+    },
+    "Berserker_C_Ram": {
+      "Description": "공격 대상의 [출혈] {5}당 [가하는 피해량]이 {1}% 증가한다."
+    },
+    "Berserker_C_Grudge": {
+      "Description": "이전 턴에 자신을 공격한 적에게 [가하는 피해량]이 {12}% 증가한다.",
+      "MaxLevel": 5
+    },
+    "Berserker_C_ThickBlood": {
+      "Art": "광전사가_광광",
+      "Description": "자해로 인한 체력 소모량이 {20}% 감소한다."
+    },
+    "Berserker_C_Trance": {
+      "Description": "체력이 {30}% 아래일 때, 특수 상태이상을 제외한 디버프의 효과를 {25}% 감소하여 받는다.\n이 효과는 곱연산으로 계산된다."
+    },
+    "Berserker_C_Swing": {
+      "Description": "`종베기` 스킬의 피해량이 {15}% 증가한다."
+    },
+    "Berserker_C_Boiling": {
+      "Description": "[분노] {3}스택당 치명타 확률이 {1}% 증가한다."
+    },
+    "Berserker_C_Devour": {
+      "Art": "광전사가_광광",
+      "Description": "적 처치 시 최대 체력의 {5}%를 회복한다."
+    },
+    "Berserker_C_Numb": {
+      "Description": "[그로기] 상태이상에 빠지지 않는다.",
+      "MaxLevel": 1
+    },
+    "Berserker_C_Headbutt": {
+      "Description": "`분쇄` 스킬이 {15}% 확률로 적을 {1}턴 기절시킨다."
+    },
+    "Berserker_C_RageFuel": {
+      "Name": "화풀이",
+      "Description": "모든 스킬이 [분노]를 {1}씩 소모하지만, 피해를 받았을 때 얻는 [분노]가 {1} 증가한다.",
+      "MaxLevel": 1
+    },
+    "Berserker_C_DeathWish": {
+      "Name": "집중",
+      "Description": "체력이 {75}% 이하일 때 [치명타 확률]이 {5}% 증가한다."
+    },
+    "Berserker_C_UnstoppingArm": {
+      "Name": "자랑",
+      "Description": "QTE 성공 시 자해 피해를 {1} 입는다.\n이 효과로 사망하지 않는다.\n이 효과로 `불굴`과 `재기` 효과를 발동하지 않는다.",
+      "MaxLevel": 1
+    },
+    "Berserker_C_BloodPact": {
+      "Art": "광전사가_광광",
+      "Description": "최대 체력이 {20}% 영구히 감소하는 대신, [분노]의 최대치가 {5} 증가한다.",
+      "MaxLevel": 1
+    },
+    "Berserker_C_Stubborn": {
+      "Description": "전투당 {1}회, 기절에 걸린다면, {1}턴 감소시켜 받는다."
+    },
+    "Berserker_C_Callus": {
+      "Description": "같은 적에게 연속으로 피격 시 그 적에 한해 해당 전투동안 [받는 피해량]이 {10}% 감소한다.\n이 효과는 중첩되지 않는다.",
+      "MaxLevel": 4
+    },
+    "Berserker_C_BloodVessel": {
+      "Art": "광전사가_광광",
+      "Name": "자존심",
+      "Description": "전투당 {1}회, 회복을 받으면 [분노]를 {1} 얻는다."
+    },
+    "Berserker_C_NoRetreat": {
+      "Name": "잠깐의 준비",
+      "Description": "`가드` 직후 [가하는 피해량]이 {15}% 증가한다."
+    },
+    "Quasar_E_FierceLight": {
+      "Art": "광속붕괴"
+    },
+    "Quasar_E_BlackHole": {
+      "Art": "블랙홀"
+    },
+    "Quasar_E_EventHorizon": {
+      "Art": "블랙홀"
+    },
+    "Quasar_E_LightspeedCollapse": {
+      "Art": "광속붕괴"
+    },
+    "Quasar_C_GravityCrush": {
+      "Art": "블랙홀"
+    },
+    "Quasar_C_SeedMass": {
+      "Art": "블랙홀"
+    },
+    "Quasar_C_Absorb": {
+      "Art": "블랙홀"
+    },
+    "Quasar_C_Bulk": {
+      "Art": "블랙홀"
+    },
+    "Quasar_C_FeedMass": {
+      "Art": "블랙홀"
+    },
+    "Quasar_C_Shockwave": {
+      "Art": "광속붕괴"
+    },
+    "Quasar_C_RestMass": {
+      "Art": "블랙홀"
+    },
+    "Quasar_C_Hold": {
+      "Art": "블랙홀"
+    },
+    "WallMason_E_Cathedral": {
+      "Description": "[벽] 상한이 {5} 증가하고 스택당 얻는 버프량이 {70}%가 된다.\n위 효과는 곱연산으로 계산된다.\n소숫점 버림."
+    },
+    "WallMason_E_MasonHand": {
+      "Description": "[벽]이 방어 버프가 아닌, 공격 버프가 된다.\n[받는 피해량] 감소와 자동 회피가 사라진다.\n대신 다음 효과를 얻는다.\n스택 1당 [가하는 피해량] {5}% 증가\n스택 1당 [치명타 확률] {2}% 증가\n스택 1당 [치명타 피해량] {7}% 증가"
+    },
+    "WallMason_E_Cornerstone": {
+      "Description": "`축성` 스킬의 범위가 지정 아군 하나로 바뀐다.\n대신 다음 효과를 얻는다.\n[벽] 스택 부여량 +{2}.\n[가하는 피해량] 증가 {20}% 부여.\n`축성` 스킬의 쿨타임이 {2}턴으로 감소."
+    },
+    "WallMason_E_InterlockedStone": {
+      "Description": "아군 중 가장 많은 [벽]을 보유한 아군의 [벽] 스택을 항상 가져온다.\n대신 자동 회피와 패리 효과를 얻지 못한다."
+    },
+    "WallMason_R_ChiselMastery": {
+      "Description": "`정 다듬기`스킬이 [벽]을 {1}중첩 더 부여한다.",
+      "MaxLevel": 1
+    },
+    "WallMason_R_FinishedWall": {
+      "Description": "[벽]이 {5}스택 이상인 아군이 [가하는 피해량]이 {10}% 증가한다."
+    },
+    "WallMason_R_Quarry": {
+      "Description": "자신이 적을 처치 시 아군 전체가 [벽]을 {1}스택 얻는다.",
+      "MaxLevel": 4
+    },
+    "WallMason_R_BackRowAim": {
+      "Description": "`뒷벽 허물기`스킬의 [벽] 중첩당 [가하는 피해량] 증가가 {9}%로 증가한다."
+    },
+    "WallMason_R_Buttress": {
+      "Description": "매 턴, [벽]을 보유중인 아군은 보유중인 디버프 효과가 {1} 추가로 감소한다.",
+      "MaxLevel": 1
+    },
+    "WallMason_R_Keystone": {
+      "Description": "[벽]을 가진 아군 하나당 자신의 [가하는 피해량]이 {5}%씩, 최대 {20}%까지 증가한다."
+    },
+    "WallMason_R_Consecration": {
+      "Description": "자신의 신앙심이 {40}이라면, [벽]을 부여할 때마다 지속시간이 갱신되는 것이 아닌 {3}턴씩 더해진다."
+    },
+    "WallMason_R_Relayer": {
+      "Description": "턴당 {2}회, [벽]의 지속시간이 끝나 사라진다면, 해당 아군은 즉시 사라진 [벽]의 {10}%를 돌려받는다.\n(최솟값 {1})"
+    },
+    "WallMason_C_Harden": {
+      "Description": "[벽] 지속시간이 {1}턴 연장된다.\n`성별` 카드와 같이 사용된다면, 더해지는 지속시간의 값이 {4}로 증가한다.",
+      "MaxLevel": 3
+    },
+    "WallMason_C_EvenBreath": {
+      "Description": "[벽] {1}스택당 스테미나 회복량이 {1} 증가한다."
+    },
+    "WallMason_C_MasonPrayer": {
+      "Description": "`명상`으로 턴을 마치면, 신앙심이 {4} 증가한다."
+    },
+    "WallMason_C_Groundwork": {
+      "MaxLevel": 3
+    },
+    "WallMason_C_SelfBulwark": {
+      "MaxLevel": 1
+    },
+    "WallMason_C_DriveWedge": {
+      "Description": "`정 다듬기` 스킬의 [벽]이 본인 대신 체력이 가장 낮은 아군이 부여받는다.\n그 아군이 자신이면 {1}중첩 더 부여한다.",
+      "MaxLevel": 3
+    },
+    "WallBreaker_E_SelfHarm": {
+      "Description": "`제 살 깎기` 스킬을 자신에게 사용하는 대신, [허물 벽]을 {5} 얻고, 자해로 인한 피해를 {50}% 감소시킨다."
+    },
+    "WallBreaker_E_Martyrdom": {
+      "Description": "사망한 아군마다 절대 소모되지 않는 [허물 벽]을 {5}까지 획득하고, 그 전투동안 [가하는 피해량]이 {20}% 증가한다."
+    },
+    "WallBreaker_E_Levelling": {
+      "Description": "`허물다` 스킬의 범위가 적 진영 전체가 되는 대신, [허물 벽] 스택당 피해량이 {7}%가 된다."
+    },
+    "WallBreaker_R_Salvage": {
+      "MaxLevel": 1
+    },
+    "WallBreaker_R_Madness": {
+      "Description": "잃은 체력 비례 [가하는 피해량] 증가 상한이 {35}%로 증가한다."
+    },
+    "WallBreaker_R_PaidBack": {
+      "Description": "`제 살 깎기` 스킬로 피해를 받은 자신을 포함한 아군은 해당 전투동안 [가하는 피해량]이 {25}% 증가한다."
+    },
+    "WallBreaker_R_Overkill": {
+      "MaxLevel": 5
+    },
+    "WallBreaker_R_Dirge": {
+      "Description": "신앙심 스탯이 {40} 이상일 경우, `허물다` 스킬 사용 시 소모하는 [허물 벽]이 {1} 감소한다.\n([가하는 피해량] 증가 버프는 감소하지 않는다.)"
+    },
+    "WallBreaker_R_ChainCollapse": {
+      "MaxLevel": 1
+    },
+    "WallBreaker_R_DullFlesh": {
+      "Description": "[허물 벽] 스택당 [받는 피해량] 증가가 {0.2}% 감소한다.",
+      "MaxLevel": 5
+    },
+    "WallBreaker_C_RuinPrayer": {
+      "Description": "공격 스킬을 사용하지 않고 턴을 마치면 신앙심 스탯이 {1} 증가한다.",
+      "MaxLevel": 3
+    },
+    "WallBreaker_C_SameStride": {
+      "Description": "`순례길` 패시브의 신앙심 버프량이 {1} 증가한다."
+    },
+    "WallBreaker_C_FirstCrack": {
+      "Description": "전투 시작 시, [허물 벽]을 {1} 얻는다.",
+      "MaxLevel": 3
+    },
+    "WallBreaker_C_LooseBrick": {
+      "Description": "`쪼개기` 스킬이 적중 할 때마다 [허물 벽]을 {1}스택 얻는다.(턴당 {1}회)",
+      "MaxLevel": 3
+    },
+    "WallBreaker_C_ShoveOff": {
+      "Description": "모든 스킬이 적중 시 적을 한 칸 밀어내며, 밀리기 전의 적이 끝 행에 있다면 고정피해 {50}을 가한다."
+    },
+    "WallBreaker_C_FleshPrice": {
+      "MaxLevel": 2
+    },
+    "WallBreaker_C_RuinOath": {
+      "Description": "신앙심 스탯 {10}당 [가하는 피해량]이 {2}% 증가한다."
+    },
+    "WallBreaker_C_DebrisPlus": {
+      "Name": "더 많은 잔해",
+      "Description": "`잔해` 패시브로 돌려받는 [허물 벽]의 양이 {5}% 증가한다.\n이 효과는 합연산으로 계산된다.\n소숫점 버림.\n최종 페이백 비율: {55}%"
+    },
+    "WallBreaker_C_ShortWindup": {
+      "MaxLevel": 2
+    },
+    "WallBreaker_C_Defenceless": {
+      "Description": "패리 혹은 방어에 실패한 턴 다음 턴에 [가하는 피해량]이 {10}% 증가하는 대신, [받는 피해량]이 {15}% 증가한다."
+    },
+    "WallBreaker_C_WeakPoint": {
+      "MaxLevel": 5
+    },
+    "WallBreaker_C_Comrade": {
+      "Description": "`제 살 깎기` 스킬로 가한 피해량의 {30}%를 회복시킨다.\n이 효과는 자해 카드로 인한 피해도 포함된다.",
+      "MaxLevel": 5
+    },
+    "WallBreaker_C_Oblation": {
+      "Description": "적 처치 시, 신앙심 스탯이 {2} 증가한다."
+    },
+    "WallBreaker_C_Cliff": {
+      "Description": "체력이 {30}% 이하일 때 [허물 벽] 중첩당 [가하는 피해량]이 {3}% 증가한다.",
+      "MaxLevel": 3
+    },
+    "WallBreaker_C_LightHand": {
+      "MaxLevel": 5
+    },
+    "WallBreaker_C_Tireless": {
+      "Description": "`제 살 깎기` 스킬 사용 시 아군 전체의 신앙심 스탯이 {10} 상승한다.\n(전투당 {1}회.)"
+    },
+    "WallBreaker_C_SharedLoad": {
+      "Description": "가하는 피해량이 {20}% 증가하고, 받는 피해량이 {20}% 증가한다."
+    },
+    "Alchemist_E_MixAndStrike": {
+      "Art": "때리면서_섞기",
+      "Description": "`다지기` 스킬에 피해량 {15}가 붙고 범위가 (n,n)이 된다.`섞기` 스킬에 피해량 {20}이 붙고 범위가 (n,n)이 된다.\n각 스킬을 쓸 때마다 [도발]을 {1} 얻는다.\n각 피해들은 고정피해를 가하며, 버프로 피해량을 증가시킬 수 없다."
+    },
+    "Alchemist_E_LowRisk": {
+      "Art": "새_그림",
+      "Description": "스킬로 얻는 부작용이 전부 [받는 피해량] 감소로 바뀐다.\n대신 [가하는 피해량]이 {50}% 감소한다.\n매 공격마다 [도발]을 {5} 얻는다.\n부작용은 체력 감소도 포함된다."
+    },
+    "Alchemist_E_OneShot": {
+      "Art": "때리면서_섞기",
+      "Description": "`중독` 스킬 사용 시 [꽉 찬 병]을 소모 후 소모한 모든 [꽉 찬 병]을 돌려받는다.\n중독을 사용한 턴 이후 {2}턴간 [꽉 찬 병]을 만들지 못한다."
+    },
+    "Alchemist_E_SelfPrescribe": {
+      "Art": "새_그림"
+    },
+    "Alchemist_R_Distill": {
+      "Art": "포션",
+      "Description": "`섞기` 스킬 사용 시 [화염병]을 하나 확정으로 얻으며, 각 [꽉 찬 병]을 얻을 확률을 {32}%로 증가시킨다.\n만약 [화염병] 외 추가로 얻은 [꽉 찬 병]이 없다면, 사용한 병 중 {1}개를 반환 한다."
+    },
+    "Alchemist_R_Accelerant": {
+      "Art": "포션"
+    },
+    "Alchemist_R_Reagent": {
+      "Art": "포션",
+      "Description": "[독 병]의 독 부여량이 {14}로 증가한다."
+    },
+    "Alchemist_R_Antidote": {
+      "Art": "포션"
+    },
+    "Alchemist_C_Satisfaction": {
+      "Art": "포션",
+      "Description": "보유한 [꽉 찬 병] {1}개당 [가하는 피해량]이 {3}% 증가한다."
+    },
+    "Alchemist_C_Toxin": {
+      "MaxLevel": 2
+    },
+    "Alchemist_C_Slick": {
+      "Description": "[기름]이 걸린 적이 [가하는 피해량]이 {12}% 감소한다."
+    },
+    "Alchemist_C_Tolerance": {
+      "Description": "[과다 회복] 상태이상을 보유한 상태에서 도트 피해로 받는 피해량이 {30}% 감소한다."
+    },
+    "Alchemist_C_Floorstart": {
+      "Art": "포션",
+      "MaxLevel": 4
+    },
+    "Alchemist_C_Insurance": {
+      "Art": "포션"
+    },
+    "Alchemist_C_Splash": {
+      "Art": "포션"
+    },
+    "Alchemist_C_Cooldown": {
+      "MaxLevel": 2
+    },
+    "Alchemist_C_Lowhp": {
+      "Description": "체력이 {30}% 이하일 때 [가하는 피해량]이 {8}% 증가한다."
+    },
+    "Alchemist_C_Sturdy": {
+      "Description": "[꽉 찬 병]과 [빈 병]의 합이 {6} 이상일 때 [받는 피해량]이 {10}% 감소한다."
+    },
+    "Alchemist_C_Ignite": {
+      "Art": "포션"
+    },
+    "Alchemist_C_Grind": {
+      "MaxLevel": 2
+    },
+    "Alchemist_C_Steady": {
+      "Art": "포션",
+      "MaxLevel": 2
+    }
+  },
+  "cardLevels": {
+    "Musician_E_LongBreath": {
+      "1": {
+        "2": 8
+      },
+      "2": {
+        "2": 64
+      },
+      "3": {
+        "2": 8
+      }
+    },
+    "Musician_E_Resonance": {
+      "1": {
+        "2": 4
+      },
+      "2": {
+        "2": 48
+      },
+      "3": {
+        "2": 24
+      },
+      "4": {
+        "2": 24
+      }
+    },
+    "Musician_E_Accompanist": {
+      "1": {
+        "2": 45
+      },
+      "2": {
+        "2": 2
+      }
+    },
+    "Musician_E_Concertist": {
+      "1": {
+        "2": 2
+      }
+    },
+    "Musician_R_Metronome": {
+      "1": {
+        "1": 1,
+        "2": 2,
+        "3": 2
+      },
+      "2": {
+        "3": 2
+      }
+    },
+    "Musician_R_Sustain": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "Musician_R_Modulation": {
+      "1": {
+        "1": 1.5,
+        "2": 2,
+        "3": 2.5,
+        "5": 3.5,
+        "6": 4
+      }
+    },
+    "Musician_R_Cadenza": {
+      "1": {
+        "2": 25,
+        "3": 35,
+        "4": 40,
+        "5": 50
+      }
+    },
+    "Musician_R_Tutti": {
+      "1": {
+        "2": 2,
+        "3": 1
+      },
+      "2": {
+        "1": 3
+      }
+    },
+    "Musician_R_Fermata": {
+      "1": {
+        "3": 2,
+        "4": 3
+      },
+      "2": {
+        "2": 2,
+        "3": 2,
+        "4": 2
+      }
+    },
+    "Musician_R_Harmonic": {
+      "1": {
+        "2": 1.5,
+        "3": 2,
+        "4": 2.5,
+        "5": 3,
+        "6": 4
+      }
+    },
+    "Musician_R_Ostinato": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "Musician_R_Descant": {
+      "1": {
+        "2": 2,
+        "3": 2,
+        "4": 3
+      },
+      "2": {
+        "2": 4,
+        "3": 5,
+        "4": 6
+      }
+    },
+    "Musician_C_HalfSpend": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "Musician_C_BarLine": {
+      "1": {
+        "2": 7,
+        "3": 9,
+        "4": 11,
+        "5": 13,
+        "6": 15
+      }
+    },
+    "Musician_C_Prelude": {
+      "1": {
+        "2": 2.5,
+        "3": 3,
+        "4": 3.5,
+        "5": 4,
+        "6": 5
+      }
+    },
+    "Musician_C_Rest": {
+      "1": {
+        "2": 8,
+        "3": 10,
+        "4": 12,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Musician_C_Quarter": {
+      "1": {
+        "2": 1,
+        "3": 1.5,
+        "4": 2,
+        "5": 2.5,
+        "6": 3
+      }
+    },
+    "Musician_C_Eighth": {
+      "1": {
+        "2": 0.75,
+        "3": 1,
+        "4": 1.25,
+        "5": 1.5,
+        "6": 2
+      }
+    },
+    "Musician_C_Sixteenth": {
+      "1": {
+        "2": 0.25,
+        "3": 0.3,
+        "4": 0.35,
+        "5": 0.4
+      }
+    },
+    "Musician_C_Rosin": {
+      "2": {
+        "2": 5,
+        "3": 6,
+        "4": 7,
+        "5": 8,
+        "6": 10
+      }
+    },
+    "Musician_C_Vibrato": {
+      "1": {
+        "2": 17,
+        "3": 19,
+        "4": 21,
+        "5": 23,
+        "6": 25
+      }
+    },
+    "Musician_C_Staccato": {
+      "1": {
+        "2": 10,
+        "3": 13,
+        "4": 17,
+        "5": 22,
+        "6": 28
+      }
+    },
+    "Musician_C_Bowing": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "Musician_C_Tuning": {
+      "1": {
+        "1": 2,
+        "2": 3,
+        "4": 5,
+        "5": 7
+      }
+    },
+    "Musician_C_Applause": {
+      "1": {
+        "2": 2,
+        "3": 3,
+        "4": 4
+      }
+    },
+    "Musician_C_Lullaby": {
+      "1": {
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 12.5,
+        "3": 15,
+        "4": 15,
+        "5": 17.5,
+        "6": 20
+      }
+    },
+    "Musician_C_Score": {
+      "1": {
+        "2": 8,
+        "3": 11,
+        "4": 14,
+        "5": 17,
+        "6": 20
+      }
+    },
+    "Musician_C_Echo": {
+      "1": {
+        "2": 20,
+        "3": 25,
+        "4": 30,
+        "5": 35,
+        "6": 40
+      }
+    },
+    "Musician_C_Encore": {
+      "2": {
+        "2": 11,
+        "3": 15,
+        "4": 19,
+        "5": 23,
+        "6": 27
+      }
+    },
+    "Musician_C_Refrain": {
+      "1": {
+        "3": 3,
+        "4": 3,
+        "5": 3,
+        "6": 3
+      },
+      "2": {
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Duelist_E_IronWall": {
+      "2": {
+        "2": 2
+      },
+      "3": {
+        "2": 40
+      },
+      "4": {
+        "2": 3
+      }
+    },
+    "Duelist_E_LightBlade": {
+      "1": {
+        "2": 40
+      },
+      "2": {
+        "2": 60
+      },
+      "3": {
+        "2": 30
+      },
+      "4": {
+        "2": 50
+      }
+    },
+    "Duelist_E_DoubleEdge": {
+      "2": {
+        "2": 40
+      },
+      "3": {
+        "2": 10
+      },
+      "4": {
+        "2": 5
+      },
+      "5": {
+        "2": 10
+      },
+      "6": {
+        "2": 20
+      },
+      "7": {
+        "2": 8
+      }
+    },
+    "Duelist_E_NamelessBlade": {
+      "2": {
+        "2": 30
+      },
+      "3": {
+        "2": 30
+      }
+    },
+    "Duelist_R_Bloodletting": {
+      "1": {
+        "3": 4,
+        "4": 4,
+        "5": 5,
+        "6": 5
+      },
+      "2": {
+        "2": 3,
+        "3": 3.5,
+        "4": 4,
+        "5": 4.5,
+        "6": 5
+      },
+      "3": {
+        "4": 6,
+        "5": 6,
+        "6": 6
+      }
+    },
+    "Duelist_R_Pivot": {
+      "1": {
+        "2": 7,
+        "3": 9,
+        "4": 11,
+        "5": 13,
+        "6": 15
+      }
+    },
+    "Duelist_R_FocusBreath": {
+      "1": {
+        "2": 2,
+        "3": 1
+      }
+    },
+    "Duelist_R_Feint": {
+      "1": {
+        "2": 23,
+        "3": 26,
+        "4": 29,
+        "5": 32,
+        "6": 35
+      }
+    },
+    "Duelist_R_BloodLoss": {
+      "1": {
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "Duelist_R_Slip": {
+      "1": {
+        "2": 22,
+        "3": 24,
+        "4": 26,
+        "5": 28,
+        "6": 30
+      }
+    },
+    "Duelist_R_HonedEdge": {
+      "1": {
+        "3": 4,
+        "4": 4,
+        "5": 3,
+        "6": 3
+      },
+      "2": {
+        "2": 27,
+        "3": 27,
+        "4": 29,
+        "5": 29,
+        "6": 35
+      }
+    },
+    "Duelist_R_Vigil": {
+      "2": {
+        "2": 2,
+        "3": 3,
+        "4": 4
+      }
+    },
+    "Duelist_C_CatchBreath": {
+      "1": {
+        "2": 4,
+        "3": 6,
+        "4": 8,
+        "5": 10,
+        "6": 12
+      }
+    },
+    "Duelist_C_SwitchGuard": {
+      "1": {
+        "2": 12,
+        "3": 16,
+        "4": 20,
+        "5": 24
+      }
+    },
+    "Duelist_C_WarmUp": {
+      "1": {
+        "2": 2
+      }
+    },
+    "Duelist_C_ShallowCut": {
+      "1": {
+        "2": 2,
+        "3": 3,
+        "4": 4
+      }
+    },
+    "Duelist_C_Composure": {
+      "1": {
+        "2": 0.5,
+        "3": 0.8,
+        "4": 1.1,
+        "5": 1.4
+      }
+    },
+    "Duelist_C_FlowThrough": {
+      "1": {
+        "2": 70,
+        "3": 60,
+        "4": 50,
+        "5": 40,
+        "6": 30
+      }
+    },
+    "Duelist_C_FindTheSpot": {
+      "1": {
+        "2": 10,
+        "3": 15,
+        "4": 20,
+        "5": 25,
+        "6": 30
+      }
+    },
+    "Duelist_C_Offense": {
+      "1": {
+        "2": 8
+      }
+    },
+    "Duelist_C_Defense": {
+      "1": {
+        "2": 8,
+        "3": 11,
+        "4": 15
+      }
+    },
+    "Duelist_C_Sentry": {
+      "1": {
+        "2": 10,
+        "3": 12,
+        "4": 14,
+        "5": 16,
+        "6": 18
+      },
+      "2": {
+        "2": 6,
+        "3": 8,
+        "4": 10,
+        "5": 10,
+        "6": 10
+      }
+    },
+    "Duelist_C_LowStance": {
+      "1": {
+        "2": 12,
+        "3": 14,
+        "4": 15,
+        "5": 15,
+        "6": 15
+      },
+      "2": {
+        "2": 40,
+        "3": 50,
+        "4": 60,
+        "5": 70,
+        "6": 80
+      }
+    },
+    "Duelist_C_Retribution": {
+      "1": {
+        "2": 16,
+        "3": 20,
+        "4": 24,
+        "5": 28
+      }
+    },
+    "Duelist_C_Bond": {
+      "1": {
+        "2": 15,
+        "3": 20,
+        "4": 25,
+        "5": 30,
+        "6": 35
+      }
+    },
+    "Duelist_C_BleedInduce": {
+      "1": {
+        "3": 2,
+        "4": 2,
+        "5": 2
+      },
+      "2": {
+        "2": 2,
+        "3": 2,
+        "4": 3,
+        "5": 4
+      }
+    },
+    "Duelist_C_Steady": {
+      "1": {
+        "2": 10,
+        "3": 12,
+        "4": 14,
+        "5": 16,
+        "6": 18
+      }
+    },
+    "Duelist_C_BladeTip": {
+      "1": {
+        "2": 0.7,
+        "3": 1
+      }
+    },
+    "Duelist_C_StepBack": {
+      "1": {
+        "2": 3,
+        "3": 3.5,
+        "4": 4,
+        "5": 4.5,
+        "6": 5
+      },
+      "2": {
+        "2": 27,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Duelist_C_GripWrap": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "Berserker_E_BloodPrice": {
+      "2": {
+        "2": 1
+      },
+      "4": {
+        "2": 5
+      },
+      "5": {
+        "2": 40
+      }
+    },
+    "Berserker_E_Brink": {
+      "1": {
+        "2": 50
+      },
+      "2": {
+        "2": 50
+      },
+      "3": {
+        "2": 2
+      }
+    },
+    "Berserker_E_Vampire": {
+      "1": {
+        "2": 20
+      },
+      "2": {
+        "2": 35
+      }
+    },
+    "Berserker_E_Undying": {
+      "1": {
+        "2": 10
+      },
+      "2": {
+        "2": 10
+      },
+      "3": {
+        "2": 50
+      }
+    },
+    "Berserker_R_Wrath": {
+      "1": {
+        "2": 2
+      }
+    },
+    "Berserker_R_ScentOfBlood": {
+      "1": {
+        "2": 30,
+        "3": 40,
+        "4": 50,
+        "5": 60,
+        "6": 70
+      }
+    },
+    "Berserker_R_Reckless": {
+      "1": {
+        "2": 30,
+        "3": 40,
+        "4": 50
+      },
+      "2": {
+        "2": 30,
+        "3": 40,
+        "4": 50
+      }
+    },
+    "Berserker_R_Sweep": {
+      "1": {
+        "2": 60,
+        "3": 70,
+        "4": 80,
+        "5": 90,
+        "6": 100
+      }
+    },
+    "Berserker_R_PainTolerance": {
+      "1": {
+        "2": 32,
+        "3": 34,
+        "4": 36,
+        "5": 38,
+        "6": 40
+      },
+      "2": {
+        "2": 32,
+        "3": 34,
+        "4": 36,
+        "5": 38,
+        "6": 40
+      }
+    },
+    "Berserker_R_Momentum": {
+      "1": {
+        "2": 15,
+        "3": 20,
+        "4": 25,
+        "5": 30
+      }
+    },
+    "Berserker_R_Scars": {
+      "1": {
+        "2": 9,
+        "3": 8,
+        "4": 7,
+        "5": 6,
+        "6": 5
+      },
+      "2": {
+        "3": 5,
+        "4": 5,
+        "5": 6,
+        "6": 6
+      }
+    },
+    "Berserker_C_Ember": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "Berserker_C_Bite": {
+      "1": {
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Berserker_C_Ram": {
+      "1": {
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "6": 6
+      },
+      "2": {
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Berserker_C_Grudge": {
+      "1": {
+        "2": 14,
+        "3": 16,
+        "4": 18,
+        "5": 20
+      }
+    },
+    "Berserker_C_ThickBlood": {
+      "1": {
+        "2": 22,
+        "3": 24,
+        "4": 26,
+        "5": 28,
+        "6": 30
+      }
+    },
+    "Berserker_C_Trance": {
+      "2": {
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      }
+    },
+    "Berserker_C_Swing": {
+      "1": {
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "Berserker_C_Boiling": {
+      "1": {
+        "3": 2,
+        "4": 2
+      },
+      "2": {
+        "2": 2,
+        "3": 2,
+        "4": 3,
+        "5": 3,
+        "6": 4
+      }
+    },
+    "Berserker_C_Devour": {
+      "1": {
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Berserker_C_Headbutt": {
+      "1": {
+        "2": 20,
+        "3": 25,
+        "4": 30,
+        "5": 35,
+        "6": 40
+      }
+    },
+    "Berserker_C_DeathWish": {
+      "1": {
+        "2": 80,
+        "3": 85,
+        "4": 85,
+        "5": 85,
+        "6": 85
+      },
+      "2": {
+        "2": 7,
+        "3": 9,
+        "4": 11,
+        "5": 13,
+        "6": 15
+      }
+    },
+    "Berserker_C_Stubborn": {
+      "1": {
+        "6": 2
+      },
+      "2": {
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Berserker_C_Overkill": {
+      "1": {
+        "2": 30,
+        "3": 40,
+        "4": 50,
+        "5": 60,
+        "6": 70
+      }
+    },
+    "Berserker_C_Callus": {
+      "1": {
+        "2": 15,
+        "3": 20,
+        "4": 25
+      }
+    },
+    "Berserker_C_BloodVessel": {
+      "1": {
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Berserker_C_NoRetreat": {
+      "1": {
+        "2": 17,
+        "3": 19,
+        "4": 21,
+        "5": 23,
+        "6": 25
+      }
+    },
+    "WallMason_E_Cathedral": {
+      "1": {
+        "2": 15
+      },
+      "2": {
+        "2": 100
+      }
+    },
+    "WallMason_E_MasonHand": {
+      "1": {
+        "2": 8
+      },
+      "2": {
+        "2": 4
+      },
+      "3": {
+        "2": 15
+      }
+    },
+    "WallMason_E_Cornerstone": {
+      "1": {
+        "2": 3
+      },
+      "2": {
+        "2": 30
+      },
+      "3": {
+        "2": 1
+      }
+    },
+    "WallMason_R_FinishedWall": {
+      "2": {
+        "2": 13,
+        "3": 16,
+        "4": 19,
+        "5": 22,
+        "6": 25
+      }
+    },
+    "WallMason_R_Mortar": {
+      "1": {
+        "2": 9,
+        "3": 10,
+        "4": 11,
+        "5": 12,
+        "6": 13
+      }
+    },
+    "WallMason_R_Quarry": {
+      "1": {
+        "2": 2,
+        "3": 3,
+        "4": 4
+      }
+    },
+    "WallMason_R_Blessing": {
+      "1": {
+        "2": 16,
+        "3": 20,
+        "4": 24,
+        "5": 28,
+        "6": 32
+      }
+    },
+    "WallMason_R_BackRowAim": {
+      "1": {
+        "2": 12,
+        "3": 15,
+        "4": 18,
+        "5": 21,
+        "6": 24
+      }
+    },
+    "WallMason_R_Keystone": {
+      "1": {
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      },
+      "2": {
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "WallMason_R_Consecration": {
+      "1": {
+        "2": 35,
+        "3": 30,
+        "4": 25,
+        "5": 20,
+        "6": 15
+      }
+    },
+    "WallMason_R_Relayer": {
+      "1": {
+        "2": 3,
+        "3": 4,
+        "4": 5,
+        "5": 6,
+        "6": 7
+      },
+      "2": {
+        "2": 20,
+        "3": 30,
+        "4": 40,
+        "5": 50,
+        "6": 60
+      }
+    },
+    "WallMason_C_Harden": {
+      "1": {
+        "2": 2,
+        "3": 3
+      },
+      "2": {
+        "2": 5,
+        "3": 6
+      }
+    },
+    "WallMason_C_EvenBreath": {
+      "1": {
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "WallMason_C_MasonPrayer": {
+      "1": {
+        "2": 6,
+        "3": 8,
+        "4": 10,
+        "5": 12,
+        "6": 14
+      }
+    },
+    "WallMason_C_SameStone": {
+      "1": {
+        "2": 5,
+        "3": 6,
+        "4": 7,
+        "5": 8,
+        "6": 9
+      }
+    },
+    "WallMason_C_Groundwork": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "WallMason_C_DriveWedge": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "WallBreaker_E_BrokenRampart": {
+      "1": {
+        "2": 8
+      },
+      "2": {
+        "2": 7
+      }
+    },
+    "WallBreaker_E_SelfHarm": {
+      "1": {
+        "2": 7
+      },
+      "2": {
+        "2": 70
+      }
+    },
+    "WallBreaker_E_Martyrdom": {
+      "1": {
+        "1": 3
+      },
+      "2": {
+        "2": 25
+      }
+    },
+    "WallBreaker_E_Levelling": {
+      "1": {
+        "2": 12
+      }
+    },
+    "WallBreaker_R_SoftBlow": {
+      "1": {
+        "2": 12,
+        "3": 11,
+        "4": 10,
+        "5": 9,
+        "6": 8
+      }
+    },
+    "WallBreaker_R_Madness": {
+      "1": {
+        "2": 40,
+        "3": 50,
+        "4": 55,
+        "5": 60,
+        "6": 65
+      }
+    },
+    "WallBreaker_R_Swallow": {
+      "1": {
+        "2": 23,
+        "3": 26,
+        "4": 29,
+        "5": 32,
+        "6": 35
+      }
+    },
+    "WallBreaker_R_PaidBack": {
+      "1": {
+        "2": 27,
+        "3": 29,
+        "4": 31,
+        "5": 33,
+        "6": 35
+      }
+    },
+    "WallBreaker_R_Reliquary": {
+      "1": {
+        "2": 4,
+        "3": 5,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "WallBreaker_R_Overkill": {
+      "1": {
+        "2": 70,
+        "3": 80,
+        "4": 90,
+        "5": 100
+      }
+    },
+    "WallBreaker_R_Dirge": {
+      "1": {
+        "2": 38,
+        "3": 36,
+        "4": 34,
+        "5": 32,
+        "6": 30
+      }
+    },
+    "WallBreaker_R_DullFlesh": {
+      "1": {
+        "2": 0.4,
+        "3": 0.6,
+        "4": 0.8,
+        "5": 1
+      }
+    },
+    "WallBreaker_C_Shard": {
+      "1": {
+        "2": 25,
+        "3": 30,
+        "4": 35,
+        "5": 40,
+        "6": 50
+      }
+    },
+    "WallBreaker_C_Tenacity": {
+      "1": {
+        "2": 32,
+        "3": 34,
+        "4": 36,
+        "5": 38,
+        "6": 40
+      }
+    },
+    "WallBreaker_C_RuinPrayer": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "WallBreaker_C_SameStride": {
+      "1": {
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "WallBreaker_C_FirstCrack": {
+      "1": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "WallBreaker_C_LooseBrick": {
+      "2": {
+        "2": 2,
+        "3": 3
+      }
+    },
+    "WallBreaker_C_ShoveOff": {
+      "1": {
+        "2": 60,
+        "3": 70,
+        "4": 80,
+        "5": 90,
+        "6": 100
+      }
+    },
+    "WallBreaker_C_FleshPrice": {
+      "1": {
+        "2": 2
+      }
+    },
+    "WallBreaker_C_RuinOath": {
+      "2": {
+        "2": 3,
+        "3": 4,
+        "4": 5,
+        "5": 6,
+        "6": 7
+      }
+    },
+    "WallBreaker_C_DebrisPlus": {
+      "1": {
+        "2": 10,
+        "3": 15,
+        "4": 20,
+        "5": 25,
+        "6": 30
+      },
+      "2": {
+        "2": 60,
+        "3": 65,
+        "4": 70,
+        "5": 75,
+        "6": 80
+      }
+    },
+    "WallBreaker_C_ShortWindup": {
+      "1": {
+        "2": 6
+      },
+      "2": {
+        "1": 1
+      }
+    },
+    "WallBreaker_C_Defenceless": {
+      "1": {
+        "2": 11,
+        "3": 12,
+        "4": 13,
+        "5": 14,
+        "6": 15
+      },
+      "2": {
+        "2": 14,
+        "3": 13,
+        "4": 12,
+        "5": 11,
+        "6": 10
+      }
+    },
+    "WallBreaker_C_WeakPoint": {
+      "1": {
+        "1": 2,
+        "2": 2
+      },
+      "2": {
+        "2": 3,
+        "3": 3,
+        "4": 4,
+        "5": 5
+      }
+    },
+    "WallBreaker_C_Comrade": {
+      "1": {
+        "2": 35,
+        "3": 40,
+        "4": 45,
+        "5": 50
+      }
+    },
+    "WallBreaker_C_Oblation": {
+      "1": {
+        "2": 3,
+        "3": 4,
+        "4": 5,
+        "5": 6,
+        "6": 7
+      }
+    },
+    "WallBreaker_C_LongHaft": {
+      "1": {
+        "2": 6,
+        "3": 5,
+        "4": 4,
+        "5": 3,
+        "6": 2
+      }
+    },
+    "WallBreaker_C_Cliff": {
+      "1": {
+        "2": 40,
+        "3": 50
+      },
+      "2": {
+        "2": 4,
+        "3": 5
+      }
+    },
+    "WallBreaker_C_LightHand": {
+      "1": {
+        "2": 5,
+        "3": 6,
+        "4": 7,
+        "5": 7
+      },
+      "2": {
+        "5": 2
+      }
+    },
+    "WallBreaker_C_Tireless": {
+      "1": {
+        "2": 15,
+        "3": 20,
+        "4": 25,
+        "5": 30,
+        "6": 35
+      }
+    },
+    "WallBreaker_C_SharedLoad": {
+      "1": {
+        "2": 30,
+        "3": 40,
+        "4": 50,
+        "5": 60,
+        "6": 70
+      },
+      "2": {
+        "2": 30,
+        "3": 40,
+        "4": 50,
+        "5": 60,
+        "6": 70
+      }
+    },
+    "Alchemist_C_Toxin": {
+      "1": {
+        "2": 2
+      }
+    },
+    "Alchemist_C_Tolerance": {
+      "1": {
+        "1": 30,
+        "2": 34,
+        "3": 38,
+        "4": 42,
+        "5": 46,
+        "6": 50
+      }
+    },
+    "Alchemist_C_Floorstart": {
+      "1": {
+        "2": 2,
+        "3": 3,
+        "4": 4
+      }
+    },
+    "Alchemist_C_Cooldown": {
+      "2": {
+        "2": 2
+      }
+    },
+    "Alchemist_C_Sturdy": {
+      "2": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Alchemist_C_Grind": {
+      "1": {
+        "2": 2
+      }
+    },
+    "Alchemist_C_Steady": {
+      "2": {
+        "2": 2
+      }
+    }
+  },
+  "classes": {
+    "Musician": {
+      "Role": "딜러 / 버퍼"
+    },
+    "Duelist": {
+      "Role": "서브딜러 / 세미탱커"
+    },
+    "Berserker": {
+      "Role": "유리대포",
+      "MaxHealth": 100
+    },
+    "Pulsar": {
+      "Role": "서브딜러"
+    },
+    "WallMason": {
+      "Role": "서브딜러"
+    },
+    "Alchemist": {
+      "MaxHealth": 85
+    }
+  },
+  "skills": {
+    "Veloce": {
+      "Description": "- [음표] 1개당 [가하는 피해량] +2.5%.\n- 사용 후 4분음표 2개 획득.\n- 사용 후 자신과 무작위 아군에게 [보호막] 2 부여."
+    },
+    "Brillante": {
+      "Range": "Supporting",
+      "Cooldown": 4,
+      "Description": "- 아군 전체에게 [음표] 수만큼 [브릴란테] 부여.\n- 사용 후 8분음표 2개 획득."
+    },
+    "Crescendo": {
+      "Cooldown": 6,
+      "Description": "- [음표] 1개당 [가하는 피해량] +3%.\n- 사용 후 16분음표 1개 획득.\n- [음표]가 최대치라면 대신 아래로 동작함.\n  - 보유 [음표]를 전부 초기화.\n  - 음표 1개당 [가하는 피해량]이 +4%가 됨.\n  - 사용 후 [박자표] 값이 1 증가."
+    },
+    "CrescendoAlForte": {
+      "Name": "Cresc. al forte",
+      "Description": "- 조건: 보유 [음표] 16개 이상.\n- 모든 [음표]를 소모하며, 소모한 [음표] 1개당 [가하는 피해량] +7%.\n- 16분음표 3개당 범위가 앞·위·아래로 1칸씩 증가.\n- 사용 후 보유한 [음표] 수에서 4를 뺀 만큼의 버프를 2턴 간 획득.\n  - 4 이하인 경우 1로 보정."
+    },
+    "FrontBackPierce": {
+      "Motions": "[[[-6,0],[-3,0],[-2,0],[-1,0],[0,0]]]",
+      "Description": "- 사용 후 2턴 간 아군의 [패링 범위] +(2×[집중])%.\n- 사용 후 2턴 간 자신의 [받는 피해량] −10%."
+    },
+    "TripleThrust": {
+      "Cooldown": 4,
+      "Motions": "[[[3,0],[2,0],[1,0],[0,0]],[[5,0],[4,0],[3,0],[2,0],[1,0],[0,0]]]",
+      "Description": "- 대상에게 [출혈] 3 부여.\n- 사용 후 3턴 간 방어·패링 범위 +(2.5×[집중])%.\n- [집중] 1 획득.\n- 피해량: 8 / 7 / 7 (합 22) (다단히트)"
+    },
+    "DeepBreath": {
+      "Name": "신경을 곤두세우고 깊은 호흡을 들여",
+      "Range": "Supporting",
+      "Cooldown": 6,
+      "Description": "- 1턴 간 준비 자세를 취함.\n- 준비 상태에서의 효과\n  - [받는 버프 효율] · [받는 회복량]] +30%\n  - [받는 피해량] −25%\n  - 방어·패링 범위 +(3×[집중])%\n- 다음 턴까지 아이템 사용 외 아무 행동도 못 함.\n  - 패링·막기는 가능.\n- [집중] 3 획득."
+    },
+    "PointBlank": {
+      "Name": "마지막까지 빛나는 점을 향해 검 끝을 쏘아라",
+      "Description": "- 조건: `신경을 곤두세우고 깊은 호흡을 들여` 사용 후 준비자세 종료.\n- [치명타 확률] 보정 +15%.\n- [집중] 수치 1당 피해량 +2.5%.\n- 3턴 간 아군의 [패링 범위] +15%, [받는 피해량] −10%.\n- 사용 후 대상에게 [출혈] 5 부여.\n- 사용 후 태세를 변경하고 2턴 간 [받는 피해량] −15% · [가하는 피해량] +15% 획득."
+    },
+    "BloodCrash": {
+      "Name": "분쇄",
+      "Damage": 23,
+      "Description": "- 이 스킬은 [분노]를 소모하지 않음.\n- 보유한 [분노] 수치 1당 3턴간 대상의 [받는 피해량] 10% 증가.\n- 적중 시 [출혈] 1 부여\n- 적중 시 체력 3 감소.\n  - 위 효과로 사망하지 않음.\n- 적중 시 [분노] 1 얻음."
+    },
+    "DoubleSlash": {
+      "Name": "횡베기",
+      "Cooldown": 3,
+      "Description": "- [분노]를 (보유 수치 / 2)만큼 소모.(반올림)\n- 소모한 [분노]당 [가하는 피해량] 20% 증가.\n- 적중 시 [출혈] 2 부여\n- 적중한 적 1기당 체력 3 감소.\n  - 모두 개별 피해로 침.\n  - 위 효과로 사망하지 않음."
+    },
+    "Burst": {
+      "Name": "종베기",
+      "Damage": 50,
+      "Cooldown": 8,
+      "Description": "- 보유 [분노] 전체 소모\n- 소모한 [분노]당 [가하는 피해량] 20% 증가.\n- 적중 시 [출혈] 3 부여.\n- (적중한 적 / 2)만큼 [분노]를 돌려받음.\n- 적중한 적 1기당 체력 5 감소.\n- (이 스킬의 최종 피해량/5) 만큼 체력 감소.\n  - 위 효과로 사망하지 않음."
+    },
+    "Collapse": {
+      "Description": "- 차징 상태가 아닐 경우 스킬 사용 시 차징함.\n- 차징 상태일 때, 매 턴 적에게 [중력] 1 부여.\n- 차징 1턴 당 [가하는 피해량] 25% 증가.\n  - 최대 2턴.\n- 차징 1턴 당 공격 범위 1칸 증가.\n  - 최대 2턴."
+    },
+    "Singularity": {
+      "Cooldown": 4,
+      "Description": "- 보유중인 [질량] 전체 소모.\n- 소모 수치 1당 [가하는 피해량] +5%.\n- 소모한 [질량] 수치에 따라 3단계로 연출과 범위가 바뀜.\n  - 1단계 (1~7스택): 검을 상대 위에 소환해 내려찍음. 범위 `(n+1,n)` - 대미지 18\n  - 2단계 (8~14스택): 큰 검 형태의 에너지를 소환, 빔을 쏜 뒤 내려찍음. 범위 `(n+1,n) + (n+1,n±1)` - 대미지 24\n  - 3단계 (15~20스택): 매우 큰 에너지 검을 소환, 빔 후 파동이 퍼지도록 내려찍음. 범위 `(n+1,n) ~ (n+3,n±1)` - 대미지 36"
+    },
+    "Infall": {
+      "Cooldown": 3,
+      "Description": "- 스킬 사용 시 [질량] 3 얻음.\n- 이 스킬로 적 처치 시 [질량] 5 추가로 얻음."
+    },
+    "Magnetosphere": {
+      "Range": "Supporting",
+      "Cooldown": 5,
+      "Description": "- 스킬 사용 시 [자기장] 얻음.\n- 스킬 사용 시 [공명] 1 얻음."
+    },
+    "Converge": {
+      "Cooldown": 2,
+      "Description": "- 보유한 [공명] 수 만큼 피해를 가함.\n- [공명]을 보유하지 않은 경우 한 번의 피해를 가함.\n- QTE 성공 시 [가하는 피해량] + 20%.\n- QTE 성공 시 [감극] 1 추가 부여."
+    },
+    "Flare": {
+      "Cooldown": 3,
+      "Description": "- 스킬 적중 시 대상 [명중률] -30%.\n- 스킬 적중 시 [공명] 1 얻음.\n- 스킬 적중 시 [자기장] 얻음."
+    },
+    "Nailing": {
+      "Description": "- 스킬 적중 시 [광신] 2 부여."
+    },
+    "SplitFlock": {
+      "Cooldown": 1,
+      "Description": "- 적중 대상마다 [광신] 1 부여."
+    },
+    "Chorale": {
+      "Cooldown": 2,
+      "Description": "- 메인 대상에게 [광신] 4 부여.\n- 남은 대상에게 [광신] 2 부여."
+    },
+    "ChiselWork": {
+      "Description": "- 스킬 적중 시 [벽] 1 얻음."
+    },
+    "BreakBackWall": {
+      "Cooldown": 1,
+      "Description": "- 보유한 [벽] 수치 1당 [가하는 피해량] +6%."
+    },
+    "Consecrate": {
+      "Cooldown": 4,
+      "Description": "- 스킬 사용 시 아군 전체에게 [벽] 3 부여."
+    },
+    "Cleave": {
+      "Description": "- 보유중인 [허물 벽] 수치 1당 [가하는 피해량] +5%."
+    },
+    "BringDown": {
+      "Cooldown": 2,
+      "Description": "- 보유중인 [허물 벽] 수치 1당 [가하는 피해량] +5%."
+    },
+    "TearDown": {
+      "Cooldown": 4,
+      "Description": "- 보유중인 [허물 벽] 전체 소모.\n  - 소모한 [허물 벽] 수치 1당 [가하는 피해량] +12%."
+    },
+    "SelfCarve": {
+      "Cooldown": 1,
+      "Description": "- 스킬 사용 시 아군을 공격함.\n- 대상 아군 최대 체력의 15%만큼 피해를 가함.\n  - 최대 30.\n- [허물 벽] 3 얻음."
+    },
+    "Grind": {
+      "Description": "- 보유한 [약재]를 전부 소모함.\n- 소모한 [약재] 수에 따라 버프와 디버프를 획득함.\n- 약재 1 소모\n  - [원액] 1 획득.\n- 약재 2 소모\n  - [가하는 피해량] +10%, [받는 피해량] +10%.\n  - [원액] 2 획득.\n- 약재 3 소모\n  - [가하는 피해량] +15%, [받는 피해량] +15%.\n  - [원액] 3 획득.\n- 약재 4 소모\n  - [가하는 피해량] +25%, [받는 피해량] +25%.\n  - 다음 턴에 가드 시 [받는 피해량] +20%.\n  - 다음 턴에 [받는 회복량] +20%.\n  - 다음 턴에 [가하는 피해량] +15%.\n  - [원액] 4 획득.\n- 위 버프·디버프는 전투가 끝날 때까지 유지됨.\n  - 최대치 없음."
+    },
+    "Mix": {
+      "Description": "- 보유중인 [원액]을 전부 소모.\n- 보유중인 원액 수만큼 [빈 병]을 소모.\n  - [빈 병]이 [원액]보다 부족할 경우, [빈 병]의 값을 따라감.\n- 소모한 [원액] 수만큼 [꽉 찬 병]을 획득.\n  - [꽉 찬 병]은 확정적으로 만들어지며, 소모한 [원액] 수만큼 판정해 각각 다른 종류의 [꽉 찬 병]을 획득함.\n    - 각각 25%의 확률을 가짐."
+    },
+    "Throw": {
+      "Cooldown": 5,
+      "Description": "- 보유한 [꽉 찬 병] 중 하나를 소모함.\n  - [회복 병]은 사용하지 않음.\n- 소모한 [꽉 찬 병]에 따라 부여하는 상태이상이 달라짐."
+    },
+    "Poisoning": {
+      "Cooldown": 5,
+      "Description": "- 조건: [꽉 찬 병] 3개 이상 보유.\n- 보유한 [꽉 찬 병]을 전부 소모하고, 그중 절반을 돌려받음.\n  - 돌려받는 종류는 소모 전 보유 비율을 따름.\n- 소모한 병 종류마다 아래를 얻음.\n  - [회복 병]\n    - 체력 60% 회복.\n    - [과다 회복] 1 얻음.\n  - [독 병]\n    - 체력 30% 감소.\n      - 위 효과로 사망하지 않음.\n    - 가하는 피해마다 [독] 3 부여. 10턴 지속.\n    - [가하는 피해량] +15%.\n  - [화염병]\n    - 체력 5% 감소.\n      - 위 효과로 사망하지 않음.\n    - 가하는 피해마다 [화상] 5 부여.\n    - [가하는 피해량] +10%.\n  - [기름 병]\n    - 체력 5% 감소.\n      - 위 효과로 사망하지 않음.\n    - [가하는 피해량] +5%. 매 공격마다 [기름] 2 부여.\n    - 같은 사용에서 [화염병]도 소모했다면 추가로:\n      - 체력 20% 감소.\n        - 위 효과로 사망하지 않음.\n      - 가하는 피해마다 [화상] 9 추가 부여.\n      - [가하는 피해량] +15% 추가로 증가함.\n- 종류에 관계없이 3개 이상 소모하면 추가로:\n  - 가하는 피해량 +50%.\n  - `(n,n)`의 대상에게 고정 피해 40. 이 피해는 어떤 버프로도 늘지 않음.\n  - 3턴 동안 [받는 피해량] +50%.\n- 감소, 회복하는 체력은 모두 최대체력을 비례로 함."
+    }
+  },
+  "cardKeywords": {
+    "Alchemist_E_LowRisk#1": {
+      "Keyword": ""
+    }
+  },
+  "passives": {
+    "Musician_Listener": {
+      "Description": "스킬에 두 번 피격될 때마다 무작위 [음표] 1개 얻음."
+    },
+    "Musician_Refrain": {
+      "Description": "[음표]를 4개 얻을 때마다 최대 체력의 2.5% 회복.\n[주는 회복량] 증가와 [받는 회복량] 증가의 영향을 받음.\n기본 회복량으로 취급함."
+    },
+    "Musician_Downbeat": {
+      "Description": "전투 시작 시 [박자표]를 1 얻음."
+    },
+    "Duelist_Read": {
+      "Description": "- 4번 피격될 때마다 다음 공격을 확정으로 패링.\n  - 궁극기·패링 불가 스킬 제외."
+    },
+    "Duelist_Slip": {
+      "Description": "- 방어의 피해 감소 효과가 절반이 됨.\n  - 대신 방어 범위 증가를 무효화하고, 그 1/3만큼 패링 범위 증가를 획득."
+    },
+    "Duelist_Count": {
+      "Name": "사전 전략",
+      "Description": "- 전투 시작 시 적이 3기 이하면 [가하는 피해량] +5%, 4기 이상이면 [받는 피해량] −5%.\n  - 전투 중 적 수가 바뀌면 다시 판정."
+    },
+    "Berserker_Fury": {
+      "Name": "다혈질",
+      "Description": "어떤 수단이든 체력이 조금이라도 감소할 경우 [분노]를 1 얻음."
+    },
+    "Berserker_Thickening": {
+      "Name": "광기",
+      "Description": "잃은 체력 10%당 [가하는 피해량] 5% 증가. (최대45%)\n현재 체력이 1% 이하인 경우 대신 [가하는 피해량] 50% 증가."
+    },
+    "Berserker_Bloodlust": {
+      "Name": "격분",
+      "Description": "[분노]가 8스택일 경우 [치명타 확률] 15% 증가."
+    },
+    "Quasar_FarLight": {
+      "Description": "피격 또는 공격 시, 그 수치의 10%만큼 [질량]을 얻음."
+    },
+    "Quasar_Supermassive": {
+      "Description": "매 피격마다 20% 확률로 [받는 피해량]이 50% 감소함.\n- 위 효과는 곱연산으로 계산되며, 최종적으로 들어오는 [받는 피해량]이 감소함."
+    },
+    "Quasar_LoneLight": {
+      "Description": "자신 외 살아있는 아군이 없다면, 그 전투에 한해 [가하는 피해량]이 25% 증가하고, [질량] 획득량이 100% 증가함."
+    },
+    "Pulsar_Beacon": {
+      "Description": "전투 시작 시, 아군 전체에 [가하는 피해량] 증가 10%를 두 턴 간 부여."
+    },
+    "Pulsar_Neutron": {
+      "Description": "매 턴, 갱신되는 [도발]을 3 얻음."
+    },
+    "Pulsar_Spin": {
+      "Description": "[자기장] 보유 시, 매 턴 스테미나를 4 추가 획득함."
+    },
+    "WallPilgrim_Road": {
+      "Description": "같은 행에 월 필그림스 소속 아군이 있다면, 해당 아군의 신앙심 8 증가."
+    },
+    "WallPilgrim_Sigil": {
+      "Description": "[광신]이 10 이상 쌓인 적에게 [낙인] 부여."
+    },
+    "WallPilgrim_NailMark": {
+      "Description": "[광신]을 보유중인 적 처치 시 해당 턴동안 가장 가까운 또다른 적에게 그대로 옮김."
+    },
+    "WallMason_Road": {
+      "Description": "같은 행에 월 필그림스 소속 아군이 있다면, 해당 아군의 신앙심 8 증가."
+    },
+    "WallMason_Stacking": {
+      "Description": "턴 종료 시 아군이 [벽] 보유 시 자신의 [벽] 수치 1 증가."
+    },
+    "WallMason_Brace": {
+      "Description": "[벽]이 5스택 이상인 아군은 치명타 피해를 받지 않음."
+    },
+    "WallBreaker_MadOath": {
+      "Description": "- 잃은 체력 2%당 [가하는 피해량] +1%.\n  - 최대 48%.\n  - 체력이 1% 이하인 경우 대신 [가하는 피해량] +50%."
+    },
+    "WallBreaker_Road": {
+      "Description": "같은 행에 월 필그림스 소속 아군이 있다면, 해당 아군의 신앙심 8 증가."
+    },
+    "WallBreaker_Debris": {
+      "Description": "[허물 벽]을 소모한 스킬로 적 처치  시 소모한 [허물 벽]의 50%를 돌려받음."
+    },
+    "Alchemist_Insurance": {
+      "Description": "- 체력이 5% 이하로 떨어지면 [회복 병] 1을 소모해 체력 30% 회복."
+    },
+    "Alchemist_BulkUp": {
+      "Description": "- `섞기` 스킬을 사용할 때마다 가하는 피해량 +5%, 받는 피해량 +5%.\n  - 최대 5중첩."
+    },
+    "Alchemist_SideEffect": {
+      "Description": "- `중독` 스킬을 쓸 때마다 받는 피해량 +10%.\n  - 최대치 없음."
+    }
+  },
+  "skillShape": {
+    "Veloce": {
+      "Cells": "[[-1,-1],[-2,-1],[-3,-1],[3,0],[2,0],[1,0],[0,0]]"
+    },
+    "Brillante": {
+      "Cells": "[[1,1],[2,1],[3,1],[4,1],[5,1],[5,0],[4,0],[3,0],[2,0],[1,0],[0,0],[0,-1],[1,-1],[2,-1],[3,-1],[4,-1],[5,-1],[-1,-1],[-2,-1],[-3,-1],[-3,1],[-2,1],[-1,1],[0,1],[-1,0],[-2,0],[-3,0]]",
+      "TargetSide": "Ally"
+    },
+    "Crescendo": {
+      "Cells": "[[0,-1],[0,0],[0,1],[1,0]]"
+    },
+    "CrescendoAlForte": {
+      "Cells": "[[0,-1],[0,0],[0,1],[1,0]]",
+      "Stages": "[[[2,0]],[[6,0],[3,0]],[[7,0],[4,0]],[[8,0],[5,0]]]"
+    },
+    "FrontBackPierce": {
+      "Cells": "[[2,0],[1,0],[0,0]]"
+    },
+    "TripleThrust": {
+      "Cells": "[[1,0],[0,0]]"
+    },
+    "DeepBreath": {
+      "TargetSide": "Ally"
+    },
+    "PointBlank": {
+      "Cells": "[[5,0],[4,0],[3,0],[2,0],[1,0],[0,0]]"
+    },
+    "BloodCrash": {
+      "Cells": "[[0,0]]",
+      "Stages": "[[[0,-1],[0,0],[0,1],[1,-1],[1,0],[1,1],[-1,-1],[-1,0],[-1,1]]]"
+    },
+    "DoubleSlash": {
+      "Cells": "[[0,1],[0,0],[0,-1]]"
+    },
+    "Burst": {
+      "Cells": "[[5,0],[4,0],[3,0],[2,0],[1,0],[0,0]]"
+    },
+    "Collapse": {
+      "Cells": "[[0,0]]",
+      "Stages": "[[[0,-1],[1,-1],[1,0],[1,1],[0,1],[0,0]],[[0,-1],[0,0],[0,1],[1,1],[1,0],[1,-1],[2,-1],[2,0],[2,1]]]"
+    },
+    "Singularity": {
+      "Cells": "[[1,0],[0,0]]",
+      "Stages": "[[[1,-1],[1,0],[1,1],[0,0]],[[3,1],[3,0],[3,-1],[2,-1],[2,0],[2,1],[1,1],[1,0],[1,-1],[0,0]]]"
+    },
+    "Infall": {
+      "Cells": "[[1,0],[0,0]]"
+    },
+    "Magnetosphere": {
+      "TargetSide": "Ally"
+    },
+    "Converge": {
+      "Cells": "[[3,0],[2,0],[1,0],[0,0]]"
+    },
+    "Flare": {
+      "Cells": "[[3,0],[2,0],[1,0],[0,0]]"
+    },
+    "ChiselWork": {
+      "Cells": "[[0,0]]"
+    },
+    "BreakBackWall": {
+      "Cells": "[[5,0],[4,0],[3,0],[2,0],[1,0],[0,0]]"
+    },
+    "Consecrate": {
+      "Cells": "[[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[5,0],[4,0],[3,0],[2,0],[1,0],[0,0],[0,-1],[1,-1],[2,-1],[3,-1],[4,-1],[5,-1]]",
+      "TargetSide": "Ally"
+    },
+    "Cleave": {
+      "Cells": "[[1,0],[0,0]]"
+    },
+    "BringDown": {
+      "Cells": "[[5,0],[4,0],[3,0],[2,0],[1,0],[0,0],[-1,0],[-2,0],[-3,0],[-4,0],[-5,0]]"
+    },
+    "TearDown": {
+      "Cells": "[[1,0],[0,0]]"
+    },
+    "SelfCarve": {
+      "TargetSide": "Ally"
+    }
+  },
+  "keywords": {
+    "DamageDealt": {
+      "Description": "주는 피해량이 표기된 수치(%)만큼 증가함.\n합연산.\n공식: 최종 피해량 = 기본 피해량 * (1 + [가하는 피해량]%)"
+    },
+    "DamageTaken": {
+      "Description": "[받는 피해량]이 표기된 수치(%)만큼 증가함.\n합연산.\n공식: 최종 피격량 = 공격자의 최종 피해량 * (1 + [받는 피해량]%)"
+    },
+    "CritChance": {
+      "Description": "치명타를 가할 확률이 수치(%)만큼 증가함.\n해당 수치가 100%를 초과할 시 초과량만큼 [치명타 피해량]이 증가함.\n합연산.\n공식: 최종 치명타 확률 = 기본 치명타 확률% + [치명타 확률]%"
+    },
+    "CritDamage": {
+      "Description": "자신이 가하는 치명타의 피해량이 수치(%)만큼 증가함.\n합연산.\n공식: 최종 치명타 피해량 = 최종 피해량 * (150% + [치명타 피해량]%)"
+    },
+    "HealDealt": {
+      "Description": "아군에게 [주는 회복량]이 수치(%)만큼 증가함.\n합연산.\n공식: 최종 회복량 = 기존 회복량 * (1 + [주는 회복량]% + [받는 회복량]%)"
+    },
+    "HealTaken": {
+      "Description": "자연 회복 포함, 자신에게 들어오는 모든 회복량이 수치(%)만큼 증가함.\n합연산.\n공식: 최종 회복량 = 기존 회복량 * (1 + [주는 회복량]% + [받는 회복량]%)"
+    },
+    "BuffDealt": {
+      "Description": "주는 버프의 효율이 수치(%)만큼 증가함.\n자신에게 주는 버프에도 포함됨.\n합연산.\n예)\n- [가하는 피해량] 50% 증가 버프가 있음.\n- [주는 버프 효율] 50%\n- [가하는 피해량] 50% 증가 버프에 + 50%가 달려 총 100%만큼 [가하는 피해량] 증가 버프를 줌.\n공식: 최종 버프 수치(%) = 기본 버프 수치(%) + [주는 버프 효율](%) + [받는 버프 효율](%)"
+    },
+    "BuffTaken": {
+      "Description": "받는 버프의 효율이 수치(%)만큼 증가함.\n합연산.\n공식: 최종 버프 수치(%) = 기본 버프 수치(%) + [주는 버프 효율](%) + [받는 버프 효율](%)"
+    },
+    "ParryWindow": {
+      "Description": "패링 판정의 범위가 넓어짐.\n방어 판정 범위는 넓어지지 않음.\n합연산."
+    },
+    "Accuracy": {
+      "Description": "기본값 100%.\n[명중률]이 100%를 초과 시 [치명타 확률]이 (초과량 / 3)만큼 증가함. (소숫점 버림.)\n[명중률]이 100% 미만일 경우 (100% - 현재 [명중률]%)의 확률로 공격이 빗나감."
+    },
+    "Reflect": {
+      "Description": "맞을 때 공격자에게 되돌려주는 고정 피해. 비율만큼 반사함.\n절대값 반사의 경우 절대값만큼 반사 피해를 가함.\n공식: 최종 [반사 피해]량 = 최종 피격량 * [반사 피해]%\n절대값의 경우: 최종 [반사 피해]량 = 지정된 고정값\n능력 자체에 [반사 피해]량 공식이 지정된 경우: 해당 공식을 따라감."
+    },
+    "Shield": {
+      "Description": "[받는 피해량]의 {100}%를 흡수 후 받은 피해량 만큼 감소.\n여유분이 남을 경우 다음 턴까지 지속됨."
+    },
+    "Bleed": {
+      "Description": "매 턴 최대 체력의 5%만큼 물리 피해.\n턴 종료 시 1 감소.\n해당 효과로 사망할 수 없음.\n해당 상태이상은 대미지가 0 미만으로 떨어져선 안 됨.\n공식:\n최종 [출혈] 피해량 = 최대 체력 * 0.05 * (1 - 물리 피해 경감%)"
+    },
+    "Poison": {
+      "Description": "매 턴 수치만큼 방어 무시 고정 피해.\n[받는 피해량] 증가의 영향을 받지 않음.\n턴 종료 시 3 감소.\n해당 효과로 사망할 수 없음."
+    },
+    "Burn": {
+      "Description": "매 턴 수치%만큼 최대 체력 비례 화염 속성 피해를 받음.\n화염 속성 경감의 영향을 받음.\n최대 스택 40.\n턴 종료 시 1 감소.\n해당 효과로 사망할 수 없음.\n해당 상태이상은 대미지가 0 미만으로 떨어져선 안 됨.\n공식:\n최종 [화상] 피해량 = 최대 체력 * ([화상] 수치%) * (1 - 화염 속성 경감%)"
+    },
+    "Oil": {
+      "Description": "화염 속성으로 받는 피해가 50% 증가함.\n화염 속성 피해 경감으로 취급함.\n곱연산."
+    },
+    "Taunt": {
+      "Description": "아군에게 갈 공격을 자신이 뺏어올 확률이 생김.\n곱연산.\n공격 스틸 시 1 감소.\n공식: 최종 스틸 수치% = ([도발] * 10) * (1 - (기존 대상의 현재 체력 / 기존 대상의 최대 체력))"
+    },
+    "Overheal": {
+      "Description": "받는 회복량이 대폭 감소함.\n곱연산.\n해당 효과로 인해 최종 [받는 회복량]이 음수가 될 수 없음.\n공식: 최종 [받는 회복량] = 최종 회복량  * (1 - 과다회복% * 8)"
+    },
+    "Brand": {
+      "Description": "[받는 회복량] -50%.\n합연산."
+    },
+    "Groggy": {
+      "Description": "한 턴 간 어떤 행동도 할 수 없음."
+    },
+    "AttackStance": {
+      "Description": "- [받는 피해량] +15%\n- [가하는 피해량] +(20 + 집중)%\n- [치명타 확률] +10%\n- 어떤 스킬이든 적중 시 [출혈] 1 부여."
+    },
+    "DefenseStance": {
+      "Description": "- [받는 피해량] −30%\n- [가하는 피해량] −45%\n- [집중]의 자동 패링이 비활성화됨.\n  - 대신 피격 시 (5×[집중])% 확률로 자동 패링. (최대 30%)\n  - 궁극기·패링 불가 스킬 제외."
+    },
+    "Note": {
+      "Description": "- 4분·8분·16분으로 나뉘고 각각 주는 버프가 다름.\n- 음표의 값은 이름과 무관하게 전부 1임.\n  - 종류별로 따로 모이지 않고 한 곳에 쌓임.\n- 4분음표 (보라색)\n  - 아군 스테미나 획득량 +(2×개수)%\n  - 아군의 [치명타 확률] +(0.5×개수)%\n  - 자신의 두 번째 턴마다 아군에게 (1×개수)의 [보호막]\n- 8분음표 (분홍색)\n  - 아군의 [치명타 확률] · [치명타 피해량] +(1×개수)%\n  - 적 스테미나 획득량 −(2×개수)%\n- 16분음표 (옅은 남색)\n  - 아군의 [치명타 확률] **−**(0.5×개수)%\n  - 아군의 [치명타 피해량] +(2×개수)%\n  - 아군의 [가하는 피해량] +(1.5×개수)%"
+    },
+    "Meter": {
+      "Description": "- 1에서 시작해 3까지 오름.\n- 값에 비례해 [음표] 최대치가 오름.\n  - 값 1 → 4개\n  - 값 2 → 8개\n  - 값 3 → 16개\n- 값 1당 [음표] 획득량 +1.\n- 최대치에서 `크레셴도`를 쓰면 [음표]를 전부 초기화하고 값이 1 오름.\n- 값이 3이고, [음표]가 16개 이상이면 `Cresc. al forte`로 `크레셴도`가 강화됨.\n- 이펙트\n  - 값 1: 플레이어 뒤에 작은 보표 하나\n  - 값 2: 대신 큰 보표 하나\n  - 값 3: 대신 큰 보표 4개\n  - [음표]가 가득 차면 가장 많은 [음표]의 색으로 빛남."
+    },
+    "Brillante": {
+      "Description": "[브릴란테] * 1.5만큼 [치명타 확률]과 [치명타 피해량]이 증가함."
+    },
+    "Focus": {
+      "Description": "- 최대 10스택.\n- 수치 1당 [받는 피해량] −0.5%, [가하는 피해량] +1%, [패링 범위] +2.5%.\n- 5스택 이상일 때 패링도 방어도 못 한 채 피격되면 3스택을 자동 소모 후 패링함.\n  - 궁극기·패링 불가 스킬 제외."
+    },
+    "Rage": {
+      "Description": "- 최대 8스택.\n- 수치 1당 [가하는 피해량] + 10%.\n  - 합연산"
+    },
+    "Mass": {
+      "Description": "- 최대 20스택.\n- 수치 1당 [가하는 피해량] +1%, [받는 피해량] −0.5%."
+    },
+    "Gravity": {
+      "Description": "- 최대 1스택.\n- [받는 피해량] +15%.\n- 공격 실패 확률 +10%.\n- 행동 가능 칸이 (0,0), (0,1), (0,2), (1,0), (1,1), (1,2)로 제한됨.\n  - x값이 0인 칸이 모두 찰 경우 x값이 1인 칸으로 이동함."
+    },
+    "Field": {
+      "Description": "- 3턴 유지.\n- 최대 1스택.\n- [받는 피해량] −20%.\n- 피격 시 공격자에게 [반사 피해] 8을 주고 [감극] 부여."
+    },
+    "Depolar": {
+      "Description": "- 2턴 유지.\n- 최대 3스택.\n- 수치 1당 [받는 피해량] +15%."
+    },
+    "Resonate": {
+      "Description": "- 최대 3스택.\n- 수치 1당 펄서의 `수렴` 스킬의 [가하는 피해량] + 30%."
+    },
+    "Zeal": {
+      "Description": "- 3턴 유지.\n- 수치 1당 [받는 피해량] +3%, [가하는 피해량] −2%.\n- 해당 상태이상을 부여한 월 필그림의 신앙심 스탯 10당 이 디버프의 수치가 10% 증가함. (최대 +50%)\n  - 곱연산."
+    },
+    "Wall": {
+      "Description": "- 3턴 유지\n- 최대 5스택.\n- 수치 1당 [받는 피해량] -4%, 자동 회피 · 패링 확률 +2%.\n- 해당 상태이상을 부여한 월 메이슨의 신앙심 스탯 10당 이 버프의 수치가 10% 강해짐. (최대 +50%)\n  - 곱연산."
+    },
+    "Ruin": {
+      "Description": "- 전투 종료까지 영구 지속.\n- 최대 5스택.\n- 수치 1당 [가하는 피해량] +5%, [받는 피해량] +3%.\n  - 합연산."
+    },
+    "Herb": {
+      "Description": "- 최대 6스택.\n- 수치 1당 [받는 회복량] +1%.\n  - 합연산.\n  - 회복을 2회 받을 때마다 수치 1 소모.\n    - 자연 회복은 포함되지 않음."
+    },
+    "Extract": {
+      "Description": "- 최대 4스택.\n- 체력이 10% 이하로 떨어지면 수치 1을 소모해 최대 체력의 10%를 회복.\n  - [받는 회복량] 증가와 [주는 회복량] 증가의 영향을 받음.\n  - 기본 회복량으로 취급."
+    },
+    "EmptyBottle": {
+      "Description": "최대 8스택."
+    },
+    "FullBottle": {
+      "Description": "- 서로 다른 네 종류가 한 상태이상 안에 들어 있음.\n  - 회복 병\n    - 체력이 5% 이하로 떨어지면 수치 1을 소모해 최대 체력의 25% 회복.\n    - 없으면 발동하지 않음.\n    - [받는 회복량] 증가와 [주는 회복량] 증가의 영향을 받음.\n    - 기본 회복량으로 취급.\n  - 독 병\n    - `던지기` 스킬로 공격 시 대상에게 [독] 10 부여.\n  - 화염병\n    - `던지기` 스킬로 공격 시 대상에게 [화상] 10 부여.\n  - 기름 병\n    - `던지기` 스킬로 공격 시 대상에게 [기름] 5 부여."
+    },
+    "HealBottle": {
+      "Description": "- 체력이 5% 이하로 떨어지면 수치 1을 소모해 최대 체력의 25% 회복.\n  - 없으면 발동하지 않음.\n  - [받는 회복량] 증가와 [주는 회복량] 증가의 영향을 받음.\n  - 기본 회복량으로 취급."
+    },
+    "PoisonBottle": {
+      "Description": "`던지기` 스킬로 공격 시 대상에게 [독] 10 부여."
+    },
+    "FireBottle": {
+      "Description": "`던지기` 스킬로 공격 시 대상에게 [화상] 10 부여."
+    },
+    "OilBottle": {
+      "Description": "`던지기` 스킬로 공격 시 대상에게 [기름] 5 부여."
+    }
+  },
+  "savedAt": "2026-09-28T06:29:12.715Z",
+  "savedAtLocal": "2026-09-28 15:29"
+}

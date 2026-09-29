@@ -1,0 +1,6307 @@
+{
+  "cardKeywords": {
+    "Alchemist_C_AmpleMeasure#1": {
+      "Keyword": "Herb"
+    },
+    "Alchemist_C_Extract#1": {
+      "Keyword": "Extract"
+    },
+    "Alchemist_C_Floorstart#1": {
+      "Keyword": "FullBottle"
+    },
+    "Alchemist_C_Grind#1": {
+      "Keyword": "Extract"
+    },
+    "Alchemist_C_Ignite#1": {
+      "Keyword": "FireBottle"
+    },
+    "Alchemist_C_Killherb#1": {
+      "Keyword": "Herb"
+    },
+    "Alchemist_C_Satisfaction#1": {
+      "Keyword": "FullBottle"
+    },
+    "Alchemist_C_Satisfaction#2": {
+      "Keyword": "FullBottle"
+    },
+    "Alchemist_C_Sideeffect#1": {
+      "Keyword": "DamageTaken"
+    },
+    "Alchemist_C_Spare#1": {
+      "Keyword": "EmptyBottle"
+    },
+    "Alchemist_C_Steady#1": {
+      "Keyword": "FullBottle"
+    },
+    "Alchemist_C_Steady#2": {
+      "Keyword": "FullBottle"
+    },
+    "Alchemist_C_Steady#3": {
+      "Keyword": "FullBottle"
+    },
+    "Alchemist_C_Tolerance#1": {
+      "Keyword": "Overheal"
+    },
+    "Alchemist_C_Toxin#1": {
+      "Keyword": "Herb"
+    },
+    "Alchemist_E_LowRisk#1": {
+      "Keyword": "Taunt"
+    },
+    "Alchemist_E_LowRisk#2": {
+      "Keyword": "Taunt"
+    },
+    "Alchemist_E_MixAndStrike#3": {
+      "Keyword": "Taunt"
+    },
+    "Alchemist_E_OneShot#1": {
+      "Keyword": "FullBottle"
+    },
+    "Alchemist_R_Accelerant#1": {
+      "Keyword": "Burn"
+    },
+    "Alchemist_R_BottleKeeping#1": {
+      "Keyword": "EmptyBottle"
+    },
+    "Alchemist_R_BottleKeeping#2": {
+      "Keyword": "EmptyBottle"
+    },
+    "Alchemist_R_IronStomach#1": {
+      "Keyword": "PoisonBottle"
+    },
+    "Alchemist_R_Recycle#1": {
+      "Keyword": "EmptyBottle"
+    },
+    "Berserker_C_BloodPact#1": {
+      "Keyword": "Rage"
+    },
+    "Berserker_C_BloodPact#2": {
+      "Keyword": "Rage"
+    },
+    "Berserker_C_BloodVessel#1": {
+      "Keyword": "Rage"
+    },
+    "Berserker_C_BloodVessel#2": {
+      "Keyword": "Rage"
+    },
+    "Berserker_C_DeathWish#1": {
+      "Keyword": "CritChance"
+    },
+    "Berserker_C_DeathWish#2": {
+      "Keyword": "CritChance"
+    },
+    "Berserker_C_Ember#1": {
+      "Keyword": "Rage"
+    },
+    "Berserker_C_Numb#1": {
+      "Keyword": "Rage"
+    },
+    "Berserker_C_Numb#2": {
+      "Keyword": "Rage"
+    },
+    "Berserker_C_RageFuel#1": {
+      "Keyword": "Rage"
+    },
+    "Berserker_C_RageFuel#2": {
+      "Keyword": "Rage"
+    },
+    "Berserker_R_Wrath#1": {
+      "Keyword": "Rage"
+    },
+    "Duelist_C_Bond#1": {
+      "Keyword": "ParryWindow"
+    },
+    "Duelist_C_Composure#1": {
+      "Keyword": "Focus"
+    },
+    "Duelist_C_Composure#2": {
+      "Keyword": "Focus"
+    },
+    "Duelist_C_Conclusion#1": {
+      "Keyword": "Focus"
+    },
+    "Duelist_C_FindTheSpot#1": {
+      "Keyword": "CritChance"
+    },
+    "Duelist_C_Offense#1": {
+      "Keyword": "DamageTaken"
+    },
+    "Duelist_C_Sentry#1": {
+      "Keyword": "ParryWindow"
+    },
+    "Duelist_C_StepBack#1": {
+      "Keyword": "ParryWindow"
+    },
+    "Duelist_C_WarmUp#1": {
+      "Keyword": "Focus"
+    },
+    "Duelist_E_DoubleEdge#1": {
+      "Keyword": "Focus"
+    },
+    "Duelist_E_DoubleEdge#2": {
+      "Keyword": "Focus"
+    },
+    "Duelist_E_DoubleEdge#5": {
+      "Keyword": "Shield"
+    },
+    "Duelist_E_LightBlade#1": {
+      "Keyword": "CritDamage"
+    },
+    "Duelist_E_LightBlade#2": {
+      "Keyword": "CritDamage"
+    },
+    "Duelist_E_LightBlade#3": {
+      "Keyword": "CritDamage"
+    },
+    "Duelist_E_NamelessBlade#1": {
+      "Keyword": "Focus"
+    },
+    "Duelist_E_NamelessBlade#2": {
+      "Keyword": "Focus"
+    },
+    "Duelist_R_Bloodletting#1": {
+      "Keyword": "CritDamage"
+    },
+    "Duelist_R_Bloodletting#2": {
+      "Keyword": "CritDamage"
+    },
+    "Duelist_R_FocusBreath#1": {
+      "Keyword": "Focus"
+    },
+    "Duelist_R_FocusBreath#2": {
+      "Keyword": "Focus"
+    },
+    "Duelist_R_HonedEdge#1": {
+      "Keyword": "Focus"
+    },
+    "Duelist_R_HonedEdge#2": {
+      "Keyword": "Focus"
+    },
+    "Duelist_R_NoSpend#1": {
+      "Keyword": "Focus"
+    },
+    "Duelist_R_Pivot#1": {
+      "Keyword": "ParryWindow"
+    },
+    "Duelist_R_Vigil#1": {
+      "Keyword": "Focus"
+    },
+    "Musician_C_Applause#1": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Bowing#1": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Bowing#2": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Crescendo#1": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Echo#1": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Encore#1": {
+      "Keyword": "Meter"
+    },
+    "Musician_C_Encore#2": {
+      "Keyword": "Meter"
+    },
+    "Musician_C_HalfSpend#1": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Prelude#1": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Refrain#1": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Refrain#2": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Rosin#1": {
+      "Keyword": "Shield"
+    },
+    "Musician_C_Rosin#2": {
+      "Keyword": "Shield"
+    },
+    "Musician_C_Sixteenth#1": {
+      "Keyword": "CritChance"
+    },
+    "Musician_C_Staccato#1": {
+      "Keyword": "Note"
+    },
+    "Musician_C_Tuning#1": {
+      "Keyword": "Meter"
+    },
+    "Musician_C_Tuning#2": {
+      "Keyword": "Meter"
+    },
+    "Musician_C_Vibrato#1": {
+      "Keyword": "Brillante"
+    },
+    "Musician_E_Accompanist#1": {
+      "Keyword": "Brillante"
+    },
+    "Musician_E_LongBreath#3": {
+      "Keyword": "Brillante"
+    },
+    "Musician_R_Cadenza#1": {
+      "Keyword": "Brillante"
+    },
+    "Musician_R_Harmonic#1": {
+      "Keyword": "CritDamage"
+    },
+    "Musician_R_Harmonic#2": {
+      "Keyword": "CritDamage"
+    },
+    "Musician_R_Metronome#1": {
+      "Keyword": "Note"
+    },
+    "Musician_R_Metronome#2": {
+      "Keyword": "Note"
+    },
+    "Musician_R_Modulation#1": {
+      "Keyword": "Note"
+    },
+    "Musician_R_Ostinato#1": {
+      "Keyword": "Note"
+    },
+    "Musician_R_Sustain#1": {
+      "Keyword": "Brillante"
+    },
+    "Musician_R_Tutti#1": {
+      "Keyword": "Note"
+    },
+    "Pulsar_C_Afterimage#1": {
+      "Keyword": "Accuracy"
+    },
+    "Pulsar_C_Coil#1": {
+      "Keyword": "Resonate"
+    },
+    "Pulsar_C_Coil#2": {
+      "Keyword": "Resonate"
+    },
+    "Pulsar_C_Coil#3": {
+      "Keyword": "Resonate"
+    },
+    "Pulsar_C_DepolarDamage#1": {
+      "Keyword": "Depolar"
+    },
+    "Pulsar_C_DepolarDamage#2": {
+      "Keyword": "Depolar"
+    },
+    "Pulsar_C_LightUp#1": {
+      "Keyword": "Shield"
+    },
+    "Pulsar_C_ReflectUp#1": {
+      "Keyword": "Reflect"
+    },
+    "Pulsar_C_Residue#1": {
+      "Keyword": "Depolar"
+    },
+    "Pulsar_C_Spin#1": {
+      "Keyword": "Field"
+    },
+    "Pulsar_C_StaticField#1": {
+      "Keyword": "Reflect"
+    },
+    "Pulsar_E_DimSupernova#1": {
+      "Keyword": "Accuracy"
+    },
+    "Pulsar_E_Geostationary#1": {
+      "Keyword": "Reflect"
+    },
+    "Pulsar_E_Geostationary#2": {
+      "Keyword": "Reflect"
+    },
+    "Pulsar_E_ImperfectLight#4": {
+      "Keyword": "Accuracy"
+    },
+    "Pulsar_R_Flywheel#1": {
+      "Keyword": "Resonate"
+    },
+    "Pulsar_R_Grounding#1": {
+      "Keyword": "Depolar"
+    },
+    "Pulsar_R_Grounding#2": {
+      "Keyword": "Depolar"
+    },
+    "Pulsar_R_Lock#1": {
+      "Keyword": "Depolar"
+    },
+    "Pulsar_R_Recharge#1": {
+      "Keyword": "Field"
+    },
+    "Pulsar_R_Shroud#1": {
+      "Keyword": "Field"
+    },
+    "Quasar_C_Absorb#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_Afterglow#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_Afterglow#2": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_Cooling#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_Cooling#2": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_Emit#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_FallPractice#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_FeedMass#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_GravityCrush#1": {
+      "Keyword": "Gravity"
+    },
+    "Quasar_C_Hold#1": {
+      "Keyword": "Gravity"
+    },
+    "Quasar_C_Hull#1": {
+      "Keyword": "Shield"
+    },
+    "Quasar_C_MirrorFace#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_Planted#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_RestMass#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_SeedMass#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_TidalSwing#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_C_TidalSwing#2": {
+      "Keyword": "Mass"
+    },
+    "Quasar_E_BlackHole#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_E_EventHorizon#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_E_FierceLight#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_E_FierceLight#2": {
+      "Keyword": "Mass"
+    },
+    "Quasar_E_LightspeedCollapse#2": {
+      "Keyword": "Mass"
+    },
+    "Quasar_R_Accretion#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_R_HighDensity#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_R_HighDensity#2": {
+      "Keyword": "Mass"
+    },
+    "Quasar_R_Jet#1": {
+      "Keyword": "Gravity"
+    },
+    "Quasar_R_Jet#2": {
+      "Keyword": "Gravity"
+    },
+    "Quasar_R_Redshift#1": {
+      "Keyword": "Gravity"
+    },
+    "Quasar_R_ShoulderIt#1": {
+      "Keyword": "Mass"
+    },
+    "Quasar_R_TidalForce#1": {
+      "Keyword": "Gravity"
+    },
+    "WallBreaker_C_Cliff#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_Cliff#2": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_DebrisPlus#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_FirstCrack#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_FirstCrack#2": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_FleshPrice#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_FleshPrice#2": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_LightHand#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_LightHand#2": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_LongHaft#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_LooseBrick#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_Shard#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_ShortWindup#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_ShortWindup#2": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_Tenacity#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_C_Tenacity#2": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_E_Levelling#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_E_Martyrdom#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_E_Martyrdom#2": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_E_SelfHarm#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_E_SelfHarm#2": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_R_ChainCollapse#1": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_R_ChainCollapse#2": {
+      "Keyword": "Ruin"
+    },
+    "WallBreaker_R_Salvage#1": {
+      "Keyword": "Ruin"
+    },
+    "WallMason_C_Cushion#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_Deflect#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_EvenBreath#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_EvenBreath#2": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_Footstone#1": {
+      "Keyword": "Shield"
+    },
+    "WallMason_C_Grit#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_Grit#2": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_Groundwork#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_Harden#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_LuckyChisel#1": {
+      "Keyword": "CritChance"
+    },
+    "WallMason_C_Overlay#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_Overlay#2": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_SelfBulwark#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_Sharing#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_Sharing#2": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_StonePicking#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_C_Tireless#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_E_Cathedral#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_E_Cathedral#2": {
+      "Keyword": "Wall"
+    },
+    "WallMason_E_MasonHand#1": {
+      "Keyword": "CritChance"
+    },
+    "WallMason_E_MasonHand#2": {
+      "Keyword": "CritChance"
+    },
+    "WallMason_E_MasonHand#3": {
+      "Keyword": "CritChance"
+    },
+    "WallMason_R_BackRowAim#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_BackRowAim#2": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_Buttress#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_ChiselMastery#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_Consecration#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_FinishedWall#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_Keystone#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_Keystone#2": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_Mortar#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_Quarry#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_Relayer#1": {
+      "Keyword": "Wall"
+    },
+    "WallMason_R_Relayer#2": {
+      "Keyword": "Wall"
+    },
+    "WallPilgrim_C_Congregation#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_C_Echo#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_C_FirstNail#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_C_Guilt#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_C_Martyr#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_C_PointOut#1": {
+      "Keyword": "Brand"
+    },
+    "WallPilgrim_C_PointOut#2": {
+      "Keyword": "Brand"
+    },
+    "WallPilgrim_C_RustyNail#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_C_Setting#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_C_Weight#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_C_Weight#2": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_C_Whetted#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_E_Fanatic#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_E_Fanatic#2": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_E_Fanatic#3": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_E_NailAndHammer#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_E_NailAndHammer#2": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_Brand#1": {
+      "Keyword": "Brand"
+    },
+    "WallPilgrim_R_Brand#2": {
+      "Keyword": "Brand"
+    },
+    "WallPilgrim_R_Contagion#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_DeepNail#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_DivineOffice#1": {
+      "Keyword": "Brand"
+    },
+    "WallPilgrim_R_DivineOffice#2": {
+      "Keyword": "Brand"
+    },
+    "WallPilgrim_R_DoubleStrike#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_DoubleStrike#2": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_Offering#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_Offering#2": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_Offering#3": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_Penance#1": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_Penance#2": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_Penance#3": {
+      "Keyword": "Zeal"
+    },
+    "WallPilgrim_R_Sermon#1": {
+      "Keyword": "Zeal"
+    }
+  },
+  "cardLevels": {
+    "Alchemist_C_AmpleMeasure": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Alchemist_C_Bulk": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Alchemist_C_Cooldown": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Alchemist_C_Extract": {
+      "1": {
+        "1": 6,
+        "2": 7,
+        "3": 8,
+        "4": 10,
+        "5": 11,
+        "6": 12
+      }
+    },
+    "Alchemist_C_Floorstart": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Alchemist_C_Grind": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Alchemist_C_Herbal": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Alchemist_C_Ignite": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "Alchemist_C_Insurance": {
+      "1": {
+        "1": 40,
+        "2": 48,
+        "3": 56,
+        "4": 64,
+        "5": 72,
+        "6": 80
+      }
+    },
+    "Alchemist_C_Killherb": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Alchemist_C_Lowhp": {
+      "1": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      },
+      "2": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Alchemist_C_Satisfaction": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Alchemist_C_Sideeffect": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Alchemist_C_Slick": {
+      "1": {
+        "1": 12,
+        "2": 14,
+        "3": 17,
+        "4": 19,
+        "5": 22,
+        "6": 24
+      }
+    },
+    "Alchemist_C_Spare": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Alchemist_C_Splash": {
+      "1": {
+        "1": 40,
+        "2": 48,
+        "3": 56,
+        "4": 64,
+        "5": 72,
+        "6": 80
+      }
+    },
+    "Alchemist_C_Steady": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      },
+      "2": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "3": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Alchemist_C_Sturdy": {
+      "1": {
+        "1": 6,
+        "2": 7,
+        "3": 8,
+        "4": 10,
+        "5": 11,
+        "6": 12
+      },
+      "2": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Alchemist_C_Tolerance": {
+      "1": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      },
+      "2": {
+        "1": 90,
+        "2": 108,
+        "3": 126,
+        "4": 144,
+        "5": 162,
+        "6": 180
+      }
+    },
+    "Alchemist_C_Toxin": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Alchemist_E_LowRisk": {
+      "1": {
+        "1": 50,
+        "2": 75
+      },
+      "2": {
+        "1": 5,
+        "2": 8
+      }
+    },
+    "Alchemist_E_MixAndStrike": {
+      "1": {
+        "1": 15,
+        "2": 23
+      },
+      "2": {
+        "1": 20,
+        "2": 30
+      },
+      "3": {
+        "1": 1,
+        "2": 2
+      }
+    },
+    "Alchemist_E_OneShot": {
+      "1": {
+        "1": 2,
+        "2": 3
+      }
+    },
+    "Alchemist_R_Accelerant": {
+      "1": {
+        "1": 40,
+        "2": 48,
+        "3": 56,
+        "4": 64,
+        "5": 72,
+        "6": 80
+      }
+    },
+    "Alchemist_R_Antidote": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Alchemist_R_BottleKeeping": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      }
+    },
+    "Alchemist_R_Chain": {
+      "1": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      }
+    },
+    "Alchemist_R_Distill": {
+      "1": {
+        "1": 32,
+        "2": 38,
+        "3": 45,
+        "4": 51,
+        "5": 58,
+        "6": 64
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Alchemist_R_IronStomach": {
+      "1": {
+        "1": 1
+      }
+    },
+    "Alchemist_R_Napalm": {
+      "1": {
+        "1": 13,
+        "2": 16,
+        "3": 18,
+        "4": 21,
+        "5": 23,
+        "6": 26
+      }
+    },
+    "Alchemist_R_Reagent": {
+      "1": {
+        "1": 14,
+        "2": 17,
+        "3": 20,
+        "4": 22,
+        "5": 25,
+        "6": 28
+      }
+    },
+    "Alchemist_R_Recycle": {
+      "1": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      }
+    },
+    "Berserker_C_Bite": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Berserker_C_BloodPact": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Berserker_C_BloodVessel": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Berserker_C_Boiling": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Berserker_C_Callus": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Berserker_C_DeathWish": {
+      "1": {
+        "1": 75,
+        "2": 90,
+        "3": 105,
+        "4": 120,
+        "5": 135,
+        "6": 150
+      },
+      "2": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Berserker_C_Devour": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Berserker_C_Ember": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Berserker_C_Grudge": {
+      "1": {
+        "1": 12,
+        "2": 14,
+        "3": 17,
+        "4": 19,
+        "5": 22,
+        "6": 24
+      }
+    },
+    "Berserker_C_Headbutt": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Berserker_C_NoRetreat": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Berserker_C_Numb": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Berserker_C_Overkill": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Berserker_C_RageFuel": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Berserker_C_Ram": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 6,
+        "2": 7,
+        "3": 8,
+        "4": 10,
+        "5": 11,
+        "6": 12
+      },
+      "3": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Berserker_C_Stubborn": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Berserker_C_Swing": {
+      "1": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      }
+    },
+    "Berserker_C_ThickBlood": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Berserker_C_Trance": {
+      "1": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      },
+      "2": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      }
+    },
+    "Berserker_C_UnstoppingArm": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Berserker_E_BloodPrice": {
+      "1": {
+        "1": 10,
+        "2": 15
+      },
+      "2": {
+        "1": 25,
+        "2": 38
+      },
+      "3": {
+        "1": 1,
+        "2": 2
+      },
+      "4": {
+        "1": 3,
+        "2": 5
+      },
+      "5": {
+        "1": 10,
+        "2": 15
+      },
+      "6": {
+        "1": 40,
+        "2": 60
+      }
+    },
+    "Berserker_E_Brink": {
+      "1": {
+        "1": 10,
+        "2": 15
+      },
+      "2": {
+        "1": 8,
+        "2": 12
+      },
+      "3": {
+        "1": 50,
+        "2": 75
+      }
+    },
+    "Berserker_E_Undying": {
+      "1": {
+        "1": 1,
+        "2": 2
+      },
+      "2": {
+        "1": 30,
+        "2": 45
+      }
+    },
+    "Berserker_E_Vampire": {
+      "1": {
+        "1": 10,
+        "2": 15
+      },
+      "2": {
+        "1": 25,
+        "2": 38
+      }
+    },
+    "Berserker_R_Frenzy": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      },
+      "2": {
+        "1": 70,
+        "2": 84,
+        "3": 98,
+        "4": 112,
+        "5": 126,
+        "6": 140
+      }
+    },
+    "Berserker_R_Momentum": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Berserker_R_PainTolerance": {
+      "1": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      },
+      "2": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      },
+      "3": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Berserker_R_Reckless": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      },
+      "2": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      }
+    },
+    "Berserker_R_Roar": {
+      "1": {
+        "1": 12,
+        "2": 14,
+        "3": 17,
+        "4": 19,
+        "5": 22,
+        "6": 24
+      }
+    },
+    "Berserker_R_Scars": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      },
+      "2": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      },
+      "3": {
+        "1": 40,
+        "2": 48,
+        "3": 56,
+        "4": 64,
+        "5": 72,
+        "6": 80
+      }
+    },
+    "Berserker_R_ScentOfBlood": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Berserker_R_SecondWind": {
+      "1": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      },
+      "2": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      }
+    },
+    "Berserker_R_Sweep": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Berserker_R_Wrath": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Duelist_C_BladeTip": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 0.5,
+        "2": 0.6,
+        "3": 0.7,
+        "4": 0.8,
+        "5": 0.9,
+        "6": 1
+      }
+    },
+    "Duelist_C_BleedInduce": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Duelist_C_Bond": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Duelist_C_CatchBreath": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Duelist_C_Composure": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 0.2,
+        "2": 0.2,
+        "3": 0.3,
+        "4": 0.3,
+        "5": 0.4,
+        "6": 0.4
+      }
+    },
+    "Duelist_C_Conclusion": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Duelist_C_Defense": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Duelist_C_FindTheSpot": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Duelist_C_FlowThrough": {
+      "1": {
+        "1": 80,
+        "2": 96,
+        "3": 112,
+        "4": 128,
+        "5": 144,
+        "6": 160
+      }
+    },
+    "Duelist_C_GripWrap": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Duelist_C_LowStance": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      },
+      "2": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      }
+    },
+    "Duelist_C_Offense": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Duelist_C_Restraint": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Duelist_C_Retribution": {
+      "1": {
+        "1": 12,
+        "2": 14,
+        "3": 17,
+        "4": 19,
+        "5": 22,
+        "6": 24
+      }
+    },
+    "Duelist_C_Sentry": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Duelist_C_ShallowCut": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Duelist_C_Steady": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Duelist_C_StepBack": {
+      "1": {
+        "1": 2.5,
+        "2": 3,
+        "3": 3.5,
+        "4": 4,
+        "5": 4.5,
+        "6": 5
+      }
+    },
+    "Duelist_C_SwitchGuard": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Duelist_C_WarmUp": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Duelist_E_DoubleEdge": {
+      "1": {
+        "1": 1,
+        "2": 2
+      },
+      "2": {
+        "1": 30,
+        "2": 45
+      },
+      "3": {
+        "1": 5,
+        "2": 8
+      },
+      "4": {
+        "1": 3,
+        "2": 5
+      },
+      "5": {
+        "1": 5,
+        "2": 8
+      },
+      "6": {
+        "1": 10,
+        "2": 15
+      }
+    },
+    "Duelist_E_IronWall": {
+      "1": {
+        "1": 25,
+        "2": 38
+      },
+      "2": {
+        "1": 1,
+        "2": 2
+      }
+    },
+    "Duelist_E_LightBlade": {
+      "1": {
+        "1": 25,
+        "2": 38
+      },
+      "2": {
+        "1": 40,
+        "2": 60
+      },
+      "3": {
+        "1": 15,
+        "2": 23
+      },
+      "4": {
+        "1": 75,
+        "2": 113
+      }
+    },
+    "Duelist_E_NamelessBlade": {
+      "1": {
+        "1": 10,
+        "2": 15
+      },
+      "2": {
+        "1": 20,
+        "2": 30
+      },
+      "3": {
+        "1": 40,
+        "2": 60
+      }
+    },
+    "Duelist_R_BloodLoss": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "Duelist_R_Bloodletting": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "1": 2.5,
+        "2": 3,
+        "3": 3.5,
+        "4": 4,
+        "5": 4.5,
+        "6": 5
+      },
+      "3": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Duelist_R_Counter": {
+      "1": {
+        "1": 40,
+        "2": 48,
+        "3": 56,
+        "4": 64,
+        "5": 72,
+        "6": 80
+      }
+    },
+    "Duelist_R_Feint": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Duelist_R_FocusBreath": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Duelist_R_HonedEdge": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      },
+      "2": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      }
+    },
+    "Duelist_R_NoSpend": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Duelist_R_Pivot": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Duelist_R_Slip": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Duelist_R_Vigil": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Musician_C_Applause": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Musician_C_BarLine": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Musician_C_Bowing": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Musician_C_Crescendo": {
+      "1": {
+        "1": 0.5,
+        "2": 0.6,
+        "3": 0.7,
+        "4": 0.8,
+        "5": 0.9,
+        "6": 1
+      }
+    },
+    "Musician_C_Echo": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "Musician_C_Eighth": {
+      "1": {
+        "1": 0.5,
+        "2": 0.6,
+        "3": 0.7,
+        "4": 0.8,
+        "5": 0.9,
+        "6": 1
+      }
+    },
+    "Musician_C_Encore": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "1": 7,
+        "2": 8,
+        "3": 10,
+        "4": 11,
+        "5": 13,
+        "6": 14
+      }
+    },
+    "Musician_C_HalfSpend": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Musician_C_Lullaby": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Musician_C_Prelude": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Musician_C_Quarter": {
+      "1": {
+        "1": 0.5,
+        "2": 0.6,
+        "3": 0.7,
+        "4": 0.8,
+        "5": 0.9,
+        "6": 1
+      }
+    },
+    "Musician_C_Refrain": {
+      "1": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Musician_C_Rest": {
+      "1": {
+        "1": 6,
+        "2": 7,
+        "3": 8,
+        "4": 10,
+        "5": 11,
+        "6": 12
+      }
+    },
+    "Musician_C_Rosin": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      },
+      "2": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Musician_C_Score": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      },
+      "2": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Musician_C_Sixteenth": {
+      "1": {
+        "1": 0.2,
+        "2": 0.2,
+        "3": 0.3,
+        "4": 0.3,
+        "5": 0.4,
+        "6": 0.4
+      }
+    },
+    "Musician_C_Staccato": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Musician_C_Tuning": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "Musician_C_Vibrato": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "Musician_E_Accompanist": {
+      "1": {
+        "1": 60,
+        "2": 90
+      }
+    },
+    "Musician_E_LongBreath": {
+      "1": {
+        "1": 5,
+        "2": 8
+      },
+      "2": {
+        "1": 40,
+        "2": 60
+      },
+      "3": {
+        "1": 5,
+        "2": 8
+      }
+    },
+    "Musician_R_Cadenza": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Musician_R_Descant": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "3": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Musician_R_Fermata": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Musician_R_Harmonic": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Musician_R_Metronome": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Musician_R_Modulation": {
+      "1": {
+        "1": 3,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 3,
+        "6": 3
+      }
+    },
+    "Musician_R_Ostinato": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Musician_R_Sustain": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Musician_R_Tutti": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Pulsar_C_Afterglow": {
+      "1": {
+        "1": 6,
+        "2": 7,
+        "3": 8,
+        "4": 10,
+        "5": 11,
+        "6": 12
+      }
+    },
+    "Pulsar_C_Afterimage": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Pulsar_C_Attraction": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Pulsar_C_Backflow": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Pulsar_C_Coil": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "3": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Pulsar_C_DepolarDamage": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Pulsar_C_Discharge": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Pulsar_C_FixedAim": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "Pulsar_C_Focused": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Pulsar_C_GuardLight": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Pulsar_C_LightUp": {
+      "1": {
+        "1": 6,
+        "2": 7,
+        "3": 8,
+        "4": 10,
+        "5": 11,
+        "6": 12
+      }
+    },
+    "Pulsar_C_Orbit": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Pulsar_C_RecoilControl": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "1": 12,
+        "2": 14,
+        "3": 17,
+        "4": 19,
+        "5": 22,
+        "6": 24
+      }
+    },
+    "Pulsar_C_ReflectUp": {
+      "1": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "Pulsar_C_Residue": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Pulsar_C_Spin": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Pulsar_C_StaticField": {
+      "1": {
+        "1": 50,
+        "2": 60,
+        "3": 70,
+        "4": 80,
+        "5": 90,
+        "6": 100
+      }
+    },
+    "Pulsar_E_DimSupernova": {
+      "1": {
+        "1": -30,
+        "2": -45
+      },
+      "2": {
+        "1": 15,
+        "2": 23
+      },
+      "3": {
+        "1": 2,
+        "2": 3
+      }
+    },
+    "Pulsar_E_Geostationary": {
+      "1": {
+        "1": 2,
+        "2": 3
+      },
+      "2": {
+        "1": 3,
+        "2": 5
+      }
+    },
+    "Pulsar_E_ImperfectLight": {
+      "1": {
+        "1": 3,
+        "2": 5
+      },
+      "2": {
+        "1": 15,
+        "2": 23
+      },
+      "3": {
+        "1": 5,
+        "2": 8
+      },
+      "4": {
+        "1": -10,
+        "2": -15
+      }
+    },
+    "Pulsar_E_NuclearPasta": {
+      "1": {
+        "1": 3,
+        "2": 5
+      },
+      "2": {
+        "1": 2,
+        "2": 3
+      },
+      "3": {
+        "1": 8,
+        "2": 12
+      },
+      "4": {
+        "1": 20,
+        "2": 30
+      },
+      "5": {
+        "1": 28,
+        "2": 42
+      },
+      "6": {
+        "1": 2,
+        "2": 3
+      }
+    },
+    "Pulsar_R_Beacon": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      },
+      "2": {
+        "1": 18,
+        "2": 22,
+        "3": 25,
+        "4": 29,
+        "5": 32,
+        "6": 36
+      },
+      "3": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Pulsar_R_CriticalFlux": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Pulsar_R_Flywheel": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Pulsar_R_Grounding": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Pulsar_R_Induction": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Pulsar_R_Lock": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Pulsar_R_QteMastery": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      },
+      "2": {
+        "1": 35,
+        "2": 42,
+        "3": 49,
+        "4": 56,
+        "5": 63,
+        "6": 70
+      }
+    },
+    "Pulsar_R_Recharge": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Pulsar_R_Shroud": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Quasar_C_Absorb": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Quasar_C_Afterglow": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Quasar_C_Bulk": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Quasar_C_Cooling": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Quasar_C_Emit": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Quasar_C_FallPractice": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Quasar_C_FastCharge": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Quasar_C_FeedMass": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Quasar_C_GravityCrush": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Quasar_C_Halo": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "Quasar_C_Hold": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Quasar_C_Hull": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "Quasar_C_MirrorFace": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Quasar_C_Planted": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Quasar_C_RestMass": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Quasar_C_SeedMass": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Quasar_C_Shockwave": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "3": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "Quasar_C_Stagger": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "Quasar_C_TidalSwing": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Quasar_C_Tow": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Quasar_E_BlackHole": {
+      "1": {
+        "1": 25,
+        "2": 38
+      },
+      "2": {
+        "1": 5,
+        "2": 8
+      }
+    },
+    "Quasar_E_EventHorizon": {
+      "1": {
+        "1": 50,
+        "2": 75
+      }
+    },
+    "Quasar_E_FierceLight": {
+      "1": {
+        "1": 20,
+        "2": 30
+      },
+      "2": {
+        "1": 40,
+        "2": 60
+      }
+    },
+    "Quasar_E_LightspeedCollapse": {
+      "1": {
+        "1": 3,
+        "2": 5
+      },
+      "2": {
+        "1": 2,
+        "2": 3
+      }
+    },
+    "Quasar_R_Accretion": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "Quasar_R_ChargeGuard": {
+      "1": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      }
+    },
+    "Quasar_R_Compression": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      },
+      "2": {
+        "1": 7,
+        "2": 8,
+        "3": 10,
+        "4": 11,
+        "5": 13,
+        "6": 14
+      }
+    },
+    "Quasar_R_HighDensity": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      },
+      "2": {
+        "1": 12,
+        "2": 14,
+        "3": 17,
+        "4": 19,
+        "5": 22,
+        "6": 24
+      }
+    },
+    "Quasar_R_Jet": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Quasar_R_Overcharge": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "Quasar_R_Recoil": {
+      "1": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      }
+    },
+    "Quasar_R_Redshift": {
+      "1": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "Quasar_R_ShoulderIt": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "Quasar_R_TidalForce": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallBreaker_C_Cliff": {
+      "1": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      },
+      "2": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "WallBreaker_C_Comrade": {
+      "1": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      }
+    },
+    "WallBreaker_C_DebrisPlus": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallBreaker_C_Defenceless": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      },
+      "2": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "WallBreaker_C_FirstCrack": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      }
+    },
+    "WallBreaker_C_FleshPrice": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "WallBreaker_C_LightHand": {
+      "1": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallBreaker_C_LongHaft": {
+      "1": {
+        "1": 7,
+        "2": 8,
+        "3": 10,
+        "4": 11,
+        "5": 13,
+        "6": 14
+      }
+    },
+    "WallBreaker_C_LooseBrick": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallBreaker_C_Oblation": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "WallBreaker_C_RuinOath": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "WallBreaker_C_RuinPrayer": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallBreaker_C_SameStride": {
+      "1": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "WallBreaker_C_Shard": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "WallBreaker_C_SharedLoad": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      },
+      "2": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "WallBreaker_C_ShortWindup": {
+      "1": {
+        "1": 7,
+        "2": 8,
+        "3": 10,
+        "4": 11,
+        "5": 13,
+        "6": 14
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "WallBreaker_C_ShoveOff": {
+      "1": {
+        "1": 50,
+        "2": 60,
+        "3": 70,
+        "4": 80,
+        "5": 90,
+        "6": 100
+      }
+    },
+    "WallBreaker_C_Tenacity": {
+      "1": {
+        "1": 30,
+        "2": 36,
+        "3": 42,
+        "4": 48,
+        "5": 54,
+        "6": 60
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallBreaker_C_Tireless": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "WallBreaker_C_WeakPoint": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "WallBreaker_E_BrokenRampart": {
+      "1": {
+        "1": 5,
+        "2": 8
+      },
+      "2": {
+        "1": 5,
+        "2": 8
+      }
+    },
+    "WallBreaker_E_Levelling": {
+      "1": {
+        "1": 7,
+        "2": 11
+      }
+    },
+    "WallBreaker_E_Martyrdom": {
+      "1": {
+        "1": 5,
+        "2": 8
+      },
+      "2": {
+        "1": 20,
+        "2": 30
+      }
+    },
+    "WallBreaker_E_SelfHarm": {
+      "1": {
+        "1": 5,
+        "2": 8
+      },
+      "2": {
+        "1": 50,
+        "2": 75
+      }
+    },
+    "WallBreaker_R_ChainCollapse": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallBreaker_R_Dirge": {
+      "1": {
+        "1": 40,
+        "2": 48,
+        "3": 56,
+        "4": 64,
+        "5": 72,
+        "6": 80
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallBreaker_R_DullFlesh": {
+      "1": {
+        "1": 0.2,
+        "2": 0.2,
+        "3": 0.3,
+        "4": 0.3,
+        "5": 0.4,
+        "6": 0.4
+      }
+    },
+    "WallBreaker_R_Madness": {
+      "1": {
+        "1": 35,
+        "2": 42,
+        "3": 49,
+        "4": 56,
+        "5": 63,
+        "6": 70
+      }
+    },
+    "WallBreaker_R_Overkill": {
+      "1": {
+        "1": 60,
+        "2": 72,
+        "3": 84,
+        "4": 96,
+        "5": 108,
+        "6": 120
+      }
+    },
+    "WallBreaker_R_PaidBack": {
+      "1": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      }
+    },
+    "WallBreaker_R_Reliquary": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "WallBreaker_R_Salvage": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallBreaker_R_SoftBlow": {
+      "1": {
+        "1": 13,
+        "2": 16,
+        "3": 18,
+        "4": 21,
+        "5": 23,
+        "6": 26
+      }
+    },
+    "WallBreaker_R_Swallow": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "WallMason_C_Cushion": {
+      "1": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "WallMason_C_Deflect": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "WallMason_C_DriveWedge": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_EvenBreath": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_Footstone": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "WallMason_C_Grit": {
+      "1": {
+        "1": 50,
+        "2": 60,
+        "3": 70,
+        "4": 80,
+        "5": 90,
+        "6": 100
+      },
+      "2": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "WallMason_C_Groundwork": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_Harden": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_LongChisel": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_LuckyChisel": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "WallMason_C_MasonOath": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      },
+      "2": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "3": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "WallMason_C_MasonPrayer": {
+      "1": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "WallMason_C_Overlay": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_QuickRite": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_SameStone": {
+      "1": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "WallMason_C_SelfBulwark": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_Sharing": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_StoneOffering": {
+      "1": {
+        "1": 6,
+        "2": 7,
+        "3": 8,
+        "4": 10,
+        "5": 11,
+        "6": 12
+      }
+    },
+    "WallMason_C_StonePicking": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_C_Tireless": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_E_Cathedral": {
+      "1": {
+        "1": 5,
+        "2": 8
+      },
+      "2": {
+        "1": 10,
+        "2": 15
+      },
+      "3": {
+        "1": 6,
+        "2": 9
+      }
+    },
+    "WallMason_E_Cornerstone": {
+      "1": {
+        "1": 5,
+        "2": 8
+      },
+      "2": {
+        "1": 5,
+        "2": 8
+      },
+      "3": {
+        "1": 2,
+        "2": 3
+      }
+    },
+    "WallMason_E_MasonHand": {
+      "1": {
+        "1": 1,
+        "2": 2
+      },
+      "2": {
+        "1": 5,
+        "2": 8
+      },
+      "3": {
+        "1": 2,
+        "2": 3
+      }
+    },
+    "WallMason_R_BackRowAim": {
+      "1": {
+        "1": 6,
+        "2": 7,
+        "3": 8,
+        "4": 10,
+        "5": 11,
+        "6": 12
+      },
+      "2": {
+        "1": 9,
+        "2": 11,
+        "3": 13,
+        "4": 14,
+        "5": 16,
+        "6": 18
+      }
+    },
+    "WallMason_R_Blessing": {
+      "1": {
+        "1": 12,
+        "2": 14,
+        "3": 17,
+        "4": 19,
+        "5": 22,
+        "6": 24
+      }
+    },
+    "WallMason_R_Buttress": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_R_ChiselMastery": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_R_Consecration": {
+      "1": {
+        "1": 40,
+        "2": 48,
+        "3": 56,
+        "4": 64,
+        "5": 72,
+        "6": 80
+      }
+    },
+    "WallMason_R_FinishedWall": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "WallMason_R_Keystone": {
+      "1": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      },
+      "2": {
+        "1": 20,
+        "2": 24,
+        "3": 28,
+        "4": 32,
+        "5": 36,
+        "6": 40
+      }
+    },
+    "WallMason_R_Mortar": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "WallMason_R_Quarry": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallMason_R_Relayer": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallPilgrim_C_Alms": {
+      "1": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "WallPilgrim_C_Companion": {
+      "1": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "WallPilgrim_C_Congregation": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "WallPilgrim_C_Echo": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallPilgrim_C_FirstNail": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "WallPilgrim_C_Guilt": {
+      "1": {
+        "1": 25,
+        "2": 30,
+        "3": 35,
+        "4": 40,
+        "5": 45,
+        "6": 50
+      }
+    },
+    "WallPilgrim_C_Hymn": {
+      "1": {
+        "1": 8,
+        "2": 10,
+        "3": 11,
+        "4": 13,
+        "5": 14,
+        "6": 16
+      }
+    },
+    "WallPilgrim_C_Inherited": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      }
+    },
+    "WallPilgrim_C_LongArm": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallPilgrim_C_Martyr": {
+      "1": {
+        "1": 6,
+        "2": 7,
+        "3": 8,
+        "4": 10,
+        "5": 11,
+        "6": 12
+      }
+    },
+    "WallPilgrim_C_Meditation": {
+      "1": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "WallPilgrim_C_NailHole": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "WallPilgrim_C_PointOut": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 4,
+        "2": 5,
+        "3": 6,
+        "4": 6,
+        "5": 7,
+        "6": 8
+      }
+    },
+    "WallPilgrim_C_RustyNail": {
+      "1": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "WallPilgrim_C_Setting": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallPilgrim_C_ShortPrayer": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallPilgrim_C_Weight": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 0.5,
+        "2": 0.6,
+        "3": 0.7,
+        "4": 0.8,
+        "5": 0.9,
+        "6": 1
+      },
+      "3": {
+        "1": 5,
+        "2": 6,
+        "3": 7,
+        "4": 8,
+        "5": 9,
+        "6": 10
+      }
+    },
+    "WallPilgrim_C_Whetted": {
+      "1": {
+        "1": 12,
+        "2": 14,
+        "3": 17,
+        "4": 19,
+        "5": 22,
+        "6": 24
+      }
+    },
+    "WallPilgrim_E_Evangelism": {
+      "1": {
+        "1": 6,
+        "2": 9
+      }
+    },
+    "WallPilgrim_E_Fanatic": {
+      "1": {
+        "1": 10,
+        "2": 15
+      },
+      "2": {
+        "1": 20,
+        "2": 30
+      },
+      "3": {
+        "1": 3,
+        "2": 5
+      }
+    },
+    "WallPilgrim_E_NailAndHammer": {
+      "1": {
+        "1": 1,
+        "2": 2
+      },
+      "2": {
+        "1": 2,
+        "2": 3
+      }
+    },
+    "WallPilgrim_E_Stigmata": {
+      "1": {
+        "1": 1,
+        "2": 2
+      },
+      "2": {
+        "1": 3,
+        "2": 5
+      }
+    },
+    "WallPilgrim_R_Brand": {
+      "1": {
+        "1": 3,
+        "2": 4,
+        "3": 4,
+        "4": 5,
+        "5": 5,
+        "6": 6
+      },
+      "2": {
+        "1": 15,
+        "2": 18,
+        "3": 21,
+        "4": 24,
+        "5": 27,
+        "6": 30
+      }
+    },
+    "WallPilgrim_R_Contagion": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallPilgrim_R_DeepNail": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallPilgrim_R_DivineOffice": {
+      "1": {
+        "1": 40,
+        "2": 48,
+        "3": 56,
+        "4": 64,
+        "5": 72,
+        "6": 80
+      },
+      "2": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "WallPilgrim_R_DoubleStrike": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    },
+    "WallPilgrim_R_Offering": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "3": {
+        "1": 10,
+        "2": 12,
+        "3": 14,
+        "4": 16,
+        "5": 18,
+        "6": 20
+      }
+    },
+    "WallPilgrim_R_Penance": {
+      "1": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      },
+      "2": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      },
+      "3": {
+        "1": 2,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 4,
+        "6": 4
+      }
+    },
+    "WallPilgrim_R_PilgrimStaff": {
+      "1": {
+        "1": 12,
+        "2": 14,
+        "3": 17,
+        "4": 19,
+        "5": 22,
+        "6": 24
+      }
+    },
+    "WallPilgrim_R_Sermon": {
+      "1": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    }
+  },
+  "cardUnits": {
+    "Alchemist_C_Bulk#1": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Floorstart#1": {
+      "Unit": "개"
+    },
+    "Alchemist_C_Herbal#2": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Insurance#1": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Lowhp#1": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Lowhp#2": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Satisfaction#1": {
+      "Unit": "개"
+    },
+    "Alchemist_C_Satisfaction#2": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Sideeffect#1": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Slick#1": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Splash#1": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Steady#1": {
+      "Unit": "턴"
+    },
+    "Alchemist_C_Steady#2": {
+      "Unit": "회"
+    },
+    "Alchemist_C_Steady#3": {
+      "Unit": "개"
+    },
+    "Alchemist_C_Sturdy#2": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Tolerance#1": {
+      "Unit": "%"
+    },
+    "Alchemist_C_Tolerance#2": {
+      "Unit": "%"
+    },
+    "Alchemist_E_LowRisk#1": {
+      "Unit": "%"
+    },
+    "Alchemist_E_OneShot#1": {
+      "Unit": "턴"
+    },
+    "Alchemist_R_Accelerant#1": {
+      "Unit": "%"
+    },
+    "Alchemist_R_Antidote#1": {
+      "Unit": "개"
+    },
+    "Alchemist_R_Antidote#2": {
+      "Unit": "턴"
+    },
+    "Alchemist_R_BottleKeeping#1": {
+      "Unit": "개"
+    },
+    "Alchemist_R_BottleKeeping#2": {
+      "Unit": "%"
+    },
+    "Alchemist_R_Chain#1": {
+      "Unit": "%"
+    },
+    "Alchemist_R_Distill#1": {
+      "Unit": "%"
+    },
+    "Alchemist_R_Distill#2": {
+      "Unit": "개"
+    },
+    "Alchemist_R_Recycle#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_Bite#1": {
+      "Unit": "턴"
+    },
+    "Berserker_C_BloodPact#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_BloodVessel#1": {
+      "Unit": "회"
+    },
+    "Berserker_C_Boiling#2": {
+      "Unit": "%"
+    },
+    "Berserker_C_Callus#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_DeathWish#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_DeathWish#2": {
+      "Unit": "%"
+    },
+    "Berserker_C_Devour#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_Grudge#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_Headbutt#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_Headbutt#2": {
+      "Unit": "턴"
+    },
+    "Berserker_C_NoRetreat#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_Numb#1": {
+      "Unit": "회"
+    },
+    "Berserker_C_Overkill#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_Ram#2": {
+      "Unit": "%"
+    },
+    "Berserker_C_Stubborn#1": {
+      "Unit": "턴"
+    },
+    "Berserker_C_Swing#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_ThickBlood#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_Trance#1": {
+      "Unit": "%"
+    },
+    "Berserker_C_Trance#2": {
+      "Unit": "%"
+    },
+    "Berserker_C_UnstoppingArm#1": {
+      "Unit": "%"
+    },
+    "Berserker_E_Brink#1": {
+      "Unit": "%"
+    },
+    "Berserker_E_Brink#2": {
+      "Unit": "%"
+    },
+    "Berserker_E_Brink#3": {
+      "Unit": "%"
+    },
+    "Berserker_E_Undying#2": {
+      "Unit": "%"
+    },
+    "Berserker_E_Vampire#1": {
+      "Unit": "%"
+    },
+    "Berserker_E_Vampire#2": {
+      "Unit": "%"
+    },
+    "Berserker_R_Frenzy#2": {
+      "Unit": "%"
+    },
+    "Berserker_R_Momentum#1": {
+      "Unit": "%"
+    },
+    "Berserker_R_PainTolerance#1": {
+      "Unit": "%"
+    },
+    "Berserker_R_PainTolerance#2": {
+      "Unit": "%"
+    },
+    "Berserker_R_Reckless#1": {
+      "Unit": "%"
+    },
+    "Berserker_R_Reckless#2": {
+      "Unit": "%"
+    },
+    "Berserker_R_Roar#1": {
+      "Unit": "%"
+    },
+    "Berserker_R_Scars#1": {
+      "Unit": "%"
+    },
+    "Berserker_R_Scars#2": {
+      "Unit": "%"
+    },
+    "Berserker_R_Scars#3": {
+      "Unit": "%"
+    },
+    "Berserker_R_ScentOfBlood#1": {
+      "Unit": "%"
+    },
+    "Berserker_R_SecondWind#1": {
+      "Unit": "%"
+    },
+    "Berserker_R_SecondWind#2": {
+      "Unit": "%"
+    },
+    "Berserker_R_Sweep#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_BladeTip#2": {
+      "Unit": "%"
+    },
+    "Duelist_C_BleedInduce#1": {
+      "Unit": "턴"
+    },
+    "Duelist_C_Bond#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_Composure#2": {
+      "Unit": "%"
+    },
+    "Duelist_C_Defense#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_FindTheSpot#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_FlowThrough#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_GripWrap#1": {
+      "Unit": "턴"
+    },
+    "Duelist_C_LowStance#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_LowStance#2": {
+      "Unit": "%"
+    },
+    "Duelist_C_Offense#1": {
+      "Unit": "%p"
+    },
+    "Duelist_C_Restraint#1": {
+      "Unit": "턴"
+    },
+    "Duelist_C_Retribution#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_Sentry#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_ShallowCut#1": {
+      "Unit": "턴"
+    },
+    "Duelist_C_Steady#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_StepBack#1": {
+      "Unit": "%"
+    },
+    "Duelist_C_SwitchGuard#1": {
+      "Unit": "%"
+    },
+    "Duelist_E_DoubleEdge#2": {
+      "Unit": "%"
+    },
+    "Duelist_E_DoubleEdge#6": {
+      "Unit": "%"
+    },
+    "Duelist_E_IronWall#1": {
+      "Unit": "%"
+    },
+    "Duelist_E_IronWall#2": {
+      "Unit": "회"
+    },
+    "Duelist_E_LightBlade#1": {
+      "Unit": "%"
+    },
+    "Duelist_E_LightBlade#2": {
+      "Unit": "%"
+    },
+    "Duelist_E_LightBlade#3": {
+      "Unit": "%"
+    },
+    "Duelist_E_LightBlade#4": {
+      "Unit": "%"
+    },
+    "Duelist_E_NamelessBlade#3": {
+      "Unit": "%"
+    },
+    "Duelist_R_BloodLoss#1": {
+      "Unit": "%"
+    },
+    "Duelist_R_Bloodletting#1": {
+      "Unit": "턴"
+    },
+    "Duelist_R_Bloodletting#2": {
+      "Unit": "%"
+    },
+    "Duelist_R_Bloodletting#3": {
+      "Unit": "중첩"
+    },
+    "Duelist_R_Counter#1": {
+      "Unit": "%"
+    },
+    "Duelist_R_Feint#1": {
+      "Unit": "%"
+    },
+    "Duelist_R_FocusBreath#1": {
+      "Unit": "턴"
+    },
+    "Duelist_R_HonedEdge#2": {
+      "Unit": "%"
+    },
+    "Duelist_R_NoSpend#1": {
+      "Unit": "턴"
+    },
+    "Duelist_R_Pivot#1": {
+      "Unit": "%"
+    },
+    "Duelist_R_Slip#1": {
+      "Unit": "%"
+    },
+    "Musician_C_Applause#1": {
+      "Unit": "개"
+    },
+    "Musician_C_Bowing#1": {
+      "Unit": "회"
+    },
+    "Musician_C_Bowing#2": {
+      "Unit": "개"
+    },
+    "Musician_C_Crescendo#1": {
+      "Unit": "%"
+    },
+    "Musician_C_Echo#1": {
+      "Unit": "%"
+    },
+    "Musician_C_Eighth#1": {
+      "Unit": "%p"
+    },
+    "Musician_C_Encore#2": {
+      "Unit": "%"
+    },
+    "Musician_C_HalfSpend#1": {
+      "Unit": "개"
+    },
+    "Musician_C_Lullaby#1": {
+      "Unit": "%"
+    },
+    "Musician_C_Prelude#1": {
+      "Unit": "%"
+    },
+    "Musician_C_Quarter#1": {
+      "Unit": "%"
+    },
+    "Musician_C_Refrain#1": {
+      "Unit": "개"
+    },
+    "Musician_C_Refrain#2": {
+      "Unit": "%"
+    },
+    "Musician_C_Score#1": {
+      "Unit": "회"
+    },
+    "Musician_C_Score#2": {
+      "Unit": "%"
+    },
+    "Musician_C_Sixteenth#1": {
+      "Unit": "%p"
+    },
+    "Musician_C_Staccato#1": {
+      "Unit": "%"
+    },
+    "Musician_C_Tuning#2": {
+      "Unit": "%"
+    },
+    "Musician_C_Vibrato#1": {
+      "Unit": "%"
+    },
+    "Musician_E_Accompanist#1": {
+      "Unit": "배"
+    },
+    "Musician_E_LongBreath#1": {
+      "Unit": "%"
+    },
+    "Musician_E_LongBreath#2": {
+      "Unit": "%"
+    },
+    "Musician_E_LongBreath#3": {
+      "Unit": "%"
+    },
+    "Musician_R_Cadenza#1": {
+      "Unit": "%"
+    },
+    "Musician_R_Descant#1": {
+      "Unit": "회"
+    },
+    "Musician_R_Descant#2": {
+      "Unit": "개"
+    },
+    "Musician_R_Descant#3": {
+      "Unit": "%"
+    },
+    "Musician_R_Fermata#1": {
+      "Unit": "개"
+    },
+    "Musician_R_Fermata#2": {
+      "Unit": "턴"
+    },
+    "Musician_R_Harmonic#1": {
+      "Unit": "개"
+    },
+    "Musician_R_Harmonic#2": {
+      "Unit": "%"
+    },
+    "Musician_R_Metronome#1": {
+      "Unit": "턴"
+    },
+    "Musician_R_Metronome#2": {
+      "Unit": "개"
+    },
+    "Musician_R_Modulation#1": {
+      "Unit": "배"
+    },
+    "Musician_R_Ostinato#1": {
+      "Unit": "회"
+    },
+    "Musician_R_Sustain#1": {
+      "Unit": "턴"
+    },
+    "Pulsar_C_Afterimage#1": {
+      "Unit": "%"
+    },
+    "Pulsar_C_Attraction#1": {
+      "Unit": "%"
+    },
+    "Pulsar_C_Coil#2": {
+      "Unit": "칸"
+    },
+    "Pulsar_C_Coil#3": {
+      "Unit": "칸"
+    },
+    "Pulsar_C_DepolarDamage#2": {
+      "Unit": "%"
+    },
+    "Pulsar_C_Discharge#1": {
+      "Unit": "칸"
+    },
+    "Pulsar_C_FixedAim#1": {
+      "Unit": "%"
+    },
+    "Pulsar_C_Focused#1": {
+      "Unit": "%"
+    },
+    "Pulsar_C_GuardLight#1": {
+      "Unit": "%"
+    },
+    "Pulsar_C_Orbit#1": {
+      "Unit": "%"
+    },
+    "Pulsar_C_RecoilControl#1": {
+      "Unit": "회"
+    },
+    "Pulsar_C_RecoilControl#2": {
+      "Unit": "%"
+    },
+    "Pulsar_C_Residue#1": {
+      "Unit": "턴"
+    },
+    "Pulsar_C_StaticField#1": {
+      "Unit": "%"
+    },
+    "Pulsar_E_DimSupernova#1": {
+      "Unit": "%"
+    },
+    "Pulsar_E_DimSupernova#2": {
+      "Unit": "%"
+    },
+    "Pulsar_E_DimSupernova#3": {
+      "Unit": "턴"
+    },
+    "Pulsar_E_Geostationary#1": {
+      "Unit": "배"
+    },
+    "Pulsar_E_Geostationary#2": {
+      "Unit": "턴"
+    },
+    "Pulsar_E_ImperfectLight#2": {
+      "Unit": "%"
+    },
+    "Pulsar_E_ImperfectLight#4": {
+      "Unit": "%"
+    },
+    "Pulsar_E_NuclearPasta#1": {
+      "Unit": "턴"
+    },
+    "Pulsar_E_NuclearPasta#2": {
+      "Unit": "턴"
+    },
+    "Pulsar_E_NuclearPasta#6": {
+      "Unit": "배"
+    },
+    "Pulsar_R_Beacon#1": {
+      "Unit": "%"
+    },
+    "Pulsar_R_Beacon#2": {
+      "Unit": "%"
+    },
+    "Pulsar_R_Beacon#3": {
+      "Unit": "턴"
+    },
+    "Pulsar_R_CriticalFlux#2": {
+      "Unit": "턴"
+    },
+    "Pulsar_R_Grounding#1": {
+      "Unit": "중첩"
+    },
+    "Pulsar_R_Grounding#2": {
+      "Unit": "%"
+    },
+    "Pulsar_R_Induction#1": {
+      "Unit": "중첩"
+    },
+    "Pulsar_R_Lock#1": {
+      "Unit": "턴"
+    },
+    "Pulsar_R_QteMastery#1": {
+      "Unit": "%"
+    },
+    "Pulsar_R_QteMastery#2": {
+      "Unit": "%"
+    },
+    "Pulsar_R_Recharge#1": {
+      "Unit": "턴"
+    },
+    "Pulsar_R_Shroud#1": {
+      "Unit": "턴"
+    },
+    "Quasar_C_Absorb#1": {
+      "Unit": "%"
+    },
+    "Quasar_C_Bulk#1": {
+      "Unit": "%"
+    },
+    "Quasar_C_Cooling#2": {
+      "Unit": "턴"
+    },
+    "Quasar_C_Emit#1": {
+      "Unit": "%"
+    },
+    "Quasar_C_FastCharge#1": {
+      "Unit": "턴"
+    },
+    "Quasar_C_FastCharge#2": {
+      "Unit": "%"
+    },
+    "Quasar_C_GravityCrush#1": {
+      "Unit": "%"
+    },
+    "Quasar_C_Halo#1": {
+      "Unit": "%"
+    },
+    "Quasar_C_Hold#1": {
+      "Unit": "턴"
+    },
+    "Quasar_C_Hull#1": {
+      "Unit": "%"
+    },
+    "Quasar_C_MirrorFace#1": {
+      "Unit": "%"
+    },
+    "Quasar_C_Shockwave#1": {
+      "Unit": "단계"
+    },
+    "Quasar_C_Shockwave#2": {
+      "Unit": "칸"
+    },
+    "Quasar_C_Stagger#1": {
+      "Unit": "턴"
+    },
+    "Quasar_C_Stagger#2": {
+      "Unit": "%"
+    },
+    "Quasar_C_TidalSwing#1": {
+      "Unit": "턴"
+    },
+    "Quasar_C_Tow#1": {
+      "Unit": "칸"
+    },
+    "Quasar_E_BlackHole#1": {
+      "Unit": "%"
+    },
+    "Quasar_E_BlackHole#2": {
+      "Unit": "%"
+    },
+    "Quasar_E_EventHorizon#1": {
+      "Unit": "%"
+    },
+    "Quasar_E_LightspeedCollapse#1": {
+      "Unit": "단계"
+    },
+    "Quasar_E_LightspeedCollapse#2": {
+      "Unit": "턴"
+    },
+    "Quasar_R_ChargeGuard#1": {
+      "Unit": "%"
+    },
+    "Quasar_R_Compression#1": {
+      "Unit": "%"
+    },
+    "Quasar_R_Compression#2": {
+      "Unit": "%"
+    },
+    "Quasar_R_HighDensity#2": {
+      "Unit": "%"
+    },
+    "Quasar_R_Jet#1": {
+      "Unit": "단계"
+    },
+    "Quasar_R_Jet#2": {
+      "Unit": "턴"
+    },
+    "Quasar_R_Overcharge#1": {
+      "Unit": "턴"
+    },
+    "Quasar_R_Recoil#1": {
+      "Unit": "%"
+    },
+    "Quasar_R_Redshift#1": {
+      "Unit": "%"
+    },
+    "Quasar_R_TidalForce#1": {
+      "Unit": "칸"
+    },
+    "WallBreaker_C_Cliff#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_Cliff#2": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_Comrade#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_Defenceless#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_Defenceless#2": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_FirstCrack#2": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_LightHand#2": {
+      "Unit": "턴"
+    },
+    "WallBreaker_C_LooseBrick#2": {
+      "Unit": "회"
+    },
+    "WallBreaker_C_RuinOath#2": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_Shard#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_SharedLoad#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_SharedLoad#2": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_ShortWindup#2": {
+      "Unit": "턴"
+    },
+    "WallBreaker_C_Tenacity#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_C_WeakPoint#2": {
+      "Unit": "%"
+    },
+    "WallBreaker_E_BrokenRampart#2": {
+      "Unit": "%"
+    },
+    "WallBreaker_E_Levelling#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_E_Martyrdom#2": {
+      "Unit": "%"
+    },
+    "WallBreaker_E_SelfHarm#2": {
+      "Unit": "%"
+    },
+    "WallBreaker_R_ChainCollapse#1": {
+      "Unit": "명"
+    },
+    "WallBreaker_R_DullFlesh#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_R_Madness#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_R_Overkill#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_R_PaidBack#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_R_SoftBlow#1": {
+      "Unit": "%"
+    },
+    "WallBreaker_R_Swallow#1": {
+      "Unit": "%"
+    },
+    "WallMason_C_Cushion#1": {
+      "Unit": "%"
+    },
+    "WallMason_C_Deflect#1": {
+      "Unit": "%"
+    },
+    "WallMason_C_DriveWedge#1": {
+      "Unit": "중첩"
+    },
+    "WallMason_C_Grit#1": {
+      "Unit": "%"
+    },
+    "WallMason_C_Grit#2": {
+      "Unit": "%"
+    },
+    "WallMason_C_Groundwork#1": {
+      "Unit": "중첩"
+    },
+    "WallMason_C_Harden#1": {
+      "Unit": "턴"
+    },
+    "WallMason_C_LongChisel#1": {
+      "Unit": "칸"
+    },
+    "WallMason_C_LuckyChisel#1": {
+      "Unit": "%"
+    },
+    "WallMason_C_MasonOath#2": {
+      "Unit": "%"
+    },
+    "WallMason_C_MasonOath#3": {
+      "Unit": "%"
+    },
+    "WallMason_C_Overlay#1": {
+      "Unit": "회"
+    },
+    "WallMason_C_Overlay#2": {
+      "Unit": "중첩"
+    },
+    "WallMason_C_QuickRite#1": {
+      "Unit": "턴"
+    },
+    "WallMason_C_SelfBulwark#1": {
+      "Unit": "중첩"
+    },
+    "WallMason_C_Sharing#1": {
+      "Unit": "회"
+    },
+    "WallMason_C_Sharing#2": {
+      "Unit": "중첩"
+    },
+    "WallMason_C_Tireless#1": {
+      "Unit": "중첩"
+    },
+    "WallMason_E_Cathedral#3": {
+      "Unit": "턴"
+    },
+    "WallMason_E_Cornerstone#2": {
+      "Unit": "턴"
+    },
+    "WallMason_E_Cornerstone#3": {
+      "Unit": "턴"
+    },
+    "WallMason_E_MasonHand#2": {
+      "Unit": "%"
+    },
+    "WallMason_E_MasonHand#3": {
+      "Unit": "%"
+    },
+    "WallMason_R_BackRowAim#1": {
+      "Unit": "%"
+    },
+    "WallMason_R_BackRowAim#2": {
+      "Unit": "%"
+    },
+    "WallMason_R_Buttress#1": {
+      "Unit": "턴"
+    },
+    "WallMason_R_ChiselMastery#1": {
+      "Unit": "중첩"
+    },
+    "WallMason_R_FinishedWall#1": {
+      "Unit": "%"
+    },
+    "WallMason_R_Keystone#1": {
+      "Unit": "%"
+    },
+    "WallMason_R_Keystone#2": {
+      "Unit": "%"
+    },
+    "WallMason_R_Mortar#1": {
+      "Unit": "%"
+    },
+    "WallMason_R_Quarry#1": {
+      "Unit": "중첩"
+    },
+    "WallMason_R_Relayer#1": {
+      "Unit": "회"
+    },
+    "WallMason_R_Relayer#2": {
+      "Unit": "중첩"
+    },
+    "WallPilgrim_C_Congregation#1": {
+      "Unit": "%"
+    },
+    "WallPilgrim_C_Echo#1": {
+      "Unit": "중첩"
+    },
+    "WallPilgrim_C_FirstNail#1": {
+      "Unit": "중첩"
+    },
+    "WallPilgrim_C_Guilt#1": {
+      "Unit": "%"
+    },
+    "WallPilgrim_C_LongArm#1": {
+      "Unit": "칸"
+    },
+    "WallPilgrim_C_PointOut#1": {
+      "Unit": "회"
+    },
+    "WallPilgrim_C_RustyNail#1": {
+      "Unit": "%"
+    },
+    "WallPilgrim_C_Setting#1": {
+      "Unit": "턴"
+    },
+    "WallPilgrim_C_ShortPrayer#1": {
+      "Unit": "턴"
+    },
+    "WallPilgrim_C_Weight#2": {
+      "Unit": "%"
+    },
+    "WallPilgrim_C_Whetted#1": {
+      "Unit": "%"
+    },
+    "WallPilgrim_E_Evangelism#1": {
+      "Unit": "턴"
+    },
+    "WallPilgrim_E_Fanatic#3": {
+      "Unit": "%"
+    },
+    "WallPilgrim_E_NailAndHammer#2": {
+      "Unit": "%"
+    },
+    "WallPilgrim_R_Brand#1": {
+      "Unit": "턴"
+    },
+    "WallPilgrim_R_Brand#2": {
+      "Unit": "%"
+    },
+    "WallPilgrim_R_Contagion#1": {
+      "Unit": "중첩"
+    },
+    "WallPilgrim_R_DeepNail#1": {
+      "Unit": "중첩"
+    },
+    "WallPilgrim_R_DivineOffice#2": {
+      "Unit": "턴"
+    },
+    "WallPilgrim_R_DoubleStrike#1": {
+      "Unit": "회"
+    },
+    "WallPilgrim_R_DoubleStrike#2": {
+      "Unit": "중첩"
+    },
+    "WallPilgrim_R_Penance#1": {
+      "Unit": "회"
+    },
+    "WallPilgrim_R_Penance#2": {
+      "Unit": "중첩"
+    },
+    "WallPilgrim_R_Sermon#1": {
+      "Unit": "중첩"
+    }
+  },
+  "cards": {
+    "Alchemist_C_AmpleMeasure": {
+      "Description": "[약재] 상한이 {8}로 오른다."
+    },
+    "Alchemist_C_Bulk": {
+      "Description": "`벌크업` 패시브의 [가하는 피해량 증가]와 [받는 피해량 증가]가 각각 {2}% 상승한다."
+    },
+    "Alchemist_C_Cooldown": {
+      "Description": "매 턴, [약재]를 {1}씩 소모해 [원액]을 {1} 얻는다."
+    },
+    "Alchemist_C_Extract": {
+      "Description": "[원액] 상한이 {6}으로 증가한다."
+    },
+    "Alchemist_C_Floorstart": {
+      "Description": "전투 시작 시 [꽉 찬 병]을 무작위로 {1}개 얻는다."
+    },
+    "Alchemist_C_Grind": {
+      "Description": "`다지기` 스킬로 얻는 [원액]이 {1} 증가한다.[약재]의 소모량은 증가하지 않는다."
+    },
+    "Alchemist_C_Herbal": {
+      "Description": "[약재] {1}당 [받는 회복량]이 {1}% 증가한다."
+    },
+    "Alchemist_C_Ignite": {
+      "Description": "[기름] 상태이상을 보유중인 적에게 [화염병] 적중 시 {15}의 고정피해를 가한다."
+    },
+    "Alchemist_C_Insurance": {
+      "Description": "`보험` 패시브의 회복량이 {40}%로 증가한다."
+    },
+    "Alchemist_C_Killherb": {
+      "Description": "적 처치 시 [약재]를 {2} 얻는다."
+    },
+    "Alchemist_C_Lowhp": {
+      "Description": "체력이 {30}% 이하일 때 가하는 피해량이 {8}% 증가한다."
+    },
+    "Alchemist_C_Satisfaction": {
+      "Description": "보유한 [꽉 찬 병] {1}개당 가하는 피해량이 {3}% 증가한다."
+    },
+    "Alchemist_C_Sideeffect": {
+      "Description": "`부작용` 패시브로 인해 얻는 [받는 피해량 증가] 효과가 {3}% 감소한다."
+    },
+    "Alchemist_C_Slick": {
+      "Description": "[기름]이 걸린 적이 가하는 피해량이 {12}% 감소한다."
+    },
+    "Alchemist_C_Spare": {
+      "Description": "전투 시작 시 [빈 병]을 {2} 더 얻는다."
+    },
+    "Alchemist_C_Splash": {
+      "Description": "`던지기` 스킬이 인접한 적에게도 스킬 피해량의 {40}%를 가한다."
+    },
+    "Alchemist_C_Steady": {
+      "Description": "{5}턴 내에 `섞기` 스킬을 {3}회 이상 사용했다면, 무작위 [꽉 찬 병]을 {1}개 추가로 얻는다."
+    },
+    "Alchemist_C_Sturdy": {
+      "Description": "[꽉 찬 병]과 [빈 병]의 합이 {6} 이상일 때 받는 피해량이 {10}% 감소한다."
+    },
+    "Alchemist_C_Tolerance": {
+      "Description": "[과다 회복] 상태이상을 보유한 상태에서 도트 피해로 받는 피해량이 {30}% 감소한다.[과다 회복] 상태이상을 보유한 상태에서 [받는 회복량]이 {90}% 감소한다."
+    },
+    "Alchemist_C_Toxin": {
+      "Description": "매 턴 얻는 [약재]가 {1} 증가한다."
+    },
+    "Alchemist_E_LowRisk": {
+      "Description": "스킬로 얻는 부작용이 전부 [받는 피해량 감소]로 바뀐다.대신 가하는 피해량이 {50}% 감소한다매 공격마다 [도발]을 {5} 얻는다.부작용은 체력 감소도 포함 된다."
+    },
+    "Alchemist_E_MixAndStrike": {
+      "Description": "`다지기` 스킬에 피해량 {15}가 붙고 범위가 (n,n)이 된다.`섞기` 스킬에 피해량 {20}이 붙고 범위가 (n,n)이 된다.각 스킬을 쓸 때마다 [도발]을 {1} 얻는다.각 피해들은 고정피해를 가하며, 버프로 피해량을 증가시킬 수 없다."
+    },
+    "Alchemist_E_OneShot": {
+      "Description": "`중독` 스킬 사용 시 [꽉 찬 병]을 소모 후 소모한 모든 [꽉 찬 병]을 돌려받는다.중독을 사용한 턴 이후 {2}턴간 [꽉 찬 병]을 만들지 못한다."
+    },
+    "Alchemist_E_SelfPrescribe": {
+      "Description": "`중독` 스킬 사용 시 얻는 모든 버프와 디버프를 두 배로 얻는다."
+    },
+    "Alchemist_R_Accelerant": {
+      "Description": "[기름]이 걸린 적에게 주는 [화상] 피해가 {40}% 증가한다."
+    },
+    "Alchemist_R_Antidote": {
+      "Description": "자신에게 걸린 상태이상 스택 {1}개를 {2}턴마다 지운다."
+    },
+    "Alchemist_R_BottleKeeping": {
+      "Description": "매 턴, [빈 병]을 {1}개 추가로 얻을 확률이 {25}% 추가된다."
+    },
+    "Alchemist_R_Chain": {
+      "Description": "`던지기` 적중 시 메인 타겟에게 적용된 디버프 중 {30}%가 인접한 적에게 퍼진다."
+    },
+    "Alchemist_R_CriticalBlend": {
+      "Description": "[꽉 찬 병]을 네 종류 모두 가지고 있다면, `던지기` 스킬 사용 시 병을 한번에 두 개 던진다."
+    },
+    "Alchemist_R_Distill": {
+      "Description": "`섞기` 스킬 사용 시 [화염병]을 하나 확정으로 얻으며, 각 [꽉 찬 병]을 얻을 확률을 {32}%로 증가시킨다.만약 [화염병] 외 추가로 얻은 [꽉 찬 병]이 없다면, 사용한 병 중 {1}개를 반환 한다."
+    },
+    "Alchemist_R_Napalm": {
+      "Description": "[화염병]의 [화상] 부여량이 {13}으로 증가한다."
+    },
+    "Alchemist_R_Reagent": {
+      "Description": "[독 병]의 [독] 부여량이 {14}로 증가한다."
+    },
+    "Alchemist_R_Recycle": {
+      "Description": "`던지기` 스킬 사용 시 던진 병마다 {25}% 확률로 [빈 병]을 획득한다."
+    },
+    "Berserker_C_Bite": {
+      "Description": "평타가 {1}턴의 [출혈]을 부여한다."
+    },
+    "Berserker_C_BloodPact": {
+      "Description": "전투 시작 시 최대 체력의 {15}%를 깎고 [분노]를 {2} 얻는다."
+    },
+    "Berserker_C_BloodVessel": {
+      "Description": "턴당 {1}회, 회복을 받으면 [분노]를 {1} 얻는다."
+    },
+    "Berserker_C_Boiling": {
+      "Description": "[분노] {1}스택당 [치명타 확률]이 {1}% 증가한다."
+    },
+    "Berserker_C_Callus": {
+      "Description": "같은 적에게 연속으로 맞으면, 그 피해가 {10}% 줄어든다."
+    },
+    "Berserker_C_DeathWish": {
+      "Description": "체력이 {75}% 이하일 때 [치명타 확률]이 {5}% 증가한다."
+    },
+    "Berserker_C_Devour": {
+      "Description": "적을 처치하면 최대 체력의 {5}%를 회복한다."
+    },
+    "Berserker_C_Ember": {
+      "Description": "전투 시작 시 [분노]를 {1} 얻는다."
+    },
+    "Berserker_C_Grudge": {
+      "Description": "전 턴에 자신을 공격한 적에게 주는 피해가 {12}% 증가한다."
+    },
+    "Berserker_C_Headbutt": {
+      "Description": "핏빛 분쇄가 {15}% 확률로 적을 {1}턴 기절시킨다."
+    },
+    "Berserker_C_NoRetreat": {
+      "Description": "뒤로 이동하지 않은 턴에는 주는 피해가 {8}% 증가한다.",
+      "Name": "이판사판"
+    },
+    "Berserker_C_Numb": {
+      "Description": "턴당 {1}회, 지속 피해를 받으면 [분노]를 {1} 얻는다."
+    },
+    "Berserker_C_Overkill": {
+      "Description": "적을 처치하고 남은 피해의 {20}%가 다음 공격에 추가된다."
+    },
+    "Berserker_C_RageFuel": {
+      "Description": "체력을 {2}번 소모할 때마다 [분노]를 {1} 얻는다."
+    },
+    "Berserker_C_Ram": {
+      "Description": "한 턴에 최종 이동한 칸 수 {1}당 주는 피해가 {6}%, 최대 {3}번 증가한다."
+    },
+    "Berserker_C_Stubborn": {
+      "Description": "전투당 한 번, 기절에 걸린다면, {1}턴 감소시켜 받는다."
+    },
+    "Berserker_C_Swing": {
+      "Description": "적이 둘 이상 인접하면, 평타가 한 명 더 대상으로 한다. 두 번째 대상에게는 피해의 {30}%를 입힌다."
+    },
+    "Berserker_C_ThickBlood": {
+      "Description": "체력 소모량이 {20}% 감소한다."
+    },
+    "Berserker_C_Trance": {
+      "Description": "체력이 {30}% 아래일 때, 특수 상태이상 제외 상태이상의 효과를 {25}% 감소하여 받는다."
+    },
+    "Berserker_C_UnstoppingArm": {
+      "Description": "같은 턴에 두번 연속 공격하면, 피해량이 {10}% 증가한다."
+    },
+    "Berserker_E_BloodPrice": {
+      "Description": "핏빛 분쇄의 체력 소모가 {10}에서 {25}로 늘고, 소모한 체력 {1}당 피해가 {3} 증가한다. 소모량은 {10}에서 {40} 사이로 직접 정할 수 있으며, 자신의 체력 소모로 죽지 않게 된다."
+    },
+    "Berserker_E_Brink": {
+      "Description": "잃은 체력 {10}%마다 입히는 피해가 {8}% 증가한다. 대신 받는 회복 효과가 {50}% 줄어든다."
+    },
+    "Berserker_E_Undying": {
+      "Description": "전투 당 한번 치명적인 피해를 받아도 체력 {1}로 버틴다. 버틴 직후 한 턴 동안 주는 피해가 {30}% 증가한다."
+    },
+    "Berserker_E_Vampire": {
+      "Description": "최대 체력이 {10}% 증가하고, 가한 피해의 {25}%만큼 체력을 회복한다. 대신 [분노]를 얻을 수 없게 된다."
+    },
+    "Berserker_R_Frenzy": {
+      "Description": "적을 처치하면 한 번 더 행동하며, 최대 {2}번 발동된다. 추가 행동의 피해는 {70}%이다."
+    },
+    "Berserker_R_Momentum": {
+      "Description": "연속으로 공격한 턴마다 스테미나 소모가 {10}% 줄어든다. 방어하면 초기화된다."
+    },
+    "Berserker_R_PainTolerance": {
+      "Description": "자신의 체력이 {25}% 아래면, 받는 피해량이 {30}% 줄어들고 턴마다 스테미나를 {5} 얻는다."
+    },
+    "Berserker_R_Reckless": {
+      "Description": "받는 피해가 {20}% 늘어나는 대신, 주는 피해가 {30}% 증가한다."
+    },
+    "Berserker_R_Roar": {
+      "Description": "핏빛 분쇄 스킬을 사용하면, 모든 적들의 주는 피해를 {12}% 감소시킨다."
+    },
+    "Berserker_R_Scars": {
+      "Description": "잃은 체력 {10}%마다 받는 피해가 {4}%씩, 최대 {40}%까지 줄어든다."
+    },
+    "Berserker_R_ScentOfBlood": {
+      "Description": "체력이 절반 아래인 적에게 입히는 피해가 {20}% 증가한다."
+    },
+    "Berserker_R_SecondWind": {
+      "Description": "체력이 {25}% 아래로 떨어지면, 전투당 한 번 최대 체력의 {25}%를 회복한다."
+    },
+    "Berserker_R_Sweep": {
+      "Description": "[분노]가 최대일 때, 평타가 주변 모든 적을 대상으로 한다. 주 대상 외에는 피해의 {20}%를 입힌다."
+    },
+    "Berserker_R_Wrath": {
+      "Description": "피해를 받을 때마다 [분노] {1}스택을 얻는다."
+    },
+    "Duelist_C_BladeTip": {
+      "Description": "[집중] {1}스택당 [치명타 확률]이 {0.5}% 증가한다."
+    },
+    "Duelist_C_BleedInduce": {
+      "Description": "자신이 부여하는 [출혈]의 지속 시간이 {1}턴 증가한다."
+    },
+    "Duelist_C_Bond": {
+      "Description": "자신이 얻는 [패링 범위] 증가의 {10}%를 인접한 아군 또한 받는다."
+    },
+    "Duelist_C_CatchBreath": {
+      "Description": "패링하면 스테미나를 {2} 얻는다."
+    },
+    "Duelist_C_Composure": {
+      "Description": "[집중] {1}스택당 받는 피해량이 {0.2}% 더 감소한다."
+    },
+    "Duelist_C_Conclusion": {
+      "Description": "적을 처치하면, [집중]을 추가로 {2} 얻는다."
+    },
+    "Duelist_C_Defense": {
+      "Description": "방어 태세의 피해량 감소가 {5}% 감소한다."
+    },
+    "Duelist_C_FindTheSpot": {
+      "Description": "[출혈]이 걸린 적을 처치하면 다음 공격의 [치명타 확률]이 {5}% 증가한다."
+    },
+    "Duelist_C_FlowThrough": {
+      "Description": "패링 직후의 공격은 스테미나를 {80}%만 사용한다."
+    },
+    "Duelist_C_GripWrap": {
+      "Description": "자동 패링이 발동되면, 대상에게 {1}턴 의 [출혈]을 부여한다."
+    },
+    "Duelist_C_LowStance": {
+      "Description": "같은 태세를 두 턴 이상 유지하면 그 태세 효과가 턴당 {10}%씩, 최대 {30}%까지 증가한다."
+    },
+    "Duelist_C_Offense": {
+      "Description": "공격 태세의 [받는 피해량 증가]가 {5}%p 감소한다."
+    },
+    "Duelist_C_Restraint": {
+      "Description": "기술을 쓰지 않고 턴을 마치면, 다음 기술의 재사용 대기가 {1}턴 감소한다."
+    },
+    "Duelist_C_Retribution": {
+      "Description": "자신을 공격한 적에게 다음 턴 주는 피해량이 {12}% 증가한다."
+    },
+    "Duelist_C_Sentry": {
+      "Description": "아군이 인접해 있을 때, [패링 범위]가 {8}% 증가한다."
+    },
+    "Duelist_C_ShallowCut": {
+      "Description": "평타가 {1}턴의 [출혈]을 부여한다."
+    },
+    "Duelist_C_Steady": {
+      "Description": "준비 자세(3스킬) 중 받는 피해량이 {8}% 더 감소한다."
+    },
+    "Duelist_C_StepBack": {
+      "Description": "패링에 성공하면, [패링 범위]가 {2.5}% 증가한다.",
+      "Name": "흐름"
+    },
+    "Duelist_C_SwitchGuard": {
+      "Description": "태세를 바꾼 턴에 받는 피해량이 {8}% 감소한다."
+    },
+    "Duelist_C_WarmUp": {
+      "Description": "전투 시작 시 [집중]을 {1} 얻는다."
+    },
+    "Duelist_E_DoubleEdge": {
+      "Description": "매 턴 태세가 강제로 바뀐다. 바뀔 때마다 [집중]을 {1} 소모하는 대신, 태세의 효과가 {30}% 증가하고 변경되는 태세마다 효과를 얻는다. 공격 태세: 스테미나를 {5} 얻고 공격 스킬의 기본 피해량이 {3} 증가한다.방어 태세: [보호막]을 {5} 얻는다. 자동 패링 확률이 {10}% 증가하고, 공격 대상이 된다면 [출혈]을 부여한다."
+    },
+    "Duelist_E_IronWall": {
+      "Description": "공격 태세가 사라지고 공격 스킬을 쓸 수 없게 된다. 패링할 때 받은 스킬 기본 피해량의 {25}%를 공격자에게 반사하고 패링 불가 스킬을 전투당 {1}회 패링할 수 있게 된다."
+    },
+    "Duelist_E_LightBlade": {
+      "Description": "방어 태세가 사라진다. 받는 피해량이 {25}% 늘어나는 대신 피해량이 {40}%, [치명타 피해량]이 {15}% 증가한다. 공격 스킬로 적을 처치하면, 피해량이 {75}% 줄어든 채 무작위 대상에게 한 번 더 사용한다."
+    },
+    "Duelist_E_NamelessBlade": {
+      "Description": "[집중] 상한이 {10}에서 {20}으로 증가한다. 대신 스택당 효과가 {40}% 감소한다."
+    },
+    "Duelist_R_BloodLoss": {
+      "Description": "[출혈] 상태의 적에게 주는 피해량이 {15}% 증가한다."
+    },
+    "Duelist_R_Bloodletting": {
+      "Description": "[출혈]을 부여할 때마다 {3}턴 간 [치명타 피해량]이 {2.5}%, 최대 {5}중첩까지 증가한다."
+    },
+    "Duelist_R_Counter": {
+      "Description": "패링에 성공하면, 즉시 평타 피해의 {40}%로 반격한다.",
+      "Name": "패링 어택"
+    },
+    "Duelist_R_Feint": {
+      "Description": "태세를 바꾼 직후의 첫 공격은 회피되지 않고 피해량이 {20}% 증가한다."
+    },
+    "Duelist_R_FocusBreath": {
+      "Description": "{3}턴마다 [집중]을 {1} 얻는다."
+    },
+    "Duelist_R_HonedEdge": {
+      "Description": "[집중] 스택이 {5} 이상일 때, 적의 방어력을 {25}% 무시한다."
+    },
+    "Duelist_R_NoSpend": {
+      "Description": "[집중]이 최대일 때, 패링에 성공하면 스택을 {3}턴 당 한 번 소모하지 않는다."
+    },
+    "Duelist_R_Pivot": {
+      "Description": "태세가 변경된 턴에 공격을 받으면, [패링 범위]가 {5}% 증가한다."
+    },
+    "Duelist_R_Slip": {
+      "Description": "패링에 실패하면, 받는 피해량이 {20}% 감소한다."
+    },
+    "Duelist_R_Vigil": {
+      "Description": "준비 자세(3스킬) 중에 패링하면, [집중]을 {1} 더 얻는다."
+    },
+    "Musician_C_Applause": {
+      "Description": "적을 처치하면 [음표]를 {1}개 얻는다."
+    },
+    "Musician_C_BarLine": {
+      "Description": "[박자표] 값이 오를 때마다 아군에게 [보호막] {5}를 제공한다."
+    },
+    "Musician_C_Bowing": {
+      "Description": "턴당 {1}회, 평타 사용 후 [음표]를 {1}개 얻는다."
+    },
+    "Musician_C_Chord": {
+      "Description": "둘 이상의 아군에게 [브릴란테]가 있으면, 자신의 평타 또한 [브릴란테] 효과를 일부 받는다."
+    },
+    "Musician_C_Crescendo": {
+      "Description": "크레셴도의 [음표]당 피해량 증가가 {0.5}% 증가한다.",
+      "Name": "아첼레란도"
+    },
+    "Musician_C_Echo": {
+      "Description": "[음표] 수가 최대일 때, 자신이 주는 피해량이 {15}% 증가한다.",
+      "Name": "카덴차"
+    },
+    "Musician_C_Eighth": {
+      "Description": "8분음표의 적 스테미나 감소가 개수당 {0.5}%p 더 증가한다."
+    },
+    "Musician_C_Encore": {
+      "Description": "[박자표]가 {3}일 때, 자신이 주는 피해량이 {7}% 증가한다.."
+    },
+    "Musician_C_HalfSpend": {
+      "Description": "[음표]를 두 번째로 소모할 때마다 {1}개 덜 소모한다. 크레셴도의 소모한 [음표] 판정은 받는다."
+    },
+    "Musician_C_Lullaby": {
+      "Description": "처음 사용하는 공격 스킬의 피해량이 {10}% 증가한다.",
+      "Name": "서곡"
+    },
+    "Musician_C_Prelude": {
+      "Description": "전투당 각 [음표]들을 처음 얻을 때, 체력을 {2}% 회복한다."
+    },
+    "Musician_C_Quarter": {
+      "Description": "4분음표의 스테미나 획득량 증가가 개수당 {0.5}% 더 증가한다."
+    },
+    "Musician_C_Refrain": {
+      "Description": "[음표]를 {4}개 얻을 때마다 회복하는 체력이 최대 체력의 {1}% 더 증가한다."
+    },
+    "Musician_C_Rest": {
+      "Description": "아무 행동도 하지 않고 턴을 넘기면, 스테미나를 {6} 더 회복한다."
+    },
+    "Musician_C_Rosin": {
+      "Description": "벨로체의 [보호막] 부여량이 {2}에서 {5}로 증가한다."
+    },
+    "Musician_C_Score": {
+      "Description": "{2}회 이상 다른 스킬을 연달아 사용하면, 그 스킬의 피해량이 {5}% 증가한다.",
+      "Name": "불협화음"
+    },
+    "Musician_C_Sixteenth": {
+      "Description": "16분음표의 [치명타 확률] 감소가 개수당 {0.2}%p 감소한다."
+    },
+    "Musician_C_Staccato": {
+      "Description": "[음표]를 소모한 턴에는 주는 피해량이 {8}% 증가한다."
+    },
+    "Musician_C_Tuning": {
+      "Description": "[박자표] 값 {1}당 자신이 받는 피해량이 {4}% 감소한다."
+    },
+    "Musician_C_Vibrato": {
+      "Description": "[브릴란테]를 받은 아군의 회복량이 {15}% 증가한다."
+    },
+    "Musician_E_Accompanist": {
+      "Description": "딜링 스킬의 기본 피해량이 {60}% 줄어들고 [음표]와 [브릴란테]의 버프량이 {1.5}배 증가한다."
+    },
+    "Musician_E_Concertist": {
+      "Description": "[음표]와 [브릴란테]의 아군 버프 효과가 삭제되는 대신, 그 전부가 자신에게 {1.5}배 향상된 상태로 적용된다."
+    },
+    "Musician_E_LongBreath": {
+      "Description": "크레셴도를 쓰지 않은 턴마다 자신이 주는 버프 효과가 {5}%씩, 최대 {40}%까지 증가하며, 크레셴도를 사용하면 초기화된다. 아군에게 [브릴란테]효과를 부여할 때마다 체력을 {5}% 회복한다."
+    },
+    "Musician_E_Resonance": {
+      "Description": "[음표]를 소모할 때마다 아군의 치명타 피해와 자신의 [치명타 확률]이 {5}%씩 증가한다. 피해는 최대 {30}%, 확률은 {15}%까지 증가한다."
+    },
+    "Musician_R_Cadenza": {
+      "Description": "[브릴란테]가 끝난 다음 턴까지 효과의 {20}%가 남는다.",
+      "Name": "울림"
+    },
+    "Musician_R_Descant": {
+      "Description": "[브릴란테]를 받은 아군이 치명타를 내면 턴당 {1}회 [음표]를 {1}개 얻는다. [브릴란테]를 받은 아군의 [치명타 확률]이 {3}% 증가한다."
+    },
+    "Musician_R_Fermata": {
+      "Description": "행동하지 않고 턴을 마치면, 무작위 [음표]를 {1}개 얻고 [브릴란테] 지속이 {1}턴 늘어난다."
+    },
+    "Musician_R_Harmonic": {
+      "Description": "16분음표 {1}개당 아군의 [치명타 피해량]이 {2}% 더 증가한다."
+    },
+    "Musician_R_Metronome": {
+      "Description": "{3}턴마다 무작위 [음표]를 {1}개 얻는다."
+    },
+    "Musician_R_Modulation": {
+      "Description": "[박자표]를 얻을 때마다, 모든 적에게 소모 [음표]x{3}만큼 피해를 입힌다."
+    },
+    "Musician_R_Ostinato": {
+      "Description": "전투당 {1}회, 같은 스킬을 연속으로 쓰면 그 스킬의 [음표]를 하나 더 얻는다."
+    },
+    "Musician_R_Overture": {
+      "Description": "[브릴란테]를 쓴 턴에 가장 가까운 적의 다음 행동이 한 턴 늦어진다.",
+      "Name": "자장가"
+    },
+    "Musician_R_Sustain": {
+      "Description": "[브릴란테]가 {1}턴 더 유지된다.",
+      "Name": "공명음"
+    },
+    "Musician_R_Tutti": {
+      "Description": "아군이 셋 이상 살아 있으면, [음표] 획득량이 {1} 증가한다."
+    },
+    "Pulsar_C_Afterglow": {
+      "Description": "3스킬이 {6}의 피해도 함께 입힌다."
+    },
+    "Pulsar_C_Afterimage": {
+      "Description": "3스킬의 [명중률] 감소가 {5}% 더 증가한다."
+    },
+    "Pulsar_C_Attraction": {
+      "Description": "중성자의 표적 확률 증가가 {8}% 증가한다."
+    },
+    "Pulsar_C_Backflow": {
+      "Description": "[반사 피해]로 적을 처치하면, [공명]을 {1}스택 얻는다."
+    },
+    "Pulsar_C_Coil": {
+      "Description": "[공명] {1}스택당 2스킬 사거리가 {1}칸씩, 최대 {2}칸 증가한다."
+    },
+    "Pulsar_C_DepolarDamage": {
+      "Description": "[감극] 중첩 {1}당 입히는 피해량이 {3}% 증가한다."
+    },
+    "Pulsar_C_Discharge": {
+      "Description": "[자기장]이 끝날 때 주변 {1}칸에 [반사 피해]만큼 폭발한다."
+    },
+    "Pulsar_C_FixedAim": {
+      "Description": "2스킬 첫 발의 QTE 판정 폭이 {15}% 증가한다."
+    },
+    "Pulsar_C_Focused": {
+      "Description": "2스킬 마지막 발의 피해량이 {10}% 증가한다."
+    },
+    "Pulsar_C_GuardLight": {
+      "Description": "체력이 절반 아래인 아군의 받는 피해량이 {8}% 감소한다."
+    },
+    "Pulsar_C_LightUp": {
+      "Description": "별들의 등대가 추가로 아군에게 [보호막] {6}을 제공한다."
+    },
+    "Pulsar_C_Magnetize": {
+      "Description": "전투 시작 시 [자기장]을 두른다."
+    },
+    "Pulsar_C_Orbit": {
+      "Description": "2스킬을 두 번 이상 이어 쓰면, 스테미나 소모가 {20}% 감소한다."
+    },
+    "Pulsar_C_RecoilControl": {
+      "Description": "2스킬을 {3}회 다 쓰면 다음 턴 받는 피해량이 {12}% 감소한다."
+    },
+    "Pulsar_C_ReflectUp": {
+      "Description": "1스킬의 [반사 피해]가 {4} 증가한다."
+    },
+    "Pulsar_C_Relay": {
+      "Description": "[감극]이 걸린 적을 처치하면 남은 중첩이 가장 가까운 적에게 옮겨진다."
+    },
+    "Pulsar_C_Residue": {
+      "Description": "[감극] 지속시간이 {1}턴 연장된다."
+    },
+    "Pulsar_C_Spin": {
+      "Description": "[자기장]이 유지되는 동안 스테미나를 턴당 {3} 더 회복한다."
+    },
+    "Pulsar_C_StaticField": {
+      "Description": "이동하지 않은 턴에는 [반사 피해]가 {50}% 증가한다."
+    },
+    "Pulsar_C_Trailing": {
+      "Description": "1스킬이 끝난 다음 턴까지 [받는 피해량 감소]의 절반이 남는다."
+    },
+    "Pulsar_E_DimSupernova": {
+      "Description": "3스킬이 적 전체를 대상으로 하고 [명중률] 감소가 {−30}%가 된다. 아군 전체에게 피해량 +{15}% 버프를 {2}턴 제공한다."
+    },
+    "Pulsar_E_Geostationary": {
+      "Description": "1스킬의 효과가 자신에게는 걸리지 않고, 무작위 아군 하나에게 부여된다. [반사 피해]가 {2}배가 되고 재사용 대기가 {3}턴이 된다."
+    },
+    "Pulsar_E_ImperfectLight": {
+      "Description": "2스킬이 연속 사용 대신 단발이 되고, 피해량이 {3}연타 최대치보다 {15}%씩, 최대 {5}번까지 높아진다. 대신 쓸 때마다 자신에게 [명중률] {−10}%가 영구히 쌓인다."
+    },
+    "Pulsar_E_NuclearPasta": {
+      "Description": "1스킬 지속이 {3}턴에서 {2}턴으로 줄어든다. [반사 피해]가 {8}에서 {20}으로 오르고 (레벨 2에서 {28}) [감극] 중첩당 수치가 {2}배가 된다."
+    },
+    "Pulsar_R_Arc": {
+      "Description": "[반사 피해]가 인접한 적에게도 절반으로 퍼진다."
+    },
+    "Pulsar_R_Beacon": {
+      "Description": "별들의 등대 버프가 +{10}%에서 +{18}%가 되고 {1}턴 더 유지된다."
+    },
+    "Pulsar_R_CriticalFlux": {
+      "Description": "[자기장]이 유지되는 동안 [공명] 상한이 {1} 오르고, [공명]이 상한이면 [자기장] 지속이 {1}턴 증가한다."
+    },
+    "Pulsar_R_Flywheel": {
+      "Description": "[공명]이 턴이 지나도 {1}스택 이하로 떨어지지 않는다."
+    },
+    "Pulsar_R_Grounding": {
+      "Description": "[감극]이 {3}중첩인 적에게 주는 피해량이 {20}% 증가한다."
+    },
+    "Pulsar_R_Induction": {
+      "Description": "[자기장]이 유지되는 동안 2스킬이 [감극]을 {1}중첩 더 부여한다."
+    },
+    "Pulsar_R_Lock": {
+      "Description": "3스킬이 적중한 적은 {2}턴 동안 [감극]을 잃지 않는다."
+    },
+    "Pulsar_R_QteMastery": {
+      "Description": "2스킬 QTE 성공 시, 피해량 증가가 {20}%에서 {35}%가 된다."
+    },
+    "Pulsar_R_Recharge": {
+      "Description": "[자기장]이 끝날 때 재사용 대기가 {1}턴 감소한다."
+    },
+    "Pulsar_R_Shroud": {
+      "Description": "[자기장]이 유지되는 동안 상태이상에 걸리지 않게 된다. 막을 때마다 [자기장] 지속이 {1}턴 감소한다."
+    },
+    "Quasar_C_Absorb": {
+      "Description": "피해를 받을 때 얻는 [질량]이 {2}% 증가한다."
+    },
+    "Quasar_C_Afterglow": {
+      "Description": "[질량]을 소모할 때 소모한 스택 {1}당 체력을 {1} 회복한다."
+    },
+    "Quasar_C_Bulk": {
+      "Description": "인접한 적이 자신을 노릴 확률이 {20}% 증가한다."
+    },
+    "Quasar_C_Cooling": {
+      "Description": "[질량]이 {15} 이상일 때 2스킬 재사용 대기가 {1}턴 더 감소한다."
+    },
+    "Quasar_C_Emit": {
+      "Description": "피해를 줄 때 얻는 [질량]이 {2}% 더 증가한다."
+    },
+    "Quasar_C_FallPractice": {
+      "Description": "3스킬로 처치할 때 얻는 [질량]이 {2} 증가한다."
+    },
+    "Quasar_C_FastCharge": {
+      "Description": "1스킬 차징 {1}턴 당 늘어나는 피해량이 {5}% 증가한다."
+    },
+    "Quasar_C_FeedMass": {
+      "Description": "적을 처치하면 [질량]을 {3} 얻는다."
+    },
+    "Quasar_C_GravityCrush": {
+      "Description": "[중력]이 있는 적에게 입히는 피해량이 {8}% 증가한다."
+    },
+    "Quasar_C_Halo": {
+      "Description": "인접한 아군이 받는 피해량이 {8}% 감소한다."
+    },
+    "Quasar_C_Hold": {
+      "Description": "[중력] 지속시간이 {1}턴 연장된다."
+    },
+    "Quasar_C_Hull": {
+      "Description": "전투 시작 시, 최대 체력의 {5}%만큼 [보호막]을 얻는다."
+    },
+    "Quasar_C_MirrorFace": {
+      "Description": "초대[질량]이 발동하면, 줄인 피해의 {10}%를 공격자에게 돌려준다."
+    },
+    "Quasar_C_Planted": {
+      "Description": "차징 중에 밀려난다면, 밀려나지 않고 [질량]을 {1} 얻는다."
+    },
+    "Quasar_C_RestMass": {
+      "Description": "이동하지 않은 턴에는 [질량]을 {1} 얻는다."
+    },
+    "Quasar_C_SeedMass": {
+      "Description": "전투 시작 시 [질량]을 {3} 얻는다."
+    },
+    "Quasar_C_Shockwave": {
+      "Description": "2스킬이 {3}단계일 때, 주변 {1}칸에 {10}의 추가 피해를 입힌다."
+    },
+    "Quasar_C_Stagger": {
+      "Description": "2스킬을 맞은 적은 {1}턴 동안 입히는 피해량이 {20}% 줄어든다."
+    },
+    "Quasar_C_TidalSwing": {
+      "Description": "차징을 도중에 끊고 발동하면, 그때까지의 차징 {1}턴당 [질량]을 {2} 얻는다."
+    },
+    "Quasar_C_Tow": {
+      "Description": "차징을 시작한 턴에도 적이 {1}칸 끌려온다."
+    },
+    "Quasar_E_BlackHole": {
+      "Description": "초대[질량]의 확률 발동이 사라지고 항상 발동하되, 감소폭이 {25}%가 된다. 추가로 {5}% 확률로 피해를 완전히 무효화한다."
+    },
+    "Quasar_E_EventHorizon": {
+      "Description": "1스킬 차징 중에는 아군이 받는 모든 피해를 자신이 대신 받는다. 그 피해는 {50}% 줄어들고 전부 [질량]으로 변환한다."
+    },
+    "Quasar_E_FierceLight": {
+      "Description": "[질량] 획득량이 절반이 되는 대신, 상한이 {20}에서 {40}으로 증가한다."
+    },
+    "Quasar_E_LightspeedCollapse": {
+      "Description": "2스킬이 단계 구분 없이 항상 {3}단계로 나간다. 대신 [질량]을 전부 소모하고 다음 {2}턴 동안 [질량]을 얻지 못 한다."
+    },
+    "Quasar_R_Accretion": {
+      "Description": "턴을 시작할 때, 인접한 적 하나당 [질량]을 {1} 얻는다."
+    },
+    "Quasar_R_ChargeGuard": {
+      "Description": "1스킬 차징 중 받는 피해량이 {30}% 감소한다."
+    },
+    "Quasar_R_Compression": {
+      "Description": "2스킬의 스택당 피해량 증가가 {5}%에서 {7}%로 증가한다."
+    },
+    "Quasar_R_HighDensity": {
+      "Description": "[질량]이 {15} 이상일 때 받는 피해량이 {12}% 더 감소한다."
+    },
+    "Quasar_R_Jet": {
+      "Description": "2스킬이 {3}단계로 나가면, 범위 안 적에게 [중력]을 {2}턴 부여한다."
+    },
+    "Quasar_R_Overcharge": {
+      "Description": "1스킬 차징 상한이 {3}턴으로 연장된다.."
+    },
+    "Quasar_R_Recoil": {
+      "Description": "아군을 대신 맞은 뒤 자신의 다음 공격 피해량이 {25}% 증가한다."
+    },
+    "Quasar_R_Redshift": {
+      "Description": "[중력]에 걸린 적이 입히는 피해량이 {15}% 감소한다."
+    },
+    "Quasar_R_ShoulderIt": {
+      "Description": "아군이 받을 피해를 대신 받으면, [질량]을 {2} 더 얻는다."
+    },
+    "Quasar_R_TidalForce": {
+      "Description": "[중력]에 걸린 적이 매 턴 {1}칸 더 끌려온다."
+    },
+    "WallBreaker_C_Cliff": {
+      "Description": "체력이 {30}% 이하일 때 [허물 벽] 중첩당 피해량 증가가 {3}% 추가로 증가한다."
+    },
+    "WallBreaker_C_Comrade": {
+      "Description": "`제 살 깎기` 스킬로 가한 피해량의 {30}%를 회복시킨다.",
+      "Name": "병 주고 약 주기"
+    },
+    "WallBreaker_C_DebrisPlus": {
+      "Description": "`잔해` 패시브로 얻는 [허물 벽] 스택이 {1} 증가한다."
+    },
+    "WallBreaker_C_Defenceless": {
+      "Description": "방어하지 않은 턴에 가하는 피해량이 {10}% 증가하는 대신, 받는 피해량이 {15}% 증가한다."
+    },
+    "WallBreaker_C_FirstCrack": {
+      "Description": "매 턴, [허물 벽] {1}을 획득할 확률이 {30}%가 된다.",
+      "Name": "이미 새겨진 균열"
+    },
+    "WallBreaker_C_FleshPrice": {
+      "Description": "`제 살 깎기` 스킬로 얻는 [허물 벽] 스택이 {1} 증가한다.[허물 벽]의 상한이 {2} 증가한다."
+    },
+    "WallBreaker_C_LightHand": {
+      "Description": "[허물 벽] 스택이 {4} 이하일 때, `제 살 깎기` 스킬의 쿨타임이 {1}턴 감소한다.",
+      "Name": "무뎌진 죄책감"
+    },
+    "WallBreaker_C_LongHaft": {
+      "Description": "[허물 벽]을 {7} 이상 보유중일 경우, `쪼개기` 스킬의 사거리가 한 칸 앞으로 증가한다."
+    },
+    "WallBreaker_C_LooseBrick": {
+      "Description": "`쪼개기` 스킬로 타격을 할 때마다 [허물 벽]을 {1}스택 얻는다.(턴당 {1}회)"
+    },
+    "WallBreaker_C_Oblation": {
+      "Description": "적 처치 시 [신앙심] 스탯이 {2} 증가한다."
+    },
+    "WallBreaker_C_RuinOath": {
+      "Description": "[신앙심] 스탯 {10}당 가하는 피해량이 {2}% 증가한다."
+    },
+    "WallBreaker_C_RuinPrayer": {
+      "Description": "행동하지 않고 턴을 마치면 [신앙심] 스탯이 {1} 증가한다."
+    },
+    "WallBreaker_C_SameStride": {
+      "Description": "같은 행의 월 필그림스 아군에게 주는 신앙심이 {4} 증가한다.",
+      "Name": "자비"
+    },
+    "WallBreaker_C_Shard": {
+      "Description": "피해를 받을 때 [허물 벽]을 획득할 확률이 {20}% 증가한다."
+    },
+    "WallBreaker_C_SharedLoad": {
+      "Description": "가하는 피해량이 {20}% 증가하고, 받는 피해량이 {20}% 증가한다.(주석: 레벨이 오를 때마다 가하는 피해량과 받는 피해량도 같이 증가함. 주석은 인게임 설명에 반영되지 않음.)",
+      "Name": "광인"
+    },
+    "WallBreaker_C_ShortWindup": {
+      "Description": "[허물 벽]이 {7}스택 이상일 때, `허물다` 스킬의 쿨타임이 {2}턴 감소한다.",
+      "Name": "광적인 파괴"
+    },
+    "WallBreaker_C_ShoveOff": {
+      "Description": "모든 스킬이 적중 시 적을 한 칸 밀언며, 더이상 밀리지 않을 시 고정피해 {50}을 가한다."
+    },
+    "WallBreaker_C_Tenacity": {
+      "Description": "체력이 {30}% 이하일 때, [허물 벽] 획득량이 {1} 증가한다."
+    },
+    "WallBreaker_C_Tireless": {
+      "Description": "`제 살 깎기` 스킬 사용 시 아군 전체의 [신앙심] 스탯이 {10} 상승한다.",
+      "Name": "최선의 교본"
+    },
+    "WallBreaker_C_WeakPoint": {
+      "Description": "[허물 벽] 중첩 {1}당 [치명타 확률]이 {2}% 증가한다."
+    },
+    "WallBreaker_E_BrokenRampart": {
+      "Description": "[허물 벽] 상한이 {5} 증가하는 대신, 스택당 [받는 피해량 증가]가 {5}%로 증가한다."
+    },
+    "WallBreaker_E_Levelling": {
+      "Description": "`허물다` 스킬의 범위가 적 진영 전체가 되는 대신, [허물 벽] 스택당 피해량이 {7}%로 감소한다."
+    },
+    "WallBreaker_E_Martyrdom": {
+      "Description": "사망한 아군마다 [허물 벽] 스택을 {5}까지 획득하고, 그 전투동안 가하는 피해량이 {20}% 증가한다."
+    },
+    "WallBreaker_E_SelfHarm": {
+      "Description": "`제 살 깎기` 스킬을 자신에게 쓰는 대신, [허물 벽]을 {5}스택 회복하고, 자해로 인한 피해를 {50}% 감소시킨다."
+    },
+    "WallBreaker_R_ChainCollapse": {
+      "Description": "`무너뜨리기` 스킬로 {2}명 이상의 적에게 피해를 가할 시 [허물 벽]을 {1} 얻는다."
+    },
+    "WallBreaker_R_Dirge": {
+      "Description": "[신앙심] 스탯이 {40} 이상일 경우, `허물다` 스킬 사용 시 소모 스택이 {1} 감소한다. (단, 피해량 버프는 감소하지 않는다.)"
+    },
+    "WallBreaker_R_DullFlesh": {
+      "Description": "[허물 벽] 스택당 [받는 피해량 증가]가 {0.2}% 감소한다.",
+      "Name": "굳은살"
+    },
+    "WallBreaker_R_Madness": {
+      "Description": "잃은 체력 비례 피해량 상한이 {35}%로 증가한다."
+    },
+    "WallBreaker_R_Overkill": {
+      "Description": "`허물다` 스킬 사용 후 적의 체력을 초과한 피해량의 {60}%를 다음 턴 아무 스킬에나 추가 한다.",
+      "Name": "뒤처리"
+    },
+    "WallBreaker_R_PaidBack": {
+      "Description": "`제 살 깎기` 스킬로 피해를 받은 자신을 포함한 아군은 해당 전투동안 가하는 피해량이 {25}% 증가한다.",
+      "Name": "앙갚음"
+    },
+    "WallBreaker_R_Reliquary": {
+      "Description": "매 턴, 자신의 [신앙심] 스탯이 {3} 상승한다."
+    },
+    "WallBreaker_R_Salvage": {
+      "Description": "`허물다` 스킬로 적을 처치할 때마다 [허물 벽] 스택을 {1} 획득한다."
+    },
+    "WallBreaker_R_SoftBlow": {
+      "Description": "`제 살 깎기` 스킬이 아군에게 가하는 피해가 최대 체력의 {13}%로 줄어든다.",
+      "Name": "동정"
+    },
+    "WallBreaker_R_Swallow": {
+      "Description": "`허물다` 스킬로 가한 피해량의 {20}%만큼 회복한다.",
+      "Name": "섭취"
+    },
+    "WallMason_C_Cushion": {
+      "Description": "[벽]이 있는 아군이 받는 치명타 피해가 {20}% 감소한다."
+    },
+    "WallMason_C_Deflect": {
+      "Description": "[벽]이 있는 아군의 회피·패링률이 {3}% 더 증가한다."
+    },
+    "WallMason_C_DriveWedge": {
+      "Description": "1스킬의 [벽]이 대신 체력이 가장 낮은 아군이 부여받는다. 그 아군이 자신이면 {1}중첩 더 부여한다."
+    },
+    "WallMason_C_EvenBreath": {
+      "Description": "[벽] 중첩 {1}당 스테미나 회복량이 {1} 증가한다."
+    },
+    "WallMason_C_Footstone": {
+      "Description": "전투 시작 시 아군 전체에게 {8}의 [보호막]을 제공한다."
+    },
+    "WallMason_C_Grit": {
+      "Description": "체력이 절반 {50}% 미만일 때, [벽] 효과가 {20}% 증가한다."
+    },
+    "WallMason_C_Groundwork": {
+      "Description": "전투 시작 시 아군 전체가 [벽] {1}중첩을 얻는다."
+    },
+    "WallMason_C_Harden": {
+      "Description": "[벽] 지속시간이 {1}턴 연장된다."
+    },
+    "WallMason_C_LongChisel": {
+      "Description": "2스킬 사거리가 {1}칸 증가한다."
+    },
+    "WallMason_C_LuckyChisel": {
+      "Description": "2스킬의 [치명타 확률]이 {3}% 증가한다."
+    },
+    "WallMason_C_MasonOath": {
+      "Description": "기도력 {10}당 자신의 피해량이 {3}%씩, 최대 {15}%까지 증가한다."
+    },
+    "WallMason_C_MasonPrayer": {
+      "Description": "행동하지 않고 턴을 마치면, 기도력이 {4} 증가한다."
+    },
+    "WallMason_C_Overlay": {
+      "Description": "턴당 {1}회, 이미 [벽]이 있는 아군에게 중첩을 줄 때 {1}중첩 더 부여한다."
+    },
+    "WallMason_C_QuickRite": {
+      "Description": "3스킬 재사용 대기가 {1}턴 감소한다."
+    },
+    "WallMason_C_SameStone": {
+      "Description": "같은 행의 월 필그림스 아군에게 주는 기도력이 {4} 더 증가한다."
+    },
+    "WallMason_C_SelfBulwark": {
+      "Description": "턴을 시작할 때 자신이 [벽] {1}중첩을 얻는다."
+    },
+    "WallMason_C_Sharing": {
+      "Description": "턴당 {1}회, 자신이 [벽]을 얻으면 인접한 아군도 {1}중첩 얻습니다."
+    },
+    "WallMason_C_StoneOffering": {
+      "Description": "적을 처치하면 기도력이 {6} 상승한다."
+    },
+    "WallMason_C_StonePicking": {
+      "Description": "아군이 [벽]을 유지한 채 턴을 마칠 때 얻는 중첩이 {1} 증가한다."
+    },
+    "WallMason_C_Tireless": {
+      "Description": "매 턴 [벽] {1}중첩을 얻는다."
+    },
+    "WallMason_E_Cathedral": {
+      "Description": "[벽] 상한이 {5}에서 {10}으로 오르고 중첩당 수치가 절반이 된다. 3스킬 재사용 대기가 {6}턴이 된다."
+    },
+    "WallMason_E_Cornerstone": {
+      "Description": "3스킬이 아군 전체 대신 아군 하나에게 부여된다. 대신 중첩이 {5}, 지속이 {5}턴, 재사용 대기가 {2}턴이 된다."
+    },
+    "WallMason_E_InterlockedStone": {
+      "Description": "자신의 [벽] 중첩이 아군 중 가장 높은 중첩과 항상 같아진다. 대신 자신은 [벽]의 회피·패링 효과는 받지 못한다."
+    },
+    "WallMason_E_MasonHand": {
+      "Description": "[벽]이 방어 버프가 아닌, 공격 버프가 된다. 방어·회피가 사라지고 중첩 {1}당 피해량 +{5}%, [치명타 확률] +{2}%로 변경된다."
+    },
+    "WallMason_R_BackRowAim": {
+      "Description": "2스킬의 [벽] 중첩당 피해량 증가가 {6}%에서 {9}%로 증가한다."
+    },
+    "WallMason_R_Blessing": {
+      "Description": "전투 시작 시 기도력이 {12} 상승한다."
+    },
+    "WallMason_R_Buttress": {
+      "Description": "[벽]이 있는 아군은 상태이상 지속 시간이 {1}턴 감소한다."
+    },
+    "WallMason_R_ChiselMastery": {
+      "Description": "1스킬이 [벽]을 {1}중첩 더 부여한다."
+    },
+    "WallMason_R_Consecration": {
+      "Description": "기도력이 {40} 이상이면, [벽]을 부여할 때 지속시간이 초기화되지 않고 더해진다."
+    },
+    "WallMason_R_FinishedWall": {
+      "Description": "[벽]이 상한까지 찬 아군은 주는 피해량이 {10}% 증가한다."
+    },
+    "WallMason_R_Keystone": {
+      "Description": "[벽]을 가진 아군 하나당 자신의 피해량이 {5}%씩, 최대 {20}%까지 증가한다."
+    },
+    "WallMason_R_Mortar": {
+      "Description": "[벽]이 사라질 때 그 아군이 최대 체력의 {8}%를 회복한다."
+    },
+    "WallMason_R_Quarry": {
+      "Description": "적을 처치하면 아군 전체가 [벽] {1}중첩을 얻는다."
+    },
+    "WallMason_R_Relayer": {
+      "Description": "턴당 {2}회, [벽]이 지속시간이 다해 사라지면, 그 아군이 즉시 {1}중첩을 되돌려 받는다."
+    },
+    "WallPilgrim_C_Alms": {
+      "Description": "같은 행의 아군이 적을 처치하면 기도력이 {4} 증가한다."
+    },
+    "WallPilgrim_C_BleedNail": {
+      "Description": "[광신]을 걸 때 [출혈]도 추가로 부여한다."
+    },
+    "WallPilgrim_C_Cleave": {
+      "Description": "2스킬이 왼쪽뿐 아니라 오른쪽 칸의 적도 함께 공격한다."
+    },
+    "WallPilgrim_C_Companion": {
+      "Description": "같은 행의 월 필그림스 아군에게 주는 기도력이 {4} 더 증가한다."
+    },
+    "WallPilgrim_C_Congregation": {
+      "Description": "[광신]이 걸린 적이 셋 이상이면 자신의 피해량이 {10}% 증가한다."
+    },
+    "WallPilgrim_C_Echo": {
+      "Description": "2스킬이 [광신]을 {1}중첩 더 부여한다."
+    },
+    "WallPilgrim_C_FirstNail": {
+      "Description": "전투 시작 시 가장 가까운 적에게 [광신] {3}중첩을 부여한다."
+    },
+    "WallPilgrim_C_Guilt": {
+      "Description": "[광신]이 걸린 적이 자신을 노릴 확률이 {25}% 감소한다."
+    },
+    "WallPilgrim_C_Hymn": {
+      "Description": "3스킬을 쓰면 기도력이 {8} 증가한다."
+    },
+    "WallPilgrim_C_Inherited": {
+      "Description": "못 자국으로 중첩이 옮겨갈 때 기도력이 {3} 증가한다."
+    },
+    "WallPilgrim_C_LongArm": {
+      "Description": "1스킬 사거리가 {1}칸 증가한다."
+    },
+    "WallPilgrim_C_Martyr": {
+      "Description": "[광신]이 걸린 적을 처치하면 기도력이 {6} 증가한다."
+    },
+    "WallPilgrim_C_Meditation": {
+      "Description": "행동하지 않고 턴을 마치면, 기도력이 {4} 증가한다."
+    },
+    "WallPilgrim_C_NailHole": {
+      "Description": "못 자국으로 옮기는 중첩이 {2} 증가한다."
+    },
+    "WallPilgrim_C_PointOut": {
+      "Description": "턴당 {1}회, [낙인]이 찍힌 적을 공격하면 스테미나를 {4} 회복합니다."
+    },
+    "WallPilgrim_C_RustyNail": {
+      "Description": "[광신]이 걸린 적의 회복량이 {10}% 감소한다."
+    },
+    "WallPilgrim_C_Setting": {
+      "Description": "[광신] 지속시간이 {1}턴 연장된다."
+    },
+    "WallPilgrim_C_ShortPrayer": {
+      "Description": "3스킬 재사용 대기가 {1}턴 감소한다."
+    },
+    "WallPilgrim_C_Weight": {
+      "Description": "[광신] 중첩 {1}당 자신이 받는 피해량이 {0.5}%씩, 최대 {5}까지 줄어듭니다."
+    },
+    "WallPilgrim_C_Whetted": {
+      "Description": "[광신]이 상한까지 찬 적에게 주는 피해량이 {12}% 증가한다."
+    },
+    "WallPilgrim_E_Evangelism": {
+      "Description": "3스킬이 행이 아닌, 적 전체를 대상으로 한다. 대신 중첩이 절반이 되고 재사용 대기가 {6}턴이 된다."
+    },
+    "WallPilgrim_E_Fanatic": {
+      "Description": "[광신] 상한이 {10}에서 {20}으로 오르고 중첩당 수치가 절반이 된다. 대신 자신도 [광신]이 걸린 적 하나당 받는 피해량이 {3}% 증가한다."
+    },
+    "WallPilgrim_E_NailAndHammer": {
+      "Description": "같은 행의 월 필그림스 아군이 주는 피해가 [광신] 중첩 {1}당 {2}% 증가한다."
+    },
+    "WallPilgrim_E_Stigmata": {
+      "Description": "[광신]이 디버프가 아닌, 지속 피해로 변경된다. 방어·피해 감소가 사라지고 중첩 {1}당 턴마다 {3}의 피해를 입힌다."
+    },
+    "WallPilgrim_R_Brand": {
+      "Description": "[낙인]이 찍힌 적은 회복량 감소에 더해 {3}턴 동안 받는 피해량이 {15}% 증가한다."
+    },
+    "WallPilgrim_R_Contagion": {
+      "Description": "매 턴 [광신]이 걸린 적 하나가 인접한 적에게 {1}중첩을 옮긴다."
+    },
+    "WallPilgrim_R_DeepNail": {
+      "Description": "1스킬이 [광신]을 {1}중첩 더 부여한다."
+    },
+    "WallPilgrim_R_DivineOffice": {
+      "Description": "기도력이 {40} 이상이면, [낙인]을 두 적에게 동시에 남길 수 있고 지속이 {2}턴 증가한다."
+    },
+    "WallPilgrim_R_DoubleStrike": {
+      "Description": "턴당 {1}회, 직전 턴에 [광신]을 건 적에게 연속으로 걸면 {1}중첩 더 부여한다."
+    },
+    "WallPilgrim_R_MadeExample": {
+      "Description": "[낙인]이 찍힌 적을 처치하면, 남은 [광신]이 흩어지지 않고 중첩이 가장 높은 적에게 통째로 옮겨간다."
+    },
+    "WallPilgrim_R_Offering": {
+      "Description": "[광신] 중첩 {1}당 자신의 기도력이 {1}씩, 최대 {10}까지 증가한다."
+    },
+    "WallPilgrim_R_Penance": {
+      "Description": "턴당 {2}회, 자신이 피해를 받으면 가장 가까운 적에게 [광신] {1}중첩을 걸고 기도력이 {2} 증가한다."
+    },
+    "WallPilgrim_R_PilgrimStaff": {
+      "Description": "전투 시작 시 기도력이 {12} 증가한다."
+    },
+    "WallPilgrim_R_Sermon": {
+      "Description": "3스킬이 인접한 행에도 [광신] {1}중첩을 부여한다."
+    }
+  },
+  "classes": {
+    "WallMason": {
+      "Name": "월 메이슨hfghfghf"
+    }
+  },
+  "savedAt": "2026-08-01T03:44:45.130Z",
+  "savedAtLocal": "2026-08-01 12:44",
+  "version": 2
+}

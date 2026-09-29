@@ -1,0 +1,7 @@
+# 파이썬·도구 찌꺼기
+__pycache__/
+*.pyc
+.wrangler/
+# SQLite 임시 파일(본 파일 config_edits.db 는 올린다)
+*.db-shm
+*.db-wal

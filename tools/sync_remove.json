@@ -1,0 +1,36 @@
+[
+  [
+    "ServerScriptService",
+    "Server",
+    "TowerService"
+  ],
+  [
+    "StarterPlayer",
+    "StarterPlayerScripts",
+    "Client",
+    "TowerBattleController"
+  ],
+  [
+    "StarterPlayer",
+    "StarterPlayerScripts",
+    "Client",
+    "BattleTestController"
+  ],
+  [
+    "StarterPlayer",
+    "StarterPlayerScripts",
+    "Client",
+    "Battle3DController"
+  ],
+  [
+    "ReplicatedStorage",
+    "Shared",
+    "TowerArena"
+  ],
+  [
+    "StarterPlayer",
+    "StarterPlayerScripts",
+    "Client",
+    "MotionEditorController"
+  ]
+]

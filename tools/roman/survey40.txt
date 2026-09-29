@@ -1,0 +1,54 @@
+STEP 40 (x -2076→, z -3723↓) 글자=높이/5 (0..Z=0..175)
+       01234567890123456789012345678901234567890
+ -3716 .................8.......................
+ -3676 ..............7.8889999.9.887............
+ -3636 ..............788aa999999988877..........
+ -3596 .............899deeeeeeeeeeddc97.........
+ -3556 ........78889adeeefffffffffeddd97777.....
+ -3516 .......79cceefffffffffffffffffedbbb97....
+ -3476 ......77dddeefffffffffffffffffedddb99....
+ -3436 .....779ddeffffffffffeffffffffeddddd988..
+ -3396 ....7aadeefffffffffffeeffffffffeeeeeee97.
+ -3356 ...779deffffffffffffb99bffffffffffffedd97
+ -3316 ...8cdeefffffffeeeeb9..9efffffffffffeddb7
+ -3276 ...8ceffffffffe999999..9efffffffffffeedb7
+ -3236 ...8efffffffbb999......9efffffffffffeedb7
+ -3196 ...9efffffffb9.........9bfffffffffffedbb7
+ -3156 ..9bfffffffb9..........9beefffffffffeedb7
+ -3116 .9bfffffffb9............99bbffffffffeddb7
+ -3076 99effffffe9................9efffffffeddb7
+ -3036 99efffffb99...........9...999bffffffeddb7
+ -2996 9eeffffb999...9999999999...99bbfffffeedb7
+ -2956 99efffb9.....9beeeeeeeeb9....9bbffffeddb7
+ -2916 99effe99.....9befffffff99.....99efffeebb7
+ -2876 9eeffe9......9effffffffe9.....9eeffffddb7
+ -2836 99effe99.....9efffffffee9.....9eefffeddb7
+ -2796 99bfffb99....9effffffeee9....99bffffeddb7
+ -2756 .9bffffbb9999beeeeeeeeeeb9999bffffffeddb7
+ -2716 ..9bffffee9eeeb99999999beeeeeeffffffeddb7
+ -2676 ...9efffffeeee9........9eeeeefffffffeddb7
+ -2636 ...9eeefffffee9..9.....9eeffffffffffeedb7
+ -2596 ...9ceeffffffbb999999..9efffffffffffeebb7
+ -2556 ...8ceeefffffffeeeee9..9efffffffffffedbb7
+ -2516 ...79cefffffffffffffb99bffffffffffffeed97
+ -2476 ....78aaeeffffffffffbeeffffffffeeeeee997.
+ -2436 ......8aceeffffffffffeeffffffffdddde998..
+ -2396 .......8cdefffffffffffffffffffeddddd98...
+ -2356 .......79deeffffffffffffffffffedccc97....
+ -2316 ........7aaeeefffffffffffffeeddccc97.....
+ -2276 .........79ccdefffffffffffedddccc97......
+ -2236 ..........77c89bfffffffffeeddccc97.......
+ -2196 ............7889bfeeffffeeeddcc977.......
+ -2156 ...............88adeeffeeddccc97.........
+ -2116 ................779ceeeedcbbb97..........
+ -2076 ..................788e99877797...........
+판 77x5x89 ×6
+판 77x5x79 ×6
+판 76x5x76 ×5
+판 71x5x80 ×5
+판 85x5x73 ×5
+판 84x5x73 ×5
+G 자식 예: Gs_화산_-2640_-9703 (Part) 자식 0
+섬 안 Mountains 파트 0  x 1000000000..-1000000000 y 1000000000..-1000000000 z 1000000000..-1000000000
+World 자식: G_평원, G_숲, G_늪지대, G_탑의성역, G_사막, G_오염지대, G_설원, G_화산, G_광산, G_지협
+Surface 자식: R_평원, R_숲, World, _PeakSeeds, Mountains, Zone_설원, Ramps, Ruins2_탑의성역, Swamp2_늪지대

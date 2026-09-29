@@ -1,0 +1,319 @@
+--!strict
+--[[
+	QuasarCards — 퀘이사(Quasar) 능력 카드 34종.
+
+	출처: `유저 아이디어(직업).md` — 아군이 맞을 것을 대신 받고 한 번에 되돌려주는 딜탱.
+
+	수치 앵커
+	  질량 상한 20. 스택 1당 피해 +1% / 받는 피해 −0.5%
+	  중력 = 2턴, 1칸씩 끌려옴, 받는 피해 +15%
+	  붕괴 22(2턴 차징 33) / 특이점 18(20스택 36) / 낙하 32
+	  패시브 초대질량 = 20% 확률로 받는 피해 절반
+
+	--------------------------------------------------------------------------
+	덱 빌딩 축 네 가지
+
+	  Anchor    **보유량**. [질량]을 벌고, 갖고 있는 것 자체로 값을 낸다.
+	  Charge    **시간**. 1스킬을 오래 당겨 [중력]으로 끌어모은다.
+	  Overload  **방출**. 2스킬 한 방에 전부 몰아넣는다.
+	  Taunt     **대신 맞기**. 아군의 피해를 자기 앞으로 돌린다.
+
+	축끼리 수치를 더하지 않습니다. **자원이 한 방향으로 흐릅니다**:
+	  Taunt가 피격을 끌어오면   → Anchor가 그것을 [질량]으로 바꾼다.
+	  Anchor가 15를 넘기면      → Overload의 단계와 재사용 대기가 달라진다.
+	  Charge가 적을 끌어모으면  → Overload의 넓은 범위가 비로소 의미가 생긴다.
+	  Overload가 전부 태우면    → 다시 빈손이 되어 Taunt·Charge로 되돌아간다.
+
+	그래서 버티며 조금씩 모아도, 차징으로 판을 짜고 한 방을 노려도 각각 굴러갑니다.
+]]
+
+local AbilityCardDefinitions = require(script.Parent.Parent.AbilityCardDefinitions)
+
+type Card = AbilityCardDefinitions.AbilityCard
+
+local CLASS_ID = "Quasar"
+
+local cards: { Card } = {
+	--=== 필수 (4) ===--
+	{
+		Id = "Quasar_E_FierceLight",
+		Name = "거센 빛",
+		Description = "[질량] 획득량이 절반이 되는 대신, 상한이 {20}에서 {40}으로 증가한다.",
+		Grade = "Essential",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor" },
+	},
+	{
+		Id = "Quasar_E_BlackHole",
+		Name = "블랙홀",
+		Description = "초대질량의 확률 발동이 사라지고 항상 발동하되, 감소폭이 {25}%가 된다. 추가로 {5}% 확률로 피해를 완전히 무효화한다.",
+		Grade = "Essential",
+		ClassId = CLASS_ID,
+		Tags = { "Taunt", "Anchor" },
+	},
+	{
+		Id = "Quasar_E_EventHorizon",
+		Name = "사건의 지평선",
+		Description = "1스킬 차징 중에는 아군이 받는 모든 피해를 자신이 대신 받는다. 그 피해는 {50}% 줄어들고 전부 [질량]으로 변환한다.",
+		Grade = "Essential",
+		ClassId = CLASS_ID,
+		Tags = { "Taunt", "Charge" },
+	},
+	{
+		Id = "Quasar_E_LightspeedCollapse",
+		Name = "광속 붕괴",
+		Description = "2스킬이 단계 구분 없이 항상 {3}단계로 나간다. 대신 [질량]을 전부 소모하고 다음 {2}턴 동안 질량을 얻지 못 한다.",
+		Grade = "Essential",
+		ClassId = CLASS_ID,
+		Tags = { "Overload" },
+	},
+
+	--=== 희귀 (10) ===--
+	{
+		Id = "Quasar_R_ChargeGuard",
+		Name = "차징 방호",
+		Description = "1스킬 차징 중 받는 피해량이 {30}% 감소한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Charge", "Taunt" },
+	},
+	{
+		Id = "Quasar_R_ShoulderIt",
+		Name = "대신 짊어지기",
+		Description = "아군이 받을 피해를 대신 받으면, [질량]을 {2} 더 얻는다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Taunt", "Anchor" },
+	},
+	{
+		Id = "Quasar_R_TidalForce",
+		Name = "조석력",
+		Description = "[중력]에 걸린 적이 매 턴 {1}칸 더 끌려온다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Charge" },
+	},
+	{
+		Id = "Quasar_R_Accretion",
+		Name = "강착",
+		Description = "턴을 시작할 때, 인접한 적 하나당 [질량]을 {1} 얻는다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor", "Taunt" },
+	},
+	{
+		Id = "Quasar_R_Compression",
+		Name = "압축",
+		Description = "2스킬의 스택당 피해량 증가가 {5}%에서 {7}%로 증가한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Overload", "Anchor" },
+	},
+	{
+		Id = "Quasar_R_Jet",
+		Name = "제트",
+		Description = "2스킬이 {3}단계로 나가면, 범위 안 적에게 [중력]을 {2}턴 부여한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Overload", "Charge" },
+	},
+	{
+		Id = "Quasar_R_Redshift",
+		Name = "적색편이",
+		Description = "[중력]에 걸린 적이 입히는 피해량이 {15}% 감소한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Charge", "Taunt" },
+	},
+	{
+		Id = "Quasar_R_HighDensity",
+		Name = "고밀도",
+		Description = "[질량]이 {15} 이상일 때 받는 피해량이 {12}% 더 감소한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor" },
+	},
+	{
+		Id = "Quasar_R_Recoil",
+		Name = "반발",
+		Description = "아군을 대신 맞은 뒤 자신의 다음 공격 피해량이 {25}% 증가한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Taunt", "Overload" },
+	},
+	{
+		Id = "Quasar_R_Overcharge",
+		Name = "과충전",
+		Description = "1스킬 차징 상한이 {3}턴으로 연장된다..",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Charge", "Overload" },
+	},
+
+	--=== 일반 (20) ===--
+	{
+		Id = "Quasar_C_FastCharge",
+		Name = "가속 차징",
+		Description = "1스킬 차징 {1}턴 당 늘어나는 피해량이 {5}% 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Charge" },
+	},
+	{
+		Id = "Quasar_C_GravityCrush",
+		Name = "중력 압착",
+		Description = "[중력]이 있는 적에게 입히는 피해량이 {8}% 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Charge", "Overload" },
+	},
+	{
+		Id = "Quasar_C_SeedMass",
+		Name = "씨앗 질량",
+		Description = "전투 시작 시 [질량]을 {3} 얻는다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor" },
+	},
+	{
+		Id = "Quasar_C_Absorb",
+		Name = "흡수",
+		Description = "피해를 받을 때 얻는 [질량]이 {2}% 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor", "Taunt" },
+	},
+	{
+		Id = "Quasar_C_Emit",
+		Name = "방출",
+		Description = "피해를 줄 때 얻는 [질량]이 {2}% 더 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor", "Overload" },
+	},
+	{
+		Id = "Quasar_C_Bulk",
+		Name = "덩치",
+		Description = "인접한 적이 자신을 노릴 확률이 {20}% 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Taunt" },
+	},
+	{
+		Id = "Quasar_C_FeedMass",
+		Name = "포식 질량",
+		Description = "적을 처치하면 [질량]을 {3} 얻는다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor", "Overload" },
+	},
+	{
+		Id = "Quasar_C_Planted",
+		Name = "고정",
+		Description = "차징 중에 밀려난다면, 밀려나지 않고 [질량]을 {1} 얻는다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Charge", "Anchor" },
+	},
+	{
+		Id = "Quasar_C_Halo",
+		Name = "광륜",
+		Description = "인접한 아군이 받는 피해량이 {8}% 감소한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Taunt" },
+	},
+	{
+		Id = "Quasar_C_Cooling",
+		Name = "냉각",
+		Description = "[질량]이 {15} 이상일 때 2스킬 재사용 대기가 {1}턴 더 감소한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Overload", "Anchor" },
+	},
+	{
+		Id = "Quasar_C_Shockwave",
+		Name = "충격파",
+		Description = "2스킬이 {3}단계일 때, 주변 {1}칸에 {10}의 추가 피해를 입힌다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Overload" },
+	},
+	{
+		Id = "Quasar_C_TidalSwing",
+		Name = "조수 간만",
+		Description = "차징을 도중에 끊고 발동하면, 그때까지의 차징 {1}턴당 [질량]을 {2} 얻는다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Charge", "Anchor" },
+	},
+	{
+		Id = "Quasar_C_FallPractice",
+		Name = "낙하 연습",
+		Description = "3스킬로 처치할 때 얻는 [질량]이 {2} 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor" },
+	},
+	{
+		Id = "Quasar_C_Hull",
+		Name = "외피",
+		Description = "전투 시작 시, 최대 체력의 {5}%만큼 보호막을 얻는다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Taunt" },
+	},
+	{
+		Id = "Quasar_C_Tow",
+		Name = "견인",
+		Description = "차징을 시작한 턴에도 적이 {1}칸 끌려온다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Charge" },
+	},
+	{
+		Id = "Quasar_C_Stagger",
+		Name = "휘청임",
+		Description = "2스킬을 맞은 적은 {1}턴 동안 입히는 피해량이 {20}% 줄어든다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Overload", "Charge" },
+	},
+	{
+		Id = "Quasar_C_RestMass",
+		Name = "정지 질량",
+		Description = "이동하지 않은 턴에는 [질량]을 {1} 얻는다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor", "Charge" },
+	},
+	{
+		Id = "Quasar_C_MirrorFace",
+		Name = "반사면",
+		Description = "초대질량이 발동하면, 줄인 피해의 {10}%를 공격자에게 돌려준다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Taunt", "Overload" },
+	},
+	{
+		Id = "Quasar_C_Hold",
+		Name = "붙잡기",
+		Description = "[중력] 지속시간이 {1}턴 연장된다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Charge" },
+	},
+	{
+		Id = "Quasar_C_Afterglow",
+		Name = "여운",
+		Description = "[질량]을 소모할 때 소모한 스택 {1}당 체력을 {1} 회복한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Anchor", "Taunt" },
+	},
+}
+
+return {
+	ClassId = CLASS_ID,
+	Cards = cards,
+}

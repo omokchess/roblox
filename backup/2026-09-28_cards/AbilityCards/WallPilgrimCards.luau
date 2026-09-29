@@ -1,0 +1,321 @@
+--!strict
+--[[
+	WallPilgrimCards — 월 필그림(WallPilgrim) 능력 카드 34종.
+
+	출처: `유저 아이디어(직업).md` — 못으로 **깎는** 디버퍼.
+
+	수치 앵커
+	  광신 = 3턴, 최대 10중첩, 중첩 1당 방어 −3% / 피해 −2%
+	         자신의 기도력 10당 수치 +10% (최대 +50%)
+	  못질 26 / 갈라진 신도 22 / 합창 18
+	  패시브 각인 = [광신]이 10중첩에 닿은 적은 2턴 간 회복량 −50%.
+	               카드에서는 이 상태를 **[낙인]** 이라고 부른다.
+	  패시브 못 자국 = [광신]이 걸린 적을 처치하면 남은 중첩이 가장 가까운 적에게 옮겨감.
+
+	--------------------------------------------------------------------------
+	덱 빌딩 축 네 가지
+
+	  Judgment  깊이. 한 적에게 중첩을 **두껍게** 쌓는다.
+	  Mark      집중. [낙인]이 찍힌 적 하나를 물고 늘어진다.
+	  Spread    확산. 중첩을 옮기고 퍼뜨려 **여럿을** 깎는다.
+	  Faith     기도력. 벌어들인 기도력으로 다른 축의 **문을 연다**.
+
+	축끼리 수치를 더하지 않는다. 대신 **조건을 만들고 지불한다**:
+	  Judgment가 상한까지 쌓으면 → Mark가 그 [낙인]을 밑천으로 쓴다.
+	  Spread가 걸린 적 수를 늘리면 → Faith와 Judgment가 그 수를 조건으로 쓴다.
+	  Faith가 기도력 구간에 닿으면 → Mark의 대상 수 제한이 풀린다.
+
+	그래서 깊이만 파도 굴러가고 넓게만 퍼뜨려도 굴러가되, 둘을 섞으면 또 다르게 굴러간다.
+]]
+
+local AbilityCardDefinitions = require(script.Parent.Parent.AbilityCardDefinitions)
+
+type Card = AbilityCardDefinitions.AbilityCard
+
+local CLASS_ID = "WallPilgrim"
+
+local cards: { Card } = {
+	--=== 필수 (4) ===--
+	{
+		Id = "WallPilgrim_E_Fanatic",
+		Name = "광신도",
+		Description = "[광신] 상한이 {10}에서 {20}으로 오르고 중첩당 수치가 절반이 된다. 대신 자신도 [광신]이 걸린 적 하나당 받는 피해량이 "
+			.. "{3}% 증가한다.",
+		Grade = "Essential",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment", "Spread" },
+	},
+	{
+		Id = "WallPilgrim_E_Stigmata",
+		Name = "성흔",
+		Description = "[광신]이 디버프가 아닌, 지속 피해로 변경된다. 방어·피해 감소가 사라지고 중첩 {1}당 턴마다 {3}의 피해를 입힌다.",
+		Grade = "Essential",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment", "Mark" },
+	},
+	{
+		Id = "WallPilgrim_E_Evangelism",
+		Name = "전도",
+		Description = "3스킬이 행이 아닌, 적 전체를 대상으로 한다. 대신 중첩이 절반이 되고 재사용 대기가 {6}턴이 된다.",
+		Grade = "Essential",
+		ClassId = CLASS_ID,
+		Tags = { "Spread", "Faith" },
+	},
+	{
+		Id = "WallPilgrim_E_NailAndHammer",
+		Name = "못과 망치",
+		Description = "같은 행의 월 필그림스 아군이 주는 피해가 [광신] 중첩 {1}당 {2}% 증가한다.",
+		Grade = "Essential",
+		ClassId = CLASS_ID,
+		Tags = { "Faith", "Judgment" },
+	},
+
+	--=== 희귀 (10) ===--
+	{
+		Id = "WallPilgrim_R_DeepNail",
+		Name = "깊은 못",
+		Description = "1스킬이 [광신]을 {1}중첩 더 부여한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment" },
+	},
+	{
+		Id = "WallPilgrim_R_DoubleStrike",
+		Name = "겹쳐 박기",
+		Description = "턴당 {1}회, 직전 턴에 [광신]을 건 적에게 연속으로 걸면 {1}중첩 더 부여한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment" },
+	},
+	{
+		Id = "WallPilgrim_R_Brand",
+		Name = "낙인",
+		Description = "[낙인]이 찍힌 적은 회복량 감소에 더해 {3}턴 동안 받는 피해량이 {15}% 증가한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Mark" },
+	},
+	{
+		Id = "WallPilgrim_R_MadeExample",
+		Name = "본보기",
+		Description = "[낙인]이 찍힌 적을 처치하면, 남은 [광신]이 흩어지지 않고 중첩이 가장 높은 적에게 통째로 옮겨간다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Mark", "Spread" },
+	},
+	{
+		Id = "WallPilgrim_R_Sermon",
+		Name = "설교",
+		Description = "3스킬이 인접한 행에도 [광신] {1}중첩을 부여한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Spread" },
+	},
+	{
+		Id = "WallPilgrim_R_Contagion",
+		Name = "전염",
+		Description = "매 턴 [광신]이 걸린 적 하나가 인접한 적에게 {1}중첩을 옮긴다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Spread", "Mark" },
+	},
+	{
+		Id = "WallPilgrim_R_PilgrimStaff",
+		Name = "순례 지팡이",
+		Description = "전투 시작 시 신앙심이 {12} 증가한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Faith" },
+	},
+	{
+		Id = "WallPilgrim_R_Offering",
+		Name = "헌납",
+		Description = "[광신] 중첩 {1}당 자신의 신앙심이 {1}씩, 최대 {10}까지 증가한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Faith", "Judgment" },
+	},
+	{
+		Id = "WallPilgrim_R_DivineOffice",
+		Name = "성무일도",
+		Description = "신앙심이 {40} 이상이면, [낙인]을 두 적에게 동시에 남길 수 있고 지속이 {2}턴 증가한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Faith", "Mark" },
+	},
+	{
+		Id = "WallPilgrim_R_Penance",
+		Name = "고행",
+		Description = "턴당 {2}회, 자신이 피해를 받으면 가장 가까운 적에게 [광신] {1}중첩을 걸고 신앙심이 {2} 증가한다.",
+		Grade = "Rare",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment", "Faith" },
+	},
+
+	--=== 일반 (20) ===--
+	{
+		Id = "WallPilgrim_C_Setting",
+		Name = "고착",
+		Description = "[광신] 지속시간이 {1}턴 연장된다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment" },
+	},
+	{
+		Id = "WallPilgrim_C_NailHole",
+		Name = "못 자국 넓히기",
+		Description = "못 자국으로 옮기는 중첩이 {2} 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Spread" },
+	},
+	{
+		Id = "WallPilgrim_C_FirstNail",
+		Name = "첫 못",
+		Description = "전투 시작 시 가장 가까운 적에게 [광신] {3}중첩을 부여한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment", "Mark" },
+	},
+	{
+		Id = "WallPilgrim_C_Meditation",
+		Name = "묵상",
+		Description = "행동하지 않고 턴을 마치면, 신앙심이 {4} 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Faith" },
+	},
+	{
+		Id = "WallPilgrim_C_Companion",
+		Name = "동행",
+		Description = "같은 행의 월 필그림스 아군에게 주는 신앙심이 {4} 더 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Faith" },
+	},
+	{
+		Id = "WallPilgrim_C_Cleave",
+		Name = "쪼갬",
+		Description = "2스킬이 왼쪽뿐 아니라 오른쪽 칸의 적도 함께 공격한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Spread" },
+	},
+	{
+		Id = "WallPilgrim_C_RustyNail",
+		Name = "녹슨 못",
+		Description = "[광신]이 걸린 적의 회복량이 {10}% 감소한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment" },
+	},
+	{
+		Id = "WallPilgrim_C_Congregation",
+		Name = "회중",
+		Description = "[광신]이 걸린 적이 셋 이상이면 자신의 피해량이 {10}% 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Spread" },
+	},
+	{
+		Id = "WallPilgrim_C_Hymn",
+		Name = "성가",
+		Description = "3스킬을 쓰면 신앙심이 {8} 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Faith", "Spread" },
+	},
+	{
+		Id = "WallPilgrim_C_Weight",
+		Name = "무게",
+		Description = "[광신] 중첩 {1}당 자신이 받는 피해량이 {0.5}%씩, 최대 {5}까지 줄어든다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment", "Faith" },
+	},
+	{
+		Id = "WallPilgrim_C_BleedNail",
+		Name = "출혈 못",
+		Description = "[광신]을 걸 때 출혈도 추가로 부여한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Mark", "Judgment" },
+	},
+	{
+		Id = "WallPilgrim_C_Martyr",
+		Name = "순교자",
+		Description = "[광신]이 걸린 적을 처치하면 신앙심이 {6} 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Faith", "Mark" },
+	},
+	{
+		Id = "WallPilgrim_C_Guilt",
+		Name = "죄책",
+		Description = "[광신]이 걸린 적이 자신을 노릴 확률이 {25}% 감소한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Mark" },
+	},
+	{
+		Id = "WallPilgrim_C_Echo",
+		Name = "메아리",
+		Description = "2스킬이 [광신]을 {1}중첩 더 부여한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Spread", "Judgment" },
+	},
+	{
+		Id = "WallPilgrim_C_Alms",
+		Name = "적선",
+		Description = "같은 행의 아군이 적을 처치하면 신앙심이 {4} 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Faith", "Spread" },
+	},
+	{
+		Id = "WallPilgrim_C_LongArm",
+		Name = "긴 팔",
+		Description = "1스킬 사거리가 {1}칸 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment" },
+	},
+	{
+		Id = "WallPilgrim_C_ShortPrayer",
+		Name = "짧은 기도",
+		Description = "3스킬 재사용 대기가 {1}턴 감소한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Spread" },
+	},
+	{
+		Id = "WallPilgrim_C_Whetted",
+		Name = "못 갈기",
+		Description = "[광신]이 상한까지 찬 적에게 주는 피해량이 {12}% 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Judgment" },
+	},
+	{
+		Id = "WallPilgrim_C_PointOut",
+		Name = "지목",
+		Description = "턴당 {1}회, [낙인]이 찍힌 적을 공격하면 스테미나를 {4} 회복한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Mark" },
+	},
+	{
+		Id = "WallPilgrim_C_Inherited",
+		Name = "물려받은 못",
+		Description = "못 자국으로 중첩이 옮겨갈 때 신앙심이 {3} 증가한다.",
+		Grade = "Common",
+		ClassId = CLASS_ID,
+		Tags = { "Spread", "Faith" },
+	},
+}
+
+return {
+	ClassId = CLASS_ID,
+	Cards = cards,
+}

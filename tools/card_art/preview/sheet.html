@@ -1,0 +1,42 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>카드 그림 시트</title>
+<style>body{margin:0;background:#15151a;color:#ddd;font:12px sans-serif}</style>
+<canvas id="c"></canvas>
+<script>
+// tools/card_art/build.py 가 적은 art.json 을 한 장에 그려 34999 수신기로 PNG 를 보낸다(?send=이름).
+// ?cls=Berserker 로 직업만, ?cell=150 칸 크기.
+const q = new URLSearchParams(location.search);
+const CELL = +(q.get("cell") || 150), COLS = +(q.get("cols") || 8), PAD = 22;
+fetch("art.json?" + Date.now()).then(r => r.json()).then(all => {
+  const list = all.filter(a => !q.get("cls") || a.Id.startsWith(q.get("cls") + "_"));
+  const rows = Math.ceil(list.length / COLS);
+  const cv = document.getElementById("c");
+  cv.width = COLS * CELL; cv.height = rows * (CELL + PAD);
+  const g = cv.getContext("2d");
+  g.fillStyle = "#15151a"; g.fillRect(0, 0, cv.width, cv.height);
+  list.forEach((a, i) => {
+    const ox = (i % COLS) * CELL, oy = Math.floor(i / COLS) * (CELL + PAD);
+    const bg = { Essential: "#3a2a5e", Rare: "#1f3a6e", Common: "#3a3a42" }[a.Grade] || "#333";
+    g.fillStyle = bg; g.beginPath(); g.arc(ox + CELL / 2, oy + CELL / 2, CELL * 0.47, 0, 7); g.fill();
+    g.strokeStyle = "rgba(255,255,255,.25)"; g.lineWidth = 2; g.stroke();
+    const S = CELL * 0.82, bx = ox + (CELL - S) / 2, by = oy + (CELL - S) / 2;
+    [...a.Shapes].sort((p, q) => p.ZIndex - q.ZIndex).forEach(s => {
+      g.save();
+      g.translate(bx + s.X * S, by + s.Y * S);
+      g.rotate(s.Rotation * Math.PI / 180);
+      g.globalAlpha = 1 - s.Transparency;
+      const w = s.W * S, h = s.H * S, r = Math.min(s.Corner * Math.min(w, h), Math.min(w, h) / 2);
+      g.beginPath(); g.roundRect(-w / 2, -h / 2, w, h, r);
+      if (s.Stroke > 0) { g.lineWidth = Math.max(1, s.Stroke * S); g.strokeStyle = s.Color; g.stroke(); }
+      else { g.fillStyle = s.Color; g.fill(); }
+      g.restore();
+    });
+    g.fillStyle = "#ddd"; g.font = "12px sans-serif"; g.textAlign = "center";
+    g.fillText(a.Name, ox + CELL / 2, oy + CELL + 15);
+  });
+  const name = q.get("send");
+  if (name) fetch("http://127.0.0.1:34999/" + name, { method: "POST", mode: "no-cors", body: cv.toDataURL("image/png") })
+    .then(() => document.title = "sent " + name);
+});
+</script>

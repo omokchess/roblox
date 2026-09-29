@@ -1,0 +1,1 @@
+[{"file": "src/server/BattleService.luau", "path": ["ServerScriptService", "Server", "BattleService"], "class": "ModuleScript", "chain": [], "base": 2}, {"file": "src/client/DebugBattlePanel.luau", "path": ["StarterPlayer", "StarterPlayerScripts", "Client", "DebugBattlePanel"], "class": "ModuleScript", "chain": [], "base": 3}]

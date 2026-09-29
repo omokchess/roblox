@@ -1,0 +1,2351 @@
+{
+ "StiltHouseB2": {
+  "name": "StiltHouseB2",
+  "category": "Building",
+  "replicated": false,
+  "description": "2층 수상 가옥 (몸체를 뒤로 밀어 바깥 계단을 35°로)",
+  "attributes": {},
+  "parts": [
+   {
+    "name": "StiltHouseB2__candle",
+    "key": "candle",
+    "group": "Main",
+    "pos": [
+     0.8,
+     10.05,
+     -11.95
+    ],
+    "size": [
+     0.2425,
+     0.6,
+     0.28
+    ],
+    "tris": 20,
+    "material": "SmoothPlastic",
+    "color": [
+     232,
+     220,
+     190
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__cloth_green",
+    "key": "cloth_green",
+    "group": "Main",
+    "pos": [
+     4.5,
+     8.8,
+     -13.7
+    ],
+    "size": [
+     3.3,
+     0.5,
+     5.7
+    ],
+    "tris": 44,
+    "material": "Fabric",
+    "color": [
+     72,
+     100,
+     74
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": true
+   },
+   {
+    "name": "StiltHouseB2__flower_pink",
+    "key": "flower_pink",
+    "group": "Main",
+    "pos": [
+     0.6149,
+     21.7,
+     -1.5
+    ],
+    "size": [
+     10.782,
+     0.36,
+     0.2965
+    ],
+    "tris": 80,
+    "material": "SmoothPlastic",
+    "color": [
+     236,
+     180,
+     204
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__flower_white",
+    "key": "flower_white",
+    "group": "Main",
+    "pos": [
+     -0.2351,
+     21.7,
+     -1.5
+    ],
+    "size": [
+     10.782,
+     0.36,
+     0.2965
+    ],
+    "tris": 80,
+    "material": "SmoothPlastic",
+    "color": [
+     236,
+     232,
+     214
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__glass",
+    "key": "glass",
+    "group": "Main",
+    "pos": [
+     -6.1,
+     12.5,
+     -14.1
+    ],
+    "size": [
+     0.44,
+     0.8,
+     0.44
+    ],
+    "tris": 60,
+    "material": "Glass",
+    "color": [
+     170,
+     200,
+     190
+    ],
+    "transparency": 0.45,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__glass_green",
+    "key": "glass_green",
+    "group": "Main",
+    "pos": [
+     -3.55,
+     11.325,
+     -12.125
+    ],
+    "size": [
+     5.54,
+     3.15,
+     1.99
+    ],
+    "tris": 120,
+    "material": "Glass",
+    "color": [
+     96,
+     160,
+     96
+    ],
+    "transparency": 0.3,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__glow_fire",
+    "key": "glow_fire",
+    "group": "Main",
+    "pos": [
+     0.8,
+     10.47,
+     -11.95
+    ],
+    "size": [
+     0.16,
+     0.288,
+     0.1386
+    ],
+    "tris": 36,
+    "material": "Neon",
+    "color": [
+     255,
+     120,
+     40
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": false,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__glow_lantern",
+    "key": "glow_lantern",
+    "group": "Main",
+    "pos": [
+     1.9,
+     18.76,
+     -0.575
+    ],
+    "size": [
+     25.6,
+     15.32,
+     20.95
+    ],
+    "tris": 140,
+    "material": "Neon",
+    "color": [
+     255,
+     184,
+     104
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": false,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__glow_potion",
+    "key": "glow_potion",
+    "group": "Main",
+    "pos": [
+     -6.1,
+     12.5,
+     -15.3
+    ],
+    "size": [
+     0.44,
+     0.8,
+     0.44
+    ],
+    "tris": 60,
+    "material": "Neon",
+    "color": [
+     180,
+     110,
+     255
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": false,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__iron",
+    "key": "iron",
+    "group": "Main",
+    "pos": [
+     1.9,
+     17.391,
+     -0.575
+    ],
+    "size": [
+     25.96,
+     20.318,
+     21.31
+    ],
+    "tris": 2256,
+    "material": "CorrodedMetal",
+    "color": [
+     72,
+     66,
+     60
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__leaf",
+    "key": "leaf",
+    "group": "Main",
+    "pos": [
+     0.175,
+     21.3,
+     -1.7
+    ],
+    "size": [
+     12.35,
+     1.0,
+     0.866
+    ],
+    "tris": 288,
+    "material": "LeafyGrass",
+    "color": [
+     70,
+     98,
+     50
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": true
+   },
+   {
+    "name": "StiltHouseB2__moss",
+    "key": "moss",
+    "group": "Main",
+    "pos": [
+     -0.0259,
+     29.2697,
+     -10.0452
+    ],
+    "size": [
+     22.7163,
+     7.9695,
+     19.3018
+    ],
+    "tris": 612,
+    "material": "LeafyGrass",
+    "color": [
+     80,
+     104,
+     54
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__paint_white",
+    "key": "paint_white",
+    "group": "Main",
+    "pos": [
+     4.5,
+     9.2,
+     -16.0
+    ],
+    "size": [
+     2.6,
+     0.45,
+     1.0
+    ],
+    "tris": 44,
+    "material": "SmoothPlastic",
+    "color": [
+     226,
+     222,
+     210
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__rope",
+    "key": "rope",
+    "group": "Main",
+    "pos": [
+     -0.0086,
+     4.625,
+     -5.03
+    ],
+    "size": [
+     21.7431,
+     0.49,
+     29.8896
+    ],
+    "tris": 2560,
+    "material": "Fabric",
+    "color": [
+     158,
+     134,
+     94
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__shingle_a",
+    "key": "shingle_a",
+    "group": "Main",
+    "pos": [
+     -0.0096,
+     29.5182,
+     -10.0473
+    ],
+    "size": [
+     22.5445,
+     8.4419,
+     19.293
+    ],
+    "tris": 1704,
+    "material": "Wood",
+    "color": [
+     78,
+     74,
+     64
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__shingle_b",
+    "key": "shingle_b",
+    "group": "Main",
+    "pos": [
+     0.0509,
+     29.5163,
+     -10.0546
+    ],
+    "size": [
+     22.8006,
+     8.4456,
+     19.3042
+    ],
+    "tris": 1524,
+    "material": "Wood",
+    "color": [
+     92,
+     84,
+     70
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__shingle_c",
+    "key": "shingle_c",
+    "group": "Main",
+    "pos": [
+     0.0332,
+     29.5067,
+     -10.0581
+    ],
+    "size": [
+     22.5476,
+     8.4647,
+     19.2985
+    ],
+    "tris": 1752,
+    "material": "Wood",
+    "color": [
+     66,
+     66,
+     58
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_a",
+    "key": "wood_a",
+    "group": "Main",
+    "pos": [
+     1.665,
+     19.3443,
+     -4.9957
+    ],
+    "size": [
+     25.97,
+     25.4445,
+     31.4097
+    ],
+    "tris": 3520,
+    "material": "Wood",
+    "color": [
+     112,
+     92,
+     72
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_b",
+    "key": "wood_b",
+    "group": "Main",
+    "pos": [
+     1.236,
+     19.7733,
+     -4.979
+    ],
+    "size": [
+     25.428,
+     26.2958,
+     31.3788
+    ],
+    "tris": 5064,
+    "material": "Wood",
+    "color": [
+     96,
+     82,
+     66
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_c",
+    "key": "wood_c",
+    "group": "Main",
+    "pos": [
+     1.3334,
+     18.9208,
+     -5.0135
+    ],
+    "size": [
+     25.6332,
+     24.5795,
+     31.3976
+    ],
+    "tris": 3256,
+    "material": "Wood",
+    "color": [
+     126,
+     108,
+     86
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_dark_1",
+    "key": "wood_dark",
+    "group": "Main",
+    "pos": [
+     1.5329,
+     17.6202,
+     -4.9993
+    ],
+    "size": [
+     26.3658,
+     34.3393,
+     30.9015
+    ],
+    "tris": 9992,
+    "material": "Wood",
+    "color": [
+     66,
+     52,
+     42
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_dark_2",
+    "key": "wood_dark",
+    "group": "Main",
+    "pos": [
+     -0.003,
+     13.9485,
+     -5.4659
+    ],
+    "size": [
+     22.8893,
+     14.3029,
+     29.9717
+    ],
+    "tris": 2056,
+    "material": "Wood",
+    "color": [
+     66,
+     52,
+     42
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_moss",
+    "key": "wood_moss",
+    "group": "Main",
+    "pos": [
+     -0.0028,
+     22.3654,
+     -10.0501
+    ],
+    "size": [
+     18.5909,
+     8.8375,
+     15.6995
+    ],
+    "tris": 1320,
+    "material": "Wood",
+    "color": [
+     84,
+     92,
+     62
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_pale",
+    "key": "wood_pale",
+    "group": "Main",
+    "pos": [
+     -0.0039,
+     11.9199,
+     -10.7639
+    ],
+    "size": [
+     15.3692,
+     10.322,
+     13.8674
+    ],
+    "tris": 1004,
+    "material": "Wood",
+    "color": [
+     150,
+     136,
+     112
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_red",
+    "key": "wood_red",
+    "group": "Main",
+    "pos": [
+     0.0162,
+     17.55,
+     -10.0322
+    ],
+    "size": [
+     16.0882,
+     14.1,
+     16.4612
+    ],
+    "tris": 1320,
+    "material": "Wood",
+    "color": [
+     124,
+     64,
+     50
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_teal",
+    "key": "wood_teal",
+    "group": "Main",
+    "pos": [
+     -2.7179,
+     11.0,
+     -6.2905
+    ],
+    "size": [
+     0.7043,
+     7.9,
+     4.9586
+    ],
+    "tris": 176,
+    "material": "Wood",
+    "color": [
+     70,
+     104,
+     98
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "StiltHouseB2__wood_wet",
+    "key": "wood_wet",
+    "group": "Main",
+    "pos": [
+     0.1715,
+     -3.551,
+     -5.0734
+    ],
+    "size": [
+     21.6856,
+     8.9789,
+     30.4429
+    ],
+    "tris": 720,
+    "material": "Wood",
+    "color": [
+     48,
+     42,
+     35
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   }
+  ],
+  "colliders": [
+   {
+    "shape": "Block",
+    "pos": [
+     -10.0,
+     -1.0,
+     9.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -10.0,
+     -1.0,
+     2.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -10.0,
+     -1.0,
+     -5.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -10.0,
+     -1.0,
+     -12.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -10.0,
+     -1.0,
+     -19.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -3.3333,
+     -1.0,
+     9.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -3.3333,
+     -1.0,
+     2.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -3.3333,
+     -1.0,
+     -5.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -3.3333,
+     -1.0,
+     -12.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -3.3333,
+     -1.0,
+     -19.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     3.3333,
+     -1.0,
+     9.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     3.3333,
+     -1.0,
+     2.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     3.3333,
+     -1.0,
+     -5.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     3.3333,
+     -1.0,
+     -12.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     3.3333,
+     -1.0,
+     -19.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     10.0,
+     -1.0,
+     9.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     10.0,
+     -1.0,
+     2.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     10.0,
+     -1.0,
+     -5.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     10.0,
+     -1.0,
+     -12.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     10.0,
+     -1.0,
+     -19.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.1,
+     14.0,
+     1.1
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     6.4,
+     -5.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     23.0,
+     1.2,
+     31.0
+    ],
+    "tag": "Floor",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -5.0,
+     12.0,
+     -4.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     5.0,
+     10.0,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     5.0,
+     12.0,
+     -4.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     5.0,
+     10.0,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     16.0,
+     -4.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     5.0,
+     2.0,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     7.5,
+     12.0,
+     -10.75
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0,
+     -1.0,
+     0.0,
+     0.0
+    ],
+    "size": [
+     13.5,
+     10.0,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     12.0,
+     -17.5
+    ],
+    "rot": [
+     -1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "size": [
+     15.0,
+     10.0,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -7.5,
+     12.0,
+     -10.75
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     -1.0,
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    "size": [
+     13.5,
+     10.0,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     17.6,
+     -10.05
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     18.6,
+     1.2,
+     15.7
+    ],
+    "tag": "Floor",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     22.45,
+     -2.4
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     18.2,
+     8.5,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     9.1,
+     22.45,
+     -5.4
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0,
+     -1.0,
+     0.0,
+     0.0
+    ],
+    "size": [
+     6.0,
+     8.5,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     9.1,
+     22.45,
+     -16.05
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0,
+     -1.0,
+     0.0,
+     0.0
+    ],
+    "size": [
+     3.3,
+     8.5,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     9.1,
+     26.15,
+     -11.4
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0,
+     -1.0,
+     0.0,
+     0.0
+    ],
+    "size": [
+     6.0,
+     1.1,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     22.45,
+     -17.7
+    ],
+    "rot": [
+     -1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "size": [
+     18.2,
+     8.5,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -9.1,
+     22.45,
+     -10.05
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     -1.0,
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    "size": [
+     15.3,
+     8.5,
+     0.8
+    ],
+    "tag": "Wall",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     29.1544,
+     -5.325
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.76604,
+     -0.64279,
+     0.0,
+     0.64279,
+     0.76604
+    ],
+    "size": [
+     21.2,
+     0.6,
+     12.3361
+    ],
+    "tag": "Roof",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     29.1544,
+     -14.775
+    ],
+    "rot": [
+     -1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.76604,
+     -0.64279,
+     0.0,
+     -0.64279,
+     -0.76604
+    ],
+    "size": [
+     21.2,
+     0.6,
+     12.3361
+    ],
+    "tag": "Roof",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     11.85,
+     17.6,
+     -11.55
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     5.5,
+     1.2,
+     11.3
+    ],
+    "tag": "Floor",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     14.4,
+     20.15,
+     -11.55
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     -1.0,
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    "size": [
+     11.1,
+     3.9,
+     0.6
+    ],
+    "tag": "Rail",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     11.9,
+     12.321,
+     1.8725
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     1.0,
+     0.56868,
+     0.82256,
+     0.0,
+     -0.82256,
+     0.56868,
+     0.0
+    ],
+    "size": [
+     19.6947,
+     0.8,
+     4.2
+    ],
+    "tag": "Stairs",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -7.6,
+     8.95,
+     10.2
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     7.2,
+     3.9,
+     0.6
+    ],
+    "tag": "Rail",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     5.75,
+     8.95,
+     10.2
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     3.5,
+     3.9,
+     0.6
+    ],
+    "tag": "Rail",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -11.2,
+     8.95,
+     -5.0
+    ],
+    "rot": [
+     0.0,
+     0.0,
+     -1.0,
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    "size": [
+     30.4,
+     3.9,
+     0.6
+    ],
+    "tag": "Rail",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     8.95,
+     -20.2
+    ],
+    "rot": [
+     -1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "size": [
+     22.4,
+     3.9,
+     0.6
+    ],
+    "tag": "Rail",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -9.2,
+     8.2,
+     -17.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     2.4,
+     2.4,
+     2.4
+    ],
+    "tag": "Prop",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -9.0,
+     8.2,
+     -14.2
+    ],
+    "rot": [
+     0.93969,
+     0.0,
+     0.34202,
+     0.0,
+     1.0,
+     0.0,
+     -0.34202,
+     0.0,
+     0.93969
+    ],
+    "size": [
+     2.4,
+     2.4,
+     2.4
+    ],
+    "tag": "Prop",
+    "group": "Main"
+   }
+  ],
+  "lights": [
+   {
+    "pos": [
+     -4.0,
+     15.1,
+     -2.8
+    ],
+    "color": [
+     255,
+     176,
+     96
+    ],
+    "range": 18,
+    "brightness": 1.6,
+    "kind": "Point",
+    "shadows": false,
+    "angle": 60,
+    "face": null,
+    "group": "Main"
+   },
+   {
+    "pos": [
+     14.4,
+     21.9,
+     -6.0
+    ],
+    "color": [
+     255,
+     176,
+     96
+    ],
+    "range": 18,
+    "brightness": 1.1,
+    "kind": "Point",
+    "shadows": false,
+    "angle": 60,
+    "face": null,
+    "group": "Main"
+   },
+   {
+    "pos": [
+     -10.6,
+     11.7,
+     9.6
+    ],
+    "color": [
+     255,
+     176,
+     96
+    ],
+    "range": 16,
+    "brightness": 1.0,
+    "kind": "Point",
+    "shadows": false,
+    "angle": 60,
+    "face": null,
+    "group": "Main"
+   },
+   {
+    "pos": [
+     0.8,
+     10.65,
+     -11.95
+    ],
+    "color": [
+     255,
+     170,
+     90
+    ],
+    "range": 10,
+    "brightness": 1.0,
+    "kind": "Point",
+    "shadows": false,
+    "angle": 60,
+    "face": null,
+    "group": "Main"
+   },
+   {
+    "pos": [
+     0.0,
+     15.3,
+     -10.75
+    ],
+    "color": [
+     255,
+     176,
+     96
+    ],
+    "range": 20,
+    "brightness": 1.4,
+    "kind": "Point",
+    "shadows": false,
+    "angle": 60,
+    "face": null,
+    "group": "Main"
+   },
+   {
+    "pos": [
+     0.0,
+     25.8,
+     -10.0
+    ],
+    "color": [
+     255,
+     176,
+     96
+    ],
+    "range": 18,
+    "brightness": 1.6,
+    "kind": "Point",
+    "shadows": false,
+    "angle": 60,
+    "face": null,
+    "group": "Main"
+   }
+  ],
+  "markers": [
+   {
+    "name": "Entrance",
+    "pos": [
+     0.0,
+     7.1,
+     10.8
+    ],
+    "rot": [
+     -1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "attrs": {},
+    "group": "Main"
+   }
+  ],
+  "bounds": {
+   "min": [
+    -11.65,
+    -8.0404,
+    -20.7123
+   ],
+   "max": [
+    14.88,
+    34.7898,
+    10.7104
+   ]
+  },
+  "partCount": 710,
+  "triCount": 39808
+ },
+ "BoardwalkOpen": {
+  "name": "BoardwalkOpen",
+  "category": "Path",
+  "replicated": false,
+  "description": "나무 산책로 직선 16 stud (난간·가로등 없음, 입구 앞용)",
+  "attributes": {},
+  "parts": [
+   {
+    "name": "BoardwalkOpen__wood_a",
+    "key": "wood_a",
+    "group": "Main",
+    "pos": [
+     -2.2856,
+     6.816,
+     0.0
+    ],
+    "size": [
+     11.378,
+     0.3692,
+     7.2425
+    ],
+    "tris": 132,
+    "material": "Wood",
+    "color": [
+     112,
+     92,
+     72
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "BoardwalkOpen__wood_b",
+    "key": "wood_b",
+    "group": "Main",
+    "pos": [
+     5.7241,
+     6.8345,
+     0.0142
+    ],
+    "size": [
+     4.5327,
+     0.3743,
+     7.1363
+    ],
+    "tris": 132,
+    "material": "Wood",
+    "color": [
+     96,
+     82,
+     66
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "BoardwalkOpen__wood_c",
+    "key": "wood_c",
+    "group": "Main",
+    "pos": [
+     0.0044,
+     6.8184,
+     -0.0147
+    ],
+    "size": [
+     13.6595,
+     0.3828,
+     7.2294
+    ],
+    "tris": 220,
+    "material": "Wood",
+    "color": [
+     126,
+     108,
+     86
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "BoardwalkOpen__wood_dark",
+    "key": "wood_dark",
+    "group": "Main",
+    "pos": [
+     0.0,
+     3.694,
+     0.0
+    ],
+    "size": [
+     16.0,
+     5.6121,
+     7.8
+    ],
+    "tris": 480,
+    "material": "Wood",
+    "color": [
+     66,
+     52,
+     42
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "BoardwalkOpen__wood_moss",
+    "key": "wood_moss",
+    "group": "Main",
+    "pos": [
+     -1.7038,
+     6.853,
+     -0.0344
+    ],
+    "size": [
+     7.9616,
+     0.3544,
+     7.1843
+    ],
+    "tris": 132,
+    "material": "Wood",
+    "color": [
+     84,
+     92,
+     62
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   },
+   {
+    "name": "BoardwalkOpen__wood_wet",
+    "key": "wood_wet",
+    "group": "Main",
+    "pos": [
+     0.0363,
+     -3.0504,
+     -0.1358
+    ],
+    "size": [
+     15.4353,
+     7.931,
+     7.016
+    ],
+    "tris": 144,
+    "material": "Wood",
+    "color": [
+     48,
+     42,
+     35
+    ],
+    "transparency": 0.0,
+    "reflectance": 0.0,
+    "castShadow": true,
+    "doubleSided": false
+   }
+  ],
+  "colliders": [
+   {
+    "shape": "Block",
+    "pos": [
+     -7.0,
+     -0.3,
+     3.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.0,
+     14.0,
+     1.0
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     -7.0,
+     -0.3,
+     -3.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.0,
+     14.0,
+     1.0
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     7.0,
+     -0.3,
+     3.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.0,
+     14.0,
+     1.0
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     7.0,
+     -0.3,
+     -3.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     1.0,
+     14.0,
+     1.0
+    ],
+    "tag": "Stilt",
+    "group": "Main"
+   },
+   {
+    "shape": "Block",
+    "pos": [
+     0.0,
+     6.4,
+     0.0
+    ],
+    "rot": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "size": [
+     16.0,
+     1.2,
+     7.0
+    ],
+    "tag": "Floor",
+    "group": "Main"
+   }
+  ],
+  "lights": [],
+  "markers": [],
+  "bounds": {
+   "min": [
+    -8.0,
+    -7.0159,
+    -3.9
+   ],
+   "max": [
+    8.0,
+    7.0301,
+    3.9
+   ]
+  },
+  "partCount": 26,
+  "triCount": 1240
+ }
+}
