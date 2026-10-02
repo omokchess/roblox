@@ -387,6 +387,13 @@ local PENDING_OUT = 4.0
 local CHECKING_IN, CHECKING_COST, CHECKING_STAMINA, CHECKING_STAMINA_TURNS = 3.0, 0.09, 20, 2
 -- 테스터: 주는 피해 +3500%, 치명 +100%, 받는 피해 −80%, 방어막 200(1턴) (2026-10-02 사용자: +3000% → +3500%)
 local TESTER_OUT, TESTER_CRIT, TESTER_IN, TESTER_SHIELD = 35.0, 1.0, 0.2, 200
+-- 결투사 패리: 받는 피해 10%, 나머지 90% 를 되돌린다
+local PARRY_KEEP, PARRY_REFLECT = 0.1, 0.9
+GridBattle.PARRY_KEEP, GridBattle.PARRY_REFLECT = PARRY_KEEP, PARRY_REFLECT
+-- 이 공격을 QTE 없이 그대로 맞는가(결투사는 회피 불가 공격도 패리할 수 있다)
+function GridBattle.IsUnavoidable(state: any, skill: any): boolean
+	return skill.Unavoidable == true and state.AllyClassId ~= "Duelist"
+end
 GridBattle.PENDING_OUT, GridBattle.CHECKING_IN, GridBattle.CHECKING_COST = PENDING_OUT, CHECKING_IN, CHECKING_COST
 GridBattle.TESTER_OUT, GridBattle.TESTER_IN, GridBattle.TESTER_SHIELD = TESTER_OUT, TESTER_IN, TESTER_SHIELD
 -- 버프 칸: 주는 피해 +40%, 받는 피해 ×0.8 / 버그 칸: 주는 피해 −30%, 받는 피해 ×1.4
@@ -433,8 +440,8 @@ local function standingMod(state: State): string?
 	return boss.Mods[BattleGrid.CellKey("Ally", cell.X, cell.Y)]
 end
 
--- 이 보스 부위를 지금 아군 자리에서 때릴 수 있는가(부위가 선 라인에 아군이 있어야 한다)
-local function bossLaneOk(state: State, unit: Unit): boolean
+-- (2026-10-02 사용자: 보스 부위가 선 라인에 있어야만 때리는 규칙을 없앰 — 아래 함수는 쓰지 않는다)
+local function _bossLaneOk(state: State, unit: Unit): boolean
 	if not unit.Block then
 		return true
 	end
@@ -1104,13 +1111,6 @@ local function damageUnit(
 	local kind: BattleStatus.Element = element or "Physical"
 	local scaled = BattleStatus.IncomingDamage(unit.Status, amount, kind)
 	if state.Debug and state.Debug.God and unit.Side == "Ally" then
-		scaled = 0
-	end
-	-- 보스 부위는 그 부위가 선 라인에서만 맞는다(카드·반사 피해도). 지속 피해(canKill false)는 EndTurn 이 따로 깎는다
-	if unit.Part and canKill ~= false and not bossLaneOk(state, unit) then
-		if scaled > 0 then
-			pushLog(state, string.format("%s — 라인이 맞지 않아 빗나갔다", unit.Name))
-		end
 		scaled = 0
 	end
 	local absorbed, remaining = BattleStatus.Absorb(unit.Status, scaled)
@@ -1794,7 +1794,10 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	fire(state, "BeforeTaken", before)
 	grade = before.Grade
 	local autoParried = before.Auto == true and grade == "Success"
-	if skill.Unavoidable then
+	-- 결투사는 회피가 없고 패리만 한다(2026-10-02 사용자): 패리(성공)는 피해를 PARRY_KEEP 만 받고 나머지를 공격한 쪽에
+	-- 되돌린다. 회피·가드 불가 공격도 패리는 된다(가드는 안 됨)
+	local parryOnly = state.AllyClassId == "Duelist"
+	if skill.Unavoidable and not parryOnly then
 		-- 회피·가드 불가: QTE·카드·자동 패링과 상관없이 그대로 맞는다(자리를 비켜서는 것만 답)
 		grade = "Fail"
 		autoParried = false
@@ -1805,12 +1808,13 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 			pushLog(state, "자동 패링")
 		end
 		-- 회피만 가능(가드 불가): 막음(Partial)은 실패로 친다
-		if skill.DodgeOnly and grade == "Partial" then
+		if (skill.DodgeOnly or skill.Unavoidable) and grade == "Partial" then
 			grade = "Fail"
 			pushLog(state, skill.Name .. " — 막을 수 없는 공격")
 		end
 	end
-	local multiplier = QteDefinitions.Multiplier("Dodge", grade) * math.max(0, before.Mult)
+	local parried = parryOnly and grade == "Success"
+	local multiplier = (if parried then PARRY_KEEP else QteDefinitions.Multiplier("Dodge", grade)) * math.max(0, before.Mult)
 	if grade ~= "Success" and multiplier > 0 and before.Crit > 0 and nextRandom(state) < before.Crit then
 		multiplier *= math.max(1, before.CritMult)
 		pushLog(state, enemy.Name .. " 치명타")
@@ -1818,6 +1822,11 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	-- 적에게 걸린 주는 피해 보정(광신·섬광·중력)을 먹인다.
 	local incoming = BattleStatus.OutgoingDamage(enemy.Status, (enemy.Power + skill.Damage) * multiplier)
 	local taken = damageUnit(state, ally, incoming, "Physical", true)
+	local parryBack = 0
+	if parried and enemy.Alive then
+		local full = BattleStatus.OutgoingDamage(enemy.Status, (enemy.Power + skill.Damage) * math.max(0, before.Mult))
+		parryBack = damageUnit(state, enemy, full * PARRY_REFLECT, "Physical", true)
+	end
 
 	--[[
 		실제로 맞았으면 반사가 나간다(펄서 자기권).
@@ -1853,9 +1862,10 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 			pushLog(
 				state,
 				string.format(
-					"%s의 %s를 받아넘겼다 (적 그로기 +%d)",
+					"%s의 %s를 받아넘겼다 — 피해 90%% 감소·%d 되돌림 (적 그로기 +%d)",
 					enemy.Name,
 					skill.Name,
+					parryBack,
 					QteDefinitions.PARRY_GROGGY_GAIN
 				)
 			)
@@ -1898,7 +1908,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		Target = ally.Id,
 		Grade = grade,
 		Hits = { { { Id = ally.Id, Damage = taken, Grade = grade, Killed = not ally.Alive } } },
-		Reflect = reflected,
+		Reflect = reflected + parryBack,
 		ReflectKilled = not enemy.Alive,
 	})
 

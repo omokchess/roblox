@@ -995,7 +995,7 @@ function BattleClient:_paintTiles()
 			for _, cell in BattleSkills.Cells(grid, "Ally", me.Y, shape, growCount, me.X) do
 				inRange[cell.X .. "," .. cell.Y] = true
 			end
-			-- 실제로 맞는 적(보스 부위는 라인이 맞아야 한다 — 범위에 들어도 안 맞을 수 있다)
+			-- 실제로 맞는 적
 			for _, id in BattleSkills.Targets(grid, "Ally", me.Y, shape, growCount, me.X) do
 				hitIds[id] = true
 			end

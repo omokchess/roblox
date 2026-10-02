@@ -1843,12 +1843,13 @@ function PrototypeTests.RunSystems()
 	local attacker = GridBattle.AliveEnemies(dodgeBattle)[1]
 	local allyBefore = GridBattle.Ally(dodgeBattle).Health
 	GridBattle.ResolveDodge(dodgeBattle, attacker.Id, "Success")
-	expect(GridBattle.Ally(dodgeBattle).Health == allyBefore, "a perfect parry must take no damage")
+	expect(allyBefore - GridBattle.Ally(dodgeBattle).Health > 0, "a duelist parry keeps 10% of the damage (2026-10-02)")
 	expect(
 		attacker.Groggy.Value == QteDefinitions.PARRY_GROGGY_GAIN,
 		"a duelist parry must build the attacker's groggy gauge"
 	)
 
+	local beforeFail = GridBattle.Ally(dodgeBattle).Health
 	GridBattle.ResolveDodge(dodgeBattle, attacker.Id, "Fail")
 	expect(GridBattle.Ally(dodgeBattle).Health < allyBefore, "a failed dodge must take full damage")
 
@@ -1859,7 +1860,7 @@ function PrototypeTests.RunSystems()
 	do
 	local attackEvent = dodgeBattle.Events[#dodgeBattle.Events]
 	expect(attackEvent and attackEvent.Kind == "EnemyAttack", "an enemy attack must leave an event")
-	expect(attackEvent.Hits[1][1].Id == "player" and attackEvent.Hits[1][1].Damage == allyBefore - GridBattle.Ally(dodgeBattle).Health, "the attack event must carry the real damage")
+	expect(attackEvent.Hits[1][1].Id == "player" and attackEvent.Hits[1][1].Damage == beforeFail - GridBattle.Ally(dodgeBattle).Health, "the attack event must carry the real damage")
 	local skillEvent = successBattle.Events[#successBattle.Events]
 	expect(skillEvent and skillEvent.Kind == "Skill" and skillEvent.Actor == "player", "a skill must leave an event")
 	local eventTotal = 0
@@ -1957,7 +1958,7 @@ function PrototypeTests.RunSystems()
 	local parryFoe = GridBattle.AliveEnemies(parryState)[1]
 	local hpBefore = GridBattle.Ally(parryState).Health
 	GridBattle.ResolveDodge(parryState, parryFoe.Id, "Success")
-	expect(GridBattle.Ally(parryState).Health == hpBefore, "a parry must take no damage")
+	expect(hpBefore - GridBattle.Ally(parryState).Health > 0 and parryFoe.Health < parryFoe.MaxHealth, "a parry takes 10% and reflects 90%")
 	expect(parryFoe.Groggy.Value == QteDefinitions.PARRY_GROGGY_GAIN, "a parry must add groggy")
 
 	-- 보통(Partial)은 절반, 실패는 전부 맞는다.

@@ -731,11 +731,7 @@ function BattleSkills.Targets(
 	local seen: { [string]: boolean } = {}
 	for _, cell in BattleSkills.Cells(grid, attackerSide, lane, shape, growCount, casterX) do
 		local occupant = BattleGrid.Occupant(grid, targetSide, cell.X, cell.Y)
-		-- 여러 칸을 차지한 적(보스 부위)은 캐스터와 같은 라인에 걸쳐 있을 때만 맞는다(범위가 옆 라인까지 닿아도)
-		if occupant and targetSide ~= attackerSide and grid.Blocks and grid.Blocks[occupant]
-			and not BattleGrid.UnitInLane(grid, targetSide, occupant, lane) then
-			occupant = nil
-		end
+		-- (2026-10-02 사용자: 보스 부위의 같은 라인 제한을 없앰 — 범위 칸에 걸치면 맞는다)
 		if occupant and not seen[occupant] then
 			seen[occupant] = true
 			table.insert(hit, occupant)

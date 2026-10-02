@@ -242,7 +242,8 @@ do
 		end
 		local _ = shape
 	end
-	check(hits.boss_DeleteArm and hits.boss_Core and not hits.boss_Head and not hits.boss_PatchArm, "라인 1 에선 삭제 팔·코어만 맞는다")
+	-- 2026-10-02 사용자: 라인 제한 없앰 — 전체 범위면 모든 부위가 맞는다
+	check(hits.boss_DeleteArm and hits.boss_Core and hits.boss_Head and hits.boss_PatchArm, "라인 제한 없음: 전체 범위는 부위 넷 다")
 	local before = s.Units.boss_Head.Health
 	GridBattle.GainResource(s, s.Units.player, "none", 0)
 	local env = s.Runtime and s.Runtime.Env
