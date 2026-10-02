@@ -135,7 +135,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "BreakpointBeam",
 		Name = "중단점 광선",
-		Description = "머리의 붉은 중단점이 아군이 선 라인 하나를 통째로 꿰뚫는다. 막을 수 없다 — 피하거나 라인을 비켜라.",
+		Description = "- 아군이 선 라인 하나를 통째로 꿰뚫는다.\n- 막기 불가 — 회피만 된다.\n- 라인을 비켜서면 맞지 않는다.",
 		Damage = 12,
 		Range = "Ranged",
 		Shape = { Kind = "Row" },
@@ -144,7 +144,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "DeleteCells",
 		Name = "글리치",
-		Description = "삭제 팔이 매 턴 다섯 무늬 가운데 하나로 아군 칸 12개를 검수 준비중으로 예고하고, 턴 끝에 검수됨!(검은 칸)으로 만든다. 검은 칸에도 설 수 있다 — 검수중(받는 피해 +200%, 최대 체력 9% 고정 피해 — 이걸로는 죽지 않음, 2턴 뒤 스테미나 20)을 버티면 다음 턴 테스터(주는 피해 +3500%). 예고 칸에서 쓰는 스킬은 +400%지만 거기서 턴을 마치면 다음 턴 못 움직인다.",
+		Description = "- 매 턴 무늬 5개 중 하나로 아군 칸 12개를 [검수 준비중]으로 예고.\n- 턴 끝에 그 칸이 [검수됨!](검은 칸)이 된다. 검은 칸에도 설 수 있다.\n- [검수 준비중] 칸\n  - 그 칸에서 쓰는 스킬의 피해량 +400%.\n  - 거기서 턴을 마치면 다음 턴 이동 불가.\n- [검수중] (검은 칸 위)\n  - [받는 피해량] +200%.\n  - 턴 끝 최대 체력 9% 고정 피해.\n    - 위 효과로 사망하지 않음.\n  - 2턴 뒤 스테미나 −20.\n- 검은 칸에서 턴을 마치면 다음 턴 [테스터]\n  - [가하는 피해량] +3500%.",
 		-- 피해 0: 회피 QTE 공격이 아니라 선택이다(과부하 도박 — GridBattle 이 턴 끝에 처리)
 		Damage = 0,
 		Range = "Melee",
@@ -154,7 +154,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "ForcedPatch",
 		Name = "강제 적용",
-		Description = "패치 팔이 아군이 선 열을 위아래로 쓸어내린다.",
+		Description = "- 아군이 선 열을 위아래로 쓸어내린다.\n- 회피·막기 가능.",
 		Damage = 10,
 		Range = "Melee",
 		Shape = { Kind = "Column" },
@@ -162,7 +162,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CoreDump",
 		Name = "코어 덤프",
-		Description = "코어가 기억을 쏟아내 아군 칸 전부를 덮친다. 피할 수도 막을 수도 없다 — 버프 칸만 비켜 간다.",
+		Description = "- 아군 칸 전부를 덮친다.\n- 회피·막기 불가.\n- 버프 칸만 비켜 간다.",
 		Damage = 18,
 		Range = "Ranged",
 		Shape = { Kind = "All" },
@@ -171,7 +171,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "NullPointer",
 		Name = "널 포인터",
-		Description = "코어가 아무것도 없는 곳을 가리킨다 — 아군이 선 라인과 다른 라인 하나가 통째로 무너진다. 막을 수 없다.",
+		Description = "- 아군이 선 라인 + 다른 라인 하나가 통째로 무너진다.\n- 막기 불가 — 회피만 된다.",
 		Damage = 14,
 		Range = "Ranged",
 		Shape = { Kind = "Row" },
@@ -180,7 +180,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "MemoryLeak",
 		Name = "메모리 누수",
-		Description = "코어에서 새어 나온 조각이 체크무늬로 아군 칸 절반에 쏟아진다.",
+		Description = "- 아군 칸 절반에 체크무늬로 쏟아진다.\n  - 아군이 선 칸은 늘 포함.\n- 회피·막기 가능.",
 		Damage = 10,
 		Range = "Ranged",
 		Shape = { Kind = "Square", Radius = 1 },

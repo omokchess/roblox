@@ -71,9 +71,9 @@ local definitions: { [string]: EnemyDefinition } = {
 		MotionId = "Debug",
 		Behavior = "Boss",
 		Rules = {
-			"[디버그 코어]는 다른 부위를 모두 부수기 전까지 쓰러지지 않는다(체력 1에서 버팀).",
-			"코어가 쓰러지면 남은 부위도 함께 무너진다.",
-			"지속 피해(출혈·독·화상)는 99% 줄여 받는다.",
+			"- [디버그 코어]는 다른 부위를 모두 부수기 전까지 쓰러지지 않음.\n  - 체력 1에서 버팀.",
+			"- 코어가 쓰러지면 남은 부위도 함께 무너짐.",
+			"- 지속 피해([출혈]·[독]·[화상]) −99%.",
 		},
 		Parts = {
 			{
@@ -82,7 +82,7 @@ local definitions: { [string]: EnemyDefinition } = {
 				Health = 20000,
 				Cells = { { 1, 2 }, { 2, 2 } },
 				Moves = { { Id = "BreakpointBeam", When = "매 턴" } },
-				Break = "디버그가 한 턴 멈칫한다 — 그 턴엔 어느 부위도 예고하지 않는다.",
+				Break = "- 디버그가 1턴 멈칫.\n  - 그 턴엔 어느 부위도 예고하지 않음.",
 			},
 			{
 				Key = "DeleteArm",
@@ -90,7 +90,7 @@ local definitions: { [string]: EnemyDefinition } = {
 				Health = 16000,
 				Cells = { { 1, 1 }, { 2, 1 } },
 				Moves = { { Id = "DeleteCells", When = "매 턴" } },
-				Break = "검은 칸(검수됨!)이 모두 돌아오고, 더는 칸을 지우지 않는다.",
+				Break = "- [검수됨!] 칸이 모두 돌아옴.\n- 더는 칸을 지우지 않음.",
 			},
 			{
 				Key = "PatchArm",
@@ -101,11 +101,11 @@ local definitions: { [string]: EnemyDefinition } = {
 					{
 						Name = "패치 적용",
 						When = "홀수 턴",
-						Description = "아군 칸을 새로 칠한다 — 버프 칸 2(가하는 피해량 +40%, 받는 피해량 −20%), 회복 칸 1(턴 끝 최대 체력 15% 회복), 버그 칸 2(가하는 피해량 −30%, 받는 피해량 +40%). 그 칸에 서 있을 때만 효과. 검은 칸에는 깔지 않는다.",
+						Description = "- 아군 칸을 새로 칠한다.\n  - 검은 칸에는 깔지 않음.\n- 버프 칸 2\n  - [가하는 피해량] +40%, [받는 피해량] −20%.\n- 회복 칸 1\n  - 턴 끝 최대 체력 15% 회복.\n- 버그 칸 2\n  - [가하는 피해량] −30%, [받는 피해량] +40%.\n- 그 칸에 서 있을 때만 효과.",
 					},
 					{ Id = "ForcedPatch", When = "짝수 턴" },
 				},
-				Break = "버그 칸이 사라지고, 버프·회복 칸은 그대로 굳는다.",
+				Break = "- 버그 칸이 사라짐.\n- 버프·회복 칸은 그대로 굳음.",
 			},
 			{
 				Key = "Core",
@@ -117,7 +117,7 @@ local definitions: { [string]: EnemyDefinition } = {
 					{ Id = "NullPointer", When = "짝수 턴(4의 배수 턴 빼고)" },
 					{ Id = "CoreDump", When = "4의 배수 턴" },
 				},
-				Break = "디버그가 무너진다 — 승리.",
+				Break = "- 디버그가 무너짐 — 승리.",
 			},
 		},
 	},

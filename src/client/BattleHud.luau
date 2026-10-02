@@ -168,6 +168,60 @@ function BattleHud.ParseDescription(text: string): { Row }
 	return rows
 end
 
+--[[
+	설명 글 → 줄들(첫 단계 글머리는 accent 색 마름모, 그 아래는 짧은 줄표, 두 칸 들여쓰기 = 한 단계).
+	스킬 설명 말풍선과 보스 정보 창이 같이 쓴다(2026-10-02 사용자: 보스 스킬 설명도 플레이어 스킬 설명 양식으로).
+	dim = 부서진 부위처럼 흐리게.
+]]
+local function describe(parent: Instance, text: string, accent: Color3, firstOrder: number?, dim: boolean?)
+	for i, row in BattleHud.ParseDescription(text) do
+		local line = make("Frame", {
+			Size = UDim2.new(1, -6, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			LayoutOrder = (firstOrder or 0) + i,
+		}, parent)
+		local top = if row.Level == 0 and i > 1 then 5 else 0
+		local left = row.Level * 16
+		if row.Bullet then
+			-- 글머리: 첫 단계는 종류 색 마름모, 그 아래는 짧은 줄표
+			if row.Level == 0 then
+				make("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromOffset(left + 4, top + 10),
+					Size = UDim2.fromOffset(6, 6),
+					Rotation = 45,
+					BackgroundColor3 = if dim then MUTED else accent,
+					BorderSizePixel = 0,
+				}, line)
+			else
+				make("Frame", {
+					Position = UDim2.fromOffset(left, top + 9),
+					Size = UDim2.fromOffset(7, 2),
+					BackgroundColor3 = MUTED,
+					BorderSizePixel = 0,
+				}, line)
+			end
+			left += 15
+		end
+		make("TextLabel", {
+			Position = UDim2.fromOffset(left, top),
+			Size = UDim2.new(1, -left, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Text = BattleHud.Markup(row.Text),
+			RichText = true,
+			TextWrapped = true,
+			TextColor3 = if dim then MUTED elseif row.Head then BONE else BODY,
+			Font = if row.Head then Enum.Font.GothamBold else Enum.Font.GothamMedium,
+			TextSize = 15,
+			LineHeight = 1.1,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+		}, line)
+	end
+end
+
 export type Callbacks = {
 	Select: (index: number) -> (),
 	Attack: () -> (),
@@ -1004,52 +1058,7 @@ function BattleHud:_showTip(index: number)
 			child:Destroy()
 		end
 	end
-	for i, row in BattleHud.ParseDescription(skill.Description or "") do
-		local line = make("Frame", {
-			Size = UDim2.new(1, -6, 0, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 1,
-			LayoutOrder = i,
-		}, self.tipBody)
-		local top = if row.Level == 0 and i > 1 then 5 else 0
-		local left = row.Level * 16
-		if row.Bullet then
-			-- 글머리: 첫 단계는 종류 색 마름모, 그 아래는 짧은 줄표
-			if row.Level == 0 then
-				make("Frame", {
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.fromOffset(left + 4, top + 10),
-					Size = UDim2.fromOffset(6, 6),
-					Rotation = 45,
-					BackgroundColor3 = kind.Color,
-					BorderSizePixel = 0,
-				}, line)
-			else
-				make("Frame", {
-					Position = UDim2.fromOffset(left, top + 9),
-					Size = UDim2.fromOffset(7, 2),
-					BackgroundColor3 = MUTED,
-					BorderSizePixel = 0,
-				}, line)
-			end
-			left += 15
-		end
-		make("TextLabel", {
-			Position = UDim2.fromOffset(left, top),
-			Size = UDim2.new(1, -left, 0, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 1,
-			Text = BattleHud.Markup(row.Text),
-			RichText = true,
-			TextWrapped = true,
-			TextColor3 = if row.Head then BONE else BODY,
-			Font = if row.Head then Enum.Font.GothamBold else Enum.Font.GothamMedium,
-			TextSize = 15,
-			LineHeight = 1.1,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Top,
-		}, line)
-	end
+	describe(self.tipBody, skill.Description or "", kind.Color)
 
 	-- 키워드 풀이: 사전에 있는 것 앞에서 셋. 풀이는 첫 줄만(공식 줄은 길다)
 	for _, child in self.gloss:GetChildren() do
@@ -1163,7 +1172,7 @@ end
 	  - Into the Breach("멋보다 분명함"): 이번 턴 예고한 행동을 그 자리에서 바로 표시
 	모양은 스킬 설명 말풍선과 같다: 먹빛 판 + 뼛빛 1px 선 + 모서리 꺾쇠, 왼쪽 색 막대, 마름모 글머리, 숫자·키워드만 색.
 	부위마다 칸 하나: 이름 · 상태 꼬리표 · 체력 줄 · 행동(스킬) · 부수면. 누른 부위 칸은 금빛 테두리로, 그 칸까지 내려 준다.
-	창 밖을 누르거나 Esc·✕ 로 닫는다(BattleClient).
+	창 밖을 누르거나 Esc·X 로 닫는다(BattleClient).
 ]]
 local function chip(parent: Instance, text: string, color: Color3, order: number): TextLabel
 	local c = make("TextLabel", {
@@ -1203,23 +1212,6 @@ end
 local function comma(n: number): string
 	local s = tostring(math.floor(n)):reverse():gsub("(%d%d%d)", "%1,"):reverse()
 	return (s:gsub("^,", ""))
-end
-
--- 글머리 마름모 + 들여 쓴 칸(안에 글을 넣는다)
-local function bulletRow(parent: Instance, color: Color3, order: number): Frame
-	local row = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = order }, parent)
-	make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromOffset(4, 10),
-		Size = UDim2.fromOffset(6, 6),
-		Rotation = 45,
-		BackgroundColor3 = color,
-		BorderSizePixel = 0,
-	}, row)
-	local holder = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, row)
-	make("UIPadding", { PaddingLeft = UDim.new(0, 15) }, holder)
-	make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, holder)
-	return holder
 end
 
 function BattleHud:_buildBossInfo()
@@ -1275,7 +1267,7 @@ function BattleHud:_buildBossInfo()
 		Size = UDim2.fromOffset(26, 26),
 		BackgroundColor3 = INK_2,
 		BorderSizePixel = 0,
-		Text = "✕",
+		Text = "X",
 		TextColor3 = BONE,
 		Font = Enum.Font.GothamBlack,
 		TextSize = 14,
@@ -1352,7 +1344,10 @@ end
 -- 부위 행동 하나(스킬이면 BattleSkills 에서 이름·설명·피해·방어 규칙을 가져온다)
 function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned: string?, alive: boolean)
 	local skill = if move.Id then BattleSkills.ById(move.Id) else nil
-	local holder = bulletRow(parent, if alive then CRIMSON else MUTED, order)
+	-- 머리(이름·꼬리표·수치 줄) 아래에 설명 줄 — 스킬 설명 말풍선과 같은 짜임
+	local holder = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = order }, parent)
+	make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, holder)
+	make("UIPadding", { PaddingTop = UDim.new(0, 4) }, holder)
 	local top = make("Frame", { Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, LayoutOrder = 1 }, holder)
 	make("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
@@ -1375,16 +1370,26 @@ function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned
 	end
 	chip(top, move.When, STEEL, 3)
 	if skill then
+		local stats = {}
 		if (skill.Damage or 0) > 0 then
-			chip(top, "피해 " .. tostring(skill.Damage), BONE, 4)
+			table.insert(stats, statPart("피해", tostring(skill.Damage)))
 		end
-		if skill.Unavoidable then
-			chip(top, "회피·막기 불가", RED, 5)
-		elseif skill.DodgeOnly then
-			chip(top, "막기 불가 · 회피만", GOLD, 5)
-		end
+		table.insert(stats, if skill.Unavoidable then statPart("방어", "회피·막기 불가", RED)
+			elseif skill.DodgeOnly then statPart("방어", "회피만", GOLD)
+			else statPart("방어", "회피·막기"))
+		make("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 16),
+			BackgroundTransparency = 1,
+			Text = table.concat(stats, string.format('<font color="%s">   |   </font>', hex(Color3.fromRGB(80, 74, 66)))),
+			TextColor3 = MUTED,
+			Font = Enum.Font.GothamBold,
+			TextSize = 13,
+			RichText = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			LayoutOrder = 2,
+		}, holder)
 	end
-	richRow(holder, BattleHud.Markup((if skill then skill.Description else move.Description) or ""), if alive then BODY else MUTED, 2)
+	describe(holder, (if skill then skill.Description else move.Description) or "", CRIMSON, 10, not alive)
 end
 
 --[[
@@ -1440,9 +1445,7 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 	if def.Rules then
 		local rules = make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody)
 		make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, rules)
-		for i, rule in def.Rules do
-			richRow(bulletRow(rules, CRIMSON, i), BattleHud.Markup(rule), BODY)
-		end
+		describe(rules, table.concat(def.Rules, "\n"), CRIMSON)
 	end
 	-- 부위마다 칸 하나
 	local focusFrame: Frame? = nil
@@ -1514,7 +1517,10 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 		end
 		-- 부수면
 		if part.Break then
-			richRow(box, string.format('<font color="%s"><b>부수면</b></font>   %s', hex(GOLD), BattleHud.Markup(part.Break)), if isAlive then BODY else MUTED, 50)
+			local brk = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 50 }, box)
+			make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, brk)
+			richRow(brk, string.format('<font color="%s"><b>부수면</b></font>', hex(GOLD)), BONE, 0)
+			describe(brk, part.Break, GOLD, 0, not isAlive)
 		end
 	end
 	self.boss.Visible = true
