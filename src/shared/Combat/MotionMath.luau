@@ -239,6 +239,87 @@ local function blendArray(a: { number }, b: { number }, w: number, from: number?
 	return r
 end
 
+--[[
+	무기(W·O) 회전은 키 사이를 **쿼터니언 최단 호(slerp)** 로 잇는다(2026-09-30). 오일러 세 값을 따로 선형 보간하면
+	크게 휘두를 때(머리 위 → 땅) 날이 엉뚱하게 비틀리며 돈다. 다만 어느 한 값이라도 180° 넘게 바뀌면
+	일부러 한 바퀴 이상 돌리는 것(칼 돌리기 -120 → -400)이라 적힌 대로 오일러로 돈다.
+]]
+local RAD = math.pi / 180
+local function anglesQuat(v: { number }): { number }
+	local function ax(i: number, deg: number)
+		local h = deg * RAD / 2
+		local q = { 0, 0, 0, math.cos(h) }
+		q[i] = math.sin(h)
+		return q
+	end
+	local function mul(a: { number }, b: { number }): { number }
+		return {
+			a[4] * b[1] + a[1] * b[4] + a[2] * b[3] - a[3] * b[2],
+			a[4] * b[2] - a[1] * b[3] + a[2] * b[4] + a[3] * b[1],
+			a[4] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[4],
+			a[4] * b[4] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+		}
+	end
+	return mul(mul(ax(1, v[4]), ax(2, v[5])), ax(3, v[6]))
+end
+
+local function slerpWeapon(a: { number }, b: { number }, alpha: number): { number }
+	if alpha <= 0 then
+		return a
+	elseif alpha >= 1 then
+		return b
+	end
+	for i = 4, 6 do
+		if math.abs(b[i] - a[i]) > 180 then
+			return lerpArray(a, b, alpha)
+		end
+	end
+	local qa, qb = anglesQuat(a), anglesQuat(b)
+	local dot = qa[1] * qb[1] + qa[2] * qb[2] + qa[3] * qb[3] + qa[4] * qb[4]
+	if dot < 0 then
+		dot = -dot
+		qb = { -qb[1], -qb[2], -qb[3], -qb[4] }
+	end
+	local wa, wb
+	if dot > 0.9995 then
+		wa, wb = 1 - alpha, alpha
+	else
+		local th = math.acos(math.clamp(dot, -1, 1))
+		local sn = math.sin(th)
+		wa, wb = math.sin((1 - alpha) * th) / sn, math.sin(alpha * th) / sn
+	end
+	local x, y, z, w = qa[1] * wa + qb[1] * wb, qa[2] * wa + qb[2] * wb, qa[3] * wa + qb[3] * wb, qa[4] * wa + qb[4] * wb
+	local n = math.sqrt(x * x + y * y + z * z + w * w)
+	x, y, z, w = x / n, y / n, z / n, w / n
+	-- CFrame.Angles(Rx·Ry·Rz) 로 되돌리고, 선형 보간 값에 가까운 쪽으로 감는다(섞기가 되감지 않게)
+	local r02 = 2 * (x * z + y * w)
+	local r12 = 2 * (y * z - x * w)
+	local r22 = 1 - 2 * (x * x + y * y)
+	local r01 = 2 * (x * y - z * w)
+	local r00 = 1 - 2 * (y * y + z * z)
+	local ref = {}
+	for i = 1, 3 do
+		ref[i] = a[i + 3] + (b[i + 3] - a[i + 3]) * alpha
+	end
+	local e
+	if math.abs(r02) > 0.99999 then
+		-- 짐벌(비틀기 ±90°): 숙임·기울기가 한 축으로 겹친다 — 기울기는 보간 값을 쓰고 숙임으로 나머지를 채운다
+		local r10 = 2 * (x * y + z * w)
+		local r11 = 1 - 2 * (x * x + z * z)
+		local sum = math.atan2(r10, r11) / RAD
+		local c = ref[3]
+		e = if r02 > 0 then { sum - c, 90, c } else { c - sum, -90, c }
+	else
+		e = { math.atan2(-r12, r22) / RAD, math.asin(r02) / RAD, math.atan2(-r01, r00) / RAD }
+	end
+	local r = table.create(6)
+	for i = 1, 3 do
+		r[i] = a[i] + (b[i] - a[i]) * alpha
+		r[i + 3] = e[i] + 360 * math.round((ref[i] - e[i]) / 360)
+	end
+	return r
+end
+
 -- 시각 t 의 자세. 되풀이 모션은 t 를 길이로 감는다.
 function MotionMath.Sample(compiled: any, t: number): Pose
 	local keys = compiled.Keys
@@ -256,7 +337,7 @@ function MotionMath.Sample(compiled: any, t: number): Pose
 			local alpha = curve(b.e)((t - a.t) / span)
 			local pose = {}
 			for name, va in a.pose do
-				pose[name] = lerpArray(va, b.pose[name], alpha)
+				pose[name] = if name == "W" or name == "O" then slerpWeapon(va, b.pose[name], alpha) else lerpArray(va, b.pose[name], alpha)
 			end
 			return pose
 		end

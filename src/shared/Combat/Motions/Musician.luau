@@ -1,88 +1,140 @@
 --!strict
 --[[
-	음악가 — 바이올리니스트. (2026-09-28)
+	음악가 — 바이올리니스트. (2026-09-28, 자세 다시 2026-09-30)
 
-	성격: 우아함·무대 체질. 늘 연주하며 움직이고, 움직임은 곡선(sine)으로 흐른다.
-	      연주자답게 몸을 **관객(카메라) 쪽으로 28° 열고** 선다 — 전투 카메라는 오른쪽 옆에서 보므로
-	      실제 연주 자세(바이올린이 왼쪽 앞)로 서면 악기가 카메라 반대편으로 파묻힌다.
-	      한 발에 무게를 싣고(콘트라포스토) 다른 발끝을 세우며, 피하면 피루엣으로 돈다.
+	성격: 우아함·무대 체질. 움직임은 곡선(sine)으로 흐르고, 피하면 피루엣으로 돈다.
 	      공격은 칼질이 아니라 **활 긋기**다 — 음표가 날아가 때린다.
+	사용자 지정(`스탠딩/직업 베이스 모션.md`): 바이올린 **바닥이 목에 닿고**, 대기에서 **활은 똑바로 세운다**.
+	참고: 바이올린 자세 — 악기는 왼쪽 쇄골에 얹고 턱받침에 턱을 괸다, 스크롤은 왼 어깨 앞 위로,
+	      윗판은 20~45° 오른쪽으로 눕힌다. 활은 프로그(손잡이)를 쥔다.
+	      대기 = 쉼표에서 활을 세워 든 준비 자세. 긋기는 활털이 브리지와 지판 사이 줄에 닿은 채로 미끄러진다.
+	무대 쪽으로 몸을 연다: 전투 카메라는 오른쪽 옆에서 본다 — 몸을 오른쪽으로 48° 틀어(Root Y -48) 가슴과 악기가 카메라 쪽.
 	무기 종류: Bowed (WeaponDefinitions.Violin: O = 왼손 바이올린, W = 오른손 활)
-	  바이올린은 왼팔 위에 얹는다: O = { 0.3, -2.4, -0.8, -90, 160, 0 } (팔과 일직선, 길이 방향으로 당겨 턱까지, 줄 쪽 위로)
-	  활은 몸을 가로질러 왼쪽을 본다: W 기울기 ≈ 90. 활 긋기 = 오른팔 Y(좌우) 흔들기.
+	수치: tools/combat/posecalc.py 로 구했다 — 곧은 R6 팔로 바닥이 목에 닿으면서 왼손이 목을 쥐고(어긋남 0.02),
+	      활털이 줄에 닿은 채 활 길이 0.9~2.3 구간을 긋는 오른팔·활 각도(활 길이 s 별 BOW 표).
 ]]
 local Kit = require(script.Parent.Parent.MotionKit)
-local K, W = Kit.K, Kit.With
+local K = Kit.K
 
-local VIOLIN = { 0.3, -1.6, -0.5, -90, 186, 24 }
+-- 턱에 괸 바이올린(바닥 = 목 왼쪽 쇄골, 몸 앞에서 왼쪽 60°·위로 2°, 윗판 오른쪽으로 40° 눕힘)
+local CHIN = { LArm = { 114.7, 20.6, 11 }, O = { 0, 0.01, -0.01, 35.2, -22.1, 125 } }
+-- 활 긋기: 활털의 s 스터드 자리가 줄에 닿는 오른팔·활(프로그 쪽 0.9 → 끝 쪽 2.3)
+local BOW = {
+	[9] = { RArm = { 109.4, 41.5, -21.2 }, W = { 0, 0, 0, -104.4, 46.8, 35.3 } },
+	[11] = { RArm = { 102.9, 36.4, -18.9 }, W = { 0, 0, 0, -104.7, 44.1, 54.9 } },
+	[14] = { RArm = { 95.6, 31.2, -15 }, W = { 0, 0, 0, -105.1, 40.5, 71.8 } },
+	[17] = { RArm = { 89.1, 26.7, -10.5 }, W = { 0, 0, 0, -105.4, 36.9, 84 } },
+	[20] = { RArm = { 83.5, 20.3, -7.5 }, W = { 0, 0, 0, -106, 33.1, 93.6 } },
+	[23] = { RArm = { 78.5, 13.7, -3.8 }, W = { 0, 0, 0, -106.8, 28.8, 102 } },
+}
+-- 활을 세워 든 오른손(가슴 앞, 활끝은 바이올린 쪽으로 살짝)
+local UPRIGHT = { RArm = { 76, 20, 5 }, W = { 0, 0, 0, 17.7, 0, 6.9 } }
+local SWAY_L = { RArm = { 77, 22, 4 }, W = { 0, 0, 0, 13.8, 0, 11.2 } }
+local SWAY_R = { RArm = { 75, 18, 6 }, W = { 0, 0, 0, 21.1, 0, 2.1 } }
+-- 활을 하늘로 / 내던진 끝 / 인사하며 옆 아래로 / 몸 앞에 세워 뻗기(오선 방패의 기둥)
+local RAISE = { RArm = { 170, 14, 16 }, W = { 0, 0, 0, -70, 0, 11.6 } }
+local FLING = { RArm = { 70, -80, 58 }, W = { 0, 0, 0, -64.8, 0, -6.6 } }
+local BOWDOWN = { RArm = { 40, -30, 40 }, W = { 0, 0, 0, -81.3, 0, -5.8 } }
+local GUARDBOW = { RArm = { 92, 26, 0 }, W = { 0, 0, 0, -2, 0, 0 } }
+-- 바이올린을 턱에서 뗀 자세: 목을 쥐고 치켜듦(스크롤 위) / 가슴에 끌어안음 / 가슴 앞에 세움 / 머리 위로
+local VOPEN = { LArm = { 120, 30, -30 }, O = { 0, 0, 0, -56.2, -53, -13 } }
+local VHUG = { LArm = { 60, 70, 0 }, O = { 0, 0, 0, 14.3, -68.7, -20.5 } }
+local VGUARD = { LArm = { 52, 34, 0 }, O = { 0, 0, 0, 38, -34, -2.9 } }
+local VHIGH = { LArm = { 150, 20, -10 }, O = { 0, 0, 0, -45.2, -26.4, 3.9 } }
 
--- 연주 자세: 몸을 살짝 왼쪽으로 열고, 턱을 바이올린에 괸다. 오른발에 무게, 왼발끝을 세움
-local PLAY = {
-	Root = { 0, -0.05, 0, 0, -28, 0 },
-	Torso = { 4, 8, 0 },
-	Head = { -12, 24, 16 },
-	LArm = { 88, 34, 0 },
-	RArm = { 106, 30, 0 },
+local function with(...)
+	local out = {}
+	for _, t in { ... } do
+		for k, v in t do
+			out[k] = v
+		end
+	end
+	return out
+end
+
+-- 준비 자세(대기): 오른발에 무게(콘트라포스토), 왼발끝을 세우고, 턱을 턱받침에 괴고 고개를 왼쪽으로 기울인다
+local READY = with({
+	Root = { 0, -0.05, 0, 0, -48, 0 },
+	Torso = { 3, 6, 0 },
+	Head = { -14, 30, 18 },
 	RLeg = { 3, 0, 4 },
 	LLeg = { -8, 0, -8 },
-	O = VIOLIN,
-	W = { 0, 0, 0, 0, 0, 94 },
-}
--- 활을 끝까지 내리그은 자리(다운보우 끝)
-local DOWN = { RArm = { 104, -8, 6 }, W = { 0, 0, 0, 0, 0, 86 } }
--- 활을 쳐든 자리(업보우 끝)
-local UP = { RArm = { 108, 42, 0 }, W = { 0, 0, 0, 0, 0, 98 } }
--- 두 팔을 활짝 편 자세(피날레)
-local OPEN = W(PLAY, {
-	Root = { 0, 0.15, 0, 0, -40, 0 },
+}, CHIN, UPRIGHT)
+-- 연주 자세(활이 줄 위)
+local function PLAY(s: number, over: { [string]: any }?)
+	return with(READY, BOW[s], over or {})
+end
+-- 두 팔을 활짝 편 자세(피날레·피루엣)
+local OPEN = with(READY, VOPEN, {
+	Root = { 0, 0.15, 0, 0, -60, 0 },
 	Torso = { 14, 0, 0 },
 	Head = { 20, 0, 0 },
-	LArm = { 120, 30, -30 },
 	RArm = { 150, -40, 40 },
+	W = { 0, 0, 0, -60, 0, 20 },
 	RLeg = { 2, 0, 3 },
 	LLeg = { -20, 0, -6 },
-	W = { 0, 0, 0, -40, 0, 20 },
 })
+-- 인사(커트시): 바이올린을 가슴에 안고 활을 옆 아래로, 한 발 뒤로 빼며 무릎을 굽힌다
+local CURTSY = with(READY, VHUG, BOWDOWN, {
+	Root = { 0, -0.45, 0.1, 0, -52, 0 },
+	Torso = { -18, 4, 0 },
+	Head = { -24, 20, 8 },
+	RLeg = { 16, 0, 4 },
+	LLeg = { -34, 0, -4 },
+})
+-- 방어: 바이올린을 가슴 앞에 세워 감싸고, 활을 몸 앞에 수직으로 뻗는다
+local GUARD = with(READY, VGUARD, GUARDBOW, {
+	Root = { 0, -0.2, 0.45, 0, -66, 0 },
+	Torso = { 6, -6, 0 },
+	Head = { 0, 14, 0 },
+})
+-- 들림: 몸이 떠서 가슴을 젖히고 발을 찬다
+local LIFT = { Root = { 0, 0.1, 0, 6, -48, 0 }, Torso = { 10, 6, 0 }, Head = { -6, 32, 16 } }
+-- 벨로체: 앞으로 몸을 싣는다
+local LEAN = { Root = { 0, -0.2, -0.2, 0, -42, 0 }, Torso = { -8, 10, 0 }, Head = { -18, 32, 18 }, RLeg = { 16, 0, 4 }, LLeg = { -16, 0, -8 } }
+-- 알 포르테: 발끝으로 선다
+local TIPTOE = { Root = { 0, 0.3, 0.1, 0, -48, 0 }, Torso = { 16, 6, 0 }, Head = { 6, 30, 14 }, RLeg = { -6, 0, 2 }, LLeg = { -10, 0, -2 } }
 
-local M = {
-	Stance = PLAY,
+return {
+	Stance = READY,
 
-	-- 대기: 느린 레가토. 활을 길게 내리긋고 올리며 음악에 맞춰 몸이 좌우로 흔들린다
+	-- 대기: 쉼표의 준비 자세 — 바이올린은 턱에, 활은 세워 들고 박자에 맞춰 몸과 활끝이 천천히 흔들린다
 	Idle = {
 		Duration = 3.38,
 		Loop = true,
 		Keys = {
-			K(0.0, "sineInOut", PLAY, UP),
-			K(1.69, "sineInOut", PLAY, W(DOWN, { Torso = { 2, 4, -4 }, Head = { -14, 26, 20 }, Root = { 0, -0.12, 0, 0, -30, 0 }, RLeg = { 5, 0, 5 }, LLeg = { -10, 0, -8 } })),
-			K(2.535, "sineInOut", PLAY, { RArm = { 106, 20, 2 }, W = { 0, 0, 0, 0, 0, 92 }, Torso = { 5, 10, 3 }, Head = { -10, 32, 12 } }),
+			K(0.0, "sineInOut", READY),
+			K(0.845, "sineInOut", READY, with(SWAY_L, { Root = { 0, -0.1, 0, 0, -50, 0 }, Torso = { 2, 8, -2 }, Head = { -12, 32, 20 }, RLeg = { 5, 0, 5 }, LLeg = { -10, 0, -8 } })),
+			K(1.69, "sineInOut", READY, { Root = { 0, -0.05, 0, 0, -47, 0 }, Torso = { 4, 6, 0 }, Head = { -15, 30, 17 } }),
+			K(2.535, "sineInOut", READY, with(SWAY_R, { Root = { 0, -0.1, 0, 0, -46, 0 }, Torso = { 3, 4, 2 }, Head = { -13, 28, 16 } })),
 		},
 	},
 
-	-- 들림: 발끝을 번갈아 차며 트레몰로(아주 빠른 활 떨기) — 신이 나서 멈추지 않는다
+	-- 들림: 발끝을 번갈아 차며 트레몰로(활을 줄 위에서 아주 빠르게 떤다) — 신이 나서 멈추지 않는다
 	Held = {
 		Duration = 0.72,
 		Loop = true,
 		Keys = {
-			K(0, "sineInOut", PLAY, { Root = { 0, 0.1, 0, 6, -28, 0 }, Torso = { 10, 8, 0 }, Head = { -2, 30, 14 }, RArm = { 110, 28, 0 }, RLeg = { 18, 0, 2 }, LLeg = { -22, 0, -2 } }),
-			K(0.12, "sineInOut", PLAY, { RArm = { 110, 16, 0 }, W = { 0, 0, 0, 0, 0, 90 } }),
-			K(0.24, "sineInOut", PLAY, { RArm = { 110, 28, 0 }, W = { 0, 0, 0, 0, 0, 94 } }),
-			K(0.36, "sineInOut", PLAY, { Root = { 0, 0.14, 0, 4, -26, 0 }, Torso = { 10, 8, 0 }, Head = { -2, 34, 12 }, RArm = { 110, 16, 0 }, W = { 0, 0, 0, 0, 0, 90 }, RLeg = { -20, 0, 2 }, LLeg = { 16, 0, -2 } }),
-			K(0.48, "sineInOut", PLAY, { RArm = { 110, 28, 0 }, W = { 0, 0, 0, 0, 0, 94 } }),
-			K(0.6, "sineInOut", PLAY, { RArm = { 110, 16, 0 }, W = { 0, 0, 0, 0, 0, 90 } }),
+			K(0, "sineInOut", PLAY(14, LIFT), { RLeg = { 18, 0, 2 }, LLeg = { -22, 0, -2 } }),
+			K(0.12, "sineInOut", PLAY(17, LIFT), { RLeg = { 4, 0, 2 }, LLeg = { -6, 0, -2 } }),
+			K(0.24, "sineInOut", PLAY(14, LIFT), { RLeg = { -8, 0, 2 }, LLeg = { 6, 0, -2 } }),
+			K(0.36, "sineInOut", PLAY(17, LIFT), { Root = { 0, 0.14, 0, 4, -46, 0 }, RLeg = { -20, 0, 2 }, LLeg = { 16, 0, -2 } }),
+			K(0.48, "sineInOut", PLAY(14, LIFT), { RLeg = { -6, 0, 2 }, LLeg = { 4, 0, -2 } }),
+			K(0.6, "sineInOut", PLAY(17, LIFT), { RLeg = { 8, 0, 2 }, LLeg = { -10, 0, -2 } }),
 		},
 	},
 
-	-- 내려놓임: 발끝으로 사뿐히 내려서 활을 크게 한 번 휘두르고, 무릎을 굽혀 인사(커트시)
+	-- 내려놓임: 발끝으로 사뿐히 내려서 두 팔을 활짝 펴고(활을 크게 한 번), 바이올린을 안고 인사(커트시)
 	Drop = {
 		Duration = 1.0,
 		BlendIn = 0.03,
 		Keys = {
-			K(0, nil, PLAY, { Root = { 0, 0.4, 0, 0, -28, 0 }, RLeg = { 10, 0, 2 }, LLeg = { -14, 0, -2 } }),
-			K(0.08, "quadIn", PLAY, { Root = { 0, -0.2, 0, 0, -28, 0 } }),
+			K(0, nil, READY, { Root = { 0, 0.4, 0, 0, -48, 0 }, RLeg = { 10, 0, 2 }, LLeg = { -14, 0, -2 } }),
+			K(0.08, "quadIn", READY, { Root = { 0, -0.2, 0, 0, -48, 0 } }),
 			K(0.3, "cubicOut", OPEN),
-			K(0.55, "sineInOut", PLAY, { Root = { 0, -0.45, 0.1, 0, -32, 0 }, Torso = { -18, 4, 0 }, Head = { -24, 20, 8 }, RArm = { 60, -30, 40 }, W = { 0, 0, 0, -30, 0, 60 }, LArm = { 70, 40, -10 }, RLeg = { 16, 0, 4 }, LLeg = { -34, 0, -4 } }),
-			K(0.75, "sineInOut", PLAY, { Root = { 0, -0.4, 0.1, 0, -32, 0 }, Torso = { -16, 4, 0 }, Head = { -22, 20, 8 }, RArm = { 60, -30, 40 }, W = { 0, 0, 0, -30, 0, 60 }, LArm = { 70, 40, -10 }, RLeg = { 16, 0, 4 }, LLeg = { -34, 0, -4 } }),
-			K(1.0, "sineInOut", PLAY, UP),
+			K(0.55, "sineInOut", CURTSY),
+			K(0.75, "sineInOut", CURTSY, { Root = { 0, -0.4, 0.1, 0, -52, 0 }, Torso = { -16, 4, 0 } }),
+			K(1.0, "sineInOut", READY),
 		},
 		Events = {
 			{ t = 0.08, k = "Fx", n = "Tiptoe" },
@@ -92,60 +144,61 @@ local M = {
 		},
 	},
 
-	-- 피격: 바이올린을 감싸려고 등을 돌리며 움츠린다 → 다시 자세
+	-- 피격: 바이올린을 가슴에 끌어안고 등을 돌리며 움츠린다 → 다시 자세
 	Hit = {
 		Duration = 0.65,
 		BlendIn = 0.02,
 		Keys = {
-			K(0, nil, PLAY),
-			K(0.05, "expoOut", PLAY, { Root = { 0, -0.2, 0.7, 0, 0, -6 }, Torso = { -16, 30, 6 }, Head = { -20, 20, 0 }, LArm = { 60, 70, 0 }, RArm = { 60, 50, 20 }, W = { 0, 0, 0, 20, 0, 60 }, RLeg = { 20, 0, 6 }, LLeg = { -10, 0, -8 } }),
-			K(0.22, "sineOut", PLAY, { Root = { 0, -0.24, 0.8, 0, -4, -4 }, Torso = { -12, 26, 4 }, Head = { -14, 24, 4 }, LArm = { 62, 66, 0 }, RArm = { 64, 46, 18 }, W = { 0, 0, 0, 20, 0, 60 }, RLeg = { 18, 0, 6 }, LLeg = { -8, 0, -8 } }),
-			K(0.65, "cubicInOut", PLAY),
+			K(0, nil, READY),
+			K(0.05, "expoOut", READY, with(VHUG, { Root = { 0, -0.2, 0.7, 0, -22, -6 }, Torso = { -16, 30, 6 }, Head = { -20, 20, 0 }, RArm = { 60, 50, 20 }, W = { 0, 0, 0, -10, 0, 0 }, RLeg = { 20, 0, 6 }, LLeg = { -10, 0, -8 } })),
+			K(0.22, "sineOut", READY, with(VHUG, { Root = { 0, -0.24, 0.8, 0, -26, -4 }, Torso = { -12, 26, 4 }, Head = { -14, 24, 4 }, RArm = { 64, 46, 18 }, W = { 0, 0, 0, -6, 0, 0 }, RLeg = { 18, 0, 6 }, LLeg = { -8, 0, -8 } })),
+			K(0.65, "cubicInOut", READY),
 		},
 	},
 
-	-- 방어: 뒤로 물러서며 바이올린을 가슴에 끌어안고, 활을 앞으로 뻗어 오선 방패를 친다
+	-- 방어: 뒤로 물러서며 바이올린을 가슴 앞에 세워 감싸고, 활을 앞에 수직으로 세워 오선 방패를 친다
 	Guard = {
 		Duration = 0.65,
 		BlendIn = 0.03,
 		Keys = {
-			K(0, nil, PLAY),
-			K(0.08, "expoOut", PLAY, { Root = { 0, -0.2, 0.45, 0, -50, 0 }, Torso = { 6, -10, 0 }, Head = { 0, 10, 0 }, LArm = { 50, 30, 0 }, O = { 0.3, -1.6, -0.4, -40, 160, 0 }, RArm = { 88, -10, 0 }, W = { 0, 0, 0, 0, 0, 90 } }),
-			K(0.18, "sineOut", PLAY, { Root = { 0, -0.25, 0.6, 0, -48, 0 }, Torso = { 8, -8, 0 }, Head = { 2, 10, 0 }, LArm = { 50, 30, 0 }, O = { 0.3, -1.6, -0.4, -40, 160, 0 }, RArm = { 92, -6, 0 }, W = { 0, 0, 0, 0, 0, 90 } }),
-			K(0.65, "cubicInOut", PLAY, UP),
+			K(0, nil, READY),
+			K(0.08, "expoOut", GUARD),
+			K(0.18, "sineOut", GUARD, { Root = { 0, -0.25, 0.6, 0, -64, 0 }, Torso = { 8, -4, 0 }, Head = { 2, 14, 0 }, RArm = { 94, 26, 0 } }),
+			K(0.65, "cubicInOut", READY),
 		},
 		Events = { { t = 0.08, k = "Fx", n = "StaveShield" } },
 	},
 
-	-- 회피: 한 발로 피루엣(한 바퀴) 돌며 옆으로 비껴난다
+	-- 회피: 두 팔을 펴고 한 발로 피루엣(한 바퀴) 돌며 옆으로 비껴난다
 	Dodge = {
 		Duration = 0.7,
 		BlendIn = 0.02,
 		Keys = {
-			K(0, nil, PLAY),
-			K(0.06, "quadOut", PLAY, { Root = { 0.3, -0.2, 0.2, 0, -40, 0 }, Torso = { 6, 0, 0 } }),
-			K(0.2, "cubicIn", OPEN, { Root = { -0.6, 0.35, 0.5, 0, 150, 0 }, RLeg = { 0, 0, 2 }, LLeg = { 40, 0, -10 } }),
-			K(0.36, "cubicOut", OPEN, { Root = { -1.2, 0.2, 0.9, 0, 332, 0 }, RLeg = { 0, 0, 2 }, LLeg = { 30, 0, -10 } }),
-			K(0.7, "sineInOut", PLAY, { Root = { -0.4, -0.05, 0.3, 0, 332, 0 } }),
+			K(0, nil, READY),
+			K(0.06, "quadOut", READY, { Root = { 0.3, -0.2, 0.2, 0, -60, 0 }, Torso = { 6, 0, 0 } }),
+			K(0.2, "cubicIn", OPEN, { Root = { -0.6, 0.35, 0.5, 0, 130, 0 }, RLeg = { 0, 0, 2 }, LLeg = { 40, 0, -10 } }),
+			K(0.36, "cubicOut", OPEN, { Root = { -1.2, 0.2, 0.9, 0, 312, 0 }, RLeg = { 0, 0, 2 }, LLeg = { 30, 0, -10 } }),
+			K(0.7, "sineInOut", READY, { Root = { -0.4, -0.05, 0.3, 0, 312, 0 } }),
 		},
 		Events = { { t = 0.06, k = "Fx", n = "Pirouette" } },
 	},
 
 	Skills = {
-		-- 벨로체: 빠른 스피카토(활을 튀기며 짧게 여러 번) — 앞으로 몸을 싣고, 음표가 줄지어 날아간다
+		-- 벨로체: 활을 줄에 얹어 빠른 스피카토(짧게 튀기며 여러 번) — 앞으로 몸을 싣고, 마지막은 끝까지 길게 내리긋는다
 		Veloce = {
 			Duration = 1.3,
 			Keys = {
-				K(0, nil, PLAY, UP),
-				K(0.12, "quadOut", PLAY, { Root = { 0, -0.2, -0.2, 0, -22, 0 }, Torso = { -8, 12, 0 }, Head = { -18, 30, 16 }, RArm = { 108, 36, 0 }, RLeg = { 16, 0, 4 }, LLeg = { -16, 0, -8 } }),
-				K(0.2, "expoOut", PLAY, { Root = { 0, -0.2, -0.2, 0, -22, 0 }, Torso = { -8, 12, 0 }, Head = { -18, 30, 16 }, RArm = { 104, 14, 2 }, RLeg = { 16, 0, 4 }, LLeg = { -16, 0, -8 } }),
-				K(0.28, "expoOut", PLAY, { Root = { 0, -0.24, -0.2, 0, -22, 0 }, Torso = { -8, 12, 0 }, Head = { -18, 30, 16 }, RArm = { 108, 34, 0 }, RLeg = { 16, 0, 4 }, LLeg = { -16, 0, -8 } }),
-				K(0.36, "expoOut", PLAY, { Root = { 0, -0.2, -0.25, 0, -22, 0 }, Torso = { -9, 12, 0 }, Head = { -18, 30, 16 }, RArm = { 104, 12, 2 }, RLeg = { 16, 0, 4 }, LLeg = { -16, 0, -8 } }),
-				K(0.44, "expoOut", PLAY, { Root = { 0, -0.24, -0.25, 0, -22, 0 }, Torso = { -9, 12, 0 }, Head = { -18, 30, 16 }, RArm = { 108, 34, 0 }, RLeg = { 16, 0, 4 }, LLeg = { -16, 0, -8 } }),
+				K(0, nil, READY),
+				K(0.12, "quadOut", PLAY(14, LEAN)),
+				K(0.2, "expoOut", PLAY(17, LEAN)),
+				K(0.28, "expoOut", PLAY(14, LEAN), { Root = { 0, -0.24, -0.2, 0, -42, 0 } }),
+				K(0.36, "expoOut", PLAY(17, LEAN), { Root = { 0, -0.2, -0.25, 0, -42, 0 }, Torso = { -9, 10, 0 } }),
+				K(0.44, "expoOut", PLAY(14, LEAN), { Root = { 0, -0.24, -0.25, 0, -42, 0 }, Torso = { -9, 10, 0 } }),
+				K(0.52, "sineOut", PLAY(9, LEAN), { Root = { 0, -0.24, -0.25, 0, -42, 0 }, Torso = { -9, 10, 0 } }),
 				-- 마지막 한 번은 길고 세게 내리그어 음표를 떠나보낸다
-				K(0.62, "expoOut", PLAY, { Root = { 0, -0.3, -0.35, 0, -18, 0 }, Torso = { -12, 16, 0 }, Head = { -16, 28, 12 }, RArm = { 100, -30, 20 }, W = { 0, 0, 0, 0, 0, 80 }, RLeg = { 22, 0, 4 }, LLeg = { -22, 0, -8 } }),
-				K(0.9, "sineOut", PLAY, { Root = { 0, -0.26, -0.3, 0, -20, 0 }, Torso = { -10, 14, 0 }, RArm = { 98, -34, 22 }, W = { 0, 0, 0, 0, 0, 80 }, RLeg = { 20, 0, 4 }, LLeg = { -20, 0, -8 } }),
-				K(1.3, "sineInOut", PLAY, UP),
+				K(0.62, "expoOut", PLAY(23, LEAN), { Root = { 0, -0.3, -0.35, 0, -38, 0 }, Torso = { -12, 14, 0 }, Head = { -16, 30, 14 }, RLeg = { 22, 0, 4 }, LLeg = { -22, 0, -8 } }),
+				K(0.9, "sineOut", PLAY(23, LEAN), { Root = { 0, -0.26, -0.3, 0, -40, 0 }, Torso = { -10, 12, 0 }, RLeg = { 20, 0, 4 }, LLeg = { -20, 0, -8 } }),
+				K(1.3, "sineInOut", READY),
 			},
 			Events = {
 				{ t = 0.12, k = "Trail", on = true },
@@ -161,12 +214,12 @@ local M = {
 		Brillante = {
 			Duration = 1.7,
 			Keys = {
-				K(0, nil, PLAY, UP),
-				K(0.25, "cubicOut", PLAY, { Root = { 0, 0.1, 0, 0, -28, 0 }, Torso = { 12, 8, 0 }, Head = { 16, 20, 6 }, RArm = { 172, 20, 20 }, W = { 0, 0, 0, -60, 0, 30 }, RLeg = { 0, 0, 3 }, LLeg = { -26, 0, -6 } }),
-				K(0.6, "sineInOut", OPEN, { Root = { 0, 0.25, 0, 0, 332, 0 } }),
-				K(0.82, "expoOut", OPEN, { Root = { 0, -0.1, 0, 0, 332, 0 }, RArm = { 60, -70, 50 }, W = { 0, 0, 0, -20, 0, 50 }, Torso = { -10, -12, 0 }, Head = { -8, -10, 0 } }),
-				K(1.25, "sineOut", OPEN, { Root = { 0, 0, 0, 0, 332, 0 }, RArm = { 56, -74, 54 }, W = { 0, 0, 0, -20, 0, 50 }, Torso = { -6, -12, 0 }, Head = { 2, -10, 0 } }),
-				K(1.7, "sineInOut", PLAY, { Root = { 0, -0.05, 0, 0, 332, 0 }, RArm = UP.RArm, W = UP.W }),
+				K(0, nil, READY),
+				K(0.25, "cubicOut", READY, with(RAISE, { Root = { 0, 0.1, 0, 0, -48, 0 }, Torso = { 12, 6, 0 }, Head = { 10, 26, 10 }, RLeg = { 0, 0, 3 }, LLeg = { -26, 0, -6 } })),
+				K(0.6, "sineInOut", OPEN, { Root = { 0, 0.25, 0, 0, 312, 0 } }),
+				K(0.82, "expoOut", OPEN, with(FLING, { Root = { 0, -0.1, 0, 0, 312, 0 }, Torso = { -10, -12, 0 }, Head = { -8, -10, 0 } })),
+				K(1.25, "sineOut", OPEN, with(FLING, { Root = { 0, 0, 0, 0, 312, 0 }, RArm = { 66, -84, 60 }, Torso = { -6, -12, 0 }, Head = { 2, -10, 0 } })),
+				K(1.7, "sineInOut", READY, { Root = { 0, -0.05, 0, 0, 312, 0 } }),
 			},
 			Events = {
 				{ t = 0.1, k = "Trail", on = true },
@@ -176,19 +229,20 @@ local M = {
 			},
 		},
 
-		-- 크레셴도: 세 번 긋는 동안 점점 크게, 몸이 점점 뒤로 젖혀지다가 마지막 포르테로 음표를 쏜다
+		-- 크레셴도: 세 번 긋는 동안 점점 길고 크게, 몸이 점점 뒤로 젖혀지다가 마지막 포르테로 활을 내던지듯 긋는다
 		Crescendo = {
 			Duration = 1.9,
 			Keys = {
-				K(0, nil, PLAY, UP),
-				K(0.3, "sineInOut", PLAY, { RArm = { 104, 4, 4 }, W = { 0, 0, 0, 0, 0, 88 }, Torso = { 6, 6, 0 } }),
-				K(0.55, "sineInOut", PLAY, { RArm = { 110, 44, 0 }, W = { 0, 0, 0, 0, 0, 98 }, Torso = { 10, 10, 2 }, Head = { -8, 30, 16 } }),
-				K(0.82, "sineInOut", PLAY, { RArm = { 102, -14, 8 }, W = { 0, 0, 0, 0, 0, 84 }, Torso = { 14, 6, -3 }, Head = { -4, 28, 18 }, Root = { 0, 0.05, 0.1, 0, -30, 0 } }),
-				K(1.1, "cubicInOut", PLAY, { RArm = { 120, 50, 0 }, W = { 0, 0, 0, 0, 0, 104 }, Torso = { 20, 12, 4 }, Head = { 6, 30, 16 }, Root = { 0, 0.15, 0.25, 0, -26, 0 }, RLeg = { -4, 0, 3 }, LLeg = { -14, 0, -6 } }),
+				K(0, nil, READY),
+				K(0.15, "sineInOut", PLAY(11)),
+				K(0.3, "sineInOut", PLAY(17, { Torso = { 6, 6, 0 } })),
+				K(0.55, "sineInOut", PLAY(11, { Torso = { 10, 8, 2 }, Head = { -8, 32, 18 } })),
+				K(0.82, "sineInOut", PLAY(20, { Torso = { 14, 6, -3 }, Head = { -4, 30, 18 }, Root = { 0, 0.05, 0.1, 0, -50, 0 } })),
+				K(1.1, "cubicInOut", PLAY(9, { Torso = { 20, 10, 4 }, Head = { 6, 30, 16 }, Root = { 0, 0.15, 0.25, 0, -46, 0 }, RLeg = { -4, 0, 3 }, LLeg = { -14, 0, -6 } })),
 				-- 포르테
-				K(1.22, "expoOut", PLAY, { RArm = { 96, -60, 40 }, W = { 0, 0, 0, -10, 0, 70 }, Torso = { -14, -8, 0 }, Head = { -20, 18, 8 }, Root = { 0, -0.3, -0.4, 0, -24, 0 }, RLeg = { 26, 0, 4 }, LLeg = { -26, 0, -6 } }),
-				K(1.5, "sineOut", PLAY, { RArm = { 92, -64, 44 }, W = { 0, 0, 0, -10, 0, 70 }, Torso = { -10, -8, 0 }, Head = { -14, 18, 8 }, Root = { 0, -0.26, -0.35, 0, -24, 0 }, RLeg = { 24, 0, 4 }, LLeg = { -24, 0, -6 } }),
-				K(1.9, "sineInOut", PLAY, UP),
+				K(1.22, "expoOut", READY, with(FLING, { Torso = { -14, -8, 0 }, Head = { -20, 18, 8 }, Root = { 0, -0.3, -0.4, 0, -44, 0 }, RLeg = { 26, 0, 4 }, LLeg = { -26, 0, -6 } })),
+				K(1.5, "sineOut", READY, with(FLING, { RArm = { 66, -84, 62 }, Torso = { -10, -8, 0 }, Head = { -14, 18, 8 }, Root = { 0, -0.26, -0.35, 0, -44, 0 }, RLeg = { 24, 0, 4 }, LLeg = { -24, 0, -6 } })),
+				K(1.9, "sineInOut", READY),
 			},
 			Events = {
 				{ t = 0.3, k = "Fx", n = "SoftNotes" },
@@ -202,24 +256,24 @@ local M = {
 			},
 		},
 
-		-- 크레셴도 알 포르테: 발끝으로 서서 바이올린을 치켜들고 광란의 트레몰로 → 활을 내던지듯 긋는 순간 별처럼 터진다
+		-- 크레셴도 알 포르테: 발끝으로 서서 광란의 트레몰로 → 바이올린과 활을 머리 위로 모았다가 내던지듯 긋는 순간 별처럼 터진다
 		CrescendoAlForte = {
 			Duration = 2.4,
 			Keys = {
-				K(0, nil, PLAY, UP),
-				K(0.3, "cubicOut", PLAY, { Root = { 0, 0.3, 0.1, 0, -28, 0 }, Torso = { 16, 8, 0 }, Head = { 6, 30, 14 }, LArm = { 128, 28, 0 }, RArm = { 132, 30, 0 }, W = { 0, 0, 0, -20, 0, 94 }, RLeg = { -6, 0, 2 }, LLeg = { -10, 0, -2 } }),
-				K(0.38, "linear", PLAY, { Root = { 0, 0.32, 0.1, 0, -28, 0 }, Torso = { 16, 8, 0 }, Head = { 6, 30, 14 }, LArm = { 128, 28, 0 }, RArm = { 132, 16, 0 }, W = { 0, 0, 0, -20, 0, 90 }, RLeg = { -6, 0, 2 }, LLeg = { -10, 0, -2 } }),
-				K(0.46, "linear", PLAY, { Root = { 0, 0.3, 0.1, 0, -28, 0 }, Torso = { 17, 8, 0 }, Head = { 6, 30, 14 }, LArm = { 128, 28, 0 }, RArm = { 132, 32, 0 }, W = { 0, 0, 0, -20, 0, 96 }, RLeg = { -6, 0, 2 }, LLeg = { -10, 0, -2 } }),
-				K(0.54, "linear", PLAY, { Root = { 0, 0.34, 0.1, 0, -28, 0 }, Torso = { 17, 8, 0 }, Head = { 6, 30, 14 }, LArm = { 128, 28, 0 }, RArm = { 132, 14, 0 }, W = { 0, 0, 0, -20, 0, 90 }, RLeg = { -6, 0, 2 }, LLeg = { -10, 0, -2 } }),
-				K(0.62, "linear", PLAY, { Root = { 0, 0.3, 0.1, 0, -28, 0 }, Torso = { 18, 8, 0 }, Head = { 6, 30, 14 }, LArm = { 128, 28, 0 }, RArm = { 132, 32, 0 }, W = { 0, 0, 0, -20, 0, 96 }, RLeg = { -6, 0, 2 }, LLeg = { -10, 0, -2 } }),
-				K(0.7, "linear", PLAY, { Root = { 0, 0.36, 0.1, 0, -28, 0 }, Torso = { 18, 8, 0 }, Head = { 8, 30, 14 }, LArm = { 128, 28, 0 }, RArm = { 132, 14, 0 }, W = { 0, 0, 0, -20, 0, 90 }, RLeg = { -6, 0, 2 }, LLeg = { -10, 0, -2 } }),
-				K(0.78, "linear", PLAY, { Root = { 0, 0.3, 0.1, 0, -28, 0 }, Torso = { 18, 8, 0 }, Head = { 8, 30, 14 }, LArm = { 128, 28, 0 }, RArm = { 132, 32, 0 }, W = { 0, 0, 0, -20, 0, 96 }, RLeg = { -6, 0, 2 }, LLeg = { -10, 0, -2 } }),
-				-- 숨을 멈추는 한 박
-				K(1.05, "cubicOut", PLAY, { Root = { 0, 0.4, 0.3, 0, -22, 0 }, Torso = { 24, 14, 4 }, Head = { 20, 30, 10 }, LArm = { 132, 28, 0 }, RArm = { 168, 50, 10 }, W = { 0, 0, 0, -50, 0, 110 }, RLeg = { -10, 0, 2 }, LLeg = { -30, 0, -2 } }),
+				K(0, nil, READY),
+				K(0.3, "cubicOut", PLAY(14, TIPTOE)),
+				K(0.38, "linear", PLAY(17, TIPTOE), { Root = { 0, 0.32, 0.1, 0, -48, 0 } }),
+				K(0.46, "linear", PLAY(14, TIPTOE), { Torso = { 17, 6, 0 } }),
+				K(0.54, "linear", PLAY(17, TIPTOE), { Root = { 0, 0.34, 0.1, 0, -48, 0 }, Torso = { 17, 6, 0 } }),
+				K(0.62, "linear", PLAY(14, TIPTOE), { Torso = { 18, 6, 0 } }),
+				K(0.7, "linear", PLAY(17, TIPTOE), { Root = { 0, 0.36, 0.1, 0, -48, 0 }, Torso = { 18, 6, 0 }, Head = { 8, 30, 14 } }),
+				K(0.78, "linear", PLAY(14, TIPTOE), { Torso = { 18, 6, 0 }, Head = { 8, 30, 14 } }),
+				-- 숨을 멈추는 한 박: 바이올린과 활을 머리 위로 모은다
+				K(1.05, "cubicOut", READY, with(VHIGH, RAISE, { Root = { 0, 0.4, 0.3, 0, -42, 0 }, Torso = { 24, 12, 4 }, Head = { 20, 30, 10 }, RLeg = { -10, 0, 2 }, LLeg = { -30, 0, -2 } })),
 				-- 내던지듯 긋기
-				K(1.14, "expoOut", OPEN, { Root = { 0, -0.35, -0.5, 0, -34, 0 }, Torso = { -18, -14, 0 }, Head = { -10, -4, 0 }, RArm = { 70, -88, 60 }, W = { 0, 0, 0, -10, 0, 40 }, RLeg = { 30, 0, 4 }, LLeg = { -30, 0, -6 } }),
-				K(1.7, "sineOut", OPEN, { Root = { 0, -0.3, -0.45, 0, -34, 0 }, Torso = { -14, -14, 0 }, Head = { 4, -4, 0 }, RArm = { 66, -90, 62 }, W = { 0, 0, 0, -10, 0, 40 }, RLeg = { 28, 0, 4 }, LLeg = { -28, 0, -6 } }),
-				K(2.4, "sineInOut", PLAY, UP),
+				K(1.14, "expoOut", OPEN, with(FLING, { Root = { 0, -0.35, -0.5, 0, -54, 0 }, Torso = { -18, -14, 0 }, Head = { -10, -4, 0 }, RLeg = { 30, 0, 4 }, LLeg = { -30, 0, -6 } })),
+				K(1.7, "sineOut", OPEN, with(FLING, { Root = { 0, -0.3, -0.45, 0, -54, 0 }, Torso = { -14, -14, 0 }, Head = { 4, -4, 0 }, RArm = { 66, -84, 62 }, RLeg = { 28, 0, 4 }, LLeg = { -28, 0, -6 } })),
+				K(2.4, "sineInOut", READY),
 			},
 			Events = {
 				{ t = 0.3, k = "Fx", n = "Tremolo" },
@@ -237,25 +291,24 @@ local M = {
 		Guard = {
 			Duration = 1.0,
 			Keys = {
-				K(0, nil, PLAY, UP),
-				K(0.14, "backOut", PLAY, { Root = { 0, -0.2, 0.4, 0, -50, 0 }, Torso = { 6, -10, 0 }, Head = { 0, 10, 0 }, LArm = { 50, 30, 0 }, O = { 0.3, -1.6, -0.4, -40, 160, 0 }, RArm = { 90, -8, 0 }, W = { 0, 0, 0, 0, 0, 90 } }),
-				K(0.7, "sineInOut", PLAY, { Root = { 0, -0.22, 0.4, 0, -50, 0 }, Torso = { 7, -10, 0 }, Head = { 0, 10, 0 }, LArm = { 50, 30, 0 }, O = { 0.3, -1.6, -0.4, -40, 160, 0 }, RArm = { 90, -8, 0 }, W = { 0, 0, 0, 0, 0, 90 } }),
-				K(1.0, "sineInOut", PLAY, UP),
+				K(0, nil, READY),
+				K(0.14, "backOut", GUARD, { Root = { 0, -0.2, 0.4, 0, -66, 0 } }),
+				K(0.7, "sineInOut", GUARD, { Root = { 0, -0.22, 0.4, 0, -66, 0 }, Torso = { 7, -6, 0 } }),
+				K(1.0, "sineInOut", READY),
 			},
 			Events = { { t = 0.14, k = "Fx", n = "StaveShield" } },
 		},
 
-		-- 명상: 눈을 감고 줄을 튕겨(피치카토) 음을 고른다
+		-- 명상: 눈을 감고 턱을 바이올린에 깊이 묻은 채 아주 느린 활 한 번으로 음을 고른다
 		Meditate = {
 			Duration = 2.0,
 			Keys = {
-				K(0, nil, PLAY, UP),
-				K(0.3, "sineInOut", PLAY, { Head = { -20, 34, 18 }, Torso = { 0, 10, 0 }, RArm = { 84, 44, 0 }, W = { 0, 0, 0, 70, 0, 90 } }),
-				K(0.5, "expoOut", PLAY, { Head = { -20, 34, 18 }, Torso = { 0, 10, 0 }, RArm = { 90, 50, 0 }, W = { 0, 0, 0, 70, 0, 90 } }),
-				K(0.8, "sineInOut", PLAY, { Head = { -22, 34, 18 }, Torso = { 0, 10, 0 }, RArm = { 84, 44, 0 }, W = { 0, 0, 0, 70, 0, 90 } }),
-				K(1.0, "expoOut", PLAY, { Head = { -22, 34, 18 }, Torso = { 0, 10, 0 }, RArm = { 90, 52, 0 }, W = { 0, 0, 0, 70, 0, 90 } }),
-				K(1.5, "sineInOut", PLAY, { Head = { -18, 32, 18 }, Torso = { 2, 10, 0 }, RArm = { 86, 46, 0 }, W = { 0, 0, 0, 70, 0, 90 } }),
-				K(2.0, "sineInOut", PLAY, UP),
+				K(0, nil, READY),
+				K(0.3, "sineInOut", PLAY(11, { Head = { -20, 34, 20 }, Torso = { 0, 8, 0 } })),
+				K(0.5, "sineInOut", PLAY(14, { Head = { -21, 34, 20 }, Torso = { 0, 8, 0 } })),
+				K(1.0, "sineInOut", PLAY(23, { Head = { -22, 34, 20 }, Torso = { -1, 8, 0 } })),
+				K(1.5, "sineInOut", PLAY(14, { Head = { -18, 32, 18 }, Torso = { 1, 8, 0 } })),
+				K(2.0, "sineInOut", READY),
 			},
 			Events = {
 				{ t = 0.5, k = "Fx", n = "Pizz" },
@@ -265,30 +318,3 @@ local M = {
 		},
 	},
 }
-
---[[
-	무대 쪽으로 몸을 더 연다(2026-09-29). 전투 카메라는 캐릭터 오른쪽 옆에서 본다. 원래 28° 만 열어서
-	왼쪽 어깨의 바이올린이 머리 뒤에 묻히고 목만 앞으로 삐져나와 "머리에 총을 댄" 듯 보였다.
-	모든 키의 몸 돌림(Root Y)에 STAGE_YAW 를 더해 연주 동작은 그대로 두고 보는 각도만 바꾼다.
-]]
-local STAGE_YAW = -22
-local function open(key: any)
-	local r = key.Root
-	if type(r) == "table" and #r == 6 then
-		key.Root = { r[1], r[2], r[3], r[4], r[5] + STAGE_YAW, r[6] }
-	end
-end
-for _, motion in M do
-	if type(motion) == "table" and motion.Keys then
-		for _, key in motion.Keys do
-			open(key)
-		end
-	end
-end
-for _, motion in M.Skills or {} do
-	for _, key in motion.Keys or {} do
-		open(key)
-	end
-end
-
-return M

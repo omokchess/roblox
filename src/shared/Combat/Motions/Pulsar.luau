@@ -1,8 +1,9 @@
 --!strict
 --[[
-	펄서 — 오브 셋을 거느린 떠 있는 마법사. (2026-09-28)
+	펄서 — 오브 셋을 거느린 떠 있는 마법사. (2026-09-28, 자세 다시 2026-09-30)
 
 	성격: 고요하고 초연함. 늘 발이 땅에서 떠 있고(Root y +0.8), 두 발목을 모아 발끝을 늘어뜨린다.
+	참고: 태극권 참장 포구(抱球) — 두 팔을 둥글게 가슴 앞에 모아 큰 공을 안은 듯, 손바닥이 마주 본다.
 	      손짓이 곧 주문 — 손을 펴고 모으는 대로 오브가 대형을 바꾼다(Orbs 사건).
 	      피할 때는 걷지 않고 **순간 이동**하듯 미끄러진다. 맞으면 공중에서 뒤로 튕겨 돈다.
 	무기 종류: Orbs (WeaponDefinitions.Orbs, Hand = Float). 손에 쥐는 것이 없다.
@@ -10,13 +11,17 @@
 local Kit = require(script.Parent.Parent.MotionKit)
 local K, W = Kit.K, Kit.With
 
--- 떠 있는 자세: 몸을 카메라 쪽으로 조금 열고, 두 팔은 옆으로 흘리듯, 다리는 모아 발끝을 뒤로
+-- 떠 있는 자세(태극권 포구 抱球 — 가슴 앞에 큰 공을 안듯 두 팔을 둥글게, 오른손이 위·왼손이 아래로 손바닥을 마주):
+-- 몸을 카메라 쪽으로 조금 열고, 다리는 모아 발끝을 뒤로. 팔 각도는 손이 가슴 앞 공 둘레에 오도록 posecalc 로 구함
+local BALL_R = { RArm = { 80.6, 37.7, -7.3 }, LArm = { 50.7, -42.1, 12.8 } }
+local BALL_L = { RArm = { 50.7, 42.1, -12.8 }, LArm = { 80.6, -37.7, 7.3 } }
+local BALL_MID = { RArm = { 66.3, 37.8, -4.7 }, LArm = { 66.3, -37.8, 4.7 } }
 local FLOAT = {
 	Root = { 0, 0.8, 0, 0, -16, 0 },
 	Torso = { 4, 0, 0 },
 	Head = { 2, 12, 0 },
-	RArm = { 24, 0, 34 },
-	LArm = { 24, 0, -34 },
+	RArm = BALL_R.RArm,
+	LArm = BALL_R.LArm,
 	RLeg = { -16, 0, -3 },
 	LLeg = { -24, 0, 3 },
 }
@@ -42,14 +47,15 @@ local OPEN = W(FLOAT, {
 return {
 	Stance = FLOAT,
 
-	-- 대기: 천천히 오르내리며 손끝이 물결치듯 흔들린다(오브는 무기 쪽이 궤도를 돈다)
+	-- 대기: 천천히 오르내리며 품 안의 공을 굴리듯 두 손이 위아래를 바꾼다(포구 전환). 오브는 몸 둘레를 돈다
 	Idle = {
 		Duration = 4.16,
 		Loop = true,
 		Keys = {
 			K(0.0, "sineInOut", FLOAT),
-			K(2.08, "sineInOut", FLOAT, { Root = { 0, 1.15, 0, 0, -12, 0 }, Torso = { 7, 3, 0 }, Head = { 6, 8, 0 }, RArm = { 34, 10, 40 }, LArm = { 18, -10, -28 }, RLeg = { -22, 0, -3 }, LLeg = { -18, 0, 3 } }),
-			K(3.12, "sineInOut", FLOAT, { Root = { 0, 0.95, 0, 0, -18, 0 }, RArm = { 20, -8, 30 }, LArm = { 32, 8, -42 } }),
+			K(1.04, "sineInOut", FLOAT, { Root = { 0, 1.0, 0, 0, -14, 0 }, Torso = { 6, 2, 0 }, RArm = BALL_MID.RArm, LArm = BALL_MID.LArm, RLeg = { -19, 0, -3 }, LLeg = { -21, 0, 3 } }),
+			K(2.08, "sineInOut", FLOAT, { Root = { 0, 1.15, 0, 0, -12, 0 }, Torso = { 7, 3, 0 }, Head = { 6, 8, 0 }, RArm = BALL_L.RArm, LArm = BALL_L.LArm, RLeg = { -22, 0, -3 }, LLeg = { -18, 0, 3 } }),
+			K(3.12, "sineInOut", FLOAT, { Root = { 0, 0.95, 0, 0, -18, 0 }, Torso = { 5, 1, 0 }, RArm = BALL_MID.RArm, LArm = BALL_MID.LArm }),
 		},
 	},
 

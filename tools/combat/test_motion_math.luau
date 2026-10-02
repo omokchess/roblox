@@ -38,4 +38,34 @@ local slime = MotionMath.Compile({
 near(MotionMath.Sample(slime, 1).Body[2], -10, "Body 이어 받기")
 near(MotionMath.Sample(slime, 0.5).Root[2], 0.5, "Root 보간")
 
+-- 4) 무기 회전은 최단 호(slerp): 한 축만 돌면 선형과 같고, 180° 넘게 바뀌면 적힌 대로(칼 돌리기)
+local function samp(w0, w1, t)
+	return MotionMath.Sample(MotionMath.Compile({ Duration = 1, Keys = { { t = 0, W = w0 }, { t = 1, e = "linear", W = w1 } } }), t).W
+end
+near(samp({ 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 90, 0, 0 }, 0.5)[4], 45, "한 축 slerp")
+near(samp({ 0, 0, 0, -120, 0, 0 }, { 0, 0, 0, -400, 0, 0 }, 0.5)[4], -260, "칼 돌리기는 오일러")
+near(samp({ 0.2, 0, 0, 10, 0, 0 }, { 0.6, 0, 0, 10, 0, 0 }, 0.5)[1], 0.4, "무기 자리 보간")
+-- 두 축이 함께 바뀌면: 결과 회전이 두 끝 사이 최단 호의 가운데(두 끝과 같은 각도만큼 떨어짐)
+do
+	local function R(v)
+		local r = math.pi / 180
+		local cx, sx, cy, sy, cz, sz = math.cos(v[4] * r), math.sin(v[4] * r), math.cos(v[5] * r), math.sin(v[5] * r), math.cos(v[6] * r), math.sin(v[6] * r)
+		-- Rx·Ry·Rz 의 셋째 열(무기 +Z)과 둘째 열(+Y)
+		return { sy, -sx * cy, cx * cy }, { -cy * sz, cx * cz - sx * sy * sz, sx * cz + cx * sy * sz }
+	end
+	local a, b = { 0, 0, 0, 20, -60, 30 }, { 0, 0, 0, 110, -5, -120 }
+	local m = samp(a, b, 0.5)
+	local function ang(p, q)
+		local pz, py = R(p)
+		local qz, qy = R(q)
+		local d = (pz[1] * qz[1] + pz[2] * qz[2] + pz[3] * qz[3] + py[1] * qy[1] + py[2] * qy[2] + py[3] * qy[3]) / 2
+		return d
+	end
+	near(ang(a, m), ang(m, b), "slerp 가운데")
+	-- 짐벌(비틀기 90°) 끝에서도 회전이 맞는다
+	local g0, g1 = { 0, 0, 0, -164, 90, 0 }, { 0, 0, 0, -70, 90, 0 }
+	local gm = samp(g0, g1, 0.5)
+	near(ang(g0, gm), ang(gm, g1), "짐벌 slerp 가운데")
+end
+
 print("MotionMath 검사 통과")

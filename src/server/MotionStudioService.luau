@@ -49,9 +49,17 @@ local function saves(rig: Instance): { KeyframeSequence }
 	return list
 end
 
+-- 2026-09-30 사용자가 애니메이션 편집기 방식을 접었다(버그가 많음) — 코드 모션(Motions/<직업>.luau)만 쓴다.
+-- 무대에 남은 편집본·쥐는 모양(음악가 인형의 활·바이올린 C0 를 손댄 것)이 새 자세를 덮어쓰지 않게 끈다.
+local USE_STUDIO_EDITS = false
+
 function MotionStudioService.Start()
 	local studio = workspace:FindFirstChild("MotionStudio")
 	if not studio then
+		return
+	end
+	if not USE_STUDIO_EDITS then
+		studio:Destroy()
 		return
 	end
 	local out = Instance.new("Folder")

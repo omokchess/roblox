@@ -156,6 +156,58 @@ def compile_motion(m):
     return out, m.get("Duration", out[-1][0]), m.get("Loop", False)
 
 
+def _qax(i, deg):
+    h = math.radians(deg) / 2
+    q = [0.0, 0.0, 0.0, math.cos(h)]
+    q[i] = math.sin(h)
+    return q
+
+
+def _qmul(a, b):
+    return [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
+            a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+            a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
+            a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]]
+
+
+def slerp_weapon(a, b, alpha):
+    """MotionMath.slerpWeapon 과 같다(무기 회전은 최단 호, 한 값이라도 180° 넘게 바뀌면 오일러 그대로)"""
+    if alpha <= 0:
+        return a
+    if alpha >= 1:
+        return b
+    if any(abs(b[i] - a[i]) > 180 for i in (3, 4, 5)):
+        return [a[j] + (b[j] - a[j]) * alpha for j in range(6)]
+    qa = _qmul(_qmul(_qax(0, a[3]), _qax(1, a[4])), _qax(2, a[5]))
+    qb = _qmul(_qmul(_qax(0, b[3]), _qax(1, b[4])), _qax(2, b[5]))
+    dot = sum(x * y for x, y in zip(qa, qb))
+    if dot < 0:
+        dot, qb = -dot, [-v for v in qb]
+    if dot > 0.9995:
+        wa, wb = 1 - alpha, alpha
+    else:
+        th = math.acos(max(-1, min(1, dot)))
+        sn = math.sin(th)
+        wa, wb = math.sin((1 - alpha) * th) / sn, math.sin(alpha * th) / sn
+    q = [x * wa + y * wb for x, y in zip(qa, qb)]
+    n = math.sqrt(sum(v * v for v in q))
+    x, y, z, w = [v / n for v in q]
+    ref = [a[i + 3] + (b[i + 3] - a[i + 3]) * alpha for i in range(3)]
+    r02 = 2 * (x * z + y * w)
+    if abs(r02) > 0.99999:
+        sm = math.degrees(math.atan2(2 * (x * y + z * w), 1 - 2 * (x * x + z * z)))
+        c = ref[2]
+        e = [sm - c, 90, c] if r02 > 0 else [c - sm, -90, c]
+    else:
+        e = [math.degrees(math.atan2(-2 * (y * z - x * w), 1 - 2 * (x * x + y * y))),
+             math.degrees(math.asin(r02)),
+             math.degrees(math.atan2(-2 * (x * y - z * w), 1 - 2 * (y * y + z * z)))]
+    r = [a[j] + (b[j] - a[j]) * alpha for j in range(3)]
+    for i in range(3):
+        r.append(e[i] + 360 * round((ref[i] - e[i]) / 360))
+    return r
+
+
 def sample(comp, t):
     keys, dur, loop = comp
     if loop and dur > 0:
@@ -167,7 +219,10 @@ def sample(comp, t):
         if t <= tb:
             ta, _, pa = keys[i - 1]
             a = EASE.get(eb or "sineInOut", EASE["sineInOut"])((t - ta) / max(1e-4, tb - ta))
-            return {n: [pa[n][j] + (pb[n][j] - pa[n][j]) * a for j in range(len(pa[n]))] for n in pa}
+            out = {n: [pa[n][j] + (pb[n][j] - pa[n][j]) * a for j in range(len(pa[n]))] for n in pa}
+            for n in ("W", "O"):
+                out[n] = slerp_weapon(pa[n], pb[n], a)
+            return out
     return keys[-1][2]
 
 
@@ -246,26 +301,53 @@ def material(col, glow=False, alpha=1.0):
 
 
 _unit = None
+_shapes = {}
 
 
-def cube(name, M, col, glow=False, alpha=1.0, ball=False):
+def _shape_mesh(shape):
+    """로블록스 쐐기·원통을 블렌더 단위 메시로(로블록스 부품 축 → 블렌더: x→x, y→z, z→-y)"""
+    if shape in _shapes:
+        return _shapes[shape]
+    if shape == "Wedge":
+        # 쐐기: 뒤(+z)는 꽉 찬 높이, 앞(-z) 아래 모서리로 비탈이 내려간다
+        rv = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, -0.5, 0.5), (-0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
+        verts = [(x, -z, y) for x, y, z in rv]
+        faces = [(0, 1, 2, 3), (3, 2, 5, 4), (0, 3, 4), (1, 5, 2), (0, 4, 5, 1)]
+        me = bpy.data.meshes.new("wedge")
+        me.from_pydata(verts, [], faces)
+        me.update()
+    else:
+        # 원통: 축 = 로블록스 x(블렌더 x)
+        bpy.ops.mesh.primitive_cylinder_add(radius=0.5, depth=1, vertices=20)
+        o = bpy.context.active_object
+        me = o.data
+        me.transform(Matrix.Rotation(PI / 2, 4, "Y"))
+        bpy.data.objects.remove(o)
+    _shapes[shape] = me
+    return me
+
+
+def cube(name, M, col, glow=False, alpha=1.0, ball=False, shape="Block"):
     global _unit
     if ball:
         bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5, segments=12, ring_count=8)
         o = bpy.context.active_object
     else:
-        if _unit is None:
-            bpy.ops.mesh.primitive_cube_add(size=1)
-            _unit = bpy.context.active_object.data
-            bpy.data.objects.remove(bpy.context.active_object)
-        o = bpy.data.objects.new(name, _unit)
+        if shape in ("Wedge", "Cylinder"):
+            data = _shape_mesh(shape)
+        else:
+            if _unit is None:
+                bpy.ops.mesh.primitive_cube_add(size=1)
+                _unit = bpy.context.active_object.data
+                bpy.data.objects.remove(bpy.context.active_object)
+            data = _unit
+        o = bpy.data.objects.new(name, data)
         bpy.context.scene.collection.objects.link(o)
     o.matrix_world = M
     o.data.materials.clear() if ball else None
     if ball:
         o.data.materials.append(material(col, glow, alpha))
     else:
-        o.material_slots and None
         o.active_material = None
         if not o.material_slots:
             o.data.materials.append(material((128, 128, 128)))
@@ -293,7 +375,7 @@ def build(pose, offset, weapon, yaw=90):
                 at = part["At"]
                 pc = wcf * cfp(at[0], at[1], at[2]) * orient(at[3], at[4], at[5])
                 cube(part["Name"], to_blender(pc, part["Size"]), part["Color"], part["Material"] == "Neon",
-                     1 - part.get("Transparency", 0) * 0.8, part["Shape"] == "Ball")
+                     1 - part.get("Transparency", 0) * 0.8, part["Shape"] == "Ball", part["Shape"])
         main = weapon.get("Main")
         if main and main.get("Hand") == "Float":
             orbit = weapon.get("Orbit", {"Count": 3, "Radius": 2.6, "Height": 1.6})
@@ -305,10 +387,10 @@ def build(pose, offset, weapon, yaw=90):
                     at = part["At"]
                     pc = oc * cfp(at[0], at[1], at[2]) * orient(at[3], at[4], at[5])
                     cube(part["Name"], to_blender(pc, part["Size"]), part["Color"], part["Material"] == "Neon",
-                         1 - part.get("Transparency", 0) * 0.8, part["Shape"] == "Ball")
+                         1 - part.get("Transparency", 0) * 0.8, part["Shape"] == "Ball", part["Shape"])
 
 
-def render(path, n, span, cam_side=1.0):
+def render(path, n, span, cam_side=1.0, zoom=None):
     sc = bpy.context.scene
     for eng in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
         try:
@@ -316,7 +398,7 @@ def render(path, n, span, cam_side=1.0):
             break
         except Exception:
             pass
-    sc.render.resolution_x, sc.render.resolution_y = int(240 * n), 420
+    sc.render.resolution_x, sc.render.resolution_y = (int(240 * n), 420) if zoom is None else (720, 720)
     sc.world = bpy.data.worlds.new("W")
     sc.world.use_nodes = True
     sc.world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.75, 0.78, 0.82, 1)
@@ -331,7 +413,7 @@ def render(path, n, span, cam_side=1.0):
     g.data.materials.append(material((150, 150, 140)))
     cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("C"))
     cam.data.type = "ORTHO"
-    cam.data.ortho_scale = span + 6
+    cam.data.ortho_scale = span + 6 if zoom is None else zoom
     # 앞(로블록스 -Z = 블렌더 +Y)에서 조금 오른쪽·위
     cam.location = Vector((-span / 2 - 10 * cam_side, 40, 19))
     d = Vector((-span / 2, 0, 0.5)) - cam.location
@@ -347,8 +429,8 @@ def lineup(spec, out_name, yaw=90):
     motions = json.load(open(os.path.join(OUT, "motions.json"), encoding="utf-8"))
     weapons = json.load(open(os.path.join(OUT, "weapons.json"), encoding="utf-8"))
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    global _unit, _mats
-    _unit, _mats = None, {}
+    global _unit, _mats, _shapes
+    _unit, _mats, _shapes = None, {}, {}
     items = [x.split("/") for x in spec.split(",")]
     step = 7.0
     for i, (cls, name, wid, t) in enumerate(items):
@@ -359,8 +441,75 @@ def lineup(spec, out_name, yaw=90):
     print("찍음", out_name)
 
 
+def views(set_name, motion_name, t, weapon_id, out_name):
+    """한 자세를 네 방향에서: 게임 옆모습(90) · 앞 3/4(45) · 앞(0) · 뒤 3/4(135). 자세 검사용."""
+    motions = json.load(open(os.path.join(OUT, "motions.json"), encoding="utf-8"))
+    weapons = json.load(open(os.path.join(OUT, "weapons.json"), encoding="utf-8"))
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    global _unit, _mats, _shapes
+    _unit, _mats, _shapes = None, {}, {}
+    s = motions[set_name]
+    m = s["Skills"][motion_name[7:]] if motion_name.startswith("Skills.") else s[motion_name]
+    pose = sample(compile_motion(m), float(t))
+    step = 7.0
+    for i, yaw in enumerate((90, 45, 0, 135)):
+        build(pose, (-i * step, 0, 0), weapons.get(weapon_id), yaw)
+    render(os.path.join(OUT, out_name + ".png"), 4, 3 * step)
+    print("찍음", out_name)
+
+
+def close(set_name, motion_name, t, weapon_id, yaw, out_name):
+    """한 자세를 가까이(윗몸·무기 확대) 한 방향에서"""
+    motions = json.load(open(os.path.join(OUT, "motions.json"), encoding="utf-8"))
+    weapons = json.load(open(os.path.join(OUT, "weapons.json"), encoding="utf-8"))
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    global _unit, _mats, _shapes
+    _unit, _mats, _shapes = None, {}, {}
+    s = motions[set_name]
+    m = s["Skills"][motion_name[7:]] if motion_name.startswith("Skills.") else s[motion_name]
+    build(sample(compile_motion(m), float(t)), (0, 0, 0), weapons.get(weapon_id), float(yaw))
+    render(os.path.join(OUT, out_name + ".png"), 1, 0, zoom=7.5)
+    print("찍음", out_name)
+
+
+def gallery(out_name, yaw):
+    """무기 전부를 세워 한 줄로(쥔 점 = 바닥 위 3, +Y 위). 모양 확인용"""
+    weapons = json.load(open(os.path.join(OUT, "weapons.json"), encoding="utf-8"))
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    global _unit, _mats, _shapes
+    _unit, _mats, _shapes = None, {}, {}
+    ids = ["Rapier", "Greatsword", "Violin", "PilgrimNails", "MasonHammer", "PickStaff", "Flask", "Greataxe", "Orbs"]
+    x = 0.0
+    for wid in ids:
+        w = weapons.get(wid)
+        if not w:
+            continue
+        for slot in ("Main", "Off"):
+            piece = w.get(slot)
+            if not piece:
+                continue
+            base = cfp(-x, -1.6, 0) * orient(0, float(yaw), 0)
+            for part in piece["Parts"]:
+                at = part["At"]
+                pc = base * cfp(at[0], at[1], at[2]) * orient(at[3], at[4], at[5])
+                cube(part["Name"], to_blender(pc, part["Size"]), part["Color"], part["Material"] == "Neon",
+                     1 - part.get("Transparency", 0) * 0.8, part["Shape"] == "Ball", part["Shape"])
+            x += 2.4
+    render(os.path.join(OUT, out_name + ".png"), 6, x - 2.4)
+    print("찍음", out_name)
+
+
 def main():
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["Test", "Axes"]
+    if args[0] == "gallery":
+        gallery(args[1], args[2])
+        return
+    if args[0] == "close":
+        close(*args[1:7])
+        return
+    if args[0] == "views":
+        views(args[1], args[2], args[3], args[4], args[5])
+        return
     if args[0] == "lineup":
         lineup(args[1], args[2], float(args[3]) if len(args) > 3 else 90)
         return
@@ -383,8 +532,8 @@ def main():
     for name in names:
         m = s["Skills"][name[7:]] if name.startswith("Skills.") else s[name]
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        global _unit, _mats
-        _unit, _mats = None, {}
+        global _unit, _mats, _shapes
+        _unit, _mats, _shapes = None, {}, {}
         comp = compile_motion(m)
         dur = comp[1]
         weapon = weapons.get(weapon_id) if weapon_id else None
