@@ -40,6 +40,8 @@ export type Piece = {
 	Parts: { Part },
 	-- 블렌더 메시가 있을 때(ReplicatedStorage.WeaponMeshes.<무기Id>.<Main|Off>) 묶음마다 입힐 색·재질. 없으면 Parts 로 짓는다
 	Skins: { [string]: Skin }?,
+	-- 조각 전체를 무기 축(+Y) 둘레로 돌리는 각(도). 날 넓이를 X 로 그려 둔 정의를 날이 -Z(손가락 마디 쪽)를 보게 돌릴 때
+	Turn: number?,
 	Sockets: { [string]: { number } },
 	-- 궤적 색(없으면 궤적 없음)
 	Trail: { number }?,
@@ -157,6 +159,8 @@ local weapons: { [string]: Weapon } = {
 			Trail = { 214, 236, 255 },
 		},
 	},
+	-- 퀘이사: 별빛이 흐르는 검은 츠바이핸더(두 손). 2026-10-02: 날이 90° 꺾여 면이 손가락 마디 쪽을 보던 것(사용자: "검을 90도 꺾어서 잡고 있어")을
+	-- Turn = 90 으로 바로잡음 — 날(넓이)·날밑이 Z 쪽으로, 앞날(-Z)이 손가락 마디 쪽
 	-- 퀘이사: 별빛이 흐르는 검은 츠바이핸더(두 손) — 긴 손잡이·가운데 고리, 끝이 처진 큰 십자 가드,
 	-- 가죽 감은 리카소와 그 위 패링 훅(파리어하켄), 가운데 보라 빛줄기
 	Greatsword = {
@@ -165,6 +169,7 @@ local weapons: { [string]: Weapon } = {
 		Type = "Great2H",
 		Main = {
 			Hand = "Right",
+			Turn = 90,
 			Parts = {
 				P("Pommel", "Ball", { 0.5, 0.5, 0.5 }, { 0, -1.02, 0, 0, 0, 0 }, VOID, "Metal"),
 				P("PommelCap", "Block", { 0.22, 0.16, 0.22 }, { 0, -1.3, 0, 0, 45, 0 }, VOID, "Metal"),

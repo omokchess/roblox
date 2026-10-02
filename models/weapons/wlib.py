@@ -32,14 +32,23 @@ class Group:
 
     def __init__(self, name, color=(0.7, 0.7, 0.7), smooth=40.0, alpha=1.0):
         self.name = name
+        self.turn = 0.0  # 무기 축(+Y) 둘레로 돌려 짓기(도) — 날 넓이를 X 로 그려도 날이 -Z 를 보게
         self.color = color
         self.smooth = smooth  # 이 각도보다 완만한 모서리는 매끈하게(None 이면 모두 각지게)
         self.alpha = alpha
         self.bm = bmesh.new()
 
+    def tf(self, p):
+        """무기 공간 점 → 블렌더 좌표(turn 적용: Roblox CFrame.Angles(0, turn, 0) 과 같은 방향)"""
+        if self.turn:
+            a = math.radians(self.turn)
+            x, y, z = p
+            p = (x * math.cos(a) + z * math.sin(a), y, -x * math.sin(a) + z * math.cos(a))
+        return W2B(p)
+
     # 무기 공간 꼭짓점·면을 그대로 넣는다
     def add(self, verts, faces):
-        vs = [self.bm.verts.new(W2B(v)) for v in verts]
+        vs = [self.bm.verts.new(self.tf(v)) for v in verts]
         for f in faces:
             try:
                 self.bm.faces.new([vs[i] for i in f])
@@ -268,7 +277,7 @@ def bbox(g, center, size, bevel=0.0, rot=(0, 0, 0), seg=2):
     R = Matrix.Rotation(ry, 4, "Y") @ Matrix.Rotation(rx, 4, "X") @ Matrix.Rotation(rz, 4, "Z")
     for v in bm.verts:
         p = R @ v.co + Vector(center)
-        v.co = W2B(tuple(p))
+        v.co = g.tf(tuple(p))
     g.merge(bm)
     bm.free()
 

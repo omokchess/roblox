@@ -412,7 +412,8 @@ def build(pose, offset, weapon, yaw=90):
         for slot, piece in (("W", weapon.get("Main")), ("O", weapon.get("Off"))):
             if not piece or piece.get("Hand") == "Float":
                 continue
-            wcf = base * weapon_cf(world, piece["Hand"], pose.get(slot, [0] * 6))
+            # Turn = 조각 전체를 무기 축(+Y) 둘레로 돌림(츠바이핸더: 날이 손가락 마디 쪽을 보게 90 — CombatWeapons 와 같다)
+            wcf = base * weapon_cf(world, piece["Hand"], pose.get(slot, [0] * 6)) * orient(0, piece.get("Turn", 0), 0)
             for part in piece["Parts"]:
                 at = part["At"]
                 pc = wcf * cfp(at[0], at[1], at[2]) * orient(at[3], at[4], at[5])
@@ -530,7 +531,7 @@ def gallery(out_name, yaw):
             piece = w.get(slot)
             if not piece:
                 continue
-            base = cfp(-x, -1.6, 0) * orient(0, float(yaw), 0)
+            base = cfp(-x, -1.6, 0) * orient(0, float(yaw), 0) * orient(0, piece.get("Turn", 0), 0)
             for part in piece["Parts"]:
                 at = part["At"]
                 pc = base * cfp(at[0], at[1], at[2]) * orient(at[3], at[4], at[5])

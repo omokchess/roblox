@@ -47,9 +47,12 @@ class Piece:
         self.prefix = "%s_%s_" % (wid, slot)
         self.groups = {}
 
+    turn = 0.0
+
     def g(self, name, color, smooth=40.0, alpha=1.0):
         if name not in self.groups:
             self.groups[name] = L.Group(self.prefix + name, color, smooth, alpha)
+            self.groups[name].turn = self.turn
         return self.groups[name]
 
     def finish(self):
@@ -227,6 +230,8 @@ def _plate2(g, outline, center, zfun, rings=(1.0, 0.78, 0.52, 0.26)):
 
 def greatsword():
     p = Piece("Greatsword", "Main")
+    # 날 넓이·날밑을 X 로 그리고 통째로 90° 돌린다 → 날이 Z 쪽(앞날 -Z = 손가락 마디 쪽). WeaponDefinitions 의 Turn = 90 과 같다
+    p.turn = 90.0
     void, leather = p.g("Void", rgb(50, 48, 70), 35), p.g("Leather", LEATHER)
     gem, blade = p.g("Gem", rgb(170, 140, 255), None), p.g("Blade", rgb(34, 34, 52), 20)
     edge, core = p.g("Edge", rgb(70, 74, 104), 20), p.g("Core", rgb(140, 110, 255), None)

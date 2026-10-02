@@ -2,8 +2,10 @@
 --[[
 	광전사 — 핏빛 룬 데인 액스를 든 짐승. (2026-09-28, 자세 다시 2026-09-30)
 
-	성격: 광포함. 깊게 웅크려 고개만 치켜들고 노려보며, 가슴이 크게 들썩인다(거친 숨).
-	      맞으면 움찔한 뒤 **포효**로 받아친다. 피하지 않고 파고들어 어깨로 들이받는다.
+	성격: 광포함. 맞으면 움찔한 뒤 **포효**로 받아친다. 피하지 않고 파고들어 어깨로 들이받는다.
+	      평소엔 **차분한 전투광**(2026-10-02 사용자: "짐승 같은 느낌보단 차분한 전투광 — 도끼를 한 손에 쥔 채 힘 푼 채 서 있게,
+	      잡기·놓기 때도 차분하게"): 꼿꼿이 힘 빼고 서서 도끼를 한 손에 늘어뜨려 머리를 땅에 끌고, 느리고 깊게 숨 쉰다.
+	      싸울 때만 두 손으로 움켜쥐고 터진다(기술·반응 모션은 차분한 자세에서 시작해 차분한 자세로 돌아온다).
 	      공격은 전부 온몸을 싣는다 — 도약 내려찍기, 대각 두 번 베기, 두 바퀴 회전 후 내려찍기.
 	참고: 데인 액스(10~11세기) — 두 손을 벌려 한 손은 자루 끝, 다른 손은 머리 쪽 높이 쥐고 도끼를 조종한다.
 	      크게 벨 때는 위 손을 아래로 미끄러뜨려 두 손을 모은다. 방패 없이 자루로 막는다.
@@ -33,60 +35,68 @@ local BLOCK = { Root = { 0, -0.7, 0.2, 0, -10, 0 }, Torso = { -14, 0, 0 }, Head 
 local PLANT = { Root = { 0, -1.2, 0, 0, -16, 0 }, Torso = { -30, 0, 0 }, Head = { 10, 10, 0 }, RArm = { 66.3, 57.7, -24.8 }, LArm = { 61.4, -41.6, 8.3 }, RLeg = { 90, 0, 20 }, LLeg = { 90, 0, -20 }, W = { -0.01, 0.39, -0.01, 109.9, -1.5, -99.2 } }
 -- 한 손: 오른손이 자루 끝을 쥐고 도끼 머리를 뒤 아래로 끈다(돌진·들이받기) / 포효하며 한 손으로 치켜듦
 local DRAG_FWD = { Root = { 0, -1, 0.2, 0, -16, 0 }, Torso = { -40, 0, 0 }, Head = { 30, 12, 0 }, RArm = { 20, 22, 14 }, LArm = { 20, -22, 0 }, RLeg = { 40, 0, 18 }, LLeg = { -34, 0, -18 }, W = { 0, 0, 0, -3.9, 11, -189.3 } }
+-- 차분한 전투광(대기): 오른손은 늘어져 자루 아래쪽을 느슨히 쥐고, 도끼 머리는 오른쪽 뒤 땅에 눕혀 끌린다(날 면이 땅에 닿음).
+-- 고개는 살짝 숙여 눈만 치켜 적을 본다 — tools/combat/design/berserker_calm.py(머리 가장 낮은 점이 땅 바로 위 -2.98)
+local CALM = { Root = { 0, -0.06, 0, 0, -18, 0 }, Torso = { -7, 2, 0 }, Head = { -6, 16, -3 }, RArm = { -14, 0, 9 }, LArm = { 2, 0, -7 }, RLeg = { 4, 0, 7 }, LLeg = { -3, 0, -7 }, W = { 0, 0.15, 0, 101.6, -48.5, -130.7 } }
+-- 같은 회전의 다른 오일러 표기(앞뒤 키와 짧은 길로 잇기 — check_wrap.py)
+local CALM_B = { 0, 0.15, 0, -78.4, -131.5, 49.3 }
+local CALM_C = { 0, 0.15, 0, -78.4, -131.5, -310.7 }
+-- 들림(차분): 축 늘어져 매달리고, 도끼는 한 손에 머리가 아래로 늘어진다
+local CALM_HANG = { Root = { 0, 0, 0, 2, -18, 0 }, Torso = { -4, 0, 0 }, Head = { -12, 20, 0 }, RArm = { -4, 0, 6 }, LArm = { 0, 0, -6 }, RLeg = { 6, 0, 4 }, LLeg = { -2, 0, -4 }, W = { 0, 0.15, 0, 92.2, -72.1, -178.6 } }
 local ROAR = { Root = { 0, -0.3, 0.1, 0, -16, 0 }, Torso = { 22, 0, 0 }, Head = { 40, 10, 0 }, RArm = { 100, -40, 60 }, LArm = { 100, 40, -60 }, RLeg = { 16, 0, 18 }, LLeg = { -14, 0, -18 }, W = { 0, 0, 0, -42, -5.1, 7 } }
 
 return {
-	Stance = FERAL,
+	Stance = CALM,
 
-	-- 대기: 거친 숨(2026-10-02 사용자: 광전사는 "거칠게 숨 쉬는 느낌"). 짧고 세게 들이쉬고(0.3초) 몰아 내쉰다.
-	-- 깊은 숨 → 얕은 숨 → 깊은 숨(고개를 치켜들며 으르렁) 세 번이 한 바퀴라 박자가 고르지 않다. 가슴·어깨가 크게 들썩이고
-	-- 도끼도 몸통에 붙어 함께 오르내린다. Smooth = 키에서 멈추지 않는 곡선. 머리는 몸통 들썩임을 되돌려 노려봄을 지킨다.
-	Idle = {
-		Duration = 2.85,
+	-- 대기: 차분한 전투광 — 힘 빼고 서서 느리고 깊게 숨 쉰다(Kit.Breath, Smooth). 들숨에 가슴이 오르면 늘어진 팔·도끼도 조금 따라 들린다
+	Idle = Kit.Breath(CALM, {
+		Duration = 4.4,
+		Chest = 2.5,
+		Rise = 0.02,
+		Head = -1.2,
+		Mid = { Head = { -7, 18, -2 } },
+	}),
+
+	-- 버릇(가끔): 목을 천천히 한쪽으로 꺾었다 반대로 꺾어 풀고(뚝) 다시 적을 본다 — 몸통·머리만(도끼는 그대로 끌림)
+	Fidgets = {
+		{
+			Duration = 2.2,
+			BlendIn = 0.35,
+			BlendOut = 0.45,
+			Keys = {
+				{ t = 0, Head = { -6, 16, -3 }, Torso = { -7, 2, 0 } },
+				{ t = 0.6, e = "sineInOut", Head = { -2, 8, 22 }, Torso = { -6, 2, 3 } },
+				{ t = 1.1, e = "sineInOut", Head = { -4, 22, -20 }, Torso = { -6, 2, -3 } },
+				{ t = 1.25, e = "expoOut", Head = { -5, 22, -25 }, Torso = { -6, 2, -3 } },
+				{ t = 2.2, e = "sineInOut", Head = { -6, 16, -3 }, Torso = { -7, 2, 0 } },
+			},
+		},
+	},
+
+	-- 들림: 차분하게 — 버둥대지 않고 축 늘어져 매달린 채 도끼를 한 손에 늘어뜨리고, 고개만 들어 적을 내려다본다. 시계추처럼 느리게 흔들린다
+	Held = {
+		Duration = 3.0,
 		Loop = true,
 		Smooth = true,
 		Keys = {
-			K(0.0, nil, FERAL, { Torso = { -31, 0, 0 }, Head = { 28, 12, 0 }, Root = { 0, -0.6, 0, 0, -16, 0 } }),
-			K(0.3, nil, FERAL, { Torso = { -21, 0, 0 }, Head = { 21, 12, 0 }, Root = { 0, -0.5, 0, 0, -16, 0 } }),
-			K(0.62, nil, FERAL, { Torso = { -27, 0, 0 }, Head = { 26, 12, 0 }, Root = { 0, -0.56, 0, 0, -16, 0 } }),
-			K(0.95, nil, FERAL, { Torso = { -31, 0, 0 }, Head = { 29, 11, 0 }, Root = { 0, -0.61, 0, 0, -16, 0 } }),
-			K(1.22, nil, FERAL, { Torso = { -25, 0, 0 }, Head = { 24, 12, 0 }, Root = { 0, -0.54, 0, 0, -16, 0 } }),
-			K(1.5, nil, FERAL, { Torso = { -29, 0, 0 }, Head = { 27, 12, 0 }, Root = { 0, -0.58, 0, 0, -16, 0 } }),
-			K(1.8, nil, FERAL, { Torso = { -31.5, 0, 0 }, Head = { 29, 12, 0 }, Root = { 0, -0.61, 0, 0, -16, 0 } }),
-			K(2.1, nil, FERAL, { Torso = { -19, 0, 0 }, Head = { 20, 17, 4 }, Root = { 0, -0.48, 0, 0, -16, 0 } }),
-			K(2.45, nil, FERAL, { Torso = { -26, 0, 0 }, Head = { 26, 9, -2 }, Root = { 0, -0.56, 0, 0, -16, 0 } }),
+			K(0, nil, CALM_HANG),
+			K(1.5, nil, CALM_HANG, { Root = { 0, 0.04, 0, -2, -18, 0 }, Head = { -8, 24, 3 }, RLeg = { -2, 0, 4 }, LLeg = { 4, 0, -4 }, W = { 0, 0.15, 0, 95, -70, -175 } }),
 		},
 	},
 
-	-- 들림: 얌전히 — 도끼 가드를 쥔 채 몸을 펴고 매달려 천천히 흔들린다. 고개만 들어 노려보고, 다리는 늘어져 숨에 맞춰
-	-- 조금씩 흔들린다(2026-10-02 사용자: 발버둥이 너무 발광 같다 → 얌전하게)
-	Held = {
-		Duration = 2.4,
-		Loop = true,
-		Keys = {
-			K(0, "sineInOut", FERAL, { Root = { 0, 0, 0, 3, -16, 0 }, Torso = { -12, 0, 0 }, Head = { 16, 12, 0 }, RLeg = { 8, 0, 6 }, LLeg = { -4, 0, -6 } }),
-			K(1.2, "sineInOut", FERAL, { Root = { 0, 0.05, 0, -3, -16, 0 }, Torso = { -8, 0, 0 }, Head = { 20, 16, 0 }, RLeg = { -2, 0, 6 }, LLeg = { 6, 0, -6 } }),
-		},
-	},
-
-	-- 내려놓임: 쿵 — 도끼를 앞 땅에 박으며 한쪽 무릎으로 착지(땅이 팬다) → 한 손으로 도끼를 치켜들고 포효
+	-- 내려놓임: 차분하게 — 사뿐히 무릎을 굽혀 내려서고, 도끼 머리가 땅에 쿵 하고 끌리는 자리에 눕는다. 숨을 한 번 내쉬며 목을 기울이고 선다
 	Drop = {
-		Duration = 1.4,
-		BlendIn = 0.03,
+		Duration = 1.2,
+		BlendIn = 0.05,
 		Keys = {
-			K(0, nil, HIGH, { Root = { 0, 0.4, 0.3, 0, -12, 0 } }),
-			K(0.08, "quadIn", SLAM, { Root = { 0, -1.3, -0.5, 0, -12, 0 }, RLeg = { 90, 0, 14 }, LLeg = { -60, 0, -10 } }),
-			K(0.55, "sineOut", SLAM, { Root = { 0, -1.28, -0.5, 0, -12, 0 }, Torso = { -44, 0, 0 }, RLeg = { 90, 0, 14 }, LLeg = { -60, 0, -10 } }),
-			-- 포효
-			-- W 는 같은 회전을 ±360 감아 적었다(내려찍기→포효→대기가 짧은 길로 돌게 — check_wrap.py)
-			K(0.8, "backOut", ROAR, { W = { 0, 0, 0, -42, -365.1, 7 } }),
-			K(1.1, "sineOut", ROAR, { Torso = { 24, 0, 0 }, Head = { 42, 10, 0 }, RArm = { 104, -42, 62 }, LArm = { 104, 42, -62 }, W = { 0, 0, 0, -42, -365.1, 7 } }),
-			K(1.4, "sineInOut", FERAL, { W = { 0, -1.5, 0.02, -53.1, -394.6, -27.3 } }),
+			K(0, nil, CALM_HANG, { Root = { 0, 0.3, 0, 0, -18, 0 } }),
+			K(0.14, "quadIn", CALM, { Root = { 0, -0.42, 0, 0, -18, 0 }, Torso = { -14, 2, 0 }, Head = { -10, 16, -3 }, RLeg = { 26, 0, 8 }, LLeg = { -14, 0, -8 } }),
+			K(0.5, "sineOut", CALM, { Root = { 0, -0.12, 0, 0, -18, 0 }, Torso = { -9, 2, 0 }, Head = { -8, 16, 8 } }),
+			K(0.8, "sineInOut", CALM, { Head = { -4, 18, -10 } }),
+			K(1.2, "sineInOut", CALM),
 		},
 		Events = {
-			{ t = 0.08, k = "Fx", n = "Crater" },
-			{ t = 0.09, k = "Shake", a = 0.5, d = 0.35 },
-			{ t = 0.8, k = "Fx", n = "Roar" },
+			{ t = 0.14, k = "Shake", a = 0.15, d = 0.2 },
 		},
 	},
 
@@ -95,11 +105,11 @@ return {
 		Duration = 0.8,
 		BlendIn = 0.02,
 		Keys = {
-			K(0, nil, FERAL),
+			K(0, nil, CALM, { W = CALM_B }),
 			K(0.05, "expoOut", FERAL, { Root = { 0, -0.5, 0.5, 0, -16, 0 }, Torso = { -12, 0, 0 }, Head = { 10, 12, 0 } }),
 			K(0.3, "backOut", ROAR, { Root = { 0, -0.35, 0.3, 0, -16, 0 }, Torso = { 18, 0, 0 }, Head = { 38, 10, 0 } }),
 			K(0.5, "sineOut", ROAR, { Root = { 0, -0.35, 0.3, 0, -16, 0 }, Torso = { 20, 0, 0 } }),
-			K(0.8, "sineInOut", FERAL),
+			K(0.8, "sineInOut", CALM, { W = CALM_B }),
 		},
 		Events = { { t = 0.3, k = "Fx", n = "Roar" } },
 	},
@@ -109,10 +119,10 @@ return {
 		Duration = 0.7,
 		BlendIn = 0.03,
 		Keys = {
-			K(0, nil, FERAL),
+			K(0, nil, CALM, { W = CALM_B }),
 			K(0.07, "expoOut", BLOCK),
 			K(0.2, "sineOut", BLOCK, { Root = { 0, -0.8, 0.4, 0, -10, 0 }, Torso = { -16, 0, 0 }, Head = { 18, 10, 0 } }),
-			K(0.7, "sineInOut", FERAL),
+			K(0.7, "sineInOut", CALM, { W = CALM_B }),
 		},
 		Events = { { t = 0.08, k = "Fx", n = "HaftBlock" } },
 	},
@@ -122,11 +132,11 @@ return {
 		Duration = 0.7,
 		BlendIn = 0.02,
 		Keys = {
-			K(0, nil, FERAL),
+			K(0, nil, CALM),
 			K(0.08, "expoOut", DRAG_FWD, { Root = { 0, -1.2, 0, 0, -30, 0 }, Torso = { -50, 0, 0 }, Head = { 36, 12, 0 }, RLeg = { 44, 0, 18 }, LLeg = { -40, 0, -18 } }),
 			K(0.2, "expoOut", DRAG_FWD, { Root = { 0, -0.7, -1.0, 0, 20, 0 }, Torso = { -30, 30, 0 }, Head = { 20, -20, 0 }, LArm = { 70, -30, -30 }, RLeg = { 40, 0, 18 }, LLeg = { -40, 0, -18 } }),
 			K(0.4, "sineOut", DRAG_FWD, { Root = { 0, -0.7, -0.9, 0, 16, 0 }, Torso = { -28, 26, 0 }, Head = { 20, -16, 0 }, LArm = { 70, -30, -30 }, RLeg = { 38, 0, 18 }, LLeg = { -36, 0, -18 } }),
-			K(0.7, "sineInOut", FERAL),
+			K(0.7, "sineInOut", CALM),
 		},
 		Events = { { t = 0.2, k = "Fx", n = "ShoulderCheck" } },
 	},
@@ -136,14 +146,14 @@ return {
 		BloodCrash = {
 			Duration = 1.7,
 			Keys = {
-				K(0, nil, FERAL),
+				K(0, nil, CALM),
 				K(0.2, "quadOut", DRAG_FWD),
 				-- W 는 같은 회전을 -360 감아 적었다(끌기→치켜듦이 짧은 길로 돌게 — check_wrap.py)
 				K(0.45, "cubicOut", HIGH, { Root = { 0, 0.4, 0.3, 0, -12, 0 }, W = { 0, -0.4, 0.01, 23, -51.9, -308.2 } }),
 				K(0.55, "expoOut", SLAM, { W = { 0, -0.41, -0.01, -51.4, -204.5, -313.8 } }),
 				K(1.0, "linear", SLAM, { Root = { 0, -1.05, -0.7, 0, -12, 0 }, W = { 0, -0.41, -0.01, -51.4, -204.5, -313.8 } }),
 				K(1.3, "cubicInOut", FERAL, { Torso = { -22, 0, 0 }, W = { 0, -1.5, 0.02, -53.1, -34.6, -387.3 } }),
-				K(1.7, "sineInOut", FERAL, { W = { 0, -1.5, 0.02, -53.1, -34.6, -387.3 } }),
+				K(1.7, "sineInOut", CALM, { W = CALM_C }),
 			},
 			Events = {
 				{ t = 0.22, k = "Fx", n = "BloodBoil" },
@@ -161,14 +171,14 @@ return {
 		DoubleSlash = {
 			Duration = 1.5,
 			Keys = {
-				K(0, nil, FERAL),
+				K(0, nil, CALM, { W = CALM_B }),
 				K(0.2, "cubicOut", CUT_A0),
 				K(0.3, "expoOut", CUT_A1),
 				K(0.46, "cubicOut", CUT_B0),
 				K(0.56, "expoOut", CUT_B1),
 				K(0.95, "sineOut", CUT_B1, { Root = { 0, -0.86, -0.9, 0, -30, 0 }, Torso = { -34, -30, 0 }, Head = { 26, 30, 0 } }),
 				-- 쌍베기로 감긴 값에 맞춰 대기를 -360 감아 적었다(되감지 않게)
-				K(1.5, "sineInOut", FERAL, { W = { 0, -1.5, 0.02, -53.1, -34.6, -387.3 } }),
+				K(1.5, "sineInOut", CALM, { W = CALM_C }),
 			},
 			Events = {
 				{ t = 0.05, k = "Dash", to = "Target", gap = 4, d = 0.2 },
@@ -187,14 +197,14 @@ return {
 		Burst = {
 			Duration = 2.0,
 			Keys = {
-				K(0, nil, FERAL),
+				K(0, nil, CALM),
 				K(0.2, "cubicOut", WHIRL),
 				K(0.5, "linear", WHIRL, { Root = { 0, -0.6, 0, 0, -330, 0 } }),
 				K(0.8, "linear", WHIRL, { Root = { 0, -0.6, 0, 0, -690, 0 } }),
 				K(1.0, "cubicOut", HIGH, { Root = { 0, 0.2, 0.3, 0, -732, 0 } }),
 				K(1.1, "expoOut", SLAM, { Root = { 0, -1.1, -0.5, 0, -732, 0 } }),
 				K(1.55, "linear", SLAM, { Root = { 0, -1.05, -0.5, 0, -732, 0 } }),
-				K(2.0, "sineInOut", FERAL, { Root = { 0, -0.55, 0, 0, -736, 0 } }),
+				K(2.0, "sineInOut", CALM, { Root = { 0, -0.06, 0, 0, -738, 0 }, W = CALM_B }),
 			},
 			Events = {
 				{ t = 0.2, k = "Trail", on = true },
@@ -210,10 +220,10 @@ return {
 		Guard = {
 			Duration = 1.1,
 			Keys = {
-				K(0, nil, FERAL),
+				K(0, nil, CALM, { W = CALM_B }),
 				K(0.14, "backOut", BLOCK),
 				K(0.8, "sineInOut", BLOCK, { Root = { 0, -0.72, 0.2, 0, -10, 0 }, Torso = { -15, 0, 0 } }),
-				K(1.1, "sineInOut", FERAL),
+				K(1.1, "sineInOut", CALM, { W = CALM_B }),
 			},
 			Events = { { t = 0.14, k = "Fx", n = "HaftBlock" } },
 		},
@@ -222,11 +232,11 @@ return {
 		Meditate = {
 			Duration = 2.0,
 			Keys = {
-				K(0, nil, FERAL),
+				K(0, nil, CALM),
 				K(0.4, "cubicInOut", PLANT),
 				K(1.0, "sineInOut", PLANT, { Root = { 0, -1.15, 0, 0, -16, 0 }, Torso = { -24, 0, 0 }, Head = { 14, 10, 0 } }),
 				K(1.5, "sineInOut", PLANT),
-				K(2.0, "sineInOut", FERAL),
+				K(2.0, "sineInOut", CALM),
 			},
 			Events = { { t = 0.5, k = "Fx", n = "Meditate" } },
 		},

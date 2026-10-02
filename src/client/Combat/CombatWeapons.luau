@@ -99,6 +99,8 @@ local function buildPiece(piece: WeaponDefinitions.Piece, name: string, anchored
 		weldTo(grip, p, (src:GetAttribute("Offset") :: CFrame?) or CFrame.identity)
 		p.Parent = model
 	end
+	-- Turn: 조각 전체를 무기 축(+Y) 둘레로 돌린다(Part 정의만 — 블렌더 메시는 이미 돌려 지었다)
+	local turn = CFrame.fromOrientation(0, (piece.Turn or 0) * RAD, 0)
 	for _, spec in (if meshes then {} else piece.Parts) do
 		local p: BasePart
 		if spec.Shape == "Wedge" then
@@ -118,7 +120,7 @@ local function buildPiece(piece: WeaponDefinitions.Piece, name: string, anchored
 		p.Massless = true
 		p.Anchored = false
 		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
-		weldTo(grip, p, at(spec.At))
+		weldTo(grip, p, turn * at(spec.At))
 		p.Parent = model
 	end
 	-- 궤적·이펙트 점
