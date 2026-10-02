@@ -54,16 +54,15 @@ end
 return {
 	Stance = REST,
 
-	-- 대기: 깊고 느린 숨. 들숨에 가슴이 오르며 어깨 위 대검이 함께 들썩인다
-	Idle = {
+	-- 대기: 깊고 느린 숨(Kit.Breath, Smooth — 2026-10-02 사용자: 끊기지 않게). 들숨에 가슴이 오르며 어깨 위 대검이 함께 들썩이고,
+	-- 내쉬며 고개가 조금 돌아간다.
+	Idle = Kit.Breath(REST, {
 		Duration = 3.9,
-		Loop = true,
-		Keys = {
-			K(0.0, "sineInOut", REST),
-			K(1.82, "sineInOut", REST, { Root = { 0, -0.22, 0, 0, -14, 0 }, Torso = { -1, 0, 0 }, Head = { 1, 12, 0 }, LArm = { 6, 0, -14 } }),
-			K(2.73, "sineInOut", REST, { Root = { 0, -0.3, 0, 0, -14, 0 }, Torso = { -5, 0, 0 }, Head = { 6, 15, 0 } }),
-		},
-	},
+		Chest = 2.5,
+		Rise = 0.04,
+		In = { RArm = { 61.5, 24, 8 }, LArm = { 5, 0, -13 } },
+		Mid = { Head = { 3, 15, 0 } },
+	}),
 
 	-- 들림: 축 늘어져 대검 무게에 끌려 내려간다. 칼끝이 아래로 늘어지고 천천히 시계추처럼 흔들린다
 	Held = {

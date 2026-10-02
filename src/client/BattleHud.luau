@@ -21,6 +21,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local BattleSkills = require(ReplicatedStorage.Shared.BattleSkills)
+local EnemyDefinitions = require(ReplicatedStorage.Shared.EnemyDefinitions)
 local Keywords = require(ReplicatedStorage.Shared.Keywords)
 local QteDefinitions = require(ReplicatedStorage.Shared.QteDefinitions)
 
@@ -43,6 +45,7 @@ local STAMINA = Color3.fromRGB(206, 214, 110)
 local SLOT_W, SLOT_H, SLOT_GAP = 132, 88, 8
 local ACTION_W = 200
 local TIP_W, GLOSS_W = 440, 270
+local BOSS_W = 500
 local QTE_W, QTE_H = 580, 250
 -- 고리 QTE 에서 반지름 1 이 몇 px 인가
 local RING_R = 72
@@ -190,6 +193,7 @@ function BattleHud.new(gui: ScreenGui, callbacks: Callbacks)
 	self:_buildTip()
 	self:_buildQte()
 	self:_buildTop()
+	self:_buildBossInfo()
 
 	local camera = workspace.CurrentCamera
 	if camera then
@@ -564,7 +568,7 @@ function BattleHud:_rescale()
 	local view = if camera then camera.ViewportSize else Vector2.new(1280, 720)
 	local need = self.dock.Size.X.Offset + 40
 	self.scale = math.clamp(math.min(view.X / need, view.Y / 700), 0.6, 1)
-	for _, s in { self.dockScale, self.tipScale, self.glossScale, self.qteScale, self.effectPopScale } do
+	for _, s in { self.dockScale, self.tipScale, self.glossScale, self.qteScale, self.effectPopScale, self.bossScale } do
 		s.Scale = self.scale
 	end
 end
@@ -579,6 +583,7 @@ function BattleHud:SetActive(on: boolean)
 		self.effectPinned = nil
 		self.effectPop.Visible = false
 		self:_hideTip()
+		self:HideBossInfo()
 		self:QteClose()
 	end
 end
@@ -1147,6 +1152,387 @@ function BattleHud:_hideTipSoon(index: number?)
 	end)
 end
 
+--=== 보스 정보 창 ===--
+--[[
+	보스(부위)를 누르면 여는 창(2026-10-02 사용자: "보스를 클릭하면 부위 포함 사용하는 모든 스킬들의 설명을 볼 수 있게.
+	AI티 나지 않게 여러 레퍼런스를 찾아야 함. UI 테마는 플레이어의 스킬 UI를 참고").
+	참고한 것
+	  - 붕괴: 스타레일 대상 정보: 체력·상태와 **가진 능력 전부**를 한 창에 — 고른 적 기준으로 연다
+	  - 몬스터 헌터 와일즈 대형 몬스터 도감: **부위별로** 무엇이 부서지는지 — 여기선 부수면 일어나는 일
+	  - Darkest Dungeon 적 정보: 능력 이름 옆 짧은 표식(출혈·기절 …) — 여기선 언제 쓰나·막을 수 있나를 작은 꼬리표로
+	  - Into the Breach("멋보다 분명함"): 이번 턴 예고한 행동을 그 자리에서 바로 표시
+	모양은 스킬 설명 말풍선과 같다: 먹빛 판 + 뼛빛 1px 선 + 모서리 꺾쇠, 왼쪽 색 막대, 마름모 글머리, 숫자·키워드만 색.
+	부위마다 칸 하나: 이름 · 상태 꼬리표 · 체력 줄 · 행동(스킬) · 부수면. 누른 부위 칸은 금빛 테두리로, 그 칸까지 내려 준다.
+	창 밖을 누르거나 Esc·✕ 로 닫는다(BattleClient).
+]]
+local function chip(parent: Instance, text: string, color: Color3, order: number): TextLabel
+	local c = make("TextLabel", {
+		Size = UDim2.fromOffset(0, 18),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 1,
+		Text = text,
+		TextColor3 = color,
+		Font = Enum.Font.GothamBold,
+		TextSize = 11,
+		LayoutOrder = order,
+	}, parent)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, c)
+	stroke(c, color, 0.35)
+	return c
+end
+
+-- 줄바꿈되는 설명 한 줄(RichText 로 이미 꾸민 글)
+local function richRow(parent: Instance, rich: string, color: Color3, order: number?): TextLabel
+	return make("TextLabel", {
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Text = rich,
+		RichText = true,
+		TextWrapped = true,
+		TextColor3 = color,
+		Font = Enum.Font.GothamMedium,
+		TextSize = 14,
+		LineHeight = 1.1,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		LayoutOrder = order or 0,
+	}, parent)
+end
+
+local function comma(n: number): string
+	local s = tostring(math.floor(n)):reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return (s:gsub("^,", ""))
+end
+
+-- 글머리 마름모 + 들여 쓴 칸(안에 글을 넣는다)
+local function bulletRow(parent: Instance, color: Color3, order: number): Frame
+	local row = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = order }, parent)
+	make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(4, 10),
+		Size = UDim2.fromOffset(6, 6),
+		Rotation = 45,
+		BackgroundColor3 = color,
+		BorderSizePixel = 0,
+	}, row)
+	local holder = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, row)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 15) }, holder)
+	make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, holder)
+	return holder
+end
+
+function BattleHud:_buildBossInfo()
+	local panel = make("Frame", {
+		Name = "BossInfo",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -24, 0.5, -20),
+		Size = UDim2.fromOffset(BOSS_W, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = INK,
+		BackgroundTransparency = 0.03,
+		BorderSizePixel = 0,
+		Active = true,
+		Visible = false,
+		ZIndex = 12,
+	}, self.gui)
+	self.boss = panel
+	self.bossScale = make("UIScale", {}, panel)
+	stroke(panel, BONE, 0.65)
+	brackets(panel, BONE, 12)
+	local inner = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, panel)
+	make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder }, inner)
+
+	local header = make("Frame", { Size = UDim2.new(1, 0, 0, 64), BackgroundTransparency = 1, LayoutOrder = 1 }, inner)
+	make("Frame", { Position = UDim2.fromOffset(0, 14), Size = UDim2.fromOffset(4, 24), BackgroundColor3 = CRIMSON, BorderSizePixel = 0 }, header)
+	self.bossName = make("TextLabel", {
+		Position = UDim2.fromOffset(16, 12),
+		Size = UDim2.new(1, -150, 0, 28),
+		BackgroundTransparency = 1,
+		Text = "",
+		TextColor3 = BONE,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 22,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+	}, header)
+	local kind = make("TextLabel", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -52, 0, 16),
+		Size = UDim2.fromOffset(0, 20),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 1,
+		Text = "보스",
+		TextColor3 = CRIMSON,
+		Font = Enum.Font.GothamBold,
+		TextSize = 12,
+	}, header)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7) }, kind)
+	stroke(kind, CRIMSON, 0.3)
+	local close = make("TextButton", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -14, 0, 13),
+		Size = UDim2.fromOffset(26, 26),
+		BackgroundColor3 = INK_2,
+		BorderSizePixel = 0,
+		Text = "✕",
+		TextColor3 = BONE,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 14,
+	}, header)
+	stroke(close, BONE, 0.55)
+	close.Activated:Connect(function()
+		self:HideBossInfo()
+	end)
+	self.bossStats = make("TextLabel", {
+		Position = UDim2.fromOffset(16, 42),
+		Size = UDim2.new(1, -30, 0, 16),
+		BackgroundTransparency = 1,
+		Text = "",
+		TextColor3 = MUTED,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		RichText = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+	}, header)
+
+	make("Frame", {
+		Size = UDim2.new(1, -28, 0, 1),
+		Position = UDim2.fromOffset(14, 0),
+		BackgroundColor3 = BONE,
+		BackgroundTransparency = 0.82,
+		BorderSizePixel = 0,
+		LayoutOrder = 2,
+	}, inner)
+
+	local pad = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 3 }, inner)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 14) }, pad)
+	self.bossBody = make("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 0, 40),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.new(),
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = BONE,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+	}, pad)
+	self.bossLayout = make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8) }, self.bossBody)
+	self.bossLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		self:_fitBossInfo()
+	end)
+end
+
+function BattleHud:_fitBossInfo()
+	local s = math.max(self.scale, 0.01)
+	local content = self.bossLayout.AbsoluteContentSize.Y / s
+	local camera = workspace.CurrentCamera
+	local view = if camera then camera.ViewportSize else Vector2.new(1280, 720)
+	-- 화면 높이의 70% 안(아래 판·위 줄과 겹치지 않게)
+	local height = math.min(content, view.Y * 0.7 / s - 100)
+	self.bossBody.Size = UDim2.new(1, 0, 0, math.max(60, height))
+	self.bossBody.CanvasSize = UDim2.fromOffset(0, content)
+end
+
+function BattleHud:IsBossInfoOpen(): boolean
+	return self.boss.Visible
+end
+
+-- 화면 점이 창 위인가(창 밖을 누르면 닫는다)
+function BattleHud:IsOverBossInfo(point: Vector2): boolean
+	local p, size = self.boss.AbsolutePosition, self.boss.AbsoluteSize
+	return self.boss.Visible and point.X >= p.X and point.X <= p.X + size.X and point.Y >= p.Y and point.Y <= p.Y + size.Y
+end
+
+function BattleHud:HideBossInfo()
+	self.boss.Visible = false
+	self.bossFocus = nil
+end
+
+-- 부위 행동 하나(스킬이면 BattleSkills 에서 이름·설명·피해·방어 규칙을 가져온다)
+function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned: string?, alive: boolean)
+	local skill = if move.Id then BattleSkills.ById(move.Id) else nil
+	local holder = bulletRow(parent, if alive then CRIMSON else MUTED, order)
+	local top = make("Frame", { Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, LayoutOrder = 1 }, holder)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		Padding = UDim.new(0, 6),
+	}, top)
+	make("TextLabel", {
+		Size = UDim2.fromOffset(0, 20),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 1,
+		Text = if skill then skill.Name else (move.Name or "?"),
+		TextColor3 = if alive then BONE else MUTED,
+		Font = Enum.Font.GothamBold,
+		TextSize = 15,
+		LayoutOrder = 1,
+	}, top)
+	if planned and move.Id == planned then
+		chip(top, "이번 턴 예고", RED, 2)
+	end
+	chip(top, move.When, STEEL, 3)
+	if skill then
+		if (skill.Damage or 0) > 0 then
+			chip(top, "피해 " .. tostring(skill.Damage), BONE, 4)
+		end
+		if skill.Unavoidable then
+			chip(top, "회피·막기 불가", RED, 5)
+		elseif skill.DodgeOnly then
+			chip(top, "막기 불가 · 회피만", GOLD, 5)
+		end
+	end
+	richRow(holder, BattleHud.Markup((if skill then skill.Description else move.Description) or ""), if alive then BODY else MUTED, 2)
+end
+
+--[[
+	열기·고쳐 그리기. snapshot = 서버 스냅샷(부위 체력·예고), focus = 누른 부위 키(Head·Core …).
+	열려 있을 때 스냅샷이 바뀌면 BattleClient 가 다시 부른다(같은 부위면 스크롤 자리를 지킨다).
+]]
+function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
+	local bossSnap = snapshot and snapshot.Boss
+	if not bossSnap then
+		return
+	end
+	local def = EnemyDefinitions.Get(bossSnap.Id)
+	local keep = self.boss.Visible and self.bossFocus == focus
+	local scrollAt = self.bossBody.CanvasPosition
+	self.bossFocus = focus
+	local units: { [string]: any } = {}
+	for _, u in snapshot.Units or {} do
+		if u.Part then
+			units[u.Part] = u
+		end
+	end
+	local alive, total, hp, maxHp = 0, 0, 0, 0
+	for _, part in def.Parts or {} do
+		local u = units[part.Key]
+		total += 1
+		if u then
+			hp += math.max(0, u.Health or 0)
+			maxHp += u.MaxHealth or 0
+			if u.Alive then
+				alive += 1
+			end
+		end
+	end
+	self.bossName.Text = def.Name
+	local sep = string.format('<font color="%s">   |   </font>', hex(Color3.fromRGB(80, 74, 66)))
+	self.bossStats.Text = table.concat({
+		statPart("부위", string.format("%d / %d", alive, total)),
+		statPart("체력 합", string.format("%s / %s", comma(hp), comma(maxHp))),
+		statPart("", string.format("%d턴", snapshot.Turn or 1)),
+	}, sep)
+
+	for _, child in self.bossBody:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	local order = 0
+	local function nextOrder(): number
+		order += 1
+		return order
+	end
+	-- 보스 규칙
+	if def.Rules then
+		local rules = make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody)
+		make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, rules)
+		for i, rule in def.Rules do
+			richRow(bulletRow(rules, CRIMSON, i), BattleHud.Markup(rule), BODY)
+		end
+	end
+	-- 부위마다 칸 하나
+	local focusFrame: Frame? = nil
+	for _, part in def.Parts or {} do
+		local u = units[part.Key]
+		local isAlive = u ~= nil and u.Alive == true
+		local focused = part.Key == focus
+		local box = make("Frame", {
+			Size = UDim2.new(1, -6, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundColor3 = INK_2,
+			BackgroundTransparency = if focused then 0.1 else 0.45,
+			BorderSizePixel = 0,
+			LayoutOrder = nextOrder(),
+		}, self.bossBody)
+		stroke(box, if focused then GOLD else BONE, if focused then 0.15 else 0.8)
+		make("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 9), PaddingBottom = UDim.new(0, 10) }, box)
+		make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, box)
+		if focused then
+			focusFrame = box
+		end
+		-- 이름 + 상태
+		local head = make("Frame", { Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, LayoutOrder = 1 }, box)
+		make("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 8),
+		}, head)
+		make("TextLabel", {
+			Size = UDim2.fromOffset(0, 22),
+			AutomaticSize = Enum.AutomaticSize.X,
+			BackgroundTransparency = 1,
+			Text = part.Name,
+			TextColor3 = if isAlive then BONE else MUTED,
+			Font = Enum.Font.GothamBlack,
+			TextSize = 17,
+			LayoutOrder = 1,
+		}, head)
+		if not isAlive then
+			chip(head, "파괴됨", MUTED, 2)
+		elseif part.Key == "Core" and alive > 1 then
+			chip(head, "잠김 — 다른 부위가 남음", GOLD, 2)
+		end
+		if u and u.Stunned and isAlive then
+			chip(head, "그로기", TEAL, 3)
+		end
+		-- 체력 줄
+		local bar = make("Frame", { Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, LayoutOrder = 2 }, box)
+		local track = make("Frame", { Position = UDim2.fromOffset(0, 4), Size = UDim2.new(1, -128, 0, 6), BackgroundColor3 = INK, BorderSizePixel = 0 }, bar)
+		stroke(track, BONE, 0.85)
+		local ratio = if u and (u.MaxHealth or 0) > 0 then math.clamp((u.Health or 0) / u.MaxHealth, 0, 1) else 0
+		make("Frame", { Size = UDim2.fromScale(ratio, 1), BackgroundColor3 = if isAlive then CRIMSON else MUTED, BorderSizePixel = 0 }, track)
+		make("TextLabel", {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, 0, 0, -1),
+			Size = UDim2.fromOffset(120, 14),
+			BackgroundTransparency = 1,
+			Text = if u then string.format("%s / %s", comma(math.max(0, u.Health or 0)), comma(u.MaxHealth or 0)) else "-",
+			TextColor3 = if isAlive then BONE else MUTED,
+			Font = Enum.Font.GothamBold,
+			TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Right,
+		}, bar)
+		-- 행동
+		local planned = if isAlive and u and u.Plan then u.Plan.SkillId else nil
+		for i, move in part.Moves or {} do
+			self:_bossMove(box, move, 2 + i, planned, isAlive)
+		end
+		-- 부수면
+		if part.Break then
+			richRow(box, string.format('<font color="%s"><b>부수면</b></font>   %s', hex(GOLD), BattleHud.Markup(part.Break)), if isAlive then BODY else MUTED, 50)
+		end
+	end
+	self.boss.Visible = true
+	self:_fitBossInfo()
+	if keep then
+		self.bossBody.CanvasPosition = scrollAt
+	else
+		self.bossBody.CanvasPosition = Vector2.zero
+		-- 누른 부위 칸까지 내려 준다(줄 세우기가 끝난 뒤)
+		task.defer(function()
+			if focusFrame and focusFrame.Parent and self.boss.Visible then
+				local y = focusFrame.AbsolutePosition.Y - self.bossBody.AbsolutePosition.Y + self.bossBody.CanvasPosition.Y
+				self.bossBody.CanvasPosition = Vector2.new(0, math.max(0, y - 6))
+			end
+		end)
+	end
+end
+
 --=== QTE ===--
 
 local function ring(parent: Instance, color: Color3, transparency: number): (Frame, UIStroke)
@@ -1620,7 +2006,10 @@ function BattleHud:FlashGrade(role: string, grade: string, word: string)
 		self:Flash(text, string.format("피해 ×%s", tostring(mult)), if grade == "Success" then GOLD elseif grade == "Partial" then BONE else RED)
 	else
 		local text = if grade == "Success" then word elseif grade == "Partial" then "막음" else "피격"
-		local sub = if grade == "Success" then "피해 없음" elseif grade == "Partial" then "피해 절반" else "피해 그대로"
+		-- 결투사 패리는 피해를 다 막지 않는다(GridBattle.PARRY_KEEP — 10% 는 받고 90% 되돌림)
+		local sub = if grade == "Success" and word == "패리" then "받는 피해량 −90%"
+			elseif grade == "Success" then "피해 없음"
+			elseif grade == "Partial" then "피해 절반" else "피해 그대로"
 		self:Flash(text, sub, if grade == "Success" then TEAL elseif grade == "Partial" then BONE else RED)
 	end
 end

@@ -41,20 +41,31 @@ local GUARD_HIT = { Root = GTAP.Root, Torso = { -30, 0, 0 }, Head = { -6, 10, 0 
 return {
 	Stance = LIFT,
 
-	-- 대기: 톡-톡-쾅 — 손목으로 두 번 톡톡, 팔을 들어 쾅 한 번, 결을 들여다보며 고개를 갸웃한다
-	Idle = {
-		Duration = 4.42,
-		Loop = true,
-		Keys = {
-			K(0.0, "sineInOut", LIFT),
-			K(0.3, "quadIn", TAP),
-			K(0.55, "sineOut", LIFT),
-			K(0.85, "quadIn", TAP),
-			K(1.3, "cubicOut", HIGH),
-			K(1.6, "quadIn", TAP, { Root = { 0, -0.32, 0, 0, -30, 0 }, Torso = { -14, 0, 0 } }),
-			K(1.9, "sineOut", TAP, { Root = { 0, -0.3, 0, 0, -30, 0 }, Torso = { -13, 0, 0 } }),
-			K(2.5, "sineInOut", LIFT, { Head = { -26, 22, -12 } }),
-			K(3.3, "sineInOut", LIFT, { Head = { -22, 6, 8 } }),
+	-- 대기: 망치를 든 채 정을 돌면에 대고 숨 쉰다(Kit.Breath, Smooth — 2026-10-02 사용자: 끊기지 않게). 두 손은 몸통과 함께 움직여
+	-- 정·망치 사이가 벌어지지 않는다.
+	Idle = Kit.Breath(LIFT, {
+		Duration = 3.7,
+		Chest = 2,
+		Mid = { Head = { -20, 18, -3 } },
+	}),
+
+	-- 버릇(가끔): 톡-톡-쾅 — 손목으로 두 번 톡톡, 팔을 들어 쾅 한 번, 결을 들여다보며 고개를 갸웃한다(옛 대기 동작)
+	Fidgets = {
+		{
+			Duration = 2.9,
+			BlendIn = 0.2,
+			BlendOut = 0.4,
+			Keys = {
+				K(0.0, nil, LIFT),
+				K(0.3, "quadIn", TAP),
+				K(0.55, "sineOut", LIFT),
+				K(0.85, "quadIn", TAP),
+				K(1.3, "cubicOut", HIGH),
+				K(1.6, "quadIn", TAP, { Root = { 0, -0.32, 0, 0, -30, 0 }, Torso = { -14, 0, 0 } }),
+				K(1.9, "sineOut", TAP, { Root = { 0, -0.3, 0, 0, -30, 0 }, Torso = { -13, 0, 0 } }),
+				K(2.4, "sineInOut", LIFT, { Head = { -26, 22, -12 } }),
+				K(2.9, "sineInOut", LIFT, { Head = { -22, 6, 8 } }),
+			},
 		},
 	},
 

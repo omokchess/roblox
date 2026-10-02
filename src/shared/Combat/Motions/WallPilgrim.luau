@@ -41,17 +41,26 @@ local CRAB = { Root = { 0.4, -0.9, 0.8, 0, -30, 0 }, Torso = { -40, 0, 0 }, Head
 return {
 	Stance = PRAY,
 
-	-- 대기: 중얼거리는 기도 — 앞뒤로 몸을 흔들고 고개를 까딱이다가, 가끔 눈을 치켜떠 적을 본다
-	Idle = {
-		Duration = 3.64,
-		Loop = true,
-		Keys = {
-			K(0.0, "sineInOut", PRAY),
-			K(0.65, "sineInOut", PRAY, { Torso = { -30, 0, 0 }, Head = { -18, 10, 0 }, Root = { 0, -0.36, 0, 0, -14, 0 } }),
-			K(1.3, "sineInOut", PRAY),
-			K(1.95, "sineInOut", PRAY, { Torso = { -30, 0, 0 }, Head = { -18, 10, 0 }, Root = { 0, -0.36, 0, 0, -14, 0 } }),
-			K(2.6, "cubicOut", PRAY, { Torso = { -20, 0, 0 }, Head = { 14, 22, 0 } }),
-			K(3.12, "sineInOut", PRAY, { Torso = { -21, 0, 0 }, Head = { 12, 22, 0 } }),
+	-- 대기: 구부정히 기도하며 느리게 숨 쉰다 — 들숨에 등이 펴졌다 내쉬며 다시 웅크린다(Kit.Breath, Smooth — 2026-10-02 사용자: 끊기지 않게)
+	Idle = Kit.Breath(PRAY, {
+		Duration = 4.0,
+		Chest = 4,
+		Head = -2.5,
+		Rise = 0.02,
+	}),
+
+	-- 버릇(가끔): 기도하다 눈을 치켜떠 적을 노려보고 다시 고개를 숙인다(몸통·머리만 — 숨은 그대로)
+	Fidgets = {
+		{
+			Duration = 2.3,
+			BlendIn = 0.35,
+			BlendOut = 0.5,
+			Keys = {
+				{ t = 0, Torso = PRAY.Torso, Head = PRAY.Head },
+				{ t = 0.5, e = "cubicOut", Torso = { -20, 0, 0 }, Head = { 14, 22, 0 } },
+				{ t = 1.5, e = "sineInOut", Torso = { -21, 0, 0 }, Head = { 12, 22, 0 } },
+				{ t = 2.3, e = "sineInOut", Torso = PRAY.Torso, Head = PRAY.Head },
+			},
 		},
 	},
 

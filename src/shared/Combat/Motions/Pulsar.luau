@@ -47,10 +47,12 @@ local OPEN = W(FLOAT, {
 return {
 	Stance = FLOAT,
 
-	-- 대기: 천천히 오르내리며 품 안의 공을 굴리듯 두 손이 위아래를 바꾼다(포구 전환). 오브는 몸 둘레를 돈다
+	-- 대기: 숨에 맞춰 천천히 오르내리며 품 안의 공을 굴리듯 두 손이 위아래를 바꾼다(태극권 포구 전환). 오브는 몸 둘레를 돈다.
+	-- Smooth(2026-10-02 사용자: 끊기지 않게) — 키에서 멈추지 않고 한 줄기로 흐른다.
 	Idle = {
 		Duration = 4.16,
 		Loop = true,
+		Smooth = true,
 		Keys = {
 			K(0.0, "sineInOut", FLOAT),
 			K(1.04, "sineInOut", FLOAT, { Root = { 0, 1.0, 0, 0, -14, 0 }, Torso = { 6, 2, 0 }, RArm = BALL_MID.RArm, LArm = BALL_MID.LArm, RLeg = { -19, 0, -3 }, LLeg = { -21, 0, 3 } }),

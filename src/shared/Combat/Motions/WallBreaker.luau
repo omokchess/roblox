@@ -46,19 +46,27 @@ end
 return {
 	Stance = GUARD,
 
-	-- 대기: 들썩들썩 좌우로 무게를 옮기다가, 지팡이 끝으로 툭 찔러 보고 물러나 고개를 까딱
-	Idle = {
-		Duration = 3.64,
-		Loop = true,
-		Keys = {
-			K(0.0, "sineInOut", GUARD),
-			K(0.52, "sineInOut", GUARD, { Root = { 0.12, -0.53, 0, 0, -38, 0 }, Torso = { -15, 4, 0 }, Head = { 0, 34, -6 } }),
-			K(1.04, "sineInOut", GUARD, { Root = { -0.12, -0.4, 0, 0, -32, 0 }, Torso = { -10, -4, 0 }, Head = { 8, 26, 6 } }),
-			K(1.4, "sineInOut", GUARD, { Root = { 0, -0.5, 0.1, 0, -35, 0 } }),
-			K(1.6, "expoOut", JAB),
-			K(1.95, "cubicInOut", GUARD),
-			K(2.5, "sineInOut", GUARD, { Root = { 0.1, -0.52, 0, 0, -37, 0 }, Torso = { -14, 3, 0 }, Head = { 12, 40, -10 } }),
-			K(3.1, "sineInOut", GUARD, { Root = { -0.1, -0.42, 0, 0, -33, 0 }, Torso = { -11, -3, 0 } }),
+	-- 대기: 지팡이를 낮게 겨눈 채 숨 쉰다(Kit.Breath, Smooth — 2026-10-02 사용자: 끊기지 않게). 두 손은 몸통과 함께 움직여 자루에 붙어 있다.
+	Idle = Kit.Breath(GUARD, {
+		Duration = 3.5,
+		Chest = 3,
+		Mid = { Head = { 6, 33, 0 } },
+	}),
+
+	-- 버릇(가끔): 무게를 앞발로 옮겨 지팡이 끝으로 툭 찔러 보고 물러나 고개를 까딱(옛 대기 동작)
+	Fidgets = {
+		{
+			Duration = 1.6,
+			BlendIn = 0.25,
+			BlendOut = 0.35,
+			Keys = {
+				K(0.0, nil, GUARD),
+				K(0.3, "sineInOut", GUARD, { Root = { 0, -0.5, 0.1, 0, -35, 0 } }),
+				K(0.5, "expoOut", JAB),
+				K(0.85, "cubicInOut", GUARD),
+				K(1.25, "sineInOut", GUARD, { Head = { 12, 40, -10 } }),
+				K(1.6, "sineInOut", GUARD),
+			},
 		},
 	},
 

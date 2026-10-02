@@ -473,6 +473,14 @@ end
 
 function BattleClient:_onGridState(snapshot: any)
 	self.snapshot = snapshot
+	-- 보스 정보 창이 열려 있으면 체력·예고를 새 스냅샷으로 고쳐 그린다(보스가 없어졌으면 닫는다)
+	if self.hud and self.hud:IsBossInfoOpen() then
+		if snapshot and snapshot.Boss then
+			self.hud:ShowBossInfo(snapshot, self.hud.bossFocus)
+		else
+			self.hud:HideBossInfo()
+		end
+	end
 
 	if not snapshot then
 		--[[
@@ -657,6 +665,12 @@ function BattleClient:_setupBattle()
 	self.tiles = BattleStage.Build(self.folder, self.layout, arena and arena.BaseY, GRID_WIDTH, GRID_HEIGHT, self.rayParams) :: any
 
 	self.director = CombatDirector.new()
+	-- 적 진영 맨 뒷줄 가운데(결투사 강화 스킬이 그 너머까지 꿰뚫고 지나간다)
+	local back = Vector3.zero
+	for y = 1, GRID_HEIGHT do
+		back += self.tiles.Enemy[y][GRID_WIDTH].Position
+	end
+	self.director.FarEnd = back / GRID_HEIGHT
 	-- 새 전투의 사건은 여기부터 센다(이전 전투 번호와 섞이지 않게)
 	self.lastEventSeq = 0
 	self.goneCells = {}
@@ -1197,9 +1211,67 @@ function BattleClient:_tileUnderCursor(): any?
 	return { X = tonumber(x), Y = tonumber(y) }
 end
 
+--[[
+	커서 아래 보스 부위(정보 창, 2026-10-02 사용자: "보스를 클릭하면 부위 포함 모든 스킬 설명").
+	부위 몸은 광선에 안 맞으므로(CanQuery 꺼짐 — 칸 드래그 광선이 막히지 않게) 부위마다 몸 상자를 화면에 비춰
+	커서를 품은 것 가운데 **가장 작은 상자**를 고른다(앞 부위가 뒤 코어보다 작다). 돌려주는 값: 부위 키(Head·Core …)
+]]
+function BattleClient:_bossPartUnderCursor(): string?
+	local director = self.director
+	local camera = workspace.CurrentCamera
+	local snapshot = self.snapshot
+	if not director or not camera or not (snapshot and snapshot.Boss) then
+		return nil
+	end
+	local mouse = UserInputService:GetMouseLocation()
+	local best, bestArea = nil, math.huge
+	for id, actor in director.Actors do
+		local unit = snapshot.Units[id]
+		if actor.Kind ~= "Boss" or not unit or not unit.Part or not actor.Model or not actor.Model.Parent then
+			continue
+		end
+		local cf, size = actor.Model:GetBoundingBox()
+		local minX, minY, maxX, maxY = math.huge, math.huge, -math.huge, -math.huge
+		local front = false
+		for _, sx in { -0.5, 0.5 } do
+			for _, sy in { -0.5, 0.5 } do
+				for _, sz in { -0.5, 0.5 } do
+					local v, onScreen = camera:WorldToViewportPoint(cf:PointToWorldSpace(size * Vector3.new(sx, sy, sz)))
+					front = front or (onScreen and v.Z > 0)
+					minX, minY, maxX, maxY = math.min(minX, v.X), math.min(minY, v.Y), math.max(maxX, v.X), math.max(maxY, v.Y)
+				end
+			end
+		end
+		local mx, my = mouse.X, mouse.Y
+		if front and mx >= minX and mx <= maxX and my >= minY and my <= maxY then
+			local area = (maxX - minX) * (maxY - minY)
+			if area < bestArea then
+				best, bestArea = unit.Part, area
+			end
+		end
+	end
+	return best
+end
+
 function BattleClient:_bindInput()
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed or not self.active or self.qte then
+			return
+		end
+		-- 보스 정보 창: 부위를 누르면 연다(연출 중에도 — 아군 칸 위를 누른 건 드래그라 빼고),
+		-- 열린 채 창 밖을 누르면 닫고 그 누름은 평소대로(드래그) 쓴다
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			local part = if self:_tileUnderCursor() then nil else self:_bossPartUnderCursor()
+			if part then
+				self.hud:ShowBossInfo(self.snapshot, part)
+				return
+			end
+			-- 전투 화면은 IgnoreGuiInset 이라 GUI 자리와 마우스 자리가 같은 기준이다
+			if self.hud:IsBossInfoOpen() and not self.hud:IsOverBossInfo(UserInputService:GetMouseLocation()) then
+				self.hud:HideBossInfo()
+			end
+		elseif input.KeyCode == Enum.KeyCode.Escape and self.hud:IsBossInfoOpen() then
+			self.hud:HideBossInfo()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then

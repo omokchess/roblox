@@ -7,7 +7,7 @@
 	참고: 카포 페로(1610) 테르차 — 앞팔을 적에게 뻗어 칼끝을 적 얼굴에, 손보호 고리는 아래.
 	      검 끝을 쏘아라 = 가토츠(칼을 머리 옆으로 끌어 수평 겨눔, 앞손이 조준선).
 	무기 종류: Thrust1H (WeaponDefinitions.Rapier)
-	사건 이름(k): Hit(i = 몇 번째 타격) · Dash(to = Target/Home, gap = 대상 앞 거리, 음수면 뚫고 지나감)
+	사건 이름(k): Hit(i = 몇 번째 타격) · Dash(to = Target/Home/Far, gap = 대상 앞 거리, 음수면 뚫고 지나감 · Far = 적 진영 맨 끝 너머 past 스터드)
 	              Fx(n = ClassFx.Duelist 의 이름) · Trail(on) · Shake(a, d) · Stop(d = 타격 정지)
 ]]
 local Kit = require(script.Parent.Parent.MotionKit)
@@ -18,11 +18,12 @@ local K, W = Kit.K, Kit.With
 --   tools/combat/design/duelist_gen.py 의 point_arm). 상체는 뒤로 12° 젖히고 고개는 적 쪽으로 돌려 턱을 든 채 내려다본다.
 --   칼은 팔 선과 한 줄(숙임 -90)로 정면(2026-10-02 사용자: "완전히 정면으로" — 처음 지정의 "30° 비스듬히" 대신).
 --   칼끝은 아래로 안 간다. 손보호 고리는 아래(6시).
+--   손목은 날 축을 중심으로 오른쪽으로 30° 돌린다(W 비틀기 +30 — 뒤에서 보아 시계 방향, 2026-10-02 사용자: "완전 똑바로 말고 손목을 약간 돌린 것처럼").
 --   왼손은 주머니에 꽂은 듯 — 앞·안쪽으로 살짝 기울인다(2026-10-02 사용자: 바깥 뒤로 기울인 것의 반대로).
 --   큰 기술·피격 때만 빠져나온다. 앞발은 적 쪽, 뒷발은 옆으로.
 local POCKET = { 14, -6, 10 }
-local EG = { Root = { 0, -0.12, 0, 0, 62, 0 }, Torso = { 12, -6, 0 }, Head = { -4, -54, 4 }, RArm = { 82.7, -47.5, 0 }, LArm = POCKET, RLeg = { 16, -38, 10 }, LLeg = { -10, 0, -12 }, W = { 0, 0, 0, -90, 0, 0 } }
--- 숨: 조금 더 젖혀 뽐냈다가(IN) 돌아옴(OUT) — 팔 겨눔은 자세마다 다시 계산해 흔들리지 않는다
+local EG = { Root = { 0, -0.12, 0, 0, 62, 0 }, Torso = { 12, -6, 0 }, Head = { -4, -54, 4 }, RArm = { 82.7, -47.5, 0 }, LArm = POCKET, RLeg = { 16, -38, 10 }, LLeg = { -10, 0, -12 }, W = { 0, 0, 0, -90, 30, 0 } }
+-- 숨: 들이쉬며 조금 더 젖혀 뽐냈다가(IN) 내쉬며 가라앉음(OUT) — 팔 겨눔은 자세마다 다시 계산해 흔들리지 않는다
 local EG_IN = { Root = { 0, -0.1, 0, 0, 62, 0 }, Torso = { 15, -6, 1 }, Head = { -6, -54, 5 }, RArm = { 79.9, -47.5, 0 }, LArm = { 16, -6, 11 } }
 local EG_OUT = { Root = { 0, -0.15, 0, 0, 62, 0 }, Torso = { 10, -6, -1 }, Head = { -3, -53, 3 }, RArm = { 85.1, -47.5, 0 }, LArm = { 12, -6, 9 } }
 -- 찌르기 끝(런지): 팔·칼이 한 줄로 적 가슴을 꿰뚫는다(칼 = 팔 연장선). 왼손은 주머니 근처 그대로 — 여유
@@ -84,15 +85,37 @@ local SHOT = W(DEEP, {
 return {
 	Stance = EG,
 
-	-- 대기: 여유 — 상체를 젖힌 채 느리게 숨 쉬며 조금 더 젖혀 뽐냈다 돌아온다. 칼끝은 팔 선 둘레로 작게(±2~3°) 원을 그린다
+	-- 대기: 여유 — 느리게 숨 쉰다(2026-10-02 사용자: "끊기는 느낌이 아니라 부드럽게 숨을 쉬고 있는 느낌").
+	-- 내쉰 끝(OUT) → 들이쉰 끝(IN, 상체를 더 젖혀 턱을 듦) → 내쉬는 중(EG). Smooth = 키에서 멈추지 않는 곡선(MotionMath.smoothSample).
+	-- 들숨이 날숨보다 짧다(1.45초 : 2.15초). 칼끝은 팔 선 둘레로 작게(±2°) 떠돈다.
 	Idle = {
-		Duration = 2.6,
+		Duration = 3.6,
 		Loop = true,
+		Smooth = true,
 		Keys = {
-			K(0.0, "sineInOut", EG),
-			K(0.65, "sineInOut", EG, { Root = EG_IN.Root, Torso = EG_IN.Torso, Head = EG_IN.Head, RArm = EG_IN.RArm, LArm = EG_IN.LArm, W = { 0, 0, 0, -88, 0, 3 } }),
-			K(1.3, "sineInOut", EG, { W = { 0, 0, 0, -92, 0, -3 } }),
-			K(1.95, "sineInOut", EG, { Root = EG_OUT.Root, Torso = EG_OUT.Torso, Head = EG_OUT.Head, RArm = EG_OUT.RArm, LArm = EG_OUT.LArm, W = { 0, 0, 0, -89, 0, -1 } }),
+			K(0.0, nil, EG, { Root = EG_OUT.Root, Torso = EG_OUT.Torso, Head = EG_OUT.Head, RArm = EG_OUT.RArm, LArm = EG_OUT.LArm, W = { 0, 0, 0, -89.5, 30, -1 } }),
+			K(1.45, nil, EG, { Root = EG_IN.Root, Torso = EG_IN.Torso, Head = EG_IN.Head, RArm = EG_IN.RArm, LArm = EG_IN.LArm, W = { 0, 0, 0, -88, 30, 2 } }),
+			K(2.5, nil, EG, { W = { 0, 0, 0, -91, 30, 0.5 } }),
+		},
+	},
+
+	-- 버릇(가끔, 불규칙한 간격 — CombatDirector): 주머니 손을 빼 목 쪽 깃을 잡고 두 번 살짝 당겨 다듬은 뒤 다시 주머니로.
+	-- 당길 때 턱을 들고 고개를 살짝 오른쪽으로 기울인다. 칼 겨눔·숨은 그대로(왼팔·머리만 덮음).
+	-- 손 자리 = 몸통 앞 깃(몸통 공간 (-0.35, 1.05, -1.45)) — R6 팔은 곧아 가슴에 붙일 수 없어 깃을 앞으로 당겨 쥔 모양(posecalc.reach)
+	Fidgets = {
+		{
+			Duration = 2.1,
+			BlendIn = 0.3,
+			BlendOut = 0.45,
+			Keys = {
+				{ t = 0, LArm = POCKET, Head = { -4, -54, 4 } },
+				{ t = 0.45, e = "cubicOut", LArm = { 113.2, -61.4, -16.8 }, Head = { -1, -52, 0 } },
+				{ t = 0.62, e = "quadIn", LArm = { 106.4, -59.5, -16.1 }, Head = { 1, -51, -3 } },
+				{ t = 0.82, e = "sineOut", LArm = { 117.3, -59.4, -15.2 }, Head = { 0, -51, -2 } },
+				{ t = 0.98, e = "quadIn", LArm = { 106.4, -59.5, -16.1 }, Head = { 3, -50, -6 } },
+				{ t = 1.25, e = "sineOut", LArm = { 113.2, -61.4, -16.8 }, Head = { 1, -51, -4 } },
+				{ t = 2.1, e = "cubicInOut", LArm = POCKET, Head = { -4, -54, 4 } },
+			},
 		},
 	},
 
@@ -271,13 +294,14 @@ return {
 			Events = {
 				{ t = 0.3, k = "Fx", n = "Glint" },
 				{ t = 0.66, k = "Trail", on = true },
-				{ t = 0.67, k = "Dash", to = "Target", gap = -4, d = 0.06 },
+				-- 적 진영 맨 끝 칸 너머까지 꿰뚫고 지나간다(2026-10-02 사용자)
+				{ t = 0.67, k = "Dash", to = "Far", past = 5, d = 0.1 },
 				{ t = 0.7, k = "Hit", i = 1, fx = "PointBlank" },
 				{ t = 0.71, k = "Stop", d = 0.14 },
 				{ t = 0.72, k = "Shake", a = 0.55, d = 0.35 },
 				{ t = 0.95, k = "Trail", on = false },
 				{ t = 1.24, k = "Fx", n = "Chiburi" },
-				{ t = 1.5, k = "Dash", to = "Home", d = 0.24 },
+				{ t = 1.5, k = "Dash", to = "Home", d = 0.34 },
 			},
 		},
 

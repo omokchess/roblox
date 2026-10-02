@@ -68,4 +68,21 @@ do
 	near(ang(g0, gm), ang(gm, g1), "짐벌 slerp 가운데")
 end
 
+-- 부드러운 되풀이(Smooth): 키를 그대로 지나되 키에서 멈추지 않고, 이음새(마지막 → 첫 키)도 이어진다
+do
+	local sm = MotionMath.Compile({
+		Duration = 3,
+		Loop = true,
+		Smooth = true,
+		Keys = { { t = 0, Torso = { 0, 0, 0 } }, { t = 1, Torso = { 10, 0, 0 } }, { t = 2, Torso = { 20, 0, 0 } } },
+	})
+	local function x(t)
+		return MotionMath.Sample(sm, t).Torso[1]
+	end
+	near(x(1), 10, "Smooth 키 지남")
+	near(x(3), x(0), "Smooth 한 바퀴")
+	assert(x(1.01) - x(0.99) > 0.15, "Smooth 는 키에서 멈추지 않는다")
+	assert(math.abs((x(3 - 1e-3) - x(3 - 2e-3)) - (x(1e-3) - x(0))) < 1e-2, "Smooth 이음새 속도 이어짐")
+end
+
 print("MotionMath 검사 통과")

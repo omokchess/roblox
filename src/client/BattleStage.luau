@@ -225,11 +225,27 @@ local function pixels(parent: BasePart, colors: { Color3 }, rate: number, speed:
 	e.Parent = parent
 end
 
+-- 묶인 칸은 칸마다 따로 그리던 윤곽선을 끈다(내 자리·놓을 곳처럼 다른 색으로 칠한 칸은 그대로 둔다).
+-- 칸 칠하기가 갱신마다 윤곽을 다시 켜니 묶음이 그대로여도 매번 돈다.
+local function hideTileMarks(tiles: { [string]: { { BasePart } } }, kind: string, keys: { [string]: boolean })
+	for key in keys do
+		local x, y = string.match(key, "(%d+),(%d+)")
+		local row = tiles.Ally[tonumber(y) :: number]
+		local t = row and row[tonumber(x) :: number]
+		local box = t and t:FindFirstChild("Mark") :: SelectionBox?
+		if box and (if kind == "Pending" then box.Color3 == BattleStage.BOARD.Pending else box.SurfaceColor3 == VOID) then
+			box.Transparency = 1
+			box.SurfaceTransparency = 1
+		end
+	end
+end
+
 function BattleStage.GroupMarks(tiles: { [string]: { { BasePart } } }, kind: "Pending" | "Gone", keys: { [string]: boolean })
 	local first = tiles.Ally[1] and tiles.Ally[1][1]
 	if not first or not first.Parent then
 		return
 	end
+	hideTileMarks(tiles, kind, keys)
 	local holderName = "Marks_" .. kind
 	local holder = first.Parent:FindFirstChild(holderName)
 	local list = {}
@@ -252,28 +268,48 @@ function BattleStage.GroupMarks(tiles: { [string]: { { BasePart } } }, kind: "Pe
 	folder:SetAttribute("Sig", sig)
 	folder.Parent = first.Parent
 	local color = BattleStage.BOARD[kind]
-	local scanInfo = TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+	local edgeColor = if kind == "Pending" then Color3.fromRGB(255, 170, 235) else Color3.fromRGB(70, 220, 255)
+	-- 칸 한 칸 건너가는 거리(판이 어느 쪽으로 놓였든 이웃 칸 자리로 잰다)
+	local stepX = tiles.Ally[1][2].Position - first.Position
+	local stepY = tiles.Ally[2][1].Position - first.Position
+	-- 묶음 전체가 같은 박자로 숨 쉬듯 밝아졌다 어두워진다(한 판으로 보이게)
+	local pulse = TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
 	for _, group in components(keys) do
+		local inGroup: { [string]: boolean } = {}
+		for _, c in group do
+			inGroup[c[1] .. "," .. c[2]] = true
+		end
 		local sum = Vector3.zero
 		for _, c in group do
 			local t = tiles.Ally[c[2]] and tiles.Ally[c[2]][c[1]]
 			if not t then
 				continue
 			end
-			local w, d = t.Size.X + 0.2, t.Size.Z + 0.2
 			sum += t.Position
+			-- 판은 칸 사이 틈까지 덮어 이웃 판과 이어 붙는다
+			local size = Vector3.new(t.Size.X + 0.2, 0.04, t.Size.Z + 0.2)
 			if kind == "Pending" then
-				-- 바닥에 붙은 자홍 홀로그램 판(이웃 칸과 이어 보이게 칸 크기 그대로) + 스캔 막대 + 솟는 화소
-				local plate = fxPart("Holo", t.CFrame + Vector3.new(0, 0.18, 0), Vector3.new(w, 0.04, d), color, 0.72, folder)
+				local plate = fxPart("Holo", t.CFrame + Vector3.new(0, 0.18, 0), size, color, 0.72, folder)
+				TweenService:Create(plate, pulse, { Transparency = 0.5 }):Play()
 				pixels(plate, { color, Color3.fromRGB(255, 200, 245) }, 3, 2.2, 1.4)
-				local from = t.CFrame * CFrame.new(0, 0.3, -d / 2 + 0.1)
-				local bar = fxPart("Scan", from, Vector3.new(w, 0.08, 0.16), Color3.fromRGB(255, 170, 235), 0.15, folder)
-				TweenService:Create(bar, scanInfo, { CFrame = t.CFrame * CFrame.new(0, 0.3, d / 2 - 0.1) }):Play()
 			else
-				-- 지워진 데이터: 검정 판 위로 검정·청록 화소가 깜박이며 흩어진다
-				local plate = fxPart("Void", t.CFrame + Vector3.new(0, 0.16, 0), Vector3.new(w, 0.04, d), Color3.new(0, 0, 0), 0.35, folder)
+				-- 지워진 데이터: 검정 판(칸 틈까지 가림) 위로 검정·청록 화소가 깜박이며 흩어진다
+				local plate = fxPart("Void", t.CFrame + Vector3.new(0, 0.16, 0), size, Color3.new(0, 0, 0), 0.05, folder)
 				plate.Material = Enum.Material.SmoothPlastic
 				pixels(plate, { Color3.fromRGB(10, 10, 14), Color3.fromRGB(70, 220, 255), Color3.fromRGB(10, 10, 14) }, 5, 1.2, 0.9)
+			end
+			-- 묶음 바깥 둘레에만 테두리(안쪽 칸 경계는 그리지 않는다)
+			for _, d in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
+				if inGroup[(c[1] + d[1]) .. "," .. (c[2] + d[2])] then
+					continue
+				end
+				local across = stepX * d[1] + stepY * d[2]
+				local along = if d[1] ~= 0 then stepY else stepX
+				local mid = t.Position + across * 0.5 + Vector3.new(0, 0.21, 0)
+				local edge = fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(0.16, 0.06, along.Magnitude + 0.16), edgeColor, 0.1, folder)
+				if kind == "Pending" then
+					TweenService:Create(edge, pulse, { Transparency = 0.45 }):Play()
+				end
 			end
 		end
 		-- 덩어리마다 글자 하나(가운데 위)

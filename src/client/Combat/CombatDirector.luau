@@ -16,7 +16,7 @@
 
 	사건(모션 Events 의 k)
 	  Hit    { i = 몇 번째 타격, fx = 이펙트 이름 }  대상 반응·번쩍·피해 숫자
-	  Dash   { to = "Target"|"Home", gap = 대상 앞 거리(음수 = 뚫고 지나감), d = 걸리는 초 }
+	  Dash   { to = "Target"|"Home"|"Far", gap = 대상 앞 거리(음수 = 뚫고 지나감), past = Far 일 때 적 진영 끝 너머 거리, d = 걸리는 초 }
 	  Fx     { n = 이펙트 이름 }                     Fx/<직업>.luau 의 함수
 	  Trail  { on = true/false, slot = "W"|"O"|nil } 무기 궤적
 	  Shake  { a = 세기, d = 초 }
@@ -75,6 +75,9 @@ type Actor = {
 	PendingDeath: boolean,
 	Dying: boolean,
 	Idle: any,
+	-- 대기 버릇 모션들(없으면 nil)과 다음 버릇까지 남은 초
+	Fidgets: { any }?,
+	FidgetIn: number?,
 }
 
 -- 관전용 연출기(Quiet)는 화면을 흔들지 않고, 치울 때 남(내 전투)의 효과까지 지우지 않는다
@@ -89,6 +92,8 @@ function CombatDirector.new(opts: { Quiet: boolean? }?)
 	-- 안전장치로 강제로 끝낸 재생 수(0 이어야 정상 — 점검 도구가 본다)
 	self.ForcedDone = 0
 	self.CameraBase = nil :: CFrame?
+	-- 적 진영 맨 뒷줄 가운데(BattleClient 가 칸을 놓고 정한다). 없으면 가장 먼 배우로 어림한다(돌진 to = "Far")
+	self.FarEnd = nil :: Vector3?
 	-- PreSimulation: 애니메이션 단계(Animator 가 관절 Transform 을 다시 쓴다) 다음, 물리 단계 전.
 	-- RenderStepped 에서 넣으면 Animator 가 덮어써 몸이 차렷 그대로 보였다.
 	self.Connection = RunService.PreSimulation:Connect(function(dt)
@@ -132,6 +137,7 @@ function CombatDirector:AddHumanoid(id: string, character: Model, classId: strin
 		PendingDeath = false,
 		Dying = false,
 		Idle = idle,
+		Fidgets = CombatMotions.Get(classId, "Fidgets", weapons.Type),
 	}
 	self.Actors[id] = actor
 	return actor
@@ -497,6 +503,25 @@ function CombatDirector:_dash(a: Actor, play: any, ev: any)
 	local to: CFrame
 	if ev.to == "Home" then
 		to = a.Home
+	elseif ev.to == "Far" then
+		-- 대상을 꿰뚫고 적 진영 맨 끝 칸 너머까지(past 스터드 더) 간다(2026-10-02 사용자: 결투사 강화 스킬)
+		local forward = flat(a.Home.LookVector)
+		local targets = play.Targets[1] or {}
+		local t = targets[1] and self.Actors[targets[1]]
+		local toward = if t then flat(t.Pos.Position - a.Pos.Position) else forward
+		local far = self.FarEnd
+		if not far then
+			local best = -math.huge
+			for _, o in self.Actors do
+				local d = (o.Home.Position - a.Pos.Position):Dot(forward)
+				if o ~= a and d > best then
+					best, far = d, o.Home.Position
+				end
+			end
+		end
+		local reach = (if far then (far - a.Pos.Position):Dot(forward) else 12) + (ev.past or 5)
+		local pos = a.Pos.Position + toward * (reach / math.max(0.3, toward:Dot(forward)))
+		to = CFrame.lookAt(Vector3.new(pos.X, a.Home.Y, pos.Z), Vector3.new(pos.X, a.Home.Y, pos.Z) + forward)
 	else
 		local targets = play.Targets[1] or {}
 		local t = targets[1] and self.Actors[targets[1]]
@@ -783,6 +808,15 @@ function CombatDirector:_step(realDt: number)
 			end
 		else
 			a.Rig.Pivot = a.Pos
+		end
+		-- 대기 버릇: 가만히 서 있을 때 불규칙한 간격(6~15초)으로 한 번(2026-10-02 사용자: 결투사 깃 다듬기)
+		local fidgets = a.Fidgets
+		if fidgets and #fidgets > 0 and not a.Held and not a.Dying and not a.Animator:IsBusy() and a.Animator.base == a.Idle._c then
+			a.FidgetIn = (a.FidgetIn or 4 + math.random() * 8) - dt
+			if (a.FidgetIn :: number) <= 0 then
+				a.FidgetIn = 6 + math.random() * 9
+				a.Animator:Fidget(fidgets[math.random(#fidgets)])
+			end
 		end
 		-- 모션
 		a.Animator:Update(dt)

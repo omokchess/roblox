@@ -6,6 +6,8 @@
 	  바탕(Base)  대기 자세처럼 되풀이하는 모션. 바꿀 때 0.25초 동안 섞어 넘어간다.
 	  동작(Action) 스킬·피격·회피처럼 한 번 하는 모션. 들어올 때 BlendIn, 끝나면 BlendOut 동안 바탕으로 돌아간다.
 	               Hold 모션(들려 있음 등)은 끝 자세를 붙들고 `Release()` 전까지 안 돌아간다.
+	  버릇(Fidget) 대기 중 가끔 하는 작은 동작(깃 다듬기 …). 바탕 위에 **키에 적힌 관절만** 얹어 나머지는 계속
+	               숨 쉬고, IsBusy 에 안 잡혀 전투 흐름을 막지 않는다. 동작이 들어오면 바로 사라진다.
 
 	시간은 밖에서 `Update(dt)` 로 밀어 준다 — 타격 정지(히트스톱)처럼 연출 쪽에서 시간을 멈추려면
 	dt 를 0 으로 넘기면 된다(CombatDirector 가 한다).
@@ -34,6 +36,7 @@ function CombatAnimator.new(rig: any)
 	self.baseFrom = nil :: MotionMath.Pose?
 	self.baseFade = 0
 	self.action = nil :: any
+	self.fidget = nil :: any
 	self.lastPose = MotionMath.Neutral()
 	return self
 end
@@ -82,6 +85,22 @@ function CombatAnimator:Play(motion: any, options: PlayOptions?)
 	return handle
 end
 
+-- 대기 버릇을 한 번 한다(동작 중이거나 이미 하고 있으면 건너뛴다)
+function CombatAnimator:Fidget(motion: any)
+	if self.fidget or (self.action and not self.action.Done) then
+		return
+	end
+	local only = {}
+	for _, key in motion.Keys or {} do
+		for name, v in key do
+			if type(v) == "table" then
+				only[name] = true
+			end
+		end
+	end
+	self.fidget = { Motion = MotionMath.Compile(motion), T = 0, Only = only }
+end
+
 -- 붙든(Hold) 동작을 풀고 바탕으로 돌아간다
 function CombatAnimator:Release()
 	if self.action then
@@ -106,6 +125,26 @@ function CombatAnimator:Update(dt: number)
 			else
 				basePose = MotionMath.Blend(self.baseFrom, basePose, self.baseFade)
 			end
+		end
+	end
+
+	-- 버릇: 바탕 위에 적힌 관절만 덮는다
+	local fidget = self.fidget
+	if fidget and self.action then
+		self.fidget = nil
+	elseif fidget then
+		fidget.T += dt
+		local m = fidget.Motion
+		local fp = MotionMath.Sample(m, math.min(fidget.T, m.Duration))
+		local wIn = if m.BlendIn > 0 then math.min(1, fidget.T / m.BlendIn) else 1
+		local wOut = if fidget.T <= m.Duration then 0 elseif m.BlendOut > 0 then math.min(1, (fidget.T - m.Duration) / m.BlendOut) else 1
+		local target = table.clone(basePose)
+		for name in fidget.Only do
+			target[name] = fp[name] or target[name]
+		end
+		basePose = MotionMath.Blend(basePose, target, wIn * (1 - wOut))
+		if wOut >= 1 then
+			self.fidget = nil
 		end
 	end
 

@@ -7,6 +7,7 @@
 	  Drop   칸에 내려놓일 때        Hit   피격(QTE 실패)
 	  Guard  방어(QTE 절반 성공)     Dodge 회피·받아넘김(QTE 성공)
 	  Skills = { [스킬 Id] = 모션 }  직업 스킬·강화 스킬·가드·명상
+	  Fidgets = { 모션, … }  대기 중 불규칙한 간격으로 가끔 하는 버릇(키에 적은 관절만 덮는다 — CombatAnimator:Fidget)
 	없는 것은 Common 묶음에서 빌린다.
 
 	**무기 호환**: 묶음은 그 직업 기본 무기 종류(WeaponDefinitions.ClassType)에 맞춰 만든다.

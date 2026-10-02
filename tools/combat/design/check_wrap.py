@@ -26,6 +26,9 @@ for k, m in cls.items():
     if k == "Skills":
         for sk, sm in m.items():
             walk("Skills." + sk, sm)
+    elif k == "Fidgets":
+        for i, fm in enumerate(m):
+            walk(f"Fidgets.{i + 1}", fm)
     elif isinstance(m, dict) and "Keys" in m:
         walk(k, m)
 print("끝")

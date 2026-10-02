@@ -1,5 +1,9 @@
 --!strict
 
+-- 보스 정보 창(BattleHud:ShowBossInfo)에 보이는 부위의 행동 하나. Id 가 있으면 BattleSkills 의 스킬(이름·설명·피해·방어 규칙),
+-- 없으면 공격이 아닌 기믹이라 Name·Description 을 여기 적는다. When = 언제 쓰나(턴 박자 — GridBattle 보스 예고와 맞출 것)
+export type BossMove = { Id: string?, Name: string?, When: string, Description: string? }
+
 -- 보스 부위 하나. 칸 여러 개를 한 유닛이 차지한다(부위파괴 — 부위마다 체력이 따로다)
 export type BossPart = {
 	Key: string,
@@ -7,6 +11,9 @@ export type BossPart = {
 	Health: number,
 	-- 적 진영 칸 {x, y}. 첫 칸이 대표 칸(스냅샷 X·Y)
 	Cells: { { number } },
+	-- 정보 창: 이 부위가 쓰는 것과 부쉈을 때 일어나는 일(GridBattle.bossPartBroken)
+	Moves: { BossMove }?,
+	Break: string?,
 }
 
 export type EnemyDefinition = {
@@ -19,6 +26,8 @@ export type EnemyDefinition = {
 	Behavior: "Strike" | "Guard" | "Focus" | "Boss",
 	-- 있으면 보스다. 이 부위들이 적 진영을 나눠 차지하고, Core 가 쓰러지면 끝난다(GridBattle 보스 규칙)
 	Parts: { BossPart }?,
+	-- 정보 창 맨 위 보스 규칙(글머리 줄)
+	Rules: { string }?,
 }
 
 local CORE_CELLS = {}
@@ -61,11 +70,55 @@ local definitions: { [string]: EnemyDefinition } = {
 		Color = Color3.fromRGB(190, 60, 255),
 		MotionId = "Debug",
 		Behavior = "Boss",
+		Rules = {
+			"[디버그 코어]는 다른 부위를 모두 부수기 전까지 쓰러지지 않는다(체력 1에서 버팀).",
+			"코어가 쓰러지면 남은 부위도 함께 무너진다.",
+			"지속 피해(출혈·독·화상)는 99% 줄여 받는다.",
+		},
 		Parts = {
-			{ Key = "Head", Name = "중단점 머리", Health = 20000, Cells = { { 1, 2 }, { 2, 2 } } },
-			{ Key = "DeleteArm", Name = "삭제 팔", Health = 16000, Cells = { { 1, 1 }, { 2, 1 } } },
-			{ Key = "PatchArm", Name = "패치 팔", Health = 16000, Cells = { { 1, 3 }, { 2, 3 } } },
-			{ Key = "Core", Name = "디버그 코어", Health = 48000, Cells = CORE_CELLS },
+			{
+				Key = "Head",
+				Name = "중단점 머리",
+				Health = 20000,
+				Cells = { { 1, 2 }, { 2, 2 } },
+				Moves = { { Id = "BreakpointBeam", When = "매 턴" } },
+				Break = "디버그가 한 턴 멈칫한다 — 그 턴엔 어느 부위도 예고하지 않는다.",
+			},
+			{
+				Key = "DeleteArm",
+				Name = "삭제 팔",
+				Health = 16000,
+				Cells = { { 1, 1 }, { 2, 1 } },
+				Moves = { { Id = "DeleteCells", When = "매 턴" } },
+				Break = "검은 칸(검수됨!)이 모두 돌아오고, 더는 칸을 지우지 않는다.",
+			},
+			{
+				Key = "PatchArm",
+				Name = "패치 팔",
+				Health = 16000,
+				Cells = { { 1, 3 }, { 2, 3 } },
+				Moves = {
+					{
+						Name = "패치 적용",
+						When = "홀수 턴",
+						Description = "아군 칸을 새로 칠한다 — 버프 칸 2(가하는 피해량 +40%, 받는 피해량 −20%), 회복 칸 1(턴 끝 최대 체력 15% 회복), 버그 칸 2(가하는 피해량 −30%, 받는 피해량 +40%). 그 칸에 서 있을 때만 효과. 검은 칸에는 깔지 않는다.",
+					},
+					{ Id = "ForcedPatch", When = "짝수 턴" },
+				},
+				Break = "버그 칸이 사라지고, 버프·회복 칸은 그대로 굳는다.",
+			},
+			{
+				Key = "Core",
+				Name = "디버그 코어",
+				Health = 48000,
+				Cells = CORE_CELLS,
+				Moves = {
+					{ Id = "MemoryLeak", When = "홀수 턴" },
+					{ Id = "NullPointer", When = "짝수 턴(4의 배수 턴 빼고)" },
+					{ Id = "CoreDump", When = "4의 배수 턴" },
+				},
+				Break = "디버그가 무너진다 — 승리.",
+			},
 		},
 	},
 }

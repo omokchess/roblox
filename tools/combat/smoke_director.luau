@@ -409,6 +409,18 @@ for _, classId in CLASSES do
 				local away = (a.Pos.Position - a.Home.Position).Magnitude
 				assert(away > 2, string.format("못질 도중(0.6초)에 이미 칸으로 돌아옴: 집에서 %.2f", away))
 			end
+			-- 결투사 강화 스킬(2026-10-02 사용자): 0.67 에 적 진영 맨 끝 줄 너머까지 꿰뚫고 지나간다(돌진 to = "Far")
+			if classId == "Duelist" and skillId == "PointBlank" then
+				local a = director.Actors.player
+				local fwd = a.Home.LookVector
+				local far = a.Home.Position + fwd * 30
+				director.FarEnd = far
+				-- 0.71 타격 정지(0.14초)가 돌진을 잠깐 멈추므로 넉넉히 지나서 본다(1.5 에 집으로)
+				step(1.0)
+				local past = (a.Pos.Position - far):Dot(fwd)
+				director.FarEnd = nil
+				assert(past > 2, string.format("검 끝을 쏘아라가 적 진영 끝을 못 넘음: 끝 줄에서 %.2f", past))
+			end
 		end)
 		settle(director, classId .. " 스킬 " .. skillId, 6)
 		played += 1

@@ -464,6 +464,22 @@ local function bossPart(state: State, key: string): Unit?
 	return if unit and unit.Alive then unit else nil
 end
 
+-- 코어인데 다른 부위가 아직 살아 있나(그동안 코어는 체력 1 아래로 안 내려간다 — 2026-10-02 사용자)
+local function coreLocked(state: State, unit: Unit): boolean
+	local boss = state.Boss
+	if not boss or unit.Part ~= "Core" then
+		return false
+	end
+	for key, id in boss.Parts do
+		local other = state.Units[id]
+		if key ~= "Core" and other and other.Alive then
+			return true
+		end
+	end
+	return false
+end
+GridBattle.CoreLocked = coreLocked
+
 -- 부위가 부서졌다(damageUnit·DebugSetHealth 가 쓰러뜨린 직후)
 local function bossPartBroken(state: State, unit: Unit)
 	local boss = state.Boss
@@ -1119,7 +1135,11 @@ local function damageUnit(
 	end
 
 	local dealt = math.max(0, math.floor(remaining))
-	local floorHealth = if canKill == false then 1 else 0
+	local locked = coreLocked(state, unit)
+	local floorHealth = if canKill == false or locked then 1 else 0
+	if locked and unit.Health - dealt < 1 then
+		pushLog(state, "다른 부위가 남아 있어 디버그 코어는 부서지지 않는다")
+	end
 	unit.Health = math.max(floorHealth, unit.Health - dealt)
 	--[[
 		아군이 쓰러지기 직전 — 카드(재기·불굴)가 막을 수 있다. Cancel 이면 Health 로 버틴다.

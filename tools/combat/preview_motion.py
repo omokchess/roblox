@@ -153,7 +153,10 @@ def compile_motion(m):
         out.append((k.get("t", 0), k.get("e"), pose))
     if not out:
         out = [(0, None, prev)]
-    return out, m.get("Duration", out[-1][0]), m.get("Loop", False)
+    loop = m.get("Loop", False)
+    if loop and m.get("Smooth") and len(out) > 1:
+        loop = "smooth"
+    return out, m.get("Duration", out[-1][0]), loop
 
 
 def _qax(i, deg):
@@ -208,10 +211,49 @@ def slerp_weapon(a, b, alpha):
     return r
 
 
+def pick(s, name):
+    """모션 이름: Idle · Skills.<Id> · Fidgets.<번호(1부터)>"""
+    if name.startswith("Skills."):
+        return s["Skills"][name[7:]]
+    if name.startswith("Fidgets."):
+        # 버릇은 적힌 관절만 덮는다 — 미리보기에선 기본 자세(Stance) 위에 얹어 보인다
+        f = s["Fidgets"][int(name[8:]) - 1]
+        base = s.get("Stance") or {}
+        return dict(f, Keys=[dict(base, **k) for k in f["Keys"]])
+    return s[name]
+
+
+def smooth_sample(keys, dur, t):
+    """MotionMath.smoothSample 과 같다(주기 캣멀-롬, 키에서 멈추지 않는 되풀이)"""
+    n = len(keys)
+
+    def at(i):
+        k = keys[(i - 1) % n]
+        return k[2], k[0] + ((i - 1) // n) * dur
+
+    i = n
+    for j in range(1, n + 1):
+        if t < keys[j - 1][0]:
+            i = j - 1
+            break
+    p0, t0 = at(i - 1)
+    p1, t1 = at(i)
+    p2, t2 = at(i + 1)
+    p3, t3 = at(i + 2)
+    span = max(1e-4, t2 - t1)
+    s = (t - t1) / span
+    h00, h10, h01, h11 = 2 * s ** 3 - 3 * s * s + 1, s ** 3 - 2 * s * s + s, -2 * s ** 3 + 3 * s * s, s ** 3 - s * s
+    k1, k2 = span / max(1e-4, t2 - t0), span / max(1e-4, t3 - t1)
+    return {n_: [h00 * a + h10 * (b - q0) * k1 + h01 * b + h11 * (q3 - a) * k2
+                 for a, b, q0, q3 in zip(p1[n_], p2[n_], p0[n_], p3[n_])] for n_ in p1}
+
+
 def sample(comp, t):
     keys, dur, loop = comp
     if loop and dur > 0:
         t = t % dur
+    if loop == "smooth":
+        return smooth_sample(keys, dur, t)
     if t <= keys[0][0]:
         return keys[0][2]
     for i in range(1, len(keys)):
@@ -435,7 +477,7 @@ def lineup(spec, out_name, yaw=90):
     step = 7.0
     for i, (cls, name, wid, t) in enumerate(items):
         s = motions[cls]
-        m = s["Skills"][name[7:]] if name.startswith("Skills.") else s[name]
+        m = pick(s, name)
         build(sample(compile_motion(m), float(t)), (-i * step, 0, 0), weapons.get(wid), yaw)
     render(os.path.join(OUT, out_name + ".png"), len(items), (len(items) - 1) * step)
     print("찍음", out_name)
@@ -449,7 +491,7 @@ def views(set_name, motion_name, t, weapon_id, out_name):
     global _unit, _mats, _shapes
     _unit, _mats, _shapes = None, {}, {}
     s = motions[set_name]
-    m = s["Skills"][motion_name[7:]] if motion_name.startswith("Skills.") else s[motion_name]
+    m = pick(s, motion_name)
     pose = sample(compile_motion(m), float(t))
     step = 7.0
     for i, yaw in enumerate((90, 45, 0, 135)):
@@ -466,7 +508,7 @@ def close(set_name, motion_name, t, weapon_id, yaw, out_name):
     global _unit, _mats, _shapes
     _unit, _mats, _shapes = None, {}, {}
     s = motions[set_name]
-    m = s["Skills"][motion_name[7:]] if motion_name.startswith("Skills.") else s[motion_name]
+    m = pick(s, motion_name)
     build(sample(compile_motion(m), float(t)), (0, 0, 0), weapons.get(weapon_id), float(yaw))
     render(os.path.join(OUT, out_name + ".png"), 1, 0, zoom=7.5)
     print("찍음", out_name)
@@ -530,7 +572,7 @@ def main():
     else:
         names = [motion_name]
     for name in names:
-        m = s["Skills"][name[7:]] if name.startswith("Skills.") else s[name]
+        m = pick(s, name)
         bpy.ops.wm.read_factory_settings(use_empty=True)
         global _unit, _mats, _shapes
         _unit, _mats, _shapes = None, {}, {}

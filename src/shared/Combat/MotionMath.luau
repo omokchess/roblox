@@ -9,6 +9,7 @@
 	  {
 	    Duration = 1.1,          -- 초
 	    Loop = false,            -- 대기 자세처럼 되풀이하면 true
+	    Smooth = false,          -- 되풀이를 키에서 멈추지 않는 매끈한 곡선으로(숨 쉬는 대기, smoothSample)
 	    BlendIn = 0.08,          -- 앞 자세에서 넘어오는 시간
 	    BlendOut = 0.16,         -- 끝나고 대기 자세로 돌아가는 시간(Hold 면 안 돌아감)
 	    Keys = {
@@ -197,6 +198,7 @@ function MotionMath.Compile(motion: any): any
 		Events = events,
 		Duration = motion.Duration or out[#out].t,
 		Loop = motion.Loop == true,
+		Smooth = motion.Smooth == true and motion.Loop == true,
 		BlendIn = motion.BlendIn or 0.08,
 		BlendOut = motion.BlendOut or 0.16,
 		Hold = motion.Hold == true,
@@ -320,11 +322,55 @@ local function slerpWeapon(a: { number }, b: { number }, alpha: number): { numbe
 	return r
 end
 
+--[[
+	부드러운 되풀이(Smooth = true — 2026-10-02 사용자: "끊기는 느낌이 아니라 부드럽게 숨을 쉬고 있는 느낌").
+	키마다 sineInOut 으로 들어가면 키마다 속도가 0 이 돼 키 수만큼 뚝뚝 멈춘다. 대신 키를 모두 지나는
+	**주기 캣멀-롬 곡선**(시간 간격을 따르는 에르미트)으로 이어 키에서 멈추지 않는다 — 마지막 키 → 첫 키도 같은 곡선.
+	키의 e 는 쓰지 않는다. 숨 쉬기처럼 작게 흔드는 대기용이라 무기도 오일러 값을 그대로 잇는다(한 바퀴 돌리기는 넣지 말 것).
+]]
+local function smoothSample(compiled: any, t: number): Pose
+	local keys = compiled.Keys
+	local n, D = #keys, compiled.Duration
+	local function at(i: number): ({ [string]: { number } }, number)
+		local k = keys[(i - 1) % n + 1]
+		return k.pose, k.t + math.floor((i - 1) / n) * D
+	end
+	local i = n
+	for j = 1, n do
+		if t < keys[j].t then
+			i = j - 1
+			break
+		end
+	end
+	local p0, t0 = at(i - 1)
+	local p1, t1 = at(i)
+	local p2, t2 = at(i + 1)
+	local p3, t3 = at(i + 2)
+	local span = math.max(1e-4, t2 - t1)
+	local s = (t - t1) / span
+	local s2, s3 = s * s, s * s * s
+	local h00, h10, h01, h11 = 2 * s3 - 3 * s2 + 1, s3 - 2 * s2 + s, -2 * s3 + 3 * s2, s3 - s2
+	local k1, k2 = span / math.max(1e-4, t2 - t0), span / math.max(1e-4, t3 - t1)
+	local pose = {}
+	for name, a in p1 do
+		local b, before, after = p2[name], p0[name], p3[name]
+		local r = table.create(#a)
+		for c = 1, #a do
+			r[c] = h00 * a[c] + h10 * (b[c] - before[c]) * k1 + h01 * b[c] + h11 * (after[c] - a[c]) * k2
+		end
+		pose[name] = r
+	end
+	return pose
+end
+
 -- 시각 t 의 자세. 되풀이 모션은 t 를 길이로 감는다.
 function MotionMath.Sample(compiled: any, t: number): Pose
 	local keys = compiled.Keys
 	if compiled.Loop and compiled.Duration > 0 then
 		t = t % compiled.Duration
+	end
+	if compiled.Smooth and #keys > 1 then
+		return smoothSample(compiled, t)
 	end
 	if t <= keys[1].t then
 		return keys[1].pose

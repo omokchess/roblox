@@ -220,6 +220,26 @@ do
 	check(#GridBattle.AliveEnemies(s) == 0, "코어가 쓰러지면 모두 쓰러진다")
 end
 
+-- 5b) 2026-10-02 사용자: 다른 부위가 하나라도 살아 있으면 코어는 부서지지 않는다(체력 1에서 멈춤)
+do
+	local s = newBoss("Duelist")
+	GridBattle.EnemyPlan(s, function()
+		return 0.5
+	end) -- 공용 rng 를 쓰면 뒤 시험의 무늬가 바뀐다
+	local core = s.Units.boss_Core
+	GridBattle.DebugSetHealth(s, "boss_Core", 1)
+	GridBattle.ResolveDodge(s, "boss_Core", "Success") -- 패리 되돌림이 코어로
+	check(core.Alive and core.Health == 1, "부위가 남아 있으면 코어는 1에서 버틴다: " .. core.Health)
+	GridBattle.DebugSetHealth(s, "boss_Head", 0)
+	GridBattle.DebugSetHealth(s, "boss_DeleteArm", 0)
+	check(GridBattle.CoreLocked(s, core), "패치 팔이 남아 있으면 아직 잠김")
+	GridBattle.DebugSetHealth(s, "boss_PatchArm", 0)
+	check(not GridBattle.CoreLocked(s, core), "부위가 다 부서지면 풀린다")
+	GridBattle.ResolveDodge(s, "boss_Core", "Success")
+	check(not core.Alive and s.Outcome == "Victory", "그다음엔 코어가 부서진다: " .. s.Outcome)
+	check(#GridBattle.AliveEnemies(s) == 0, "코어가 쓰러지면 모두 쓰러진다")
+end
+
 -- 6) 스냅샷: 부위 칸·예고·판 상태가 실린다
 do
 	local s = newBoss()
