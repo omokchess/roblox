@@ -17,6 +17,11 @@
 	  - 한 손/두 손/쌍수/떠 있음은 `Hold` 가 정한다. 두 손 무기는 오른손에 붙이고 왼손은 모션이 맞춘다.
 
 	부품은 맵 양식(블록)대로 Part 로 짓는다: { 이름, 모양, 크기, 자리{x,y,z, rx,ry,rz(도)}, 색, 재질, 투명도?, 빛? }
+
+	**블렌더 메시(2026-10-02 사용자: 무기는 블렌더로)**: models/weapons/build_weapons.py 가 이 Part 정의를 설계도로
+	곡면·디테일 메시를 짓는다(치수·쥐는 점·소켓 그대로). 스튜디오에서 tools/WeaponMeshes.luau 가
+	ReplicatedStorage.WeaponMeshes.<무기Id>.<Main|Off> 로 정리하면 CombatWeapons 가 그 메시를 쓰고, 묶음마다 Skins 의 색·재질을 입힌다.
+	메시가 없으면(가져오기 실패 등) 지금처럼 Parts 로 짓는다.
 ]]
 
 export type Part = {
@@ -28,9 +33,13 @@ export type Part = {
 	Material: string,
 	Transparency: number?,
 }
+-- 블렌더 메시 묶음 하나의 겉(models/weapons/build_weapons.py 의 묶음 이름과 같다)
+export type Skin = { Color: { number }, Material: string, Transparency: number? }
 export type Piece = {
 	Hand: "Right" | "Left" | "Float",
 	Parts: { Part },
+	-- 블렌더 메시가 있을 때(ReplicatedStorage.WeaponMeshes.<무기Id>.<Main|Off>) 묶음마다 입힐 색·재질. 없으면 Parts 로 짓는다
+	Skins: { [string]: Skin }?,
 	Sockets: { [string]: { number } },
 	-- 궤적 색(없으면 궤적 없음)
 	Trail: { number }?,
@@ -62,6 +71,10 @@ local function P(name: string, shape: any, size: { number }, at: { number }, col
 	return { Name = name, Shape = shape, Size = size, At = at, Color = color, Material = material, Transparency = transparency }
 end
 
+local function S(color: { number }, material: string, transparency: number?): Skin
+	return { Color = color, Material = material, Transparency = transparency }
+end
+
 local weapons: { [string]: Weapon } = {
 	-- 음악가: 왼손 바이올린(턱에 괴는 악기) + 오른손 활. (2026-09-30 다시 만듦)
 	--   실제 비율(전체 59cm·몸통 35.5cm·아래/위 울림통 20.8/16.8cm·허리 11cm, 활 75cm)을 R6 몸에 맞게 줄였다
@@ -85,6 +98,7 @@ local weapons: { [string]: Weapon } = {
 				P("Hair", "Block", { 0.06, 2.62, 0.012 }, { 0, 1.33, -0.16, 0, 0, 0 }, { 236, 230, 214 }, "SmoothPlastic"),
 			},
 			Sockets = { Base = { 0, 0.1, -0.16 }, Tip = { 0, 2.6, -0.16 } },
+			Skins = { Wood = S({ 118, 52, 28 }, "Wood"), Ebony = S(EBONY, "SmoothPlastic"), Silver = S({ 200, 200, 206 }, "Metal"), Hair = S({ 236, 230, 214 }, "SmoothPlastic") },
 			Trail = { 255, 214, 120 },
 		},
 		Off = {
@@ -110,6 +124,7 @@ local weapons: { [string]: Weapon } = {
 				P("Strings", "Block", { 0.07, 1.55, 0.012 }, { 0, -0.5, -0.19, 0, 0, 0 }, { 232, 226, 210 }, "Neon", 0.3),
 			},
 			Sockets = { Base = { 0, -0.85, -0.2 }, Tip = { 0, 0.53, -0.03 } },
+			Skins = { Varnish = S(VARNISH, "Wood"), Spruce = S(SPRUCE, "Wood"), Maple = S(MAPLE, "Wood"), Ebony = S(EBONY, "SmoothPlastic"), Bridge = S({ 226, 200, 150 }, "Wood"), Strings = S({ 232, 226, 210 }, "Neon", 0.3) },
 		},
 	},
 	-- 결투사: 17세기 스웹트 힐트 레이피어(카포 페로 시대) — 가늘고 긴 찌르기 날, 컵 가드, 너클 보우(-Z 쪽 = 칼날 쪽)
@@ -138,6 +153,7 @@ local weapons: { [string]: Weapon } = {
 				P("Pommel", "Ball", { 0.3, 0.3, 0.3 }, { 0, -0.44, 0, 0, 0, 0 }, GOLD, "Metal"),
 			},
 			Sockets = { Base = { 0, 0.8, 0 }, Tip = { 0, 4.55, 0 } },
+			Skins = { Steel = S(STEEL, "Metal"), Gold = S(GOLD, "Metal"), Grip = S({ 40, 34, 30 }, "Fabric") },
 			Trail = { 214, 236, 255 },
 		},
 	},
@@ -168,6 +184,7 @@ local weapons: { [string]: Weapon } = {
 				P("PointL", "Wedge", { 0.2, 0.7, 0.45 }, { -0.225, 6.55, 0, 0, 90, 0 }, { 70, 74, 104 }, "Metal"),
 			},
 			Sockets = { Base = { 0, 2.0, 0 }, Tip = { 0, 6.8, 0 } },
+			Skins = { Void = S(VOID, "Metal"), Leather = S(LEATHER, "Fabric"), Gem = S({ 170, 140, 255 }, "Neon"), Blade = S({ 34, 34, 52 }, "Metal"), Edge = S({ 70, 74, 104 }, "Metal"), Core = S({ 140, 110, 255 }, "Neon") },
 			Trail = { 150, 120, 255 },
 		},
 	},
@@ -185,6 +202,7 @@ local weapons: { [string]: Weapon } = {
 				P("Band2", "Block", { 0.08, 0.08, 1.18 }, { 0, 0, 0, 30, 0, 0 }, { 60, 110, 170 }, "Metal"),
 			},
 			Sockets = { Base = { 0, 0, 0 }, Tip = { 0, 0, 0 } },
+			Skins = { Shell = S({ 110, 220, 255 }, "Glass", 0.35), Core = S({ 150, 240, 255 }, "Neon"), Band = S({ 60, 110, 170 }, "Metal") },
 			Trail = { 110, 220, 255 },
 		},
 		Orbit = { Count = 3, Radius = 2.6, Height = 1.6, Speed = 1.1 },
@@ -208,6 +226,7 @@ local weapons: { [string]: Weapon } = {
 				P("Ribbon", "Block", { 0.05, 0.9, 0.18 }, { 0.2, 0.05, 0.1, 0, 0, -8 }, { 150, 40, 40 }, "Fabric"),
 			},
 			Sockets = { Base = { 0, 0.4, 0 }, Tip = { 0, 2.85, 0 } },
+			Skins = { Head = S({ 70, 66, 62 }, "CorrodedMetal"), Iron = S(IRON, "CorrodedMetal"), Cloth = S({ 140, 36, 36 }, "Fabric") },
 			Trail = { 255, 190, 150 },
 		},
 		Off = {
@@ -222,6 +241,7 @@ local weapons: { [string]: Weapon } = {
 				P("PointL", "Wedge", { 0.18, 0.38, 0.09 }, { -0.045, 2.37, 0, 0, 90, 0 }, IRON, "CorrodedMetal"),
 			},
 			Sockets = { Base = { 0, 0.4, 0 }, Tip = { 0, 2.55, 0 } },
+			Skins = { Head = S({ 70, 66, 62 }, "CorrodedMetal"), Iron = S(IRON, "CorrodedMetal"), Cloth = S({ 140, 36, 36 }, "Fabric") },
 			Trail = { 255, 190, 150 },
 		},
 	},
@@ -244,6 +264,7 @@ local weapons: { [string]: Weapon } = {
 				P("PeenLow", "Wedge", { 0.56, 0.28, 0.5 }, { 0, 2.06, 0.9, 180, 0, 0 }, STEEL_DK, "Metal"),
 			},
 			Sockets = { Base = { 0, 1.6, 0 }, Tip = { 0, 2.2, -0.8 } },
+			Skins = { Wood = S(WOOD, "Wood"), Leather = S(LEATHER, "Fabric"), Head = S({ 120, 118, 112 }, "Metal"), Dark = S(STEEL_DK, "Metal") },
 			Trail = { 230, 222, 200 },
 		},
 		Off = {
@@ -255,6 +276,7 @@ local weapons: { [string]: Weapon } = {
 				P("Bit", "Wedge", { 0.2, 0.32, 0.2 }, { 0, -0.86, 0, 0, 0, 0 }, STEEL, "Metal"),
 			},
 			Sockets = { Base = { 0, 0, 0 }, Tip = { 0, -1.02, -0.1 } },
+			Skins = { Steel = S(STEEL, "Metal"), Dark = S(STEEL_DK, "Metal"), Leather = S(LEATHER, "Fabric") },
 		},
 	},
 	-- 월 브레이커: 곡괭이 머리를 단 쿼터스태프(두 손) — 앞 곡괭이 날(살짝 아래로 굽음) + 뒤 망치 면,
@@ -282,6 +304,7 @@ local weapons: { [string]: Weapon } = {
 				P("ButtSpike", "Wedge", { 0.24, 0.3, 0.24 }, { 0, -1.58, 0, 180, 0, 0 }, IRON, "Metal"),
 			},
 			Sockets = { Base = { 0, 3.6, 0 }, Tip = { 0, 3.8, -2.3 } },
+			Skins = { Wood = S(WOOD_DK, "Wood"), Leather = S(LEATHER, "Fabric"), Rope = S({ 150, 132, 96 }, "Fabric"), Iron = S(IRON, "Metal"), Steel = S(STEEL, "Metal"), Crystal = S({ 255, 160, 90 }, "Neon") },
 			Trail = { 255, 170, 100 },
 		},
 	},
@@ -302,6 +325,7 @@ local weapons: { [string]: Weapon } = {
 				P("Cork", "Cylinder", { 0.22, 0.26, 0.26 }, { 0, 1.42, 0, 0, 0, 90 }, { 150, 110, 70 }, "Wood"),
 			},
 			Sockets = { Base = { 0, 0.42, 0 }, Tip = { 0, 1.42, 0 } },
+			Skins = { Glass = S({ 200, 236, 230 }, "Glass", 0.45), Liquid = S({ 120, 230, 110 }, "Neon", 0.1), Twine = S({ 176, 146, 96 }, "Fabric"), Cork = S({ 150, 110, 70 }, "Wood") },
 		},
 		Off = {
 			Hand = "Left",
@@ -314,6 +338,7 @@ local weapons: { [string]: Weapon } = {
 				P("Seal", "Cylinder", { 0.06, 0.3, 0.3 }, { 0, 1.0, 0, 0, 0, 90 }, { 150, 30, 30 }, "SmoothPlastic"),
 			},
 			Sockets = { Base = { 0, 0.3, 0 }, Tip = { 0, 1.08, 0 } },
+			Skins = { Glass = S({ 200, 236, 230 }, "Glass", 0.45), Liquid = S({ 255, 120, 60 }, "Neon", 0.1), Cork = S({ 150, 110, 70 }, "Wood"), Seal = S({ 150, 30, 30 }, "SmoothPlastic") },
 		},
 	},
 	-- 광전사: 데인 액스 — 긴 자루, 얇고 넓은 초승달 날(아래로 긴 턱), 머리 쪽 쇠띠, 핏빛 룬.
@@ -340,6 +365,7 @@ local weapons: { [string]: Weapon } = {
 				P("Cap", "Wedge", { 0.24, 0.34, 0.24 }, { 0, 3.98, 0, 0, 0, 0 }, STEEL_DK, "Metal"),
 			},
 			Sockets = { Base = { 0, 2.3, -1.3 }, Tip = { 0, 4.4, -1.3 } },
+			Skins = { Wood = S(WOOD_DK, "Wood"), Leather = S(LEATHER, "Fabric"), Steel = S(STEEL, "Metal"), Dark = S(STEEL_DK, "Metal"), Edge = S({ 226, 230, 236 }, "Metal"), Rune = S({ 255, 50, 40 }, "Neon") },
 			Trail = { 255, 70, 50 },
 		},
 	},

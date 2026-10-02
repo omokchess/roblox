@@ -9,6 +9,10 @@
 	떠 있는 무기(Hand = "Float", 펄서 오브)는 손에 안 붙이고 매 프레임 자리를 옮긴다(`Update`).
 
 	새 무기를 표에 더하면 여기는 손대지 않아도 된다 — 모양·쥐는 점·궤적 점이 모두 표에 있다.
+
+	블렌더 메시(2026-10-02): ReplicatedStorage.WeaponMeshes.<무기Id>.<Main|Off> 에 MeshPart 들이 있으면(tools/WeaponMeshes.luau 가 정리,
+	각 MeshPart 의 속성 Offset = 쥐는 점 기준 자리) 그것을 복제해 Grip 에 용접하고 묶음 이름으로 Skins 의 색·재질을 입힌다.
+	없으면 Parts 정의로 짓는다.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -47,8 +51,25 @@ local SHAPES = {
 	Cylinder = Enum.PartType.Cylinder,
 }
 
--- 조각 하나를 짓는다. 돌려주는 모델의 PrimaryPart = Grip(쥐는 점)
-local function buildPiece(piece: WeaponDefinitions.Piece, name: string, anchored: boolean): Model
+-- 블렌더 메시 묶음(없으면 nil)
+local function meshSource(weaponId: string, pieceName: string): Instance?
+	local root = ReplicatedStorage:FindFirstChild("WeaponMeshes")
+	local weapon = root and root:FindFirstChild(weaponId)
+	local source = weapon and weapon:FindFirstChild(pieceName)
+	return if source and source:FindFirstChildWhichIsA("MeshPart") then source else nil
+end
+
+local function weldTo(grip: BasePart, p: BasePart, offset: CFrame)
+	p.CFrame = offset
+	local weld = Instance.new("Weld")
+	weld.Part0 = grip
+	weld.Part1 = p
+	weld.C0 = offset
+	weld.Parent = p
+end
+
+-- 조각 하나를 짓는다. 돌려주는 모델의 PrimaryPart = Grip(쥐는 점). meshes = 블렌더 메시 묶음(있으면 Parts 대신)
+local function buildPiece(piece: WeaponDefinitions.Piece, name: string, anchored: boolean, meshes: Instance?): Model
 	local model = Instance.new("Model")
 	model.Name = name
 	local grip = Instance.new("Part")
@@ -60,7 +81,25 @@ local function buildPiece(piece: WeaponDefinitions.Piece, name: string, anchored
 	grip.Anchored = anchored
 	grip.Parent = model
 	model.PrimaryPart = grip
-	for _, spec in piece.Parts do
+	for _, src in (if meshes then meshes:GetChildren() else {}) do
+		if not src:IsA("MeshPart") then
+			continue
+		end
+		local p = src:Clone()
+		local skin = piece.Skins and piece.Skins[src.Name]
+		if skin then
+			p.Color = rgb(skin.Color)
+			p.Material = (Enum.Material :: any)[skin.Material] or Enum.Material.SmoothPlastic
+			p.Transparency = skin.Transparency or 0
+		end
+		p.CanCollide, p.CanQuery, p.CanTouch = false, false, false
+		p.CastShadow = p.Material ~= Enum.Material.Neon
+		p.Massless = true
+		p.Anchored = false
+		weldTo(grip, p, (src:GetAttribute("Offset") :: CFrame?) or CFrame.identity)
+		p.Parent = model
+	end
+	for _, spec in (if meshes then {} else piece.Parts) do
 		local p: BasePart
 		if spec.Shape == "Wedge" then
 			p = Instance.new("WedgePart")
@@ -79,12 +118,7 @@ local function buildPiece(piece: WeaponDefinitions.Piece, name: string, anchored
 		p.Massless = true
 		p.Anchored = false
 		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
-		p.CFrame = at(spec.At)
-		local weld = Instance.new("Weld")
-		weld.Part0 = grip
-		weld.Part1 = p
-		weld.C0 = at(spec.At)
-		weld.Parent = p
+		weldTo(grip, p, at(spec.At))
 		p.Parent = model
 	end
 	-- 궤적·이펙트 점
@@ -143,7 +177,7 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 		if piece.Hand == "Float" then
 			local orbit = def.Orbit or { Count = 3, Radius = 2.6, Height = 1.6, Speed = 1 }
 			for i = 1, orbit.Count do
-				local orb = buildPiece(piece, "Orb" .. i, true)
+				local orb = buildPiece(piece, "Orb" .. i, true, meshSource(def.Id, "Main"))
 				-- 떠 있는 조각은 용접 대신 통째로 옮긴다
 				for _, d in orb:GetDescendants() do
 					if d:IsA("BasePart") then
@@ -160,7 +194,7 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 		if not arm or not arm:IsA("BasePart") then
 			continue
 		end
-		local model = buildPiece(piece, slot, false)
+		local model = buildPiece(piece, slot, false, meshSource(def.Id, if slot == "O" then "Off" else "Main"))
 		local motor = Instance.new("Motor6D")
 		motor.Name = "CombatGrip" .. slot
 		motor.Part0 = arm
@@ -236,7 +270,7 @@ function CombatWeapons:ClonePiece(slot: string): Model?
 	if not piece then
 		return nil
 	end
-	local model = buildPiece(piece, "Thrown", true)
+	local model = buildPiece(piece, "Thrown", true, meshSource(self.Def.Id, if slot == "O" then "Off" else "Main"))
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.Anchored = true
