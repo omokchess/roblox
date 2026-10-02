@@ -46,8 +46,19 @@ local DEEP = W(LUNGE, {
 	RLeg = { 66, -20, 10 },
 	LLeg = { -50, 0, -10 },
 })
--- 뒤돌아 찌르기(몸을 반 바퀴 — 뚫고 지나간 뒤 등 뒤의 적)
-local BACK = W(LUNGE, { Root = { 0, -0.62, -0.5, 0, 220, 0 } })
+-- 앞뒤관통 준비동작(2026-10-02 사용자: "오른쪽 아래로 검을 한번 휘둘렀다가, 펜싱처럼 찌르기 준비" — tools/combat/design/duelist_fbp.py)
+--   RISE 칼끝을 왼쪽 위로 살짝 → SWISH 오른쪽 아래로 휙(칼끝은 땅 위 0.7) → COCK 뒷발에 무게, 손을 오른 허리 앞으로 당기고 칼끝은 적 가슴
+--   COCK2 두 번째(더 강하게): 더 낮고 깊게, 왼팔을 뒤 위로 들어 균형(고전 펜싱 앙가르드)
+local RISE = { Root = { 0, -0.12, 0, 0, 58, 0 }, Torso = { 10, -6, 0 }, Head = { -4, -52, 4 }, RArm = { 102.2, -29.2, -12.8 }, LArm = POCKET, RLeg = { 16, -38, 10 }, LLeg = { -10, 0, -12 }, W = { 0, 0, 0, -77.4, 0, -8.3 } }
+local SWISH = { Root = { 0, -0.22, 0, 0, 52, 0 }, Torso = { 4, -10, -2 }, Head = { -2, -46, 4 }, RArm = { 45.3, -62.1, 17.2 }, LArm = POCKET, RLeg = { 16, -38, 10 }, LLeg = { -10, 0, -12 }, W = { 0, 0, 0, -66.9, 0, -6 } }
+local COCK = { Root = { 0, -0.48, 0.38, 0, 48, 0 }, Torso = { 2, -6, 0 }, Head = { -2, -44, 2 }, RArm = { 40.1, -41.5, -0.7 }, LArm = POCKET, RLeg = { 30, -26, 12 }, LLeg = { -26, 0, -14 }, W = { 0, 0, 0, -30.8, 0, 8.2 } }
+local COCK2 = { Root = { 0, -0.66, 0.5, 0, 44, 0 }, Torso = { -2, -8, 0 }, Head = { 2, -40, 2 }, RArm = { 36.1, -43.2, 0.1 }, LArm = { 150, 0, -50 }, RLeg = { 40, -24, 12 }, LLeg = { -34, 0, -14 }, W = { 0, 0, 0, -21.4, 0, 16.4 } }
+-- 뚫고 지나간 뒤 등 뒤의 적을 보는 자세: 몸 전체를 반 바퀴(돌기 +180, 자리도 같이 돌림 — 팔·칼은 몸을 따라 돈다)
+local function behind(pose: { [string]: any }, over: { [string]: any }?): { [string]: any }
+	local r = pose.Root
+	return W(W(pose, { Root = { -r[1], r[2], -r[3], r[4], r[5] + 180, r[6] } }), over or {})
+end
+
 -- 경례: 칼을 얼굴 앞에 수직으로 세운다(날 축만 세움 — posecalc.aim_axis)
 local SALUTE = {
 	Root = { 0, 0.05, 0, 0, 12, 0 },
@@ -194,31 +205,47 @@ return {
 	},
 
 	Skills = {
-		-- 앞뒤관통: 적을 뚫고 지나가며 찌르고, 반 바퀴 돌아 등 뒤에서 다시 찌른다
+		-- 앞뒤관통(2026-10-02 사용자 다시 짬): 칼을 오른쪽 아래로 한 번 휘두르고 펜싱 찌르기 준비 → 적을 뚫고 지나가며 쭉 찌른다 →
+		-- 반 바퀴 돌아 다시 휘두르고(첫 찌르기의 피를 턴다) 더 낮고 깊게 준비 → 등 뒤에서 한 번 더 강하게 찌른다.
 		FrontBackPierce = {
-			Duration = 1.45,
+			Duration = 2.3,
 			Keys = {
 				K(0, nil, EG),
-				K(0.14, "quadOut", EG, { Root = { 0, -0.5, 0.35, 0, 48, 0 }, Torso = { -8, -4, 0 }, RArm = { 72, -30, 8 }, W = { 0, 0, 0, -80, 0, 0 }, RLeg = { 28, -26, 12 }, LLeg = { -24, 0, -14 } }),
-				K(0.2, "expoOut", LUNGE),
-				K(0.42, "linear", LUNGE, { Root = { 0, -0.56, -0.5, 0, 40, 0 } }),
-				K(0.52, "cubicIn", LUNGE, { Root = { 0, -0.4, -0.2, 0, 130, 0 }, RArm = { 80, -20, 10 }, W = { 0, 0, 0, -70, 0, 0 } }),
-				K(0.6, "expoOut", BACK),
-				K(0.82, "linear", BACK, { Root = { 0, -0.56, -0.45, 0, 222, 0 } }),
-				K(0.96, "sineOut", EG, { Root = { 0, -0.12, 0, 0, 224, 0 }, W = { 0, 0, 0, -44, 0, 0 }, RArm = { 62, -30, 14 } }),
-				K(1.2, "cubicInOut", EG, { Root = { 0, -0.2, 0, 0, 225, 0 } }),
-				K(1.45, "cubicInOut", EG),
+				K(0.1, "quadOut", RISE),
+				K(0.22, "expoOut", SWISH),
+				K(0.42, "cubicInOut", COCK),
+				-- 찌르기 직전 숨을 고르듯 조금 더 당겨 웅크림
+				K(0.5, "sineInOut", COCK, { Root = { 0, -0.5, 0.44, 0, 48, 0 } }),
+				K(0.56, "expoOut", LUNGE),
+				K(0.74, "linear", LUNGE, { Root = { 0, -0.56, -0.5, 0, 40, 0 } }),
+				-- 반 바퀴 돌며 일어선다(등 뒤의 적을 본다)
+				K(0.92, "cubicInOut", behind(EG, { W = { 0, 0, 0, -60, 0, 0 } })),
+				K(1.02, "quadOut", behind(RISE)),
+				K(1.14, "expoOut", behind(SWISH)),
+				K(1.36, "cubicInOut", behind(COCK2)),
+				K(1.46, "sineInOut", behind(COCK2, { Root = { 0, -0.68, -0.56, 0, 224, 0 } })),
+				-- 몸을 다 던져 깊게
+				K(1.52, "expoOut", behind(DEEP)),
+				K(1.78, "sineOut", behind(DEEP, { Root = { 0, -0.76, 0.7, 0, 216, 0 }, Torso = { -20, -8, 0 } })),
+				K(2.0, "cubicInOut", behind(EG)),
+				K(2.3, "cubicInOut", EG),
 			},
 			Events = {
 				{ t = 0.12, k = "Trail", on = true },
-				{ t = 0.15, k = "Dash", to = "Target", gap = -2.6, d = 0.09 },
-				{ t = 0.19, k = "Hit", i = 1, fx = "Pierce" },
-				{ t = 0.2, k = "Stop", d = 0.05 },
-				{ t = 0.6, k = "Hit", i = 2, fx = "PierceBack" },
-				{ t = 0.61, k = "Stop", d = 0.06 },
-				{ t = 0.62, k = "Shake", a = 0.25, d = 0.2 },
-				{ t = 0.85, k = "Trail", on = false },
-				{ t = 0.98, k = "Dash", to = "Home", d = 0.22 },
+				{ t = 0.54, k = "Dash", to = "Target", gap = -4, d = 0.09 },
+				{ t = 0.58, k = "Hit", i = 1, fx = "Pierce" },
+				{ t = 0.59, k = "Stop", d = 0.05 },
+				{ t = 0.8, k = "Trail", on = false },
+				{ t = 1.0, k = "Trail", on = true },
+				{ t = 1.16, k = "Fx", n = "Chiburi" },
+				{ t = 1.38, k = "Fx", n = "Glint" },
+				-- 등 뒤에서 대상 쪽으로 한 걸음 파고든다
+				{ t = 1.5, k = "Dash", to = "Target", gap = 1.4, d = 0.07 },
+				{ t = 1.53, k = "Hit", i = 2, fx = "PierceBackBig" },
+				{ t = 1.54, k = "Stop", d = 0.1 },
+				{ t = 1.55, k = "Shake", a = 0.45, d = 0.3 },
+				{ t = 1.85, k = "Trail", on = false },
+				{ t = 1.95, k = "Dash", to = "Home", d = 0.28 },
 			},
 		},
 

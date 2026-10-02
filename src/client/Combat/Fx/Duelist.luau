@@ -34,6 +34,13 @@ function Fx.PierceBack(ctx: any, _ev: any, at: Vector3?)
 	pierce(ctx, at or ctx.Target, -ctx.Forward, 1.1)
 end
 
+-- 앞뒤관통 둘째(뒤에서 강하게): 등 뒤에서 앞으로 꿰뚫는 큰 찌르기
+function Fx.PierceBackBig(ctx: any, _ev: any, at: Vector3?)
+	local p = at or ctx.Target
+	pierce(ctx, p, -ctx.Forward, 1.6)
+	ctx.Vfx.Ring(CFrame.lookAt(p, p - ctx.Forward), { R0 = 0.4, R1 = 3.6, Color = STEEL, Life = 0.32, Width = 0.24, Facing = true })
+end
+
 function Fx.PierceBig(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	pierce(ctx, p, ctx.Forward, 1.5)
