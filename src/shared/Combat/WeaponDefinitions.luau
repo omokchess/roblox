@@ -127,7 +127,8 @@ local weapons: { [string]: Weapon } = {
 			Skins = { Varnish = S(VARNISH, "Wood"), Spruce = S(SPRUCE, "Wood"), Maple = S(MAPLE, "Wood"), Ebony = S(EBONY, "SmoothPlastic"), Bridge = S({ 226, 200, 150 }, "Wood"), Strings = S({ 232, 226, 210 }, "Neon", 0.3) },
 		},
 	},
-	-- 결투사: 17세기 스웹트 힐트 레이피어(카포 페로 시대) — 가늘고 긴 찌르기 날, 컵 가드, 너클 보우(-Z 쪽 = 칼날 쪽)
+	-- 결투사: 17세기 스웹트 힐트 레이피어(카포 페로 시대) — 가늘고 긴 찌르기 날, 십자 날밑, 너클 보우(-Z 쪽 = 칼날 쪽).
+	-- 컵 가드(동그란 손 보호대)는 없앰(2026-10-02 사용자)
 	Rapier = {
 		Id = "Rapier",
 		Name = "레이피어",
@@ -140,7 +141,6 @@ local weapons: { [string]: Weapon } = {
 				P("PointR", "Wedge", { 0.05, 0.34, 0.045 }, { 0.0225, 4.43, 0, 0, -90, 0 }, STEEL, "Metal"),
 				P("PointL", "Wedge", { 0.05, 0.34, 0.045 }, { -0.0225, 4.43, 0, 0, 90, 0 }, STEEL, "Metal"),
 				P("Ricasso", "Block", { 0.12, 0.3, 0.07 }, { 0, 0.62, 0, 0, 0, 0 }, STEEL_DK, "Metal"),
-				P("Cup", "Cylinder", { 0.07, 0.56, 0.56 }, { 0, 0.5, 0, 0, 0, 90 }, GOLD, "Metal"),
 				P("Quillons", "Block", { 1.16, 0.08, 0.08 }, { 0, 0.44, 0, 0, 0, 0 }, GOLD, "Metal"),
 				P("QuillonL", "Ball", { 0.14, 0.14, 0.14 }, { -0.6, 0.44, 0, 0, 0, 0 }, GOLD, "Metal"),
 				P("QuillonR", "Ball", { 0.14, 0.14, 0.14 }, { 0.6, 0.44, 0, 0, 0, 0 }, GOLD, "Metal"),

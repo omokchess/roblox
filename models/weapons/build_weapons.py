@@ -56,7 +56,7 @@ class Piece:
         return [grp.finish() for grp in self.groups.values()]
 
 
-# ── 결투사: 컵 힐트 레이피어 ─────────────────────────
+# ── 결투사: 스웹트 힐트 레이피어(컵 가드 없음) ─────────────
 
 
 def rapier():
@@ -67,10 +67,7 @@ def rapier():
     secs = [(0.78, 0.05, 0.026), (1.6, 0.047, 0.024), (2.6, 0.042, 0.021), (3.5, 0.035, 0.018), (4.2, 0.024, 0.013), (4.5, 0.012, 0.008)]
     loops = [L.section_y(y, L.hexa(w, t, 0.35)) for y, w, t in secs] + [[(0, 4.62, 0)]]
     L.loft(steel, loops)
-    # 컵: 칼날 쪽이 볼록, 손 쪽으로 열린 얕은 사발(두께 있음 — 바깥면 따라 내려가 안쪽면으로 올라온다)
-    cup = [(0.05, 0.665), (0.12, 0.648), (0.2, 0.61), (0.26, 0.55), (0.292, 0.48), (0.302, 0.425), (0.286, 0.418),
-           (0.274, 0.47), (0.246, 0.53), (0.19, 0.585), (0.115, 0.618), (0.05, 0.632)]
-    L.lathe(gold, cup, 32)
+    # (컵 가드는 없앰 — 2026-10-02 사용자: "손 보호대(동그란 부분)은 없애줘". 십자 날밑·너클 보우만 남긴 스웹트 힐트)
     # 십자 날밑(살짝 S 로 휜 둥근 막대) + 끝 공
     q = [(-0.58, 0.52, 0), (-0.42, 0.475, 0), (-0.18, 0.445, 0), (0.18, 0.44, 0), (0.42, 0.41, 0), (0.58, 0.36, 0)]
     L.tube(gold, q, [0.026, 0.03, 0.033, 0.033, 0.03, 0.026], 10)
@@ -560,7 +557,8 @@ def main():
         ob.hide_render = False
         ob.select_set(True)
     bpy.context.view_layer.objects.active = marker
-    fbx = os.path.join(HERE, "Weapons.fbx")
+    # 일부만 지으면 따로 저장한다(스튜디오에서 그 무기만 갈아 끼우기 — WeaponMeshes.luau 는 든 묶음만 바꾼다)
+    fbx = os.path.join(HERE, "Weapons.fbx" if not ONLY else "Weapons_%s.fbx" % "_".join(ONLY))
     bpy.ops.export_scene.fbx(
         filepath=fbx, use_selection=True, global_scale=1.0, apply_unit_scale=True,
         apply_scale_options="FBX_SCALE_ALL", axis_forward="-Z", axis_up="Y",
