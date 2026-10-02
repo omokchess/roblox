@@ -83,8 +83,9 @@ return {
 			K(0, nil, HIGH, { Root = { 0, 0.3, 0.2, 0, -8, 0 } }),
 			K(0.08, "quadIn", SLAM, { Root = { 0, -1.1, -0.2, 0, -8, 0 }, RLeg = { 30, 0, 18 }, LLeg = { -30, 0, -18 } }),
 			K(0.5, "sineOut", SLAM, { Root = { 0, -1.0, -0.2, 0, -8, 0 }, Torso = { -30, 0, 0 }, RLeg = { 30, 0, 18 }, LLeg = { -30, 0, -18 } }),
-			K(0.9, "cubicInOut", MID),
-			K(1.3, "sineInOut", REST),
+			-- W 는 같은 회전을 ±360 감아 적었다(내려찍기→중단→대기가 짧은 길로 돌게 — check_wrap.py)
+			K(0.9, "cubicInOut", MID, { W = { 0, 0, 0, -226.2, -332.4, -125.3 } }),
+			K(1.3, "sineInOut", REST, { W = { 0, 0, 0, -281.6, -371.7, 7.3 } }),
 		},
 		Events = {
 			{ t = 0.08, k = "Fx", n = "HeavyLand" },
@@ -125,9 +126,10 @@ return {
 		Keys = {
 			K(0, nil, REST),
 			K(0.08, "quadOut", MID, { Root = { 0.2, -0.45, 0, 0, -2, 0 } }),
-			K(0.16, "expoOut", SWEEP_B, { Root = { -0.5, -0.5, 0.2, 0, -30, 0 }, Torso = { -10, -30, 0 } }),
-			K(0.4, "sineOut", SWEEP_B, { Root = { -0.6, -0.48, 0.2, 0, -30, 0 }, Torso = { -8, -30, 0 } }),
-			K(0.8, "cubicInOut", REST),
+			-- W 는 같은 회전을 +360 감아 적었다(중단→쳐내기가 짧은 길로 돌게 — check_wrap.py)
+			K(0.16, "expoOut", SWEEP_B, { Root = { -0.5, -0.5, 0.2, 0, -30, 0 }, Torso = { -10, -30, 0 }, W = { 0, 0, 0, 302.5, 76.9, -14.3 } }),
+			K(0.4, "sineOut", SWEEP_B, { Root = { -0.6, -0.48, 0.2, 0, -30, 0 }, Torso = { -8, -30, 0 }, W = { 0, 0, 0, 302.5, 76.9, -14.3 } }),
+			K(0.8, "cubicInOut", REST, { W = { 0, 0, 0, 438.4, -11.7, 7.3 } }),
 		},
 		Events = {
 			{ t = 0.1, k = "Trail", on = true },
@@ -150,8 +152,8 @@ return {
 				tremble(1.08, 0, 0.14),
 				K(1.18, "expoOut", SLAM),
 				K(1.6, "linear", SLAM, { Root = { 0, -0.86, -0.6, 0, -8, 0 } }),
-				K(1.9, "cubicInOut", MID),
-				K(2.2, "sineInOut", REST),
+				K(1.9, "cubicInOut", MID, { W = { 0, 0, 0, -226.2, -332.4, -125.3 } }),
+				K(2.2, "sineInOut", REST, { W = { 0, 0, 0, -281.6, -371.7, 7.3 } }),
 			},
 			Events = {
 				{ t = 0.3, k = "Fx", n = "Implode" },
