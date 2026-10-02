@@ -382,10 +382,11 @@ local HEAL_RATIO = 0.15
 local BOSS_DOT_CUT = 0.99
 -- 검수 준비중: 그 칸에서 쓰는 스킬 주는 피해 +400%
 local PENDING_OUT = 4.0
--- 검수중: 받는 피해 +200%, 턴 끝 최대 체력 20% 고정 피해, 2턴 뒤 스테미나 20
-local CHECKING_IN, CHECKING_COST, CHECKING_STAMINA, CHECKING_STAMINA_TURNS = 3.0, 0.2, 20, 2
--- 테스터: 주는 피해 +3000%, 치명 +100%, 받는 피해 −80%, 방어막 200(1턴)
-local TESTER_OUT, TESTER_CRIT, TESTER_IN, TESTER_SHIELD = 30.0, 1.0, 0.2, 200
+-- 검수중: 받는 피해 +200%, 턴 끝 최대 체력 9% 고정 피해(이 효과로는 죽지 않음), 2턴 뒤 스테미나 20
+--   (2026-10-02 사용자 너프: 20% → 9%, 죽지 않게)
+local CHECKING_IN, CHECKING_COST, CHECKING_STAMINA, CHECKING_STAMINA_TURNS = 3.0, 0.09, 20, 2
+-- 테스터: 주는 피해 +3500%, 치명 +100%, 받는 피해 −80%, 방어막 200(1턴) (2026-10-02 사용자: +3000% → +3500%)
+local TESTER_OUT, TESTER_CRIT, TESTER_IN, TESTER_SHIELD = 35.0, 1.0, 0.2, 200
 GridBattle.PENDING_OUT, GridBattle.CHECKING_IN, GridBattle.CHECKING_COST = PENDING_OUT, CHECKING_IN, CHECKING_COST
 GridBattle.TESTER_OUT, GridBattle.TESTER_IN, GridBattle.TESTER_SHIELD = TESTER_OUT, TESTER_IN, TESTER_SHIELD
 -- 버프 칸: 주는 피해 +40%, 받는 피해 ×0.8 / 버그 칸: 주는 피해 −30%, 받는 피해 ×1.4
@@ -1910,7 +1911,7 @@ end
 	검수 턴 끝 처리(EndTurn). 칸이 바뀌기 **전에** 어디 서 있었는지 본다.
 	  1. 지난 턴에 걸린 것이 한 턴 흐른다(테스터·묶임·스테미나 빚)
 	  2. 검은 칸 갱신(bossEndTurn)
-	  3. 검은 칸에서 마쳤으면 검수중 값(체력 20%·스테미나 빚) → 살아 있으면 다음 턴 테스터
+	  3. 검은 칸에서 마쳤으면 검수중 값(최대 체력 9% 고정 피해 — 죽지 않음·스테미나 빚) → 다음 턴 테스터
 	  4. 검수 준비중 칸에서 마쳤으면 다음 턴 묶임
 ]]
 local function bossTurnEffects(state: State, boss: BossState)
@@ -1941,14 +1942,15 @@ local function bossTurnEffects(state: State, boss: BossState)
 	bossEndTurn(state)
 
 	if checked and ally.Alive then
-		local lost = damageUnit(state, ally, ally.MaxHealth * CHECKING_COST, "True", true)
+		-- 고정 피해지만 이 효과로는 죽지 않는다(canKill false → 체력 1 아래로 안 깎음)
+		local lost = damageUnit(state, ally, ally.MaxHealth * CHECKING_COST, "True", false)
 		table.insert(debts, { Turns = CHECKING_STAMINA_TURNS, Amount = CHECKING_STAMINA })
 		pushLog(state, string.format("검수중 — 체력 %d 잃음 · %d턴 뒤 스테미나 %d", lost, CHECKING_STAMINA_TURNS, CHECKING_STAMINA))
 		if ally.Alive then
 			boss.Tester = 1
 			boss.TesterShield = TESTER_SHIELD
 			BattleStatus.AddShield(ally.Status, TESTER_SHIELD)
-			pushLog(state, "테스터! 다음 턴 주는 피해 +3000% · 치명 +100% · 받는 피해 −80% · 방어막 200")
+			pushLog(state, "테스터! 다음 턴 주는 피해 +3500% · 치명 +100% · 받는 피해 −80% · 방어막 200")
 		end
 	end
 	if pending and ally.Alive then

@@ -67,6 +67,9 @@ type Actor = {
 	Chest: number,
 	Ground: number,
 	Dash: any?,
+	-- 대상 앞으로 돌진해 간 자리: 그 모션이 끝나거나 Home 돌진이 올 때까지 여기 머문다(2026-10-02 고침 —
+	-- 전엔 돌진이 끝나자마자 집으로 미끄러져 모션 도중에 칸으로 돌아왔다)
+	Away: { Cf: CFrame, Play: any }?,
 	Held: boolean,
 	HeldAt: Vector3?,
 	PendingDeath: boolean,
@@ -231,6 +234,7 @@ function CombatDirector:SetHome(id: string, home: CFrame, instant: boolean?)
 	a.Home = home
 	if instant then
 		a.Pos = home
+		a.Away = nil
 	elseif a.Kind == "Slime" and moved > 1 and not a.Dash and not a.Dying then
 		-- 슬라임은 미끄러지지 않고 통 튀어서 옮긴다
 		a.Dash = { From = a.Pos, To = home, T = 0, D = 0.35, Ease = "sineInOut", Arc = 1.8 }
@@ -507,6 +511,7 @@ function CombatDirector:_dash(a: Actor, play: any, ev: any)
 	end
 	-- arc = 포물선 높이(도약해서 내려찍기)
 	a.Dash = { From = a.Pos, To = to, T = 0, D = math.max(0.02, ev.d or 0.15), Ease = ev.e or "quadOut", Arc = ev.arc }
+	a.Away = if ev.to == "Home" then nil else { Cf = to, Play = play }
 end
 
 --=== 피해 숫자 ===--
@@ -651,6 +656,7 @@ function CombatDirector:Drop(id: string, home: CFrame)
 	end
 	a.Held = false
 	a.Home = home
+	a.Away = nil
 	a.Animator:SetBase(a.Idle)
 	if a.Weapons then
 		a.Weapons:SetOrbMode("Orbit")
@@ -763,7 +769,11 @@ function CombatDirector:_step(realDt: number)
 			local goal = CFrame.new(a.HeldAt) * a.Home.Rotation
 			local sway = math.sin(os.clock() * 5) * 0.08
 			a.Pos = a.Pos:Lerp(goal * CFrame.Angles(0, 0, sway), 1 - math.exp(-realDt * 14))
+		elseif a.Away and not a.Away.Play.Done and not a.Dying then
+			-- 돌진해 간 자리에 머문다(모션이 Home 으로 돌진하거나 끝날 때까지)
+			a.Pos = a.Away.Cf
 		elseif not a.Dying then
+			a.Away = nil
 			a.Pos = a.Pos:Lerp(a.Home, 1 - math.exp(-realDt * 12))
 		end
 		if a.Kind == "Humanoid" then

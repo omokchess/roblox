@@ -145,12 +145,166 @@ BattleStage.BOARD = {
 }
 BattleStage.BOARD_TAG = { Buff = "▲ 버프", Debuff = "▼ 버그", Heal = "✚ 회복", Pending = "검수 준비중", Gone = "검수됨!" }
 
--- 구경용(2026-09-29 요청: 남이 싸울 때 그 칸에 무슨 기능이 있는지 보이게): 보스 판만 칠하고 글자를 단다
+--[[
+	검수 칸 묶음 표시(2026-10-02 요청: "검수 예정 칸을 한번에 몰아서 위에 특정 이펙트를 넣는 식으로, 검수됨 칸도").
+	칸마다 글자를 달던 것을 없애고, 붙은 칸(상하좌우)끼리 한 덩어리로 묶어 **덩어리마다 글자 하나**를 띄우고
+	칸 위에는 효과를 깐다. 칸 위 효과는 바닥에 붙여(캐릭터 다리를 가르지 않게) 이웃 칸과 이어져 한 판처럼 보인다.
+	  Pending  자홍 홀로그램 판(바닥 바로 위) + 칸을 가로지르는 스캔 막대(모든 칸이 같은 박자) + 솟는 화소
+	  Gone     검정 판 위로 검정·청록 화소가 깜박이며 흩어진다(지워진 데이터)
+	효과는 광선에 안 맞는다(드래그 판정 그대로). 같은 칸 묶음이면 다시 짓지 않는다.
+]]
+local TweenService = game:GetService("TweenService")
+local GROUP_LABEL = { Pending = "검수 준비중", Gone = "검수됨!" }
+
+local function components(keys: { [string]: boolean }): { { { number } } }
+	local seen: { [string]: boolean } = {}
+	local out = {}
+	local sorted = {}
+	for key in keys do
+		table.insert(sorted, key)
+	end
+	table.sort(sorted)
+	for _, key in sorted do
+		if seen[key] then
+			continue
+		end
+		local group, stack = {}, { key }
+		seen[key] = true
+		while #stack > 0 do
+			local k = table.remove(stack) :: string
+			local x, y = string.match(k, "(%d+),(%d+)")
+			local cx, cy = tonumber(x) :: number, tonumber(y) :: number
+			table.insert(group, { cx, cy })
+			for _, d in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
+				local nk = (cx + d[1]) .. "," .. (cy + d[2])
+				if keys[nk] and not seen[nk] then
+					seen[nk] = true
+					table.insert(stack, nk)
+				end
+			end
+		end
+		table.insert(out, group)
+	end
+	return out
+end
+
+local function fxPart(name: string, cf: CFrame, size: Vector3, color: Color3, transparency: number, parent: Instance): BasePart
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored = true
+	p.CanCollide, p.CanTouch, p.CanQuery = false, false, false
+	p.CastShadow = false
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	p.Transparency = transparency
+	p.Size = size
+	p.CFrame = cf
+	p.Parent = parent
+	return p
+end
+
+local function pixels(parent: BasePart, colors: { Color3 }, rate: number, speed: number, life: number)
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Shape = Enum.ParticleEmitterShape.Box
+	e.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+	e.EmissionDirection = Enum.NormalId.Top
+	e.Rate = rate
+	e.Lifetime = NumberRange.new(life * 0.6, life)
+	e.Speed = NumberRange.new(speed * 0.5, speed)
+	e.SpreadAngle = Vector2.new(8, 8)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.22), NumberSequenceKeypoint.new(1, 0.08) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.7, 0.4), NumberSequenceKeypoint.new(1, 1) })
+	local keys = {}
+	for i, c in colors do
+		table.insert(keys, ColorSequenceKeypoint.new((i - 1) / math.max(#colors - 1, 1), c))
+	end
+	e.Color = ColorSequence.new(keys)
+	e.LightEmission = 0.8
+	e.Rotation = NumberRange.new(0, 0)
+	e.Parent = parent
+end
+
+function BattleStage.GroupMarks(tiles: { [string]: { { BasePart } } }, kind: "Pending" | "Gone", keys: { [string]: boolean })
+	local first = tiles.Ally[1] and tiles.Ally[1][1]
+	if not first or not first.Parent then
+		return
+	end
+	local holderName = "Marks_" .. kind
+	local holder = first.Parent:FindFirstChild(holderName)
+	local list = {}
+	for key in keys do
+		table.insert(list, key)
+	end
+	table.sort(list)
+	local sig = table.concat(list, ";")
+	if holder and holder:GetAttribute("Sig") == sig then
+		return
+	end
+	if holder then
+		holder:Destroy()
+	end
+	if sig == "" then
+		return
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = holderName
+	folder:SetAttribute("Sig", sig)
+	folder.Parent = first.Parent
+	local color = BattleStage.BOARD[kind]
+	local scanInfo = TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+	for _, group in components(keys) do
+		local sum = Vector3.zero
+		for _, c in group do
+			local t = tiles.Ally[c[2]] and tiles.Ally[c[2]][c[1]]
+			if not t then
+				continue
+			end
+			local w, d = t.Size.X + 0.2, t.Size.Z + 0.2
+			sum += t.Position
+			if kind == "Pending" then
+				-- 바닥에 붙은 자홍 홀로그램 판(이웃 칸과 이어 보이게 칸 크기 그대로) + 스캔 막대 + 솟는 화소
+				local plate = fxPart("Holo", t.CFrame + Vector3.new(0, 0.18, 0), Vector3.new(w, 0.04, d), color, 0.72, folder)
+				pixels(plate, { color, Color3.fromRGB(255, 200, 245) }, 3, 2.2, 1.4)
+				local from = t.CFrame * CFrame.new(0, 0.3, -d / 2 + 0.1)
+				local bar = fxPart("Scan", from, Vector3.new(w, 0.08, 0.16), Color3.fromRGB(255, 170, 235), 0.15, folder)
+				TweenService:Create(bar, scanInfo, { CFrame = t.CFrame * CFrame.new(0, 0.3, d / 2 - 0.1) }):Play()
+			else
+				-- 지워진 데이터: 검정 판 위로 검정·청록 화소가 깜박이며 흩어진다
+				local plate = fxPart("Void", t.CFrame + Vector3.new(0, 0.16, 0), Vector3.new(w, 0.04, d), Color3.new(0, 0, 0), 0.35, folder)
+				plate.Material = Enum.Material.SmoothPlastic
+				pixels(plate, { Color3.fromRGB(10, 10, 14), Color3.fromRGB(70, 220, 255), Color3.fromRGB(10, 10, 14) }, 5, 1.2, 0.9)
+			end
+		end
+		-- 덩어리마다 글자 하나(가운데 위)
+		local center = sum / math.max(#group, 1)
+		local anchor = fxPart("Label", CFrame.new(center + Vector3.new(0, 0.4, 0)), Vector3.new(0.1, 0.1, 0.1), color, 1, folder)
+		local b = Instance.new("BillboardGui")
+		b.Size = UDim2.fromOffset(150, 30)
+		b.StudsOffset = Vector3.new(0, 1.6, 0)
+		b.AlwaysOnTop = true
+		b.MaxDistance = 220
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.GothamBlack
+		label.TextSize = 18
+		label.TextStrokeTransparency = 0.2
+		label.TextColor3 = if kind == "Gone" then Color3.fromRGB(235, 235, 235) else color
+		label.Text = if #group > 1 then string.format("%s ×%d", GROUP_LABEL[kind], #group) else GROUP_LABEL[kind]
+		label.Parent = b
+		b.Parent = anchor
+	end
+end
+
+-- 구경용(2026-09-29 요청: 남이 싸울 때 그 칸에 무슨 기능이 있는지 보이게): 보스 판만 칠하고 글자를 단다.
+-- 검수 칸(Pending·Gone)은 칸 글자 대신 묶음 표시(GroupMarks)
 function BattleStage.PaintBoard(tiles: { [string]: { { BasePart } } }, board: any)
 	local kind: { [string]: string } = {}
 	for _, m in board.Mods or {} do
 		kind[m.X .. "," .. m.Y] = m.Kind
 	end
+	local pending, gone = {}, {}
 	for _, c in board.Pending or {} do
 		kind[c[1] .. "," .. c[2]] = "Pending"
 	end
@@ -162,14 +316,21 @@ function BattleStage.PaintBoard(tiles: { [string]: { { BasePart } } }, board: an
 			local k = kind[x .. "," .. y]
 			if k == "Gone" then
 				BattleStage.PaintGone(part)
+				gone[x .. "," .. y] = true
 			elseif k then
 				BattleStage.Paint(part, BattleStage.BOARD[k], true)
+				if k == "Pending" then
+					pending[x .. "," .. y] = true
+				end
 			else
 				BattleStage.Paint(part, BattleStage.TILE_IDLE, false)
 			end
-			BattleStage.Tag(part, if k then BattleStage.BOARD_TAG[k] else nil, if k then BattleStage.BOARD[k] else nil)
+			local tagged = k and k ~= "Pending" and k ~= "Gone"
+			BattleStage.Tag(part, if tagged then BattleStage.BOARD_TAG[k :: string] else nil, if tagged then BattleStage.BOARD[k :: string] else nil)
 		end
 	end
+	BattleStage.GroupMarks(tiles, "Pending", pending)
+	BattleStage.GroupMarks(tiles, "Gone", gone)
 end
 
 return BattleStage

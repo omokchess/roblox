@@ -234,6 +234,7 @@ local function fakeRequire(target)
 		NumberSequence = roblox.NumberSequence,
 		NumberSequenceKeypoint = roblox.NumberSequenceKeypoint,
 		ColorSequence = roblox.ColorSequence,
+		ColorSequenceKeypoint = roblox.ColorSequenceKeypoint,
 		NumberRange = roblox.NumberRange,
 		warn = function(...)
 			local parts = {}
@@ -400,6 +401,14 @@ for _, classId in CLASSES do
 			assert(play, "재생이 안 만들어짐")
 			step(0.15)
 			play:SetResult({ Hits = { { { Id = "slime", Damage = 12 } }, { { Id = "slime", Damage = 8 } } } })
+			-- 돌진해 간 자리에 모션 도중엔 머문다(2026-10-02 고침: 전엔 돌진이 끝나자마자 칸으로 미끄러져 돌아왔다).
+			-- 못질: 0.1 대상 앞으로 돌진(0.22초) → 0.9 집으로. 0.6 에는 아직 대상 앞이어야 한다
+			if classId == "WallPilgrim" and skillId == "Nailing" then
+				step(0.45)
+				local a = director.Actors.player
+				local away = (a.Pos.Position - a.Home.Position).Magnitude
+				assert(away > 2, string.format("못질 도중(0.6초)에 이미 칸으로 돌아옴: 집에서 %.2f", away))
+			end
 		end)
 		settle(director, classId .. " 스킬 " .. skillId, 6)
 		played += 1

@@ -337,10 +337,10 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 	local boss = snapshot.Boss
 	if boss then
 		if (boss.Tester or 0) > 0 then
-			add("Tester", "테스터", "T", Color3.fromRGB(255, 200, 80), nil, "이번 턴 가하는 피해량 +3000% · 치명타 확률 +100% · 받는 피해량 −80% · 방어막 200(이번 턴까지).")
+			add("Tester", "테스터", "T", Color3.fromRGB(255, 200, 80), nil, "이번 턴 가하는 피해량 +3500% · 치명타 확률 +100% · 받는 피해량 −80% · 방어막 200(이번 턴까지).")
 		end
 		if boss.Checking then
-			add("Checking", "검수중", "검", Color3.fromRGB(235, 235, 235), nil, "검은 칸(검수됨!) 위. 받는 피해량 +200%. 여기서 턴을 마치면 최대 체력 20% 고정 피해, 2턴 뒤 스테미나 20을 잃고 다음 턴 테스터를 얻는다.")
+			add("Checking", "검수중", "검", Color3.fromRGB(235, 235, 235), nil, "검은 칸(검수됨!) 위. 받는 피해량 +200%. 여기서 턴을 마치면 최대 체력 9% 고정 피해(이 효과로는 죽지 않음), 2턴 뒤 스테미나 20을 잃고 다음 턴 테스터를 얻는다.")
 		end
 		if boss.Pending then
 			add("Pending", "검수 준비중", "준", Color3.fromRGB(255, 60, 200), nil, "이번 턴 가하는 피해량 +400%. 여기서 턴을 마치면 이 칸이 검수됨!이 되고 다음 턴 칸을 움직일 수 없다.")
@@ -521,7 +521,7 @@ function BattleClient:_onGridState(snapshot: any)
 	-- 테스터가 막 걸렸으면 화면 가운데 크게 한 번
 	local tester = snapshot.Boss and snapshot.Boss.Tester or 0
 	if tester > (self.lastTester or 0) then
-		self.hud:Flash("테스터", "가하는 피해량 +3000% · 치명 +100% · 받는 피해 −80%", BattleHud.Colors.Gold)
+		self.hud:Flash("테스터", "가하는 피해량 +3500% · 치명 +100% · 받는 피해 −80%", BattleHud.Colors.Gold)
 	end
 	self.lastTester = tester
 
@@ -1113,10 +1113,10 @@ function BattleClient:_paintTiles()
 			local hovered = self.dragHover and self.dragHover.X == x and self.dragHover.Y == y
 			local cellKey = x .. "," .. y
 			local mod = modAt[cellKey]
+			-- 검수 칸(검수됨!·검수 준비중)은 칸 글자 대신 덩어리마다 글자 하나 + 칸 위 효과(아래 GroupMarks, 2026-10-02 요청)
 			BattleStage.Tag(
 				ally,
-				if gone[cellKey] then "검수됨!"
-					elseif deleting[cellKey] then "검수 준비중"
+				if gone[cellKey] or deleting[cellKey] then nil
 					elseif unavoid[cellKey] then "! 회피 불가"
 					elseif mod == "Buff" then "▲ 버프"
 					elseif mod == "Debuff" then "▼ 버그"
@@ -1157,6 +1157,9 @@ function BattleClient:_paintTiles()
 			end
 		end
 	end
+	-- 검수 칸 묶음 표시(덩어리마다 글자 하나 + 칸 위 효과). 같은 묶음이면 다시 짓지 않는다
+	BattleStage.GroupMarks(self.tiles, "Pending", deleting)
+	BattleStage.GroupMarks(self.tiles, "Gone", gone)
 
 	--[[
 		슬롯·공격 버튼 칠하기. 재사용 대기·카드 잠김·스테미나 부족을 슬롯마다 보여 준다(값만 있고 화면에

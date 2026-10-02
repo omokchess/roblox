@@ -338,11 +338,11 @@ do
 	local refTaken = r0 - ref.Units.player.Health
 	check(refTaken > 0 and taken >= refTaken * 1.8, string.format("검수중 받는 피해(방어 뺄셈이 있어 딱 3배는 아니다) %d vs 보통 %d", taken, refTaken))
 
-	-- 검은 칸에서 마친다 → 최대 체력 20% 고정 피해, 테스터(방어막 200), 2턴 뒤 스테미나 20
+	-- 검은 칸에서 마친다 → 최대 체력 9% 고정 피해(죽지 않음), 테스터(방어막 200), 2턴 뒤 스테미나 20
 	s.Units.player.Health = 5000
 	local st0 = s.Units.player.Stamina
 	GridBattle.EndTurn(s)
-	check(5000 - s.Units.player.Health >= 1000 - 1, "검수중 최대 체력 20%: " .. (5000 - s.Units.player.Health))
+	check(math.abs((5000 - s.Units.player.Health) - 450) <= 1, "검수중 최대 체력 9%: " .. (5000 - s.Units.player.Health))
 	check(s.Boss.Tester == 1 and s.Units.player.Status.Shield >= 200, "테스터 + 방어막 200")
 	check(s.Boss.Locked == 0, "묶임은 한 턴")
 	local stAfter1 = s.Units.player.Stamina
@@ -355,6 +355,17 @@ do
 	GridBattle.EndTurn(s)
 	check(#s.Boss.StaminaDebt == 0 and table.concat(s.Log, " "):find("검수중 후유증", 1, true), "2턴 뒤 스테미나 20 깎임")
 	local _ = st0 + stAfter1
+
+	-- 검수중 고정 피해로는 죽지 않는다(2026-10-02 사용자: 최대 체력 9%, 이 효과로 사망하지 않음)
+	local k = newBoss("Berserker")
+	GridBattle.EnemyPlan(k, rng)
+	local kc = k.Units.boss_DeleteArm.Plan.Cells[1]
+	GridBattle.MoveAlly(k, kc[1], kc[2])
+	GridBattle.EndTurn(k)
+	check(GridBattle.Snapshot(k).Boss.Checking, "검은 칸 위(죽지 않음 시험)")
+	k.Units.player.Health = 10
+	GridBattle.EndTurn(k)
+	check(k.Units.player.Alive and k.Units.player.Health >= 1, "검수중 고정 피해로는 죽지 않는다: " .. k.Units.player.Health)
 end
 
 -- 7) 끝까지 싸워 본다(자동: 매 턴 가장 센 스킬, 회피 반반) — 멈추거나 오류 없이 끝나야 한다
