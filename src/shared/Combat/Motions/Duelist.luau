@@ -59,6 +59,17 @@ local function behind(pose: { [string]: any }, over: { [string]: any }?): { [str
 	return W(W(pose, { Root = { -r[1], r[2], -r[3], r[4], r[5] + 180, r[6] } }), over or {})
 end
 
+-- 찔러찔러또찔러(2026-10-02 사용자: "오른쪽에서 중앙으로 한번, 왼쪽에서 중앙으로 한번 총 2초, 1초 텀 두면서 뒤로 약간 빠지고
+-- 대기동작 후에 대시하면서 강하게") — tools/combat/design/duelist_tt.py. 대상 가슴 = 다가선 뒤 (0, 0.3, -3.6)
+--   TT_RCOCK→TT_RTHRUST 오른쪽으로 비켜서 손을 오른 허리 뒤로 → 오른쪽에서 가운데로 비스듬히(칼이 대상 가운데를 지난다)
+--   TT_LCOCK→TT_LTHRUST 왼쪽으로 비켜서 몸을 더 감고 손을 왼쪽 앞으로 → 왼쪽에서 가운데로
+--   TT_STRONG 대시하며 몸을 다 던진 곧은 찌르기(왼팔은 뒤로 뻗어 균형)
+local TT_RCOCK = { Root = { 0.5, -0.45, 0.3, 0, 34, 0 }, Torso = { 2, -8, 0 }, Head = { -2, -28, 0 }, RArm = { 11.6, -80.8, 26.1 }, LArm = POCKET, RLeg = { 24, -20, 12 }, LLeg = { -22, 0, -14 }, W = { 0, 0, 0, 74.2, 0, 50.3 } }
+local TT_RTHRUST = { Root = { 0.45, -0.58, -0.3, 0, 36, 0 }, Torso = { -14, -6, 0 }, Head = { 10, -26, 0 }, RArm = { 113.2, 5.5, 0 }, LArm = { -18, 0, 8 }, RLeg = { 52, -20, 10 }, LLeg = { -38, 0, -10 }, W = { 0, 0, 0, -90, 0, 0 } }
+local TT_LCOCK = { Root = { -0.85, -0.45, 0.3, 0, 104, 0 }, Torso = { 2, -4, 0 }, Head = { -2, -84, 0 }, RArm = { 53.2, -30, 0 }, LArm = POCKET, RLeg = { 24, -20, 12 }, LLeg = { -22, 0, -14 }, W = { 0, 0, 0, 79.6, 0, -57.4 } }
+local TT_LTHRUST = { Root = { -0.9, -0.58, -0.3, 0, 104, 0 }, Torso = { -14, -4, 0 }, Head = { 10, -84, 0 }, RArm = { 89.4, -121.5, 0 }, LArm = { -18, 0, 8 }, RLeg = { 52, -20, 10 }, LLeg = { -38, 0, -10 }, W = { 0, 0, 0, -90, 0, 0 } }
+local TT_STRONG = { Root = { -0.8, -0.84, -0.75, 0, 36, 0 }, Torso = { -24, -8, 0 }, Head = { 18, -28, 0 }, RArm = { 115.2, -28.6, 0 }, LArm = { -34, 0, -30 }, RLeg = { 66, -20, 10 }, LLeg = { -50, 0, -10 }, W = { 0, 0, 0, -90, 0, 0 } }
+
 -- 경례: 칼을 얼굴 앞에 수직으로 세운다(날 축만 세움 — posecalc.aim_axis)
 local SALUTE = {
 	Root = { 0, 0.05, 0, 0, 12, 0 },
@@ -250,34 +261,49 @@ return {
 			},
 		},
 
-		-- 찔러찔러또찔러: 가운데를 찌르고, 뽑아내며 칼끝을 튕기고, 그 반동으로 두 번 더 — 마지막은 몸을 다 던진다
+		-- 찔러찔러또찔러(2026-10-02 사용자 다시 짬): 오른쪽에서 가운데로 한 번, 왼쪽에서 가운데로 한 번(여기까지 2초) →
+		-- 1초 동안 뒤로 살짝 빠져 숨을 고르며 대기 자세 → 웅크렸다가 대시하며 몸을 다 던져 강하게 찌른다
 		TripleThrust = {
-			Duration = 1.4,
+			Duration = 4.0,
 			Keys = {
 				K(0, nil, EG),
-				K(0.12, "quadOut", EG, { Root = { 0, -0.42, 0.25, 0, 46, 0 }, RArm = { 76, -30, 6 }, W = { 0, 0, 0, -78, 0, 0 } }),
-				K(0.24, "expoOut", LUNGE, { Root = { 0, -0.5, -0.2, 0, 40, 0 }, RLeg = { 40, -22, 10 }, LLeg = { -28, 0, -10 } }),
-				-- 뽑아내기: 팔을 당기고 칼끝을 위로 튕긴다
-				K(0.38, "expoOut", EG, { Root = { 0, -0.36, 0.2, 0, 44, 0 }, RArm = { 80, -30, 8 }, W = { 0, 0, 0, -36, 0, 0 }, Torso = { 4, -6, 0 } }),
-				K(0.47, "expoOut", LUNGE, { Root = { 0, -0.56, -0.35, 0, 40, 0 }, RLeg = { 46, -22, 10 }, LLeg = { -34, 0, -10 } }),
-				K(0.56, "expoOut", EG, { Root = { 0, -0.4, 0.15, 0, 44, 0 }, RArm = { 78, -30, 10 }, W = { 0, 0, 0, -48, 0, 0 }, Torso = { 2, -4, 0 } }),
-				-- 마지막: 몸 전체로 깊게
-				K(0.7, "expoOut", DEEP),
-				K(0.95, "sineOut", DEEP, { Root = { 0, -0.76, -0.7, 0, 36, 0 }, Torso = { -20, -8, 0 } }),
-				K(1.12, "cubicInOut", EG, { W = { 0, 0, 0, -36, 0, 0 }, RArm = { 70, -30, 12 } }),
-				K(1.4, "cubicInOut", EG),
+				K(0.35, "cubicOut", TT_RCOCK),
+				K(0.6, "sineInOut", TT_RCOCK, { Root = { 0.55, -0.48, 0.36, 0, 32, 0 } }),
+				K(0.72, "expoOut", TT_RTHRUST),
+				K(0.95, "sineOut", TT_RTHRUST, { Root = { 0.45, -0.6, -0.36, 0, 36, 0 } }),
+				K(1.3, "cubicInOut", TT_LCOCK),
+				K(1.55, "sineInOut", TT_LCOCK, { Root = { -0.9, -0.48, 0.36, 0, 106, 0 } }),
+				K(1.67, "expoOut", TT_LTHRUST),
+				K(1.9, "sineOut", TT_LTHRUST, { Root = { -0.9, -0.6, -0.36, 0, 104, 0 } }),
+				-- 뒤로 살짝 빠져 대기 자세, 숨 한 번
+				K(2.3, "cubicInOut", EG, { Root = { 0, -0.16, 0.25, 0, 62, 0 } }),
+				K(2.65, "sineInOut", EG, { Root = EG_IN.Root, Torso = EG_IN.Torso, Head = EG_IN.Head, RArm = EG_IN.RArm, LArm = EG_IN.LArm }),
+				-- 웅크려 박차기
+				K(2.92, "sineInOut", EG, { Root = { 0, -0.32, 0.22, 0, 56, 0 }, Torso = { 6, -6, 0 }, RLeg = { 26, -30, 10 }, LLeg = { -20, 0, -12 } }),
+				K(3.1, "expoOut", TT_STRONG),
+				K(3.4, "sineOut", TT_STRONG, { Root = { -0.8, -0.8, -0.85, 0, 36, 0 }, Torso = { -20, -8, 0 } }),
+				K(3.7, "cubicInOut", EG, { W = { 0, 0, 0, -36, 0, 0 }, RArm = { 70, -30, 12 } }),
+				K(4.0, "cubicInOut", EG),
 			},
 			Events = {
-				{ t = 0.08, k = "Dash", to = "Target", gap = 3.2, d = 0.12 },
-				{ t = 0.18, k = "Trail", on = true },
-				{ t = 0.23, k = "Hit", i = 1, fx = "Pierce" },
-				{ t = 0.39, k = "Fx", n = "Flick" },
-				{ t = 0.46, k = "Hit", i = 2, fx = "Pierce" },
-				{ t = 0.69, k = "Hit", i = 3, fx = "PierceBig" },
-				{ t = 0.7, k = "Stop", d = 0.08 },
-				{ t = 0.71, k = "Shake", a = 0.3, d = 0.25 },
-				{ t = 0.96, k = "Trail", on = false },
-				{ t = 1.0, k = "Dash", to = "Home", d = 0.22 },
+				{ t = 0.05, k = "Dash", to = "Target", gap = 3.2, d = 0.15 },
+				{ t = 0.55, k = "Trail", on = true },
+				{ t = 0.72, k = "Hit", i = 1, fx = "Pierce" },
+				{ t = 0.73, k = "Stop", d = 0.04 },
+				{ t = 1.67, k = "Hit", i = 2, fx = "Pierce" },
+				{ t = 1.68, k = "Stop", d = 0.04 },
+				{ t = 2.0, k = "Trail", on = false },
+				-- 뒤로 살짝 빠진다
+				{ t = 2.05, k = "Dash", to = "Target", gap = 5.2, d = 0.3, e = "sineOut" },
+				{ t = 2.95, k = "Fx", n = "Glint" },
+				{ t = 3.0, k = "Trail", on = true },
+				-- 대시하며 강하게
+				{ t = 3.02, k = "Dash", to = "Target", gap = 3.4, d = 0.1 },
+				{ t = 3.1, k = "Hit", i = 3, fx = "PierceBig" },
+				{ t = 3.11, k = "Stop", d = 0.08 },
+				{ t = 3.12, k = "Shake", a = 0.32, d = 0.25 },
+				{ t = 3.45, k = "Trail", on = false },
+				{ t = 3.6, k = "Dash", to = "Home", d = 0.26 },
 			},
 		},
 
