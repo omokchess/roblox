@@ -409,6 +409,17 @@ for _, classId in CLASSES do
 				local away = (a.Pos.Position - a.Home.Position).Magnitude
 				assert(away > 2, string.format("못질 도중(0.6초)에 이미 칸으로 돌아옴: 집에서 %.2f", away))
 			end
+			-- 결투사 앞뒤관통(2026-10-02 사용자): 첫 찌르기는 대상 너머 멀리, 둘째는 등 뒤에서 다시 꿰뚫고 앞(아군 쪽)으로 지나간다
+			if classId == "Duelist" and skillId == "FrontBackPierce" then
+				local a, foe = director.Actors.player, director.Actors.slime
+				local fwd = a.Home.LookVector
+				step(0.6)
+				local first = (a.Pos.Position - foe.Pos.Position):Dot(fwd)
+				assert(first > 5, string.format("앞뒤관통 첫 찌르기가 대상을 충분히 못 지나감: %.2f", first))
+				step(1.05)
+				local second = (a.Pos.Position - foe.Pos.Position):Dot(fwd)
+				assert(second < -3, string.format("앞뒤관통 둘째 찌르기가 대상을 꿰뚫고 앞으로 못 지나감: %.2f", second))
+			end
 			-- 결투사 강화 스킬(2026-10-02 사용자): 0.67 에 적 진영 맨 끝 줄 너머까지 꿰뚫고 지나간다(돌진 to = "Far")
 			if classId == "Duelist" and skillId == "PointBlank" then
 				local a = director.Actors.player

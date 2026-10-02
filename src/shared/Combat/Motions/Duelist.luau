@@ -206,7 +206,7 @@ return {
 
 	Skills = {
 		-- 앞뒤관통(2026-10-02 사용자 다시 짬): 칼을 오른쪽 아래로 한 번 휘두르고 펜싱 찌르기 준비 → 적을 뚫고 지나가며 쭉 찌른다 →
-		-- 반 바퀴 돌아 다시 휘두르고(첫 찌르기의 피를 턴다) 더 낮고 깊게 준비 → 등 뒤에서 한 번 더 강하게 찌른다.
+		-- 반 바퀴 돌아 다시 휘두르고(첫 찌르기의 피를 턴다) 더 낮고 깊게 준비 → 등 뒤에서 한 번 더 강하게 찌르며 다시 꿰뚫고 지나간다.
 		FrontBackPierce = {
 			Duration = 2.3,
 			Keys = {
@@ -224,23 +224,24 @@ return {
 				K(1.14, "expoOut", behind(SWISH)),
 				K(1.36, "cubicInOut", behind(COCK2)),
 				K(1.46, "sineInOut", behind(COCK2, { Root = { 0, -0.68, -0.56, 0, 224, 0 } })),
-				-- 몸을 다 던져 깊게
+				-- 몸을 다 던져 깊게 — 꿰뚫고 미끄러져 나간다
 				K(1.52, "expoOut", behind(DEEP)),
-				K(1.78, "sineOut", behind(DEEP, { Root = { 0, -0.76, 0.7, 0, 216, 0 }, Torso = { -20, -8, 0 } })),
+				K(1.8, "linear", behind(DEEP, { Root = { 0, -0.76, 0.7, 0, 216, 0 }, Torso = { -20, -8, 0 } })),
 				K(2.0, "cubicInOut", behind(EG)),
 				K(2.3, "cubicInOut", EG),
 			},
 			Events = {
 				{ t = 0.12, k = "Trail", on = true },
-				{ t = 0.54, k = "Dash", to = "Target", gap = -4, d = 0.09 },
+				-- 대상을 7스터드 뚫고 지나간다(2026-10-02 사용자: 관통 후 거리를 더 멀게)
+				{ t = 0.54, k = "Dash", to = "Target", gap = -7, d = 0.12 },
 				{ t = 0.58, k = "Hit", i = 1, fx = "Pierce" },
 				{ t = 0.59, k = "Stop", d = 0.05 },
 				{ t = 0.8, k = "Trail", on = false },
 				{ t = 1.0, k = "Trail", on = true },
 				{ t = 1.16, k = "Fx", n = "Chiburi" },
 				{ t = 1.38, k = "Fx", n = "Glint" },
-				-- 등 뒤에서 대상 쪽으로 한 걸음 파고든다
-				{ t = 1.5, k = "Dash", to = "Target", gap = 1.4, d = 0.07 },
+				-- 등 뒤에서 다시 대상을 꿰뚫고 앞(아군 쪽)으로 지나간다(2026-10-02 사용자: 두 번째도 관통하며 대시)
+				{ t = 1.5, k = "Dash", to = "Target", gap = -5, d = 0.12 },
 				{ t = 1.53, k = "Hit", i = 2, fx = "PierceBackBig" },
 				{ t = 1.54, k = "Stop", d = 0.1 },
 				{ t = 1.55, k = "Shake", a = 0.45, d = 0.3 },
