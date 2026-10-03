@@ -1527,7 +1527,17 @@ function BattleHud:_buildBossInfo()
 		LayoutOrder = 2,
 	}, inner)
 
-	local pad = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 3 }, inner)
+	-- 2026-10-03 사용자: 액티브·패시브·기믹은 탭으로, 부위도 따로따로 보이게. 위 줄 = 큰 탭, 아래 줄 = 부위 탭(액티브일 때만)
+	local tabs = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 3 }, inner)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14), PaddingTop = UDim.new(0, 10) }, tabs)
+	make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, tabs)
+	self.bossTabRow = make("Frame", { Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, LayoutOrder = 1 }, tabs)
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, self.bossTabRow)
+	self.bossPartRow = make("Frame", { Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, LayoutOrder = 2 }, tabs)
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5) }, self.bossPartRow)
+	self.bossTab = "Active"
+
+	local pad = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 4 }, inner)
 	make("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 14) }, pad)
 	self.bossBody = make("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 0, 40),
@@ -1542,6 +1552,30 @@ function BattleHud:_buildBossInfo()
 	self.bossLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		self:_fitBossInfo()
 	end)
+end
+
+-- 탭 단추. 고른 것은 금빛 글·테두리와 밑줄
+local function tabButton(parent: Instance, label: string, selected: boolean, accent: Color3, order: number, dim: boolean?): TextButton
+	local b = make("TextButton", {
+		Size = UDim2.fromOffset(0, parent.Size.Y.Offset),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = if selected then INK_2 else INK,
+		BackgroundTransparency = if selected then 0 else 0.4,
+		BorderSizePixel = 0,
+		AutoButtonColor = true,
+		Text = label,
+		RichText = true,
+		TextColor3 = if selected then accent elseif dim then MUTED else BONE,
+		Font = if selected then Enum.Font.GothamBlack else Enum.Font.GothamBold,
+		TextSize = 13,
+		LayoutOrder = order,
+	}, parent)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, b)
+	stroke(b, if selected then accent else BONE, if selected then 0.2 else 0.75)
+	if selected then
+		make("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, -10, 1, 0), Size = UDim2.new(1, 20, 0, 2), BackgroundColor3 = accent, BorderSizePixel = 0 }, b)
+	end
+	return b
 end
 
 function BattleHud:_fitBossInfo()
@@ -1649,9 +1683,26 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 		return
 	end
 	local def = EnemyDefinitions.Get(bossSnap.Id)
-	local keep = self.boss.Visible and self.bossFocus == focus
+	-- 새로 열거나 다른 부위를 눌렀으면 액티브 탭의 그 부위로. 같은 부위로 고쳐 그리면(스냅샷 갱신) 고른 탭을 지킨다
+	if not self.boss.Visible or self.bossFocus ~= focus then
+		self.bossTab = "Active"
+	end
+	if not focus then
+		-- 고른 부위가 없으면 살아 있는 첫 부위
+		for _, part in def.Parts or {} do
+			for _, u in snapshot.Units or {} do
+				if not focus and u.Part == part.Key and u.Alive then
+					focus = part.Key
+				end
+			end
+		end
+		focus = focus or (def.Parts and def.Parts[1] and def.Parts[1].Key)
+	end
+	local keep = self.boss.Visible and self.bossFocus == focus and self.bossTabShown == self.bossTab
 	local scrollAt = self.bossBody.CanvasPosition
 	self.bossFocus = focus
+	self.bossTabShown = self.bossTab
+	self.bossSnapshot = snapshot
 	local units: { [string]: any } = {}
 	for _, u in snapshot.Units or {} do
 		if u.Part then
@@ -1713,10 +1764,58 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 		end
 	end
 	local phase = bossSnap.Phase or 1
-	heading("액티브", string.format("부위마다 쓰는 스킬 · 지금 %d페이즈", phase))
-	-- 부위마다 칸 하나
+	-- 탭 줄
+	for _, row in { self.bossTabRow, self.bossPartRow } do
+		for _, child in row:GetChildren() do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
+	end
+	local function redraw()
+		if self.bossSnapshot then
+			self:ShowBossInfo(self.bossSnapshot, self.bossFocus)
+		end
+	end
+	local TABS = {
+		{ "Active", "액티브", CRIMSON, #(def.Parts or {}) },
+		{ "Passive", "패시브", GOLD, #(def.Passives or {}) },
+		{ "Gimmick", "기믹", TEAL, #(def.Gimmicks or {}) },
+	}
+	for i, t in TABS do
+		local label = string.format('%s <font color="%s">%d</font>', t[2], hex(MUTED), t[4])
+		tabButton(self.bossTabRow, label, self.bossTab == t[1], t[3], i).Activated:Connect(function()
+			if self.bossTab ~= t[1] then
+				self.bossTab = t[1]
+				redraw()
+			end
+		end)
+	end
+	self.bossPartRow.Visible = self.bossTab == "Active"
+	if self.bossTab == "Active" then
+		for i, part in def.Parts or {} do
+			local u = units[part.Key]
+			local dead = not (u and u.Alive)
+			local dot = string.format('<font color="%s">■</font> ', hex(if dead then MUTED else (part.Color or BONE)))
+			local planned = (not dead and u and ((u.Plans and #u.Plans > 0) or u.Plan)) and string.format(' <font color="%s">!</font>', hex(RED)) or ""
+			local label = dot .. (if dead then "<s>" .. part.Name .. "</s>" else part.Name) .. planned
+			tabButton(self.bossPartRow, label, part.Key == focus, part.Color or GOLD, i, dead).Activated:Connect(function()
+				if self.bossFocus ~= part.Key then
+					self:ShowBossInfo(self.bossSnapshot, part.Key)
+				end
+			end)
+		end
+	end
+
+	-- 본문: 고른 탭만
 	local focusFrame: Frame? = nil
-	for _, part in def.Parts or {} do
+	if self.bossTab == "Active" then
+		heading("액티브", string.format("이 부위가 쓰는 스킬 · 지금 %d페이즈", phase))
+	end
+	for _, part in (if self.bossTab == "Active" then def.Parts else nil) or {} do
+		if part.Key ~= focus then
+			continue
+		end
 		local u = units[part.Key]
 		local isAlive = u ~= nil and u.Alive == true
 		local focused = part.Key == focus
@@ -1793,15 +1892,15 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 			describe(brk, part.Break, GOLD, 0, not isAlive)
 		end
 	end
-	if def.Passives then
+	if def.Passives and self.bossTab == "Passive" then
 		heading("패시브", "늘 걸려 있는 보스 규칙·페이즈 버프")
 		entries(def.Passives, CRIMSON)
 	end
-	if def.Gimmicks then
+	if def.Gimmicks and self.bossTab == "Gimmick" then
 		heading("기믹", "판·스테미나·충전 규칙")
 		entries(def.Gimmicks, TEAL)
 	end
-	if def.Rules then
+	if def.Rules and self.bossTab == "Gimmick" then
 		describe(make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody), table.concat(def.Rules, "\n"), CRIMSON)
 	end
 	self.boss.Visible = true

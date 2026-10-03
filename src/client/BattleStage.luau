@@ -437,7 +437,36 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 		local inset = 0.46 - math.min(i, 4) * 0.045
 		local lift = 0.34 + math.min(i, 4) * 0.03
 		local edgeColor = if e.Unavoid then Color3.new(1, 1, 1) else e.Color:Lerp(Color3.new(1, 1, 1), 0.45)
-		for _, comp in components(g.Cells) do
+		-- 2026-10-03 사용자: 글자·레이저는 떨어진 덩어리마다가 아니라 묶음(Group)에 하나만.
+		-- 가장 큰 덩어리(같으면 묶음 전체 가운데에 가까운 것)에 단다. 테두리·줄무늬는 칸마다 그대로
+		local comps = components(g.Cells)
+		local all = Vector3.zero
+		local n = 0
+		for _, comp in comps do
+			for _, c in comp do
+				local t = tiles.Ally[c[2]] and tiles.Ally[c[2]][c[1]]
+				if t then
+					all += t.Position
+					n += 1
+				end
+			end
+		end
+		all /= math.max(n, 1)
+		local labelComp, bestScore = nil, -math.huge
+		for _, comp in comps do
+			local sum = Vector3.zero
+			for _, c in comp do
+				local t = tiles.Ally[c[2]] and tiles.Ally[c[2]][c[1]]
+				if t then
+					sum += t.Position
+				end
+			end
+			local score = #comp * 1000 - (sum / math.max(#comp, 1) - all).Magnitude
+			if score > bestScore then
+				labelComp, bestScore = comp, score
+			end
+		end
+		for _, comp in comps do
 			local inComp: { [string]: boolean } = {}
 			for _, c in comp do
 				inComp[c[1] .. "," .. c[2]] = true
@@ -459,6 +488,9 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 					local edge = fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(if e.Unavoid then 0.42 else 0.3, 0.08, along.Magnitude * (inset * 2) + 0.3), edgeColor, 0, folder)
 					TweenService:Create(edge, blink, { Transparency = 0.5, Color = e.Color }):Play()
 				end
+			end
+			if comp ~= labelComp then
+				continue
 			end
 			local center = sum / math.max(#comp, 1)
 			local anchor = fxPart("Label", CFrame.new(center + Vector3.new(0, 0.5, 0)), Vector3.new(0.1, 0.1, 0.1), e.Color, 1, folder)
