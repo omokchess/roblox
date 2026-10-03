@@ -1,6 +1,8 @@
 --!nocheck
 --[[
-	PlainsNorth_Build.luau — 2026-10-03. 평원 북쪽 시범 지역을 새 방식으로 짓는다(편집 모드, StudioJobs 로 돌린다).
+	Plains_Build.luau — 2026-10-03. 평원 섬 지형을 새 방식으로 짓는다(편집 모드, StudioJobs 로 돌린다).
+	지역마다 손 배치표 하나(REGIONS): 북쪽(시범, R_평원북) · 동쪽 해안(R_평원동). 서쪽은 숲 섬·지협과 땅이 이어져 있어
+	숲을 바꿀 때 같이 한다(절벽으로 막으면 숲으로 못 간다). 도성 아래 옛 타일은 건물이 올라앉아 있어 건드리지 않는다.
 
 	사용자 확정: 지형은 지역마다 큰 Part 평면 + 큰 구조물(손 배치), 삼각형 법칙, 옛 지형은 ServerStorage 에 백업 후 교체.
 	2026-10-03 사용자: "돌산 같은 것도 기본적으로는 커다란 육면체", "대륙이 사각형이라는 건 곡선을 가지고 있지 않다는 거야"
@@ -8,21 +10,30 @@
 	  땅 = 축에 맞춘 네모 판들(해안선이 계단식 직각), 절벽·돌산 = 회색 바위 상자 + 풀 윗판, 오르막 = 쐐기, 길 = 직각으로 꺾임.
 	  블렌더는 상자로 안 되는 경계벽 잔해(돌 쌓은 벽·망루)만 — ServerStorage.PlainsKit (models/plains/build_kit_plains.py).
 
-	차례(다시 돌려도 된다 — 새 폴더만 지우고 다시 짓는다):
-	  1. 옛 지형 타일(Surface.World.G_평원, 이 구역 안·가운데 -400 < z < 150) → ServerStorage.TerrainBackup.PlainsNorth (처음 한 번만)
-	  2. Surface.R_평원북: 땅 판(LAND) → 바닷가 절벽 상자(CLIFFS) → 돌산·덩어리(MASSES) → 오르막(RAMPS) → 모래 단(SAND)
+	차례(지역마다, 다시 돌려도 된다 — 그 지역 새 폴더만 지우고 다시 짓는다):
+	  1. 옛 지형 타일(Surface.World.G_평원 중 지역 Select 에 맞는 것) → ServerStorage.TerrainBackup.<Backup> (처음 한 번만)
+	  2. Surface.<Folder>: 땅 판(LAND) → 바닷가 절벽 상자(CLIFFS) → 돌산·덩어리(MASSES) → 오르막(RAMPS) → 모래 단(SAND)
 	  3. 경계벽 잔해(RUINS)·바위(ROCKS)·돌길(PATHS)·밭(FIELDS)·나무(TREES)·정자(남산 꼭대기)
 	좌표 = 월드(x 동, z 남 — 북 = -z = 바다·탑의 성역 쪽). 물높이 -3.5, 옛 땅 윗면 ≈ 2, 새 땅 윗면 1.90.
-	보고: /plainsnorth
+	보고: /plainsbuild
 ]]
 local HS = game:GetService("HttpService")
 local SS = game:GetService("ServerStorage")
 local RGB = Color3.fromRGB
 local M = Enum.Material
 
--- 옛 타일을 걷어 낼 곳: Surface.World.G_평원 안에서만. 2026-10-03 첫 실행 때 폴더를 안 가려 같은 x 띠의
--- 탑의 성역·화산·광산 타일까지 옮겼다가 곧바로 되돌린 일이 있다 — 폴더와 z 아래끝을 꼭 둔다
-local AREA = { folder = "G_평원", x0 = -700, x1 = 1200, zMin = -400, zMax = 150 }
+-- 옛 타일은 Surface.World.G_평원 안에서만 걷는다. 2026-10-03 첫 실행 때 폴더를 안 가려 같은 x 띠의
+-- 탑의 성역·화산·광산 타일까지 옮겼다가 곧바로 되돌린 일이 있다 — 폴더와 좌표 범위를 꼭 둔다
+local TILE_FOLDER = "G_평원"
+local NORTH: any = {
+	Folder = "R_평원북",
+	Backup = "PlainsNorth",
+	Note = "2026-10-03 평원 북쪽 시범 지역 교체 전 옛 지형 타일",
+	Select = function(p: Vector3, _empty: boolean): boolean
+		return p.X > -700 and p.X < 1200 and p.Z > -400 and p.Z < 150
+	end,
+	Pavilion = { X = 285, Z = -159, Yaw = 180, Name = "Pavilion_남산" },
+}
 local TOP = 1.90
 local GRASS = RGB(117, 151, 83)
 local ROCK = RGB(132, 130, 124)
@@ -30,8 +41,8 @@ local ROCK2 = RGB(118, 116, 111)
 local SANDC = RGB(219, 200, 155)
 
 --=== 손 배치표 ===--
--- 땅 판: { x0, x1, 북쪽 끝 z } — 남쪽 끝은 모두 z 200(옛 땅 첫 줄 아래로 조금). 이웃 판은 맞닿기만(겹치면 깜박임)
-local LAND = {
+-- 땅 판: { x0, x1, 북쪽 끝 z, 남쪽 끝 z? } — 남쪽 끝이 없으면 z 200(옛 땅 첫 줄 아래로 조금). 이웃 판은 맞닿기만(겹치면 깜박임)
+NORTH.LAND = {
 	{ -600, -420, -60 },
 	{ -420, -160, -130 },
 	{ -160, 140, -170 },
@@ -40,11 +51,10 @@ local LAND = {
 	{ 640, 900, -110 },
 	{ 900, 1080, -40 },
 }
-local SOUTH = 200
 
 -- 바닷가 절벽 상자: { x0, x1, z0, z1, 윗면(땅 위 높이) } — 땅 가장자리를 따라 바다 쪽으로 내밀고 물 아래 -24 까지.
 -- 윗면이 0 보다 크면 땅보다 솟은 턱(풀 윗판), 0 이면 땅과 같은 높이
-local CLIFFS = {
+NORTH.CLIFFS = {
 	-- 서쪽 끝 판(북 -60)
 	{ -610, -540, -82, -56, 4 }, { -540, -470, -78, -58, 0 }, { -470, -420, -84, -58, 7 },
 	{ -432, -414, -134, -56, 10 }, -- 계단 모서리(동서 경계)
@@ -66,7 +76,7 @@ local CLIFFS = {
 }
 
 -- 돌산·큰 덩어리(참고 사진의 초록 윗면 상자): { 이름, x0, x1, z0, z1, 윗면(땅 위 높이) } — 같은 이름은 위로 얹는 켜
-local MASSES = {
+NORTH.MASSES = {
 	-- 남산: 곶 위 넷 켜(위로 갈수록 작고 북쪽으로 몰려 바다 쪽이 깎아지른 벼랑). 꼭대기 = 정자 자리
 	{ "남산", 160, 400, -222, -60, 26 },
 	{ "남산", 190, 370, -210, -90, 44 },
@@ -91,7 +101,7 @@ local MASSES = {
 }
 
 -- 오르막 쐐기: { x, 낮은 끝 z, 높은 끝 z, 너비, 낮은 높이, 높은 높이 } — 남산은 남쪽에서 지그재그로 넷
-local RAMPS = {
+NORTH.RAMPS = {
 	{ 330, -14, -62, 14, 0, 26 },
 	{ 240, -62, -92, 12, 26, 44 },
 	{ 318, -90, -114, 10, 44, 58 },
@@ -101,14 +111,14 @@ local RAMPS = {
 }
 
 -- 모래 단(만): { x0, x1, z0, z1, 윗면 } — 땅(1.9)에서 물(-3.5)로 두 계단
-local SAND = {
+NORTH.SAND = {
 	{ 432, 620, -186, -150, 0.2 },
 	{ 444, 608, -214, -186, -2.0 },
 }
 
 -- 경계벽 잔해(세계관: 오염을 막으려 세웠다가 실패해 버려진 벽) — 바닷가를 따라 축에 맞춰 끊기며 이어진다.
 -- 남산을 돌아가면 드러난다. { 틀, x, z, 돌림(0·90·180), 크기 배율? }
-local RUINS = {
+NORTH.RUINS = {
 	{ "WallRuin_A", -395, -116, 0 },
 	{ "WallRuin_B", -345, -114, 0 },
 	{ "WallRuin_A", -298, -116, 0 },
@@ -122,7 +132,7 @@ local RUINS = {
 }
 
 -- 바위 상자: { x, z, 너비, 높이, 깊이, 돌림(15 의 배수) }
-local ROCKS = {
+NORTH.ROCKS = {
 	{ 140, 30, 9, 6, 8, 0 }, { 152, 40, 5, 4, 5, 15 }, { -40, -40, 8, 5, 7, 0 }, { -30, -30, 4, 3, 4, 45 },
 	{ 520, -60, 10, 7, 8, 0 }, { 470, -120, 7, 5, 6, 30 }, { 530, -200, 6, 4, 5, 0 }, { 545, -206, 4, 3, 4, 15 },
 	{ -520, -20, 8, 6, 7, 0 }, { -506, -8, 4, 3, 4, 30 }, { 380, 40, 9, 6, 9, 0 }, { 830, 60, 6, 4, 5, 45 },
@@ -130,21 +140,21 @@ local ROCKS = {
 }
 
 -- 돌길(정돈된 돌길 — 절화 진입부): { 폭, 점들 } 축에 맞춰 직각으로만 꺾인다
-local PATHS = {
+NORTH.PATHS = {
 	{ 8, { { 330, 150 }, { 330, -14 } } }, -- 도성 쪽에서 남산 첫 오르막 발치까지
 	{ 7, { { 330, 40 }, { 0, 40 }, { 0, -60 }, { -150, -60 }, { -150, -100 } } }, -- 서쪽 → 벽 잔해 망루
 	{ 7, { { 330, 40 }, { 530, 40 }, { 530, -150 } } }, -- 동쪽 → 모래 만
 }
 
 -- 밭: { x0, z0, x1, z1 } 두둑은 x 방향
-local FIELDS = {
+NORTH.FIELDS = {
 	{ -250, 95, -150, 155 },
 	{ 400, 95, 500, 150 },
 	{ -110, 70, -30, 130 },
 }
 
 -- 나무(절화 나무 모델을 복제): { x, z, 돌림, 크기 배율 }
-local TREES = {
+NORTH.TREES = {
 	{ -200, 40, 0, 1 }, { -180, 70, 80, 0.9 }, { -330, 120, 30, 1.1 }, { -120, 170, 120, 1 },
 	{ -60, 40, 200, 0.85 }, { 20, 90, 40, 1 }, { 110, 100, 300, 1.1 }, { 180, 120, 10, 0.9 },
 	{ 400, 30, 60, 1 }, { 470, 0, 150, 0.9 }, { 520, 90, 0, 1.1 }, { 640, 60, 90, 1 },
@@ -157,6 +167,85 @@ local TREES = {
 	-- 남산 첫 켜 위
 	{ 200, -75, 0, 0.8 }, { 385, -80, 90, 0.75 }, { 175, -110, 45, 0.7 },
 }
+
+
+--=== 동쪽 해안(R_평원동) — 도성 동쪽 끝(x≈700)부터 바다까지. 동산(정자 705,250) 둔덕 남쪽·동남 바위 지대 포함 ===--
+-- 걷는 타일: x > 700, 그 위 10 스터드 안에 절화 물건이 없는 것(건물·나무가 올라앉은 타일은 둔다)
+local EAST: any = {
+	Folder = "R_평원동",
+	Backup = "PlainsEast",
+	Note = "2026-10-03 평원 동쪽 해안 교체 전 옛 지형 타일",
+	Select = function(p: Vector3, empty: boolean): boolean
+		return empty and p.X > 700 and p.X < 1250 and p.Z > 150 and p.Z < 1060
+	end,
+	-- 땅 판 { x0, x1, z0(북), z1(남) } — 북쪽 시범 판(z 200 까지)에 맞닿는다
+	LAND = {
+		{ 1080, 1150, 120, 200 },
+		{ 860, 1150, 200, 290 },
+		{ 700, 1150, 290, 600 },
+		{ 700, 1130, 600, 880 },
+		{ 700, 1000, 880, 980 },
+	},
+	-- 바닷가 절벽 상자 { x0, x1, z0, z1, 윗면(땅 위) }
+	CLIFFS = {
+		-- 북동 모서리(시범 지역 동쪽 끝 판과 이음)
+		{ 1070, 1160, 100, 124, 5 }, { 1076, 1090, 90, 200, 0 },
+		-- 동쪽 해안 x 1150
+		{ 1146, 1170, 116, 200, 6 }, { 1146, 1166, 200, 300, 0 }, { 1146, 1172, 300, 392, 4 }, { 1146, 1164, 392, 470, 0 }, { 1146, 1176, 470, 604, 9 },
+		{ 1126, 1152, 590, 614, 5 }, -- 해안선이 한 칸 들어가는 모서리
+		-- 동쪽 해안 x 1130(가운데는 모래 만)
+		{ 1126, 1150, 600, 700, 0 }, { 1126, 1156, 780, 884, 6 },
+		-- 남동 모서리
+		{ 996, 1134, 876, 900, 3 }, { 996, 1020, 880, 984, 7 },
+		-- 남쪽 해안 z 980(동쪽 반)
+		{ 760, 880, 976, 1000, 0 }, { 880, 1004, 976, 1002, 4 },
+	},
+	-- 돌산·덩어리 { 이름, x0, x1, z0, z1, 윗면 }
+	MASSES = {
+		-- 동산 둔덕: 정자 타일(윗면 8.4~9.7) 바로 아래 높이로 둘러싼다(정자는 옛 타일 위에 그대로)
+		{ "동산", 640, 860, 150, 290, 6.4 },
+		-- 동남 바위산(옛 바위 타일 자리) — 도성 동문에서 보면 바다를 가린다
+		{ "동남바위", 770, 930, 680, 810, 10 },
+		{ "동남바위", 795, 905, 698, 790, 22 },
+		{ "동남바위", 820, 875, 715, 768, 34 },
+		-- 동쪽 언덕(해안 쪽 높은 상자 둘)
+		{ "동언덕", 1040, 1140, 380, 480, 14 },
+		{ "동언덕", 1062, 1124, 396, 462, 26 },
+		{ "동둔덕", 930, 990, 540, 600, 6 },
+		{ "남동둔덕", 900, 980, 900, 960, 9 },
+	},
+	-- 오르막 { x, 낮은 끝 z, 높은 끝 z, 너비, 낮은 높이, 높은 높이 }
+	RAMPS = {
+		{ 850, 850, 812, 12, 0, 10 }, -- 동남 바위산 첫 켜로(남쪽에서)
+		{ 1090, 520, 482, 10, 0, 14 }, -- 동쪽 언덕 첫 켜로
+	},
+	-- 모래 만(동쪽 해안 z 700~780)
+	SAND = {
+		{ 1130, 1168, 700, 780, 0.2 },
+		{ 1168, 1196, 706, 774, -2.0 },
+	},
+	RUINS = {},
+	ROCKS = {
+		{ 760, 330, 8, 5, 7, 0 }, { 772, 342, 4, 3, 4, 30 }, { 980, 260, 9, 6, 8, 0 }, { 1000, 680, 7, 5, 6, 15 },
+		{ 1110, 760, 6, 4, 5, 0 }, { 1122, 748, 4, 3, 3, 45 }, { 720, 840, 8, 6, 7, 0 }, { 940, 860, 6, 4, 5, 30 },
+		{ 880, 450, 5, 4, 5, 0 }, { 1020, 620, 7, 5, 6, 0 },
+	},
+	-- 돌길: 동문길 끝(655,690)에서 동쪽 모래 만까지
+	PATHS = {
+		{ 8, { { 660, 690 }, { 1000, 690 }, { 1000, 740 }, { 1128, 740 } } },
+	},
+	FIELDS = {
+		{ 760, 420, 860, 480 },
+		{ 760, 520, 840, 570 },
+	},
+	TREES = {
+		{ 780, 380, 0, 1 }, { 810, 400, 90, 0.9 }, { 900, 330, 200, 1.1 }, { 960, 360, 30, 1 }, { 1000, 300, 120, 0.9 },
+		{ 900, 620, 60, 1 }, { 960, 640, 150, 1.1 }, { 1060, 640, 300, 0.9 }, { 760, 640, 10, 1 }, { 740, 760, 80, 0.85 },
+		{ 960, 760, 240, 1 }, { 1060, 820, 0, 1.1 }, { 760, 930, 45, 0.9 }, { 840, 940, 200, 1 }, { 1100, 560, 330, 0.85 },
+	},
+}
+
+local REGIONS = { NORTH, EAST }
 
 --=== 짓기 ===--
 local lines = {}
@@ -185,7 +274,9 @@ local function block(name, x0, x1, z0, z1, top, bottom, parent, rockColor)
 	part(name .. "_풀", Vector3.new(x1 - x0, 1.2, z1 - z0), CFrame.new(cx, top - 0.6, cz), GRASS, M.Grass, parent)
 end
 
-local ok, err = pcall(function()
+local function build(R: any)
+	local LAND, CLIFFS, MASSES, RAMPS, SAND, RUINS, ROCKS, PATHS, FIELDS, TREES =
+		R.LAND, R.CLIFFS, R.MASSES, R.RAMPS, R.SAND, R.RUINS, R.ROCKS, R.PATHS, R.FIELDS, R.TREES
 	local surface = workspace:FindFirstChild("Surface")
 	assert(surface, "Surface 폴더가 없다")
 	local kit = SS:FindFirstChild("PlainsKit")
@@ -194,37 +285,43 @@ local ok, err = pcall(function()
 	local backupRoot = SS:FindFirstChild("TerrainBackup") or Instance.new("Folder")
 	backupRoot.Name = "TerrainBackup"
 	backupRoot.Parent = SS
-	local backup = backupRoot:FindFirstChild("PlainsNorth")
+	local backup = backupRoot:FindFirstChild(R.Backup)
 	if not backup then
 		backup = Instance.new("Folder")
-		backup.Name = "PlainsNorth"
-		backup:SetAttribute("Note", "2026-10-03 평원 북쪽 시범 지역 교체 전 옛 지형 타일. 되돌리려면 FromPath 속성의 폴더로 옮긴다")
+		backup.Name = R.Backup
+		backup:SetAttribute("Note", R.Note .. ". 되돌리려면 FromPath 속성의 폴더로 옮긴다")
 		backup.Parent = backupRoot
 		local moved = 0
-		local tiles = surface.World:FindFirstChild(AREA.folder)
-		assert(tiles, "Surface.World." .. AREA.folder .. " 가 없다")
+		local tiles = surface.World:FindFirstChild(TILE_FOLDER)
+		assert(tiles, "Surface.World." .. TILE_FOLDER .. " 가 없다")
+		-- 타일 위 10 스터드 안에 절화 물건(건물·나무)이 있나
+		local over = OverlapParams.new()
+		over.FilterType = Enum.RaycastFilterType.Include
+		over.FilterDescendantsInstances = { workspace.Jeolhwa }
 		for _, d in tiles:GetDescendants() do
 			if d:IsA("BasePart") then
 				local p = d.Position
-				if p.X > AREA.x0 and p.X < AREA.x1 and p.Z > AREA.zMin and p.Z < AREA.zMax then
+				local top = p.Y + d.Size.Y / 2
+				local empty = #workspace:GetPartBoundsInBox(CFrame.new(p.X, top + 5, p.Z), Vector3.new(d.Size.X, 10, d.Size.Z), over) == 0
+				if R.Select(p, empty) then
 					d:SetAttribute("FromPath", d.Parent:GetFullName())
 					d.Parent = backup
 					moved += 1
 				end
 			end
 		end
-		say("옛 타일 %d개 → ServerStorage.TerrainBackup.PlainsNorth", moved)
+		say("%s: 옛 타일 %d개 → ServerStorage.TerrainBackup.%s", R.Folder, moved, R.Backup)
 	else
-		say("백업은 이미 있다(옛 타일 %d개) — 건너뜀", #backup:GetChildren())
+		say("%s: 백업은 이미 있다(옛 타일 %d개) — 건너뜀", R.Folder, #backup:GetChildren())
 	end
 
 	-- 2. 새 폴더
-	local old = surface:FindFirstChild("R_평원북")
+	local old = surface:FindFirstChild(R.Folder)
 	if old then
 		old:Destroy()
 	end
 	local root = Instance.new("Folder")
-	root.Name = "R_평원북"
+	root.Name = R.Folder
 	root:SetAttribute("Version", 2)
 	root.Parent = surface
 	local function folder(name)
@@ -237,8 +334,8 @@ local ok, err = pcall(function()
 	-- 2a. 땅 판(윗면 1.90, 두께 12)
 	local land = folder("Land")
 	for i, l in LAND do
-		local x0, x1, zN = l[1], l[2], l[3]
-		part("Land" .. i, Vector3.new(x1 - x0, 12, SOUTH - zN), CFrame.new((x0 + x1) / 2, TOP - 6, (zN + SOUTH) / 2), GRASS, M.Grass, land)
+		local x0, x1, zN, zS = l[1], l[2], l[3], l[4] or 200
+		part("Land" .. i, Vector3.new(x1 - x0, 12, zS - zN), CFrame.new((x0 + x1) / 2, TOP - 6, (zN + zS) / 2), GRASS, M.Grass, land)
 	end
 	-- 2b. 바닷가 절벽 상자(물 아래 -24 까지). 땅 높이와 같은 것은 0.04 올려 땅 판과 겹친 윗면이 깜박이지 않게
 	local cliffs = folder("Cliffs")
@@ -317,19 +414,22 @@ local ok, err = pcall(function()
 			part(string.format("Path%d_%d", pi, i), Vector3.new(w, 0.4, len), CFrame.lookAt((a + b) / 2, b), if i % 2 == 0 then STONE2 else STONE, M.Cobblestone, paths)
 		end
 	end
-	-- 3d. 정자(절화 키트) — 남산 꼭대기 켜 가운데
-	local summit = Vector3.new(285, groundY(285, -159), -159)
+	-- 3d. 정자(절화 키트) — 지역에 Pavilion 이 있으면(북쪽: 남산 꼭대기 켜 가운데)
+	local pv = R.Pavilion
+	local summit = if pv then Vector3.new(pv.X, groundY(pv.X, pv.Z), pv.Z) else Vector3.zero
 	local jk = SS:FindFirstChild("JeolhwaKit")
-	local pav = jk and jk:FindFirstChild("Pavilion_Jeongja")
+	local pav = pv and jk and jk:FindFirstChild("Pavilion_Jeongja")
 	if pav then
 		local m = pav:Clone()
-		m.Name = "Pavilion_남산"
-		m:PivotTo(CFrame.Angles(0, math.rad(180), 0) + m:GetPivot().Position)
+		m.Name = pv.Name
+		m:PivotTo(CFrame.Angles(0, math.rad(pv.Yaw), 0) + m:GetPivot().Position)
 		local cf, size = m:GetBoundingBox()
 		m:PivotTo(m:GetPivot() + Vector3.new(summit.X - cf.X, (summit.Y - 0.2) - (cf.Y - size.Y / 2), summit.Z - cf.Z))
 		m.Parent = root
 	end
-	say("남산 꼭대기 높이 %.1f", summit.Y)
+	if pv then
+		say("%s 높이 %.1f", pv.Name, summit.Y)
+	end
 	-- 3e. 밭
 	local fields = folder("Fields")
 	local SOIL, RIDGE = RGB(122, 100, 73), RGB(104, 84, 60)
@@ -366,6 +466,12 @@ local ok, err = pcall(function()
 		m:PivotTo(m:GetPivot() + Vector3.new(t[1] - cf.X, (y - 0.5) - (cf.Y - size.Y / 2), t[2] - cf.Z))
 		m.Parent = trees
 	end
-	say("땅 %d, 절벽 %d, 덩어리 %d, 오르막 %d, 잔해 %d, 바위 %d, 나무 %d", #LAND, #CLIFFS, #MASSES, #RAMPS, #RUINS, #ROCKS, #TREES)
+	say("%s: 땅 %d, 절벽 %d, 덩어리 %d, 오르막 %d, 잔해 %d, 바위 %d, 나무 %d", R.Folder, #LAND, #CLIFFS, #MASSES, #RAMPS, #RUINS, #ROCKS, #TREES)
+end
+
+local ok, err = pcall(function()
+	for _, R in REGIONS do
+		build(R)
+	end
 end)
-HS:PostAsync("http://127.0.0.1:34999/plainsnorth", tostring(ok) .. " " .. tostring(err) .. "\n" .. table.concat(lines, "\n"))
+HS:PostAsync("http://127.0.0.1:34999/plainsbuild", tostring(ok) .. " " .. tostring(err) .. "\n" .. table.concat(lines, "\n"))
