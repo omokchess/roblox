@@ -309,8 +309,13 @@ local ok, err = pcall(function()
 			tree.Parent = m
 			prop("Pyeongsang", m, frame, -(w - 3) / 2 + 3.2, 0, 90, tops)
 			prop("Pyeongsang", m, frame, (w - 3) / 2 - 3.2, 0, 90, tops)
+		elseif kind == "Sundial" and kit:FindFirstChild("Sundial") then
+			-- 2026-10-03 사용자 "블렌더로": 블렌더 앙부일구 틀(Jeolhwa_Sundial). 피벗 = 대석 밑 가운데, 영침이 +Z(북)
+			local sun = kit.Sundial:Clone()
+			sun:PivotTo(frame)
+			sun.Parent = m
 		elseif kind == "Sundial" then
-			-- 앙부일구: 네모 받침돌 + 돌기둥 + 청동 솥(납작한 반구) + 영침
+			-- (틀이 없을 때) 앙부일구: 네모 받침돌 + 돌기둥 + 청동 솥(납작한 반구) + 영침
 			box("Base", m, frame * CFrame.new(0, 0.3 - 0.5, 0), Vector3.new(w, 1.6, d), STONE)
 			box("Pillar", m, frame * CFrame.new(0, 0.6 + 1.6, 0), Vector3.new(1.8, 3.2, 1.8), STONE2)
 			local bowl = box("Bowl", m, frame * CFrame.new(0, 0.6 + 3.2 + 0.5, 0), Vector3.new(3.2, 1.2, 3.2), { RGB(96, 78, 46), Enum.Material.Metal })
