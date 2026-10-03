@@ -402,6 +402,35 @@ PLAZA = [
 ]
 
 # ------------------------------------------------------------------ 계산
+def wall_corners():
+    """같은 틀의 담 줄 두 끝이 3 스터드 안에서 직각(60~120도)으로 만나는 곳. (x, z, 팔1 ux, uz, 팔2 ux, uz, 묶음)
+    모서리 점 = 두 가운데선의 교점. Jeolhwa_WallCorner 가 Wall_Corner 를 앉힌다(2026-10-03)"""
+    ends = []
+    runs_ = PALACE_WALLS + TOWN_WALLS
+    for i, (k, ax, az, bx, bz, g) in enumerate(runs_):
+        L = math.hypot(bx - ax, bz - az)
+        u = ((bx - ax) / L, (bz - az) / L)
+        ends.append((i, k, ax, az, u, g))
+        ends.append((i, k, bx, bz, (-u[0], -u[1]), g))
+    out = []
+    for p in range(len(ends)):
+        for q in range(p + 1, len(ends)):
+            a, b = ends[p], ends[q]
+            if a[0] == b[0] or a[1] != b[1] or a[1] != "Wall_Segment":
+                continue
+            if math.hypot(a[2] - b[2], a[3] - b[3]) > 3:
+                continue
+            dot = a[4][0] * b[4][0] + a[4][1] * b[4][1]
+            if abs(dot) > 0.5:
+                continue
+            # 교점: a 점 + t·ua = b 점 + s·ub
+            (ux, uz), (vx, vz) = a[4], b[4]
+            det = ux * (-vz) - uz * (-vx)
+            t = ((b[2] - a[2]) * (-vz) - (b[3] - a[3]) * (-vx)) / det
+            out.append((round(a[2] + t * ux, 2), round(a[3] + t * uz, 2), ux, uz, vx, vz, a[5]))
+    return out
+
+
 def rect_world(kind, x, z, yaw, which=0, pad=0.0):
     x0, x1, z0, z1 = KIT[kind][which]
     x0, x1, z0, z1 = x0 - pad, x1 + pad, z0 - pad, z1 + pad
@@ -624,7 +653,7 @@ def emit(path):
         ("WALLS", PALACE_WALLS + TOWN_WALLS), ("GATES", TOWN_GATES),
         ("ROADS", ROADS + PALACE_PATHS), ("POOLS", POOLS), ("ISLANDS", ISLANDS), ("BRIDGES", BRIDGES),
         ("PAVES", PAVES + TOWN_PAVES), ("FIELDS", FIELDS), ("TREES", PALACE_TREES + TOWN_TREES),
-        ("PLAZA", PLAZA),
+        ("PLAZA", PLAZA), ("CORNERS", wall_corners()),
     ]
     lines = ["-- jeolhwa_plan.py 가 적은 표. 손으로 고치지 말고 jeolhwa_plan.py 를 고쳐 다시 뽑는다", "local D = {}"]
     for name, rows in tables:
