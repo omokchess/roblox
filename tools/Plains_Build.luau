@@ -463,7 +463,8 @@ local function build(R: any)
 		end
 		m:PivotTo(CFrame.Angles(0, math.rad(t[3]), 0) + m:GetPivot().Position)
 		local cf, size = m:GetBoundingBox()
-		m:PivotTo(m:GetPivot() + Vector3.new(t[1] - cf.X, (y - 0.5) - (cf.Y - size.Y / 2), t[2] - cf.Z))
+		-- 밑동 덩어리가 떠 보여 2.5 스터드 묻는다(2026-10-03 사용자: 나무 전체 2.5 낮추기)
+		m:PivotTo(m:GetPivot() + Vector3.new(t[1] - cf.X, (y - 3.0) - (cf.Y - size.Y / 2), t[2] - cf.Z))
 		m.Parent = trees
 	end
 	say("%s: 땅 %d, 절벽 %d, 덩어리 %d, 오르막 %d, 잔해 %d, 바위 %d, 나무 %d", R.Folder, #LAND, #CLIFFS, #MASSES, #RAMPS, #RUINS, #ROCKS, #TREES)
