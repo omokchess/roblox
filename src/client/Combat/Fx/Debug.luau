@@ -1,13 +1,22 @@
 --!strict
--- Fx/Debug — 보스 디버그 이펙트: 붉은 중단점 광선, 삭제(마젠타 조각), 패치(초록), 코어 덤프. (2026-09-29)
--- 자리는 부위 Pivot(바닥 가운데, 정면 = -Z) 기준. 부위 모양은 Combat/DebugBoss.luau.
+--[[
+	Fx/Debug — 보스 디버그 이펙트. (2026-09-29, 2026-10-03 다시 씀 — 정십이면체가 투사체를 쏜다)
+
+	2026-10-03 사용자: "돌아가거나, 움직이면서 투사체 같은 걸 발사하면서 공격". 자리는 부위 가운데(ctx.Root = 다면체 가운데,
+	정면 = 아군 쪽 ctx.Forward). 쏘는 이펙트의 ev.d = 날아가는 초 — 모션의 Hit 시각에 닿게 맞춰 두었다(Motions/Debug.luau).
+	  머리      붉은 중단점 탄 하나
+	  삭제 팔   마젠타 삭제 조각 한 줌(아군 칸에 흩어져 꽂힌다)
+	  패치 팔   휘어 날아가는 초록 탄 셋 / 패치 적용은 초록 빛방울을 아군 진영에 뿌린다
+	  코어      큰 마젠타 덩어리(코어 덤프) · 붉은 화살표 탄 둘(널 포인터) · 하늘로 쏜 오류 조각이 쏟아짐(메모리 누수)
+]]
 local Common = require(script.Parent.Common)
+local DebugBoss = require(script.Parent.Parent.DebugBoss)
 local c = Common.c
 
 local RED = c(255, 48, 60)
 local MAGENTA = c(255, 70, 200)
 local CYAN = c(70, 220, 255)
-local GREEN = c(90, 255, 150)
+local GREEN = c(60, 235, 100)
 local SHARDS = { MAGENTA, CYAN, c(40, 34, 60) }
 
 local Fx = {}
@@ -17,83 +26,181 @@ local function shards(Vfx: any, at: Vector3, dir: Vector3?, count: number, speed
 	Vfx.Burst(at, { Count = count, Colors = colors or SHARDS, Size = 0.5, Speed = speed, Dir = dir, Spread = 70, Gravity = 40, Life = 0.7, Material = Enum.Material.Neon })
 end
 
--- 머리 얼굴의 중단점 자리
-local function eye(ctx: any): Vector3
-	return (ctx.Root * CFrame.new(0, 5.7, -2.2)).Position
+-- 부위 반지름(다면체 둘레)
+local function radius(ctx: any): number
+	local key = ctx.Actor and ctx.Actor.BossKey
+	return DebugBoss.Radius[key] or 2.3
 end
+
+-- 쏘는 자리: 다면체 앞면 바로 앞
+local function muzzle(ctx: any): Vector3
+	return ctx.Root.Position + ctx.Forward * (radius(ctx) + 0.6)
+end
+
+-- 날아가는 빛 덩어리(공 + 겉 빛)
+local function orb(Vfx: any, size: number, color: Color3): () -> Model
+	return function()
+		local m = Instance.new("Model")
+		local core = Vfx.Part(Vector3.one * size * 0.55, CFrame.new(), c(255, 240, 250), Enum.Material.Neon, Enum.PartType.Ball)
+		local glow = Vfx.Part(Vector3.one * size, CFrame.new(), color, Enum.Material.Neon, Enum.PartType.Ball)
+		glow.Transparency = 0.35
+		core.Parent, glow.Parent = m, m
+		m.PrimaryPart = glow
+		m.Parent = Vfx.Folder()
+		return m
+	end
+end
+
+-- 날아가는 네모 조각(돈다)
+local function cube(Vfx: any, size: number, color: Color3): () -> BasePart
+	return function()
+		return Vfx.Part(Vector3.one * size, CFrame.new(), color, Enum.Material.Neon)
+	end
+end
+
+local function flight(ev: any, default: number): number
+	return if ev and ev.d then ev.d else default
+end
+
+--=== 머리: 중단점 탄 ===--
 
 function Fx.BeamCharge(ctx: any)
-	local p = eye(ctx)
+	local p = muzzle(ctx)
 	ctx.Vfx.Flash(p, { Color = RED, Size = 3, Life = 0.35, Brightness = 3 })
-	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 2.4, R1 = 0.4, Color = RED, Life = 0.34, Width = 0.2, Facing = true })
+	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 2.4, R1 = 0.4, Color = RED, Life = 0.3, Width = 0.2, Facing = true })
+	ctx.Vfx.Implode(p, { Color = RED, Radius = 3, Count = 8, Life = 0.25 })
 end
 
-function Fx.Beam(ctx: any)
-	local from = eye(ctx)
-	local to = ctx.Target
-	ctx.Vfx.Beam(from, to, { Color = RED, Width = 1.6, Life = 0.4 })
-	ctx.Vfx.Beam(from, to, { Color = c(255, 200, 200), Width = 0.5, Life = 0.3 })
-	ctx.Vfx.Flash(from, { Color = RED, Size = 5, Life = 0.25 })
+function Fx.Bolt(ctx: any, ev: any)
+	local from = muzzle(ctx)
+	ctx.Vfx.Flash(from, { Color = RED, Size = 5, Life = 0.2 })
+	ctx.Vfx.Projectile(from, ctx.Target, { Time = flight(ev, 0.16), Build = orb(ctx.Vfx, 1.3, RED), TrailColor = RED })
 end
 
 function Fx.BeamHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	ctx.Vfx.Flash(p, { Color = RED, Size = 6, Life = 0.25 })
-	shards(ctx.Vfx, p, -ctx.Forward, 8, 14, { RED, c(255, 200, 200) })
+	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.5, R1 = 3.2, Color = RED, Life = 0.3, Width = 0.25, Facing = true })
+	shards(ctx.Vfx, p, ctx.Forward, 8, 14, { RED, c(255, 200, 200) })
 end
 
--- 삭제: 주먹이 닿은 바닥에서 마젠타 조각이 흩어지고 네모 고리가 퍼진다
+--=== 삭제 팔: 삭제 조각 한 줌 ===--
+
+function Fx.DeleteCharge(ctx: any)
+	ctx.Vfx.Implode(muzzle(ctx), { Color = MAGENTA, Radius = 4, Count = 12, Life = 0.24 })
+end
+
+function Fx.DeleteVolley(ctx: any, ev: any)
+	local from = muzzle(ctx)
+	local to = ctx.Target
+	local right = ctx.Forward:Cross(Vector3.new(0, 1, 0))
+	ctx.Vfx.Flash(from, { Color = MAGENTA, Size = 5, Life = 0.2 })
+	for i = 1, 7 do
+		local spot = Vector3.new(to.X, ctx.Ground + 0.3, to.Z) + right * (i - 4) * 1.6 + ctx.Forward * ((i % 3) - 1) * 1.4
+		ctx.Vfx.Projectile(from, spot, { Time = flight(ev, 0.2) * (0.85 + (i % 3) * 0.08), Arc = 1.5 + (i % 2), Spin = 1.5, Build = cube(ctx.Vfx, 0.55, if i % 3 == 0 then CYAN else MAGENTA), TrailColor = MAGENTA })
+	end
+end
+
 function Fx.DeleteSlam(ctx: any)
 	local p = ctx.Target
 	local g = Vector3.new(p.X, ctx.Ground + 0.2, p.Z)
 	shards(ctx.Vfx, g + Vector3.new(0, 0.5, 0), Vector3.new(0, 1, 0), 18, 20)
-	ctx.Vfx.Ring(CFrame.new(g), { R0 = 1, R1 = 5, Color = MAGENTA, Life = 0.4, Width = 0.35, Height = 0.1, Segments = 4 })
+	ctx.Vfx.Ring(CFrame.new(g), { R0 = 1, R1 = 6, Color = MAGENTA, Life = 0.4, Width = 0.35, Height = 0.1, Segments = 4 })
 end
 
 function Fx.DeleteHit(ctx: any, _ev: any, at: Vector3?)
 	ctx.Vfx.Flash(at or ctx.Target, { Color = MAGENTA, Size = 5, Life = 0.22 })
 end
 
--- 강제 적용: 초록 반원으로 쓸고 지나간다
-function Fx.PatchSweep(ctx: any)
-	local p = ctx.Target
-	ctx.Vfx.Slash(CFrame.lookAt(p, p + ctx.Forward) * CFrame.Angles(0, 0, math.rad(90)), { Radius = 5, Color = GREEN, Core = c(220, 255, 230), Width = 1.1, Life = 0.3 })
+--=== 패치 팔 ===--
+
+-- 강제 적용: 초록 탄 셋이 양옆·위로 휘어 한 점에 모인다
+function Fx.PatchShot(ctx: any, ev: any)
+	local from = muzzle(ctx)
+	local right = ctx.Forward:Cross(Vector3.new(0, 1, 0))
+	ctx.Vfx.Flash(from, { Color = GREEN, Size = 5, Life = 0.2 })
+	for i = -1, 1 do
+		local start = from + right * i * 1.2
+		ctx.Vfx.Projectile(start, ctx.Target, { Time = flight(ev, 0.22), Arc = 2.5 - math.abs(i), Build = orb(ctx.Vfx, 0.8, GREEN), TrailColor = GREEN })
+	end
 end
 
 function Fx.PatchHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	ctx.Vfx.Flash(p, { Color = GREEN, Size = 5, Life = 0.22 })
-	shards(ctx.Vfx, p, -ctx.Forward, 6, 12, { GREEN, CYAN })
+	shards(ctx.Vfx, p, ctx.Forward, 6, 12, { GREEN, CYAN })
 end
 
--- 패치 적용: 손바닥에서 초록빛(칸 색은 BattleClient 가 바꾼다)
+-- 패치 적용: 초록빛을 내며 빛방울을 아군 진영 위로 흩뿌린다(칸 색은 BattleClient 가 바꾼다)
 function Fx.PatchApply(ctx: any)
-	local palm = (ctx.Root * CFrame.new(-0.2, 3.7, -5.8)).Position
-	ctx.Vfx.Flash(palm, { Color = GREEN, Size = 6, Life = 0.5, Brightness = 3 })
-	ctx.Vfx.Sparks(palm, { Color = GREEN, Count = 16, Speed = 12 })
+	local from = muzzle(ctx)
+	ctx.Vfx.Flash(from, { Color = GREEN, Size = 7, Life = 0.5, Brightness = 3 })
+	ctx.Vfx.Sparks(from, { Color = GREEN, Count = 16, Speed = 12 })
+	local right = ctx.Forward:Cross(Vector3.new(0, 1, 0))
+	local field = Vector3.new(ctx.Root.X, ctx.Ground + 0.3, ctx.Root.Z) + ctx.Forward * 22
+	for i = 1, 6 do
+		local spot = field + right * ((i - 3.5) * 3) + ctx.Forward * ((i % 2) * 4 - 2)
+		ctx.Vfx.Projectile(from, spot, {
+			Time = 0.45 + i * 0.03,
+			Arc = 5,
+			Build = orb(ctx.Vfx, 0.6, GREEN),
+			TrailColor = GREEN,
+			OnArrive = function(p: Vector3)
+				ctx.Vfx.Flash(p, { Color = GREEN, Size = 3, Life = 0.25 })
+			end,
+		})
+	end
 end
 
--- 코어 덤프: 결정에서 마젠타 충격파가 아군 진영까지 쓸고 간다
-function Fx.CoreDump(ctx: any)
-	local crystal = (ctx.Root * CFrame.new(0, 7.6, -12.1)).Position
-	ctx.Vfx.Flash(crystal, { Color = MAGENTA, Size = 12, Life = 0.4, Brightness = 5 })
-	shards(ctx.Vfx, crystal, ctx.Forward + Vector3.new(0, 0.4, 0), 24, 26)
-	local g = Vector3.new(ctx.Target.X, ctx.Ground + 0.2, ctx.Target.Z)
-	ctx.Vfx.Shockwave(g, { Color = MAGENTA, Radius = 16, Life = 0.5 })
+--=== 코어 ===--
+
+-- 결정(코어 앞에 뜬 팔면체) 자리
+local function crystal(ctx: any): Vector3
+	return ctx.Root.Position + ctx.Forward * 7.8
+end
+
+function Fx.DumpCharge(ctx: any)
+	local p = crystal(ctx)
+	ctx.Vfx.Implode(p, { Color = MAGENTA, Radius = 9, Count = 18, Life = 0.32 })
+	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 6, R1 = 1, Color = MAGENTA, Life = 0.32, Width = 0.3, Facing = true })
+end
+
+-- 코어 덤프: 결정에서 큰 마젠타 덩어리를 쏜다(닿으면 DumpHit 가 아군 진영을 쓸어 터뜨린다)
+function Fx.CoreDump(ctx: any, ev: any)
+	local from = crystal(ctx)
+	ctx.Vfx.Flash(from, { Color = MAGENTA, Size = 12, Life = 0.4, Brightness = 5 })
+	shards(ctx.Vfx, from, ctx.Forward + Vector3.new(0, 0.4, 0), 14, 20)
+	ctx.Vfx.Projectile(from, ctx.Target, { Time = flight(ev, 0.2), Arc = 2, Build = orb(ctx.Vfx, 3.2, MAGENTA), TrailColor = MAGENTA })
 end
 
 function Fx.DumpHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
-	ctx.Vfx.Flash(p, { Color = MAGENTA, Size = 7, Life = 0.25 })
-	shards(ctx.Vfx, p, Vector3.new(0, 1, 0), 10, 14)
+	ctx.Vfx.Flash(p, { Color = MAGENTA, Size = 9, Life = 0.3, Brightness = 5 })
+	shards(ctx.Vfx, p, Vector3.new(0, 1, 0), 14, 18)
+	ctx.Vfx.Shockwave(Vector3.new(p.X, ctx.Ground + 0.2, p.Z), { Color = MAGENTA, Radius = 16, Life = 0.5 })
 end
 
--- 널 포인터: 결정에서 붉은 충격파가 아군 쪽 두 라인으로
-function Fx.NullPointer(ctx: any)
-	local crystal = (ctx.Root * CFrame.new(0, 7.6, -12.1)).Position
-	ctx.Vfx.Flash(crystal, { Color = RED, Size = 10, Life = 0.35, Brightness = 5 })
-	ctx.Vfx.Beam(crystal, ctx.Target, { Color = RED, Width = 2.4, Life = 0.35 })
-	shards(ctx.Vfx, crystal, ctx.Forward, 12, 22, { RED, c(40, 34, 60) })
+-- 널 포인터: 붉은 화살표 탄 둘(길쭉한 네온 + 끝 촉)이 두 갈래로
+function Fx.NullPointer(ctx: any, ev: any)
+	local from = crystal(ctx)
+	local right = ctx.Forward:Cross(Vector3.new(0, 1, 0))
+	ctx.Vfx.Flash(from, { Color = RED, Size = 10, Life = 0.35, Brightness = 5 })
+	for _, side in { -1, 1 } do
+		local to = ctx.Target + right * side * 3
+		ctx.Vfx.Projectile(from + right * side, to, {
+			Time = flight(ev, 0.18),
+			Build = function()
+				local m = Instance.new("Model")
+				local shaft = ctx.Vfx.Part(Vector3.new(0.35, 0.35, 2.8), CFrame.new(0, 0, 0.6), RED, Enum.Material.Neon)
+				local tip = ctx.Vfx.Part(Vector3.new(0.9, 0.9, 0.9), CFrame.new(0, 0, -1) * CFrame.Angles(math.rad(45), 0, math.rad(45)), c(255, 200, 200), Enum.Material.Neon)
+				shaft.Parent, tip.Parent = m, m
+				m.PrimaryPart = shaft
+				m.Parent = ctx.Vfx.Folder()
+				return m
+			end,
+			TrailColor = RED,
+		})
+	end
 end
 
 function Fx.NullHit(ctx: any, _ev: any, at: Vector3?)
@@ -103,22 +210,32 @@ function Fx.NullHit(ctx: any, _ev: any, at: Vector3?)
 	ctx.Vfx.Flash(p, { Color = RED, Size = 6, Life = 0.22 })
 end
 
--- 메모리 누수: 등 위 오류 조각이 떠오르고 마젠타 조각비가 쏟아진다
+-- 메모리 누수: 코어 위로 오류 조각을 쏘아 올렸다가(LeakRise) 아군 위로 쏟아붓는다(LeakRain)
 function Fx.LeakRise(ctx: any)
-	local top = (ctx.Root * CFrame.new(0, 17, 0)).Position
-	ctx.Vfx.Sparks(top, { Color = MAGENTA, Count = 20, Speed = 10 })
+	local top = ctx.Root.Position + Vector3.new(0, radius(ctx) + 1, 0)
+	ctx.Vfx.Burst(top, { Count = 14, Colors = SHARDS, Size = 0.6, Speed = 30, Dir = Vector3.new(0, 1, 0), Spread = 25, Gravity = 10, Life = 0.4, Material = Enum.Material.Neon })
+end
+
+function Fx.LeakRain(ctx: any, ev: any)
+	local sky = ctx.Root.Position + Vector3.new(0, radius(ctx) + 10, 0)
+	local right = ctx.Forward:Cross(Vector3.new(0, 1, 0))
+	local to = ctx.Target
+	for i = 1, 8 do
+		local spot = Vector3.new(to.X, ctx.Ground + 0.3, to.Z) + right * ((i - 4.5) * 1.3) + ctx.Forward * (((i * 7) % 5) - 2)
+		ctx.Vfx.Projectile(sky + right * (i - 4.5), spot, { Time = flight(ev, 0.22) * (0.9 + (i % 2) * 0.1), Arc = 3, Spin = 2, Build = cube(ctx.Vfx, 0.6, SHARDS[(i % 3) + 1]), TrailColor = MAGENTA })
+	end
 end
 
 function Fx.LeakHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
-	shards(ctx.Vfx, p + Vector3.new(0, 5, 0), Vector3.new(0, -1, 0), 14, 18)
+	shards(ctx.Vfx, p + Vector3.new(0, 1, 0), Vector3.new(0, 1, 0), 12, 14)
 	ctx.Vfx.Flash(p, { Color = MAGENTA, Size = 5, Life = 0.2 })
 end
 
 -- 부위가 부서진다: 검은 조각과 마젠타 번쩍임
 function Fx.Break(ctx: any)
-	local p = ctx.Root.Position + Vector3.new(0, 3, 0)
-	ctx.Vfx.Flash(p, { Color = MAGENTA, Size = 10, Life = 0.4 })
+	local p = ctx.Root.Position
+	ctx.Vfx.Flash(p, { Color = MAGENTA, Size = 4 + radius(ctx) * 1.6, Life = 0.4 })
 	shards(ctx.Vfx, p, Vector3.new(0, 1, 0), 26, 22, { c(40, 34, 60), c(58, 52, 80), MAGENTA, CYAN })
 	ctx.Vfx.Shake(0.4, 0.3)
 end

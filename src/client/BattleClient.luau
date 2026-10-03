@@ -60,7 +60,8 @@ local TILE_UNAVOID = Color3.fromRGB(200, 20, 30)
 
 -- 보스 부위 이름표 높이(부위 바닥 기준)
 -- 먼 라인(1)일수록 화면에서 위로 올라가 보이므로 삭제 팔은 낮게, 머리는 높게 달아 겹치지 않게 한다
-local BOSS_LABEL = { Head = 12.5, DeleteArm = 5, PatchArm = 7.2, Core = 19.5 }
+-- 보스 부위 이름표 높이(다면체 가운데 기준 — 코어 반지름 6, 위성 2.3)
+local BOSS_LABEL = { Head = 5.4, DeleteArm = 3.8, PatchArm = 3.8, Core = 9.5 }
 
 local SLOT_KEYS = {
 	[Enum.KeyCode.One] = 1,
@@ -1114,6 +1115,9 @@ function BattleClient:_paintTiles()
 		end
 	end
 
+	-- 2026-10-03 사용자: 보스 디버그 쪽 칸은 아예 없앤다(보이는 것만 — 규칙·칸 차지는 그대로)
+	local bossFight = snapshot.Boss ~= nil
+	BattleStage.SetSideVisible(self.tiles, "Enemy", not bossFight)
 	local modAt: { [string]: string } = {}
 	for _, m in (snapshot.Boss and snapshot.Boss.Mods) or {} do
 		modAt[m.X .. "," .. m.Y] = m.Kind
@@ -1164,7 +1168,10 @@ function BattleClient:_paintTiles()
 
 			local foe = self.tiles.Enemy[y][x]
 			local key = x .. "," .. y
-			if inRange[key] then
+			if bossFight then
+				-- 보스 쪽 칸은 숨긴다(아래 SetSideVisible). 맞을 부위는 몸 윤곽(TargetMark)으로 보인다
+				continue
+			elseif inRange[key] then
 				BattleStage.Paint(foe, if occupied[key] and hitIds[occupied[key]] then TILE_RANGE_HIT else TILE_RANGE, true)
 			else
 				BattleStage.Paint(foe, if occupied[key] then TILE_OCCUPIED else TILE_IDLE, occupied[key] ~= nil)

@@ -1,22 +1,23 @@
 --!strict
 --[[
-	DebugBoss — 보스 디버그의 몸(부위 넷)과 그 몸을 움직이는 rig. (2026-09-29)
+	DebugBoss — 보스 디버그의 몸(부위 넷)과 그 몸을 움직이는 rig. (2026-09-29, 2026-10-03 다시 지음)
 
-	맵 양식처럼 블록을 쌓는다. 버그 덩어리: 검보라 몸통, 코드 줄 같은 청록 네온 띠, 떠다니는 글리치 조각.
-	  머리      IDE 의 붉은 중단점(동그라미) 하나가 얼굴이다
-	  삭제 팔   주먹 앞에 붉은 ✕
-	  패치 팔   손바닥에 초록 +, 팔에 붕대 띠(패치)
-	  코어      큰 몸통. 앞에 마젠타 결정이 박혀 있고 등 위로 오류 조각이 떠 있다
-	부위마다 따로 모델·배우다(맞음·쓰러짐을 부위별로 보여 준다). 자리(Pivot)는 부위가 차지한 칸들 가운데 바닥.
-	정면 = 모델 -Z(아군 쪽), +X = 라인 1 쪽(카메라 반대), 한 칸 = 6 스터드. 카메라는 -X 쪽 옆에서 보므로
-	코드 줄 같은 잔 무늬는 -X 면에 더 많이 넣었다.
+	2026-10-03 사용자: "디버그를 정12각형 구체로 두고, 디버그 쪽에 보이는 칸은 없애고, 돌아가거나 움직이면서 투사체를 쏘며 공격".
+	답: 부위 처리 = "코어 + 위성 셋", 적 칸 = "보이는 것만 없앰"(규칙·칸 차지는 그대로).
+	  코어      큰 정십이면체(둘레 반지름 6, 마젠타 속 빛) + 기운 코드 고리 + 앞에 뜬 마젠타 결정. 칸 위 10 스터드에 뜬다
+	  머리      작은 정십이면체(2.3, 청록 속 빛) + 앞면에 붉은 중단점 + 벌레 더듬이
+	  삭제 팔   작은 정십이면체(붉은 속 빛) + 앞면에 붉은 ✕
+	  패치 팔   작은 정십이면체(초록 속 빛) + 앞면에 초록 + + 비스듬히 감은 붕대 띠
+	위성은 코어 앞에서 코어를 둘러 돈다(자리는 CombatDirector 가 매 프레임 DebugBoss.Orbit 으로 정한다).
+	"블렌더랑 로블록스 내 제작을 섞어서": 다면체·이음새 빛·코드 고리·더듬이·붕대·결정은 블렌더 메시
+	(ReplicatedStorage.MonsterMeshes.Debug<부위> — models/monsters/build_monsters.py), 기호·떠다니는 오류 조각은 아래 Part 표.
+	메시가 없으면(가져오기 전) 공 Part 로 대신한다.
+
+	자리(Pivot) = 다면체 가운데, 정면 = 모델 -Z(아군 쪽). 메시 이름 Spin… 은 다면체와 함께 SPIN_AXIS 둘레로,
+	Ring… 은 RING_AXIS 둘레로 돌고(가운데 기준), Float… 은 떠서 돈다. 기호는 돌지 않고 늘 아군 쪽을 본다.
 
 	rig: Apply(pose) — Root {x,y,z,rx,ry,rz}, Body {sx,sy,sz}(%) 는 슬라임 모션과 같은 뜻(Motions/Debug.luau).
-	Float 조각은 모션과 따로 매 프레임 떠서 돌고 가끔 튄다(살아 있는 버그). Fade 는 쓰러질 때 연출이 올린다.
-
-	2026-10-03 사용자: "블렌더랑 로블록스 내 제작을 섞어서". 몸은 아래 블록 표 그대로, 블록으로 못 만드는 장식
-	(더듬이·유압 실린더·케이블·감은 붕대·베젤·볼트·발톱·팔면체 결정)은 블렌더 메시(ReplicatedStorage.MonsterMeshes.Debug<부위>
-	— models/monsters/build_monsters.py)를 더 얹는다. 메시가 대신하는 블록(REPLACED)은 뺀다. 메시가 없으면 블록만.
+	Fade 는 쓰러질 때 연출이 올린다.
 ]]
 
 local DebugBoss = {}
@@ -29,144 +30,97 @@ local M = Enum.Material
 local BODY = { RGB(34, 30, 48), M.Metal }
 local PANEL = { RGB(58, 52, 80), M.SmoothPlastic }
 local TRIM = { RGB(88, 80, 116), M.Metal }
-local CYAN = { RGB(50, 170, 210), M.Neon } -- 코드 줄: 네온 번짐이 커서 조금 어둡게
+local CYAN = { RGB(50, 170, 210), M.Neon } -- 네온 번짐이 커서 조금 어둡게
 local MAGENTA = { RGB(255, 70, 200), M.Neon }
 local RED = { RGB(255, 48, 60), M.Neon }
-local GREEN = { RGB(60, 235, 100), M.Neon } -- 네온이 밝혀 청록으로 보이지 않게 조금 짙게(2026-10-03)
+local GREEN = { RGB(60, 235, 100), M.Neon } -- 네온이 밝혀 청록으로 보이지 않게 조금 짙게
 local BANDAGE = { RGB(206, 198, 172), M.Fabric }
 
--- { 이름, 크기, 자리, 빛, 돌림(도)?, 꾸밈? }  꾸밈: "Float" 떠다님 · "Cyl" 원기둥(축 = 로컬 X)
+-- 크기·자리(디자인 값 — Motions/Debug.luau·Fx/Debug.luau·CombatDirector 가 같이 쓴다)
+DebugBoss.Radius = { Core = 6, Head = 2.3, DeleteArm = 2.3, PatchArm = 2.3 }
+DebugBoss.Lift = 10 -- 코어 가운데가 칸 바닥 위로 뜨는 높이
+-- 다면체가 도는 축(조금 기울어 굴러가듯)·코드 고리 축(build_monsters.py RING_N 과 같게)
+local SPIN_AXIS = Vector3.new(0.25, 0.35, -1).Unit
+local RING_AXIS = Vector3.new(0.35, 1, -0.2).Unit
+local SPIN_SPEED = { Core = 0.3, Head = 0.9, DeleteArm = -1.0, PatchArm = 0.8 }
+
+-- 위성 궤도: 코어 앞 12 스터드, 아군 쪽에서 보면 코어를 둘러싼 원(반지름 9, 위로 1 비켜)
+local ORBIT_R, ORBIT_FRONT, ORBIT_UP = 9, 12, 1
+DebugBoss.OrbitSpeed = 0.35 -- 라디안/초(가만히 있을 때만 돈다)
+DebugBoss.OrbitPhase = { Head = 0, DeleteArm = 2 * math.pi / 3, PatchArm = 4 * math.pi / 3 }
+
+-- 위성 자리: 코어 가운데 기준 오프셋(코어 공간 — -Z 가 아군 쪽). theta 0 = 꼭대기, 시계 방향(아군이 볼 때)
+function DebugBoss.Orbit(theta: number): Vector3
+	return Vector3.new(ORBIT_R * math.sin(theta), ORBIT_UP + ORBIT_R * math.cos(theta), -ORBIT_FRONT + 1.5 * math.sin(theta * 2))
+end
+
+-- { 이름, 크기, 자리, 빛, 돌림(도)?, 꾸밈? }  꾸밈: "Float" 떠다님 · "Cyl" 원기둥(축 = 로컬 X) · "Ball" 공
 type Spec = { any }
 
 local function S(name: string, size: { number }, at: { number }, col: { any }, rot: { number }?, flag: string?): Spec
 	return { name, size, at, col, rot or { 0, 0, 0 }, flag }
 end
 
--- 한쪽 면에 코드 줄(가는 네온 띠) 여러 개. x 는 면 자리, rows = { {y, z, 길이}, … }
-local function codeLines(list: { Spec }, x: number, rows: { { number } }, col: { any })
-	for i, r in rows do
-		table.insert(list, S("Code" .. i, { 0.1, 0.22, r[3] }, { x, r[1], r[2] }, col))
-	end
+-- 메시가 없을 때의 몸(공). 메시가 있으면 뺀다
+local function fallbackBody(r: number): Spec
+	return S("Body", { r * 1.7, r * 1.7, r * 1.7 }, { 0, 0, 0 }, BODY, nil, "Ball")
 end
 
-local SPECS: { [string]: { Spec } } = {}
-
--- 머리(라인 2, 앞 두 열): 목이 뒤로 코어에 붙고, 얼굴 한가운데 붉은 중단점
-do
-	local h: { Spec } = {
-		S("Neck", { 2.8, 3, 5.2 }, { 0, 3.2, 4.6 }, BODY),
-		S("Head", { 4.6, 4.6, 4.8 }, { 0, 5.6, 0.8 }, BODY),
-		S("Brow", { 4.9, 0.6, 5.2 }, { 0, 8.1, 0.8 }, TRIM),
-		S("Chin", { 3.8, 0.8, 4 }, { 0, 3.05, 0.4 }, PANEL),
-		S("Face", { 4.2, 4.0, 0.3 }, { 0, 5.6, -1.7 }, PANEL),
-		S("Breakpoint", { 0.3, 3.0, 3.0 }, { 0, 5.7, -1.95 }, RED, { 0, 90, 0 }, "Cyl"),
-		S("Glint", { 0.32, 0.9, 0.9 }, { -0.7, 6.4, -2.0 }, { RGB(255, 190, 190), M.Neon }, { 0, 90, 0 }, "Cyl"),
-		S("FinL", { 0.4, 2.4, 2.2 }, { -2.5, 6.4, 1.8 }, TRIM, { 0, 0, -12 }),
-		S("FinR", { 0.4, 2.4, 2.2 }, { 2.5, 6.4, 1.8 }, TRIM, { 0, 0, 12 }),
-		S("Bit1", { 0.6, 0.6, 0.6 }, { 1.6, 9.3, 0.2 }, MAGENTA, { 20, 30, 10 }, "Float"),
-		S("Bit2", { 0.4, 0.4, 0.4 }, { -1.3, 9.7, 1.5 }, CYAN, { 0, 45, 30 }, "Float"),
-		S("Bit3", { 0.5, 0.5, 0.5 }, { 0.3, 10.2, -0.5 }, MAGENTA, { 35, 0, 15 }, "Float"),
-	}
-	codeLines(h, -2.36, { { 4.4, 0.6, 3.2 }, { 5.0, 1.4, 2.0 }, { 5.6, 0.2, 3.8 }, { 6.2, 1.8, 1.4 }, { 6.8, 0.9, 2.6 } }, CYAN)
-	codeLines(h, -1.46, { { 3.6, 4.2, 3.4 }, { 4.3, 5.0, 2.0 } }, CYAN)
-	SPECS.Head = h
-end
-
--- 삭제 팔(라인 1, 앞 두 열): 어깨는 코어에 붙고 주먹이 앞으로. 주먹 앞면에 붉은 ✕
-do
-	local a: { Spec } = {
-		S("Shoulder", { 4.8, 4.8, 4.2 }, { 0.3, 4.6, 5.0 }, BODY),
-		S("Cap", { 5.2, 0.8, 4.6 }, { 0.3, 7.2, 5.0 }, TRIM),
-		S("Upper", { 3.0, 3.0, 5.0 }, { 0.2, 3.9, 1.6 }, PANEL, { -8, 0, 0 }),
-		S("Elbow", { 3.4, 3.4, 2.2 }, { 0.2, 3.0, -1.2 }, BODY),
-		S("Fore", { 3.2, 2.6, 3.6 }, { 0.2, 2.4, -3.2 }, PANEL),
-		S("Fist", { 4.4, 3.6, 2.6 }, { 0.2, 2.2, -5.5 }, BODY),
-		S("Delete1", { 0.4, 3.4, 0.2 }, { 0.2, 2.2, -6.85 }, RED, { 0, 0, 45 }),
-		S("Delete2", { 0.4, 3.4, 0.2 }, { 0.2, 2.2, -6.86 }, RED, { 0, 0, -45 }),
-		S("Knuckle1", { 0.8, 0.8, 0.8 }, { -1.3, 4.2, -5.5 }, TRIM),
-		S("Knuckle2", { 0.8, 0.8, 0.8 }, { 1.7, 4.2, -5.5 }, TRIM),
-		S("Seam1", { 0.1, 0.25, 3.4 }, { -1.42, 2.4, -3.2 }, RED),
-		S("Seam2", { 0.1, 0.25, 4.4 }, { -1.32, 4.0, 1.6 }, RED, { -8, 0, 0 }),
-		S("Bit1", { 0.5, 0.5, 0.5 }, { 1.8, 5.4, -4.6 }, MAGENTA, { 20, 10, 40 }, "Float"),
-		S("Bit2", { 0.35, 0.35, 0.35 }, { -1.5, 4.8, -6.2 }, RED, { 45, 0, 0 }, "Float"),
-	}
-	codeLines(a, -2.14, { { 3.6, 5.0, 2.6 }, { 4.4, 4.4, 1.6 }, { 5.2, 5.4, 3.0 } }, CYAN)
-	SPECS.DeleteArm = a
-end
-
--- 패치 팔(라인 3 — 카메라에 가장 가깝다, 머리를 가리지 않게 낮게): 손바닥에 초록 +, 팔에 붕대
-do
-	local a: { Spec } = {
-		S("Shoulder", { 4.6, 4.2, 4.2 }, { -0.3, 3.9, 5.0 }, BODY),
-		S("Cap", { 5.0, 0.7, 4.6 }, { -0.3, 6.3, 5.0 }, TRIM),
-		S("Upper", { 2.8, 2.6, 5.0 }, { -0.2, 3.0, 1.6 }, PANEL),
-		S("Wrap1", { 3.0, 0.5, 0.8 }, { -0.2, 3.0, 2.8 }, BANDAGE, { 0, 0, 8 }),
-		S("Wrap2", { 3.0, 0.5, 0.8 }, { -0.2, 3.1, 0.6 }, BANDAGE, { 0, 0, -6 }),
-		S("Elbow", { 3.2, 3.0, 2.0 }, { -0.2, 2.4, -1.2 }, BODY),
-		S("Fore", { 3.0, 2.4, 3.4 }, { -0.2, 2.0, -3.2 }, PANEL),
-		S("Wrap3", { 3.2, 0.5, 0.8 }, { -0.2, 2.1, -3.0 }, BANDAGE, { 0, 0, 5 }),
-		S("Palm", { 4.2, 3.2, 0.8 }, { -0.2, 2.3, -5.3 }, BODY),
-		S("Plus1", { 0.45, 2.4, 0.2 }, { -0.2, 2.3, -5.78 }, GREEN),
-		S("Plus2", { 2.4, 0.45, 0.2 }, { -0.2, 2.3, -5.79 }, GREEN),
-		S("Seam", { 0.1, 0.22, 3.2 }, { -1.72, 2.0, -3.2 }, GREEN),
-		S("Bit1", { 0.45, 0.45, 0.45 }, { -1.8, 4.6, -4.2 }, GREEN, { 30, 0, 20 }, "Float"),
-		S("Bit2", { 0.35, 0.35, 0.35 }, { 1.2, 5.2, -5.0 }, CYAN, { 0, 45, 45 }, "Float"),
-	}
-	codeLines(a, -2.62, { { 3.0, 5.2, 3.0 }, { 3.8, 4.6, 1.8 }, { 4.6, 5.6, 2.4 } }, CYAN)
-	SPECS.PatchArm = a
-end
-
--- 코어(뒤 네 열, 세 라인 전부): 큰 몸통 + 앞 어깨(팔 쪽)·목 소켓·마젠타 결정, 등 위로 오류 조각
-do
-	local c: { Spec } = {
-		S("Foot1", { 3.6, 1.4, 3.6 }, { 5.5, 0.7, -6 }, BODY),
-		S("Foot2", { 3.6, 1.4, 3.6 }, { -5.5, 0.7, -6 }, BODY),
-		S("Foot3", { 3.6, 1.4, 3.6 }, { 5.5, 0.7, 6 }, BODY),
-		S("Foot4", { 3.6, 1.4, 3.6 }, { -5.5, 0.7, 6 }, BODY),
-		S("Torso", { 14, 8.6, 20 }, { 0, 5.6, -1 }, BODY),
-		S("Top", { 15, 1, 21 }, { 0, 10.4, -1 }, TRIM),
-		S("Hump", { 10, 3, 12 }, { 0, 12.4, 1 }, PANEL),
-		S("ShoulderL1", { 4.2, 5.2, 4.2 }, { 6.3, 5.4, -11.8 }, BODY),
-		S("ShoulderL3", { 4.2, 5.2, 4.2 }, { -6.3, 5.4, -11.8 }, BODY),
-		S("Socket", { 3.4, 3.4, 3 }, { 0, 4.2, -12.2 }, BODY),
-		S("Frame", { 6.4, 6.0, 0.6 }, { 0, 7.4, -11.3 }, TRIM),
-		S("Chamber", { 5.2, 4.8, 0.6 }, { 0, 7.4, -11.4 }, { RGB(16, 12, 24), M.SmoothPlastic }),
-		S("Crystal", { 2.4, 2.4, 2.4 }, { 0, 7.6, -12.1 }, MAGENTA, { 35, 45, 0 }, "Float"),
-		S("Fin1", { 1, 3, 5 }, { 4, 13.4, 6.5 }, TRIM, { 25, 0, 0 }),
-		S("Fin2", { 1, 3, 5 }, { -4, 13.4, 6.5 }, TRIM, { 25, 0, 0 }),
-		S("Fin3", { 1, 3.6, 5 }, { 0, 14.2, 5 }, TRIM, { 30, 0, 0 }),
-		S("Spine", { 2, 2, 6 }, { 0, 11.6, 9.6 }, PANEL, { -18, 0, 0 }),
-		S("Err1", { 1.6, 1.6, 1.6 }, { 2.6, 15.8, -1.5 }, MAGENTA, { 20, 30, 10 }, "Float"),
-		S("Err2", { 1.0, 1.0, 1.0 }, { -3.2, 16.6, 1.2 }, CYAN, { 0, 45, 30 }, "Float"),
-		S("Err3", { 0.8, 0.8, 0.8 }, { 0.4, 17.4, 3.4 }, RED, { 35, 0, 15 }, "Float"),
-		S("Err4", { 1.2, 1.2, 1.2 }, { -1.6, 15.2, -4.2 }, MAGENTA, { 10, 60, 0 }, "Float"),
-		S("Err5", { 0.6, 0.6, 0.6 }, { 4.4, 16.9, 2.6 }, CYAN, { 45, 45, 0 }, "Float"),
-		S("Err6", { 0.7, 0.7, 0.7 }, { -4.6, 14.9, -2.8 }, RED, { 0, 20, 45 }, "Float"),
-		S("Err7", { 0.5, 0.5, 0.5 }, { 1.8, 18.2, 0.4 }, MAGENTA, { 30, 30, 30 }, "Float"),
-	}
-	-- 카메라 쪽(-X) 옆면: 코드 줄 여섯, 반대쪽 셋
-	codeLines(c, -7.06, { { 3.0, -6, 7 }, { 4.0, -2, 11 }, { 5.0, -7, 5 }, { 6.0, 1, 9 }, { 7.0, -4, 12 }, { 8.0, 3, 6 } }, CYAN)
-	codeLines(c, 7.06, { { 4.0, 0, 9 }, { 5.6, -3, 6 }, { 7.2, 2, 10 } }, CYAN)
-	-- 몸통 앞면 가장자리 마젠타 띠(결정 쪽으로 모인다)
-	table.insert(c, S("Seam1", { 0.25, 7, 0.1 }, { -4.2, 6.2, -11.06 }, MAGENTA))
-	table.insert(c, S("Seam2", { 0.25, 7, 0.1 }, { 4.2, 6.2, -11.06 }, MAGENTA))
-	SPECS.Core = c
-end
+local SPECS: { [string]: { Spec } } = {
+	-- 기호는 다면체 둘레(반지름 2.3) 바로 바깥 앞에 뜬다 — 다면체가 돌아도 닿지 않게
+	Head = {
+		fallbackBody(2.3),
+		S("Breakpoint", { 0.25, 2.1, 2.1 }, { 0, 0, -2.6 }, RED, { 0, 90, 0 }, "Cyl"),
+		S("Glint", { 0.27, 0.55, 0.55 }, { -0.42, 0.42, -2.69 }, { RGB(255, 190, 190), M.Neon }, { 0, 90, 0 }, "Cyl"),
+		S("Bit1", { 0.35, 0.35, 0.35 }, { 1.1, 3.9, 0.5 }, MAGENTA, { 20, 30, 10 }, "Float"),
+		S("Bit2", { 0.28, 0.28, 0.28 }, { -0.9, 4.3, 0.2 }, CYAN, { 0, 45, 30 }, "Float"),
+		S("Bit3", { 0.3, 0.3, 0.3 }, { 0.25, 4.8, -0.4 }, MAGENTA, { 35, 0, 15 }, "Float"),
+	},
+	DeleteArm = {
+		fallbackBody(2.3),
+		S("Delete1", { 0.36, 2.5, 0.2 }, { 0, 0, -2.62 }, RED, { 0, 0, 45 }),
+		S("Delete2", { 0.36, 2.5, 0.2 }, { 0, 0, -2.63 }, RED, { 0, 0, -45 }),
+		S("Bit1", { 0.3, 0.3, 0.3 }, { 1.6, 2.4, -0.6 }, MAGENTA, { 20, 10, 40 }, "Float"),
+		S("Bit2", { 0.25, 0.25, 0.25 }, { -1.7, 2.0, -0.4 }, RED, { 45, 0, 0 }, "Float"),
+	},
+	PatchArm = {
+		fallbackBody(2.3),
+		S("Plus1", { 0.4, 2.1, 0.2 }, { 0, 0, -2.62 }, GREEN),
+		S("Plus2", { 2.1, 0.4, 0.2 }, { 0, 0, -2.63 }, GREEN),
+		S("Bit1", { 0.3, 0.3, 0.3 }, { -1.7, 2.3, -0.5 }, GREEN, { 30, 0, 20 }, "Float"),
+		S("Bit2", { 0.25, 0.25, 0.25 }, { 1.5, 2.6, -0.3 }, CYAN, { 0, 45, 45 }, "Float"),
+	},
+	-- 코어: 위로 오류 조각이 떠 있다. 결정은 메시(팔면체)가 있으면 그것으로
+	Core = {
+		fallbackBody(6),
+		S("Crystal", { 2, 2, 2 }, { 0, 0, -7.8 }, MAGENTA, { 35, 45, 0 }, "Float"),
+		S("Err1", { 1.4, 1.4, 1.4 }, { 2.4, 7.6, -1.5 }, MAGENTA, { 20, 30, 10 }, "Float"),
+		S("Err2", { 0.9, 0.9, 0.9 }, { -3.0, 8.4, 1.2 }, CYAN, { 0, 45, 30 }, "Float"),
+		S("Err3", { 0.7, 0.7, 0.7 }, { 0.4, 9.2, 2.6 }, RED, { 35, 0, 15 }, "Float"),
+		S("Err4", { 1.1, 1.1, 1.1 }, { -1.6, 7.2, -3.4 }, MAGENTA, { 10, 60, 0 }, "Float"),
+		S("Err5", { 0.55, 0.55, 0.55 }, { 4.0, 8.7, 2.0 }, CYAN, { 45, 45, 0 }, "Float"),
+		S("Err6", { 0.65, 0.65, 0.65 }, { -4.2, 6.9, -2.2 }, RED, { 0, 20, 45 }, "Float"),
+		S("Err7", { 0.45, 0.45, 0.45 }, { 1.6, 10.0, 0.4 }, MAGENTA, { 30, 30, 30 }, "Float"),
+	},
+}
 
 DebugBoss.Parts = { "Head", "DeleteArm", "PatchArm", "Core" }
 
--- 메시 이름의 낱말 → 빛(먼저 맞는 것)
+-- 메시 이름의 낱말 → 빛(먼저 맞는 것, 없으면 몸 색)
 local MESH_LOOK: { { any } } = {
 	{ "Bandage", BANDAGE },
-	{ "Magenta", MAGENTA },
-	{ "Trim", TRIM },
 	{ "Panel", PANEL },
+	{ "Trim", TRIM },
+	{ "Magenta", MAGENTA },
+	{ "Red", RED },
+	{ "Green", GREEN },
+	{ "Cyan", CYAN },
 }
 
--- 메시가 있으면 빼는 블록(메시가 더 잘 만든 것)
-local REPLACED = { Wrap1 = true, Wrap2 = true, Wrap3 = true, Knuckle1 = true, Knuckle2 = true, Crystal = true }
+-- 메시가 있으면 빼는 Part(메시가 대신한다)
+local REPLACED = { Body = true, Crystal = true }
 
--- 블록 표 + 메시 장식 Spec 목록과 메시들. 메시 창고가 없으면 블록 표 그대로
+-- Part 표 + 메시 Spec 목록과 메시들. 메시 창고가 없으면 Part 표 그대로
 local function buildSpecs(key: string): ({ Spec }, { [string]: MeshPart })
 	local specs = SPECS[key] or SPECS.Core
 	local shared = game:GetService("ReplicatedStorage"):FindFirstChild("MonsterMeshes")
@@ -194,7 +148,10 @@ local function buildSpecs(key: string): ({ Spec }, { [string]: MeshPart })
 		end
 		local rx, ry, rz = offset:ToOrientation()
 		local p = offset.Position
-		local flag = if string.sub(mp.Name, 1, 5) == "Float" then "Float" else nil
+		local flag = if string.sub(mp.Name, 1, 5) == "Float" then "Float"
+			elseif string.sub(mp.Name, 1, 4) == "Spin" then "Spin"
+			elseif string.sub(mp.Name, 1, 4) == "Ring" then "Ring"
+			else nil
 		table.insert(list, S(mp.Name, { mp.Size.X, mp.Size.Y, mp.Size.Z }, { p.X, p.Y, p.Z }, col, { rx / RAD, ry / RAD, rz / RAD }, flag))
 		meshes[mp.Name] = mp
 	end
@@ -202,7 +159,7 @@ local function buildSpecs(key: string): ({ Spec }, { [string]: MeshPart })
 end
 
 --[[
-	부위 하나를 짓는다. 돌려주는 값이 곧 rig 다(`.Model`). home 은 Pivot 자리.
+	부위 하나를 짓는다. 돌려주는 값이 곧 rig 다(`.Model`). home 은 다면체 가운데 자리.
 ]]
 function DebugBoss.new(key: string, home: CFrame)
 	local self = setmetatable({}, DebugBoss)
@@ -221,6 +178,8 @@ function DebugBoss.new(key: string, home: CFrame)
 	self.Pivot = home
 	self.Fade = 0
 	self.Parts = {}
+	self.SpinSpeed = SPIN_SPEED[key] or 0.5
+	self.SpinPhase = math.random() * math.pi * 2
 	local list, meshes = buildSpecs(key)
 	for i, s in list do
 		local size, at, col, rot, flag = s[2], s[3], s[4], s[5], s[6]
@@ -236,8 +195,12 @@ function DebugBoss.new(key: string, home: CFrame)
 		p.CanQuery = false
 		p.CastShadow = col[2] ~= M.Neon
 		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
-		if flag == "Cyl" and p:IsA("Part") then
-			p.Shape = Enum.PartType.Cylinder
+		if p:IsA("Part") then
+			if flag == "Cyl" then
+				p.Shape = Enum.PartType.Cylinder
+			elseif flag == "Ball" then
+				p.Shape = Enum.PartType.Ball
+			end
 		end
 		local rest = CFrame.new(at[1], at[2], at[3]) * CFrame.fromOrientation(rot[1] * RAD, rot[2] * RAD, rot[3] * RAD)
 		p.CFrame = home * rest
@@ -248,6 +211,8 @@ function DebugBoss.new(key: string, home: CFrame)
 			Size = p.Size,
 			Alpha = 0,
 			Float = if flag == "Float" then i * 1.37 else nil,
+			Axis = if flag == "Spin" then SPIN_AXIS elseif flag == "Ring" then RING_AXIS else nil,
+			Rate = if flag == "Ring" then 0.5 else 1,
 		})
 	end
 	return self
@@ -268,9 +233,17 @@ function DebugBoss:Apply(pose: any)
 		primary.CFrame = self.Pivot
 	end
 	local t = os.clock()
+	local spin = self.SpinPhase + t * self.SpinSpeed
 	for _, e in self.Parts do
 		local rest = e.Rest
-		local cf = base * CFrame.new(rest.X * sx, rest.Y * sy, rest.Z * sz) * rest.Rotation
+		local at = CFrame.new(rest.X * sx, rest.Y * sy, rest.Z * sz) * rest.Rotation
+		local cf
+		if e.Axis then
+			-- 다면체·고리는 가운데(원점) 둘레로 돈다
+			cf = base * CFrame.fromAxisAngle(e.Axis, spin * e.Rate) * at
+		else
+			cf = base * at
+		end
 		local k = e.Float
 		if k then
 			cf = cf * CFrame.new(0, math.sin(t * 1.7 + k) * 0.3, 0) * CFrame.Angles(0, t * 0.9 + k, 0)

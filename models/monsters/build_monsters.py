@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-build_monsters.py — 보스 디버그의 블렌더 장식 메시를 FBX 하나로 내보낸다. (2026-10-03)
-  사용자(2026-10-03): "블렌더랑 로블록스 내 제작을 섞어서" · "슬라임은 원래 쓰던 슬라임으로".
-  → 몸 덩어리·코드 줄·✕/+·떠다니는 조각은 로블록스 Part(src/client/Combat/DebugBoss.luau 부품 표) 그대로,
-    블록으로는 못 만드는 것(휜 더듬이·유압 실린더·케이블·감은 붕대·베젤·볼트·발톱·팔면체 결정)만 여기서 메시로.
-    슬라임은 블록 그대로(메시 없음).
+build_monsters.py — 보스 디버그(정십이면체 코어 + 위성 셋)의 블렌더 메시를 FBX 하나로 내보낸다. (2026-10-03)
+  사용자(2026-10-03): "디버그를 정12각형 구체로 두고 … 돌아가거나, 움직이면서 투사체 같은 걸 발사하면서 공격" →
+  코어 = 큰 정십이면체, 머리·삭제·패치 = 작은 정십이면체 위성(코어 앞을 돈다). "블렌더랑 로블록스 내 제작을 섞어서" →
+  다면체·이음새 빛·코드 고리·더듬이·붕대 띠는 여기(블렌더), 기호(중단점·✕·+)·떠다니는 오류 조각은 DebugBoss.luau 의 Part.
+  슬라임은 블록 그대로(메시 없음).
 
-- 모델 공간: 바닥 가운데(Pivot) 원점, +Y 위, -Z 정면(아군 쪽) — 부품 표와 같은 자리(치수는 그 표의 블록에 맞췄다).
-- 이름 "<모델>_<부품>": DebugHead_MeshTrim, DebugPatchArm_MeshBandage, DebugCore_FloatMagentaCrystal …
-  색은 이름의 낱말(Trim·Panel·Bandage·Magenta)로 DebugBoss.luau 가 입히고, Float… 은 떠서 돈다.
+- 모델 공간: 원점 = 다면체 가운데, +Y 위, -Z 정면(아군 쪽). 면 하나가 정면(-Z)을 본다.
+- 이름 "<모델>_<부품>": Spin… = 다면체와 함께 돈다(축은 DebugBoss.luau SPIN_AXIS), Ring… = 코드 고리(축 RING_N, 같은 값),
+  Float… = 떠서 돈다, 그 밖(Mesh…)은 고정. 색은 이름의 낱말(Panel·Magenta·Red·Green·Cyan·Trim·Bandage, 없으면 몸 색).
 - 원점 표지 MonstersOrigin_Marker(1×1×1) — tools/MonsterMeshes.luau 가 원점·배율을 되찾아 ReplicatedStorage.MonsterMeshes 로 정리.
 
 돌리는 법: blender -b -P models/monsters/build_monsters.py → 스튜디오 Ctrl+M 로 Monsters.fbx → bash tools/job.sh tools/MonsterMeshes.luau
@@ -18,7 +18,7 @@ import os
 import sys
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "weapons"))
@@ -45,99 +45,107 @@ class Model:
 # ── 보스 디버그 ─────────────────────────────────
 
 
-def band(g, center, inner, depth, thick, rot=(0, 0, 0)):
-    """상자 단면(inner = (w, h))을 두르는 띠(가운데가 빈 네모 고리) — 붕대·목 고리·테두리"""
-    cx, cy, cz = center
-    w, h = inner
-    R = rot
-    for dx, dy, sx, sy in ((0, (h + thick) / 2, w + 2 * thick, thick), (0, -(h + thick) / 2, w + 2 * thick, thick),
-                           ((w + thick) / 2, 0, thick, h), (-(w + thick) / 2, 0, thick, h)):
-        L.bbox(g, _rot(center, (dx, dy, 0), R), (sx, sy, depth), min(thick, depth) * 0.3, R)
+PHI = (1 + 5 ** 0.5) / 2
+RING_N = Vector((0.35, 1.0, -0.2)).normalized()  # 코어 코드 고리의 축(DebugBoss.luau RING_AXIS 와 같게)
 
 
-def _rot(center, off, rot):
-    rx, ry, rz = (math.radians(a) for a in rot)
-    from mathutils import Matrix
-    M = Matrix.Rotation(ry, 4, "Y") @ Matrix.Rotation(rx, 4, "X") @ Matrix.Rotation(rz, 4, "Z")
-    v = M @ Vector(off)
-    return (center[0] + v.x, center[1] + v.y, center[2] + v.z)
+def dodeca(R):
+    """둘레 반지름 R 정십이면체: 면마다 (꼭짓점 5개(반시계, 바깥에서 볼 때), 가운데, 바깥 법선). 면 하나가 -Z 를 본다."""
+    vs = [Vector(v) for v in
+          [(x, y, z) for x in (-1, 1) for y in (-1, 1) for z in (-1, 1)]
+          + [(0, y / PHI, z * PHI) for y in (-1, 1) for z in (-1, 1)]
+          + [(x / PHI, y * PHI, 0) for x in (-1, 1) for y in (-1, 1)]
+          + [(x * PHI, 0, z / PHI) for x in (-1, 1) for z in (-1, 1)]]
+    ns = [Vector(n).normalized() for n in
+          [(0, y * PHI, z) for y in (-1, 1) for z in (-1, 1)]
+          + [(x, 0, z * PHI) for x in (-1, 1) for z in (-1, 1)]
+          + [(x * PHI, y, 0) for x in (-1, 1) for y in (-1, 1)]]
+    rot = ns[0].rotation_difference(Vector((0, 0, -1)))
+    k = R / 3 ** 0.5
+    vs = [rot @ v * k for v in vs]
+    ns = [rot @ n for n in ns]
+    faces = []
+    for n in ns:
+        best = max(v.dot(n) for v in vs)
+        ring = [v for v in vs if v.dot(n) > best - 1e-6]
+        c = sum(ring, Vector()) / 5
+        u = (ring[0] - c).normalized()
+        w = n.cross(u)
+        ring.sort(key=lambda v: math.atan2((v - c).dot(w), (v - c).dot(u)))
+        faces.append((ring, c, n))
+    return faces
 
 
-def bolts(g, pts, r=0.16):
-    for q in pts:
-        L.ball(g, q, r, 10, 6)
-
-
-def piston(g, a, b, r0=0.36, r1=0.17):
-    """유압 실린더: a 쪽 굵은 통 → b 쪽 가는 막대, 끝마다 고리"""
-    a, b = Vector(a), Vector(b)
-    mid = a.lerp(b, 0.55)
-    L.tube(g, [tuple(a), tuple(a.lerp(mid, 0.5)), tuple(mid)], r0, 12)
-    L.tube(g, [tuple(mid.lerp(a, 0.1)), tuple(mid.lerp(b, 0.5)), tuple(b)], r1, 10)
-    L.ball(g, tuple(a), r0 * 1.15, 12, 8)
-    L.ball(g, tuple(b), r0 * 0.9, 12, 8)
+def shell(m, R, glow_name, glow_col, BODYC, PANELC):
+    """판 12장(사이 틈으로 속 빛이 보인다) + 판 가운데 거꾸로 선 작은 오각 패널 + 속 빛 다면체 — 전부 같이 돈다"""
+    plate, panel = m.g("SpinPlate", BODYC, 30), m.g("SpinPanel", PANELC, 30)
+    t = 0.08 * R
+    for ring, c, n in dodeca(R):
+        def loop(shrink, lift, turn=0.0):
+            out = []
+            for v in ring:
+                d = (v - c) * shrink
+                if turn:
+                    d = Matrix.Rotation(turn, 3, n) @ d
+                out.append(tuple(c + d + n * lift))
+            return out
+        L.loft(plate, [loop(0.9, -t), loop(0.9, -0.35 * t), loop(0.84, 0)])
+        L.loft(panel, [loop(0.46, -0.01, math.radians(36)), loop(0.46, 0.035 * R, math.radians(36)), loop(0.4, 0.05 * R, math.radians(36))])
+    g = m.g("SpinGlow" + glow_name, glow_col, None)
+    for ring, c, n in dodeca(R * 0.93):
+        L.loft(g, [[tuple(v) for v in ring], [tuple(c)]], cap_start=True, cap_end=False)
 
 
 def debug():
-    """블록(DebugBoss.luau 의 부품 표 — 로블록스 Part)으로는 못 만드는 것만 메시로: 휜 관·고리·볼트·발톱·결정"""
     out = []
-    PANELC, TRIMC = rgb(58, 52, 80), rgb(88, 80, 116)
-    MAG = rgb(255, 70, 200)
+    BODYC, PANELC, TRIMC = rgb(34, 30, 48), rgb(58, 52, 80), rgb(88, 80, 116)
+    MAG, RED, GREEN, CYAN = rgb(255, 70, 200), rgb(255, 48, 60), rgb(60, 235, 100), rgb(50, 170, 210)
 
-    # 머리: 얼굴 테(모니터 베젤)·모서리 볼트·목 마디 고리·옆 통풍 살·벌레 더듬이 둘
+    # 코어: 반지름 6 정십이면체(마젠타 속 빛) + 기운 코드 고리(점선처럼 끊긴 띠, 고리 축으로 돈다) + 앞에 뜬 팔면체 결정
+    c = Model("DebugCore")
+    shell(c, 6.0, "Magenta", MAG, BODYC, PANELC)
+    ring = c.g("RingCyan", CYAN, None)
+    u = RING_N.cross(Vector((0, 0, 1))).normalized()
+    w = RING_N.cross(u)
+    dashes = [5, 2, 9, 3, 4, 1, 7, 2, 3, 6, 2, 8, 4, 2, 5, 3]  # 코드 줄처럼 길고 짧게(합 = 마디 수)
+    seg, a0 = sum(dashes) * 3, 0
+    for i, ln in enumerate(dashes):
+        if i % 2 == 0:
+            pts = []
+            for j in range(ln * 3 + 1):
+                ang = math.tau * (a0 * 3 + j) / seg
+                pts.append(tuple((u * math.cos(ang) + w * math.sin(ang)) * 9.5))
+            L.tube(ring, pts, 1.0, 4, section=[(0.28, 0.07), (-0.28, 0.07), (-0.28, -0.07), (0.28, -0.07)])
+        a0 += ln
+    L.lathe(c.g("FloatMagentaCrystal", MAG, None), [(0, -1.5), (1.0, 0), (0, 1.5)], 6, (0, 0, -7.8), "Y")
+    out.append(c)
+
+    # 위성 셋: 반지름 2.3. 머리 = 청록 속 빛 + 벌레 더듬이, 삭제 = 붉은 속 빛, 패치 = 초록 속 빛 + 비스듬히 감은 붕대 띠
     h = Model("DebugHead")
-    t, p = h.g("MeshTrim", TRIMC, 35), h.g("MeshPanel", PANELC, 35)
-    band(t, (0, 5.6, -1.82), (3.9, 3.7), 0.36, 0.28)
-    bolts(t, [(sx * 2.09, 5.6 + sy * 1.99, -2.02) for sx in (-1, 1) for sy in (-1, 1)], 0.14)
-    for z in (3.8, 5.0, 6.2):
-        band(t, (0, 3.2, z), (2.8, 3.0), 0.42, 0.16)
-    for i in range(3):
-        L.bbox(p, (2.36, 3.7 + i * 0.45, 0.8), (0.14, 0.2, 3.2), 0.05)
+    shell(h, 2.3, "Cyan", CYAN, BODYC, PANELC)
+    t = h.g("MeshTrim", TRIMC, 35)
     for sx in (-1, 1):
-        path = [(sx * 1.3, 8.3, 2.4), (sx * 1.7, 9.0, 2.6), (sx * 2.3, 9.7, 2.0), (sx * 2.8, 10.1, 1.0), (sx * 3.0, 10.1, 0.2)]
-        L.tube(t, path, [0.17, 0.14, 0.12, 0.1, 0.09], 8)
-        L.ball(h.g("MeshTipMagenta", MAG, None), (sx * 3.02, 10.08, 0.05), 0.24, 12, 8)
+        path = [(sx * 0.6, 1.9, 0.5), (sx * 0.9, 2.6, 0.6), (sx * 1.3, 3.2, 0.2), (sx * 1.6, 3.5, -0.4), (sx * 1.7, 3.5, -0.9)]
+        L.tube(t, path, [0.11, 0.09, 0.08, 0.07, 0.06], 8)
+        L.ball(h.g("MeshTipMagenta", MAG, None), (sx * 1.72, 3.48, -0.98), 0.17, 12, 8)
     out.append(h)
 
-    # 삭제 팔: 주먹 손가락 마디 넷(블록 Knuckle 둘 대신)·어깨 볼트·윗팔 유압 실린더(카메라 쪽 -X)·손목 고리
     a = Model("DebugDeleteArm")
-    t = a.g("MeshTrim", TRIMC, 35)
-    for i in range(4):
-        L.bbox(t, (-1.35 + i * 1.03, 4.05, -6.2), (0.86, 0.5, 1.0), 0.18, seg=2)
-    bolts(t, [(-2.12, 4.6 + dy, 5.0 + dz) for dy in (-1.6, 1.6) for dz in (-1.4, 1.4)], 0.2)
-    piston(t, (-2.0, 5.4, 3.6), (-1.75, 3.5, -0.9))
-    band(t, (0.2, 2.4, -4.0), (3.2, 2.6), 0.4, 0.16)
+    shell(a, 2.3, "Red", RED, BODYC, PANELC)
     out.append(a)
 
-    # 패치 팔: 비스듬히 감은 붕대 셋 + 늘어진 꼬리(블록 Wrap 셋 대신)·유압 실린더·손바닥 테·어깨 볼트
     a = Model("DebugPatchArm")
-    t, bd = a.g("MeshTrim", TRIMC, 35), a.g("MeshBandage", rgb(206, 198, 172), 50)
-    band(bd, (-0.2, 3.0, 2.8), (2.8, 2.6), 0.75, 0.13, (10, 0, 0))
-    band(bd, (-0.2, 3.0, 0.7), (2.8, 2.6), 0.75, 0.13, (-8, 0, 0))
-    band(bd, (-0.2, 2.0, -3.0), (3.0, 2.4), 0.8, 0.13, (6, 0, 0))
-    L.tube(bd, [(-1.68, 2.2, -3.3), (-1.75, 1.6, -3.5), (-1.72, 1.0, -3.9), (-1.62, 0.6, -4.1)], [0.12, 0.11, 0.1, 0.08], 6,
-           section=[(1.0, 0.25), (-1.0, 0.25), (-1.0, -0.25), (1.0, -0.25)])
-    piston(t, (-2.25, 4.6, 3.6), (-2.0, 2.9, -0.9))
-    band(t, (-0.2, 2.3, -5.42), (4.2, 3.2), 0.3, 0.14)
-    bolts(t, [(-2.42, 3.9 + dy, 5.0 + dz) for dy in (-1.4, 1.4) for dz in (-1.4, 1.4)], 0.2)
+    shell(a, 2.3, "Green", GREEN, BODYC, PANELC)
+    bd = a.g("MeshBandage", rgb(206, 198, 172), 50)
+    n = Vector((0.55, 0.8, 0.25)).normalized()
+    u = n.cross(Vector((0, 0, 1))).normalized()
+    w = n.cross(u)
+    pts = [tuple((u * math.cos(math.tau * i / 40) + w * math.sin(math.tau * i / 40)) * 2.42) for i in range(41)]
+    L.tube(bd, pts, 1.0, 4, cap=False, section=[(0.07, 0.3), (-0.07, 0.3), (-0.07, -0.3), (0.07, -0.3)])
+    end = Vector(pts[30])
+    L.tube(bd, [tuple(end), tuple(end + Vector((0.1, -0.5, -0.15))), tuple(end + Vector((0.05, -1.0, -0.35))), tuple(end + Vector((0.15, -1.4, -0.45)))],
+           [0.25, 0.23, 0.2, 0.16], 4, section=[(1.0, 0.25), (-1.0, 0.25), (-1.0, -0.25), (1.0, -0.25)])
     out.append(a)
-
-    # 코어: 발톱(발마다 앞 셋)·윗판 볼트·+X 옆 통풍 살·등 케이블 둘·어깨 고리·결정(블록 Crystal 대신 길쭉한 팔면체, 떠서 돈다)
-    c = Model("DebugCore")
-    t, p = c.g("MeshTrim", TRIMC, 35), c.g("MeshPanel", PANELC, 35)
-    for fx, fz in ((5.5, -6), (-5.5, -6), (5.5, 6), (-5.5, 6)):
-        for k in (-1, 0, 1):
-            L.bbox(t, (fx + k * 1.1, 0.45, fz - 2.1), (0.7, 0.9, 1.0), 0.2, (-12, 0, 0), seg=2)
-    bolts(t, [(sx * 7.1, 10.95, z) for sx in (-1, 1) for z in (-10.6, -1, 8.6)], 0.24)
-    for i in range(6):
-        L.bbox(p, (7.08, 2.6 + i * 0.55, 6.6), (0.16, 0.24, 3.6), 0.06)
-    for k, (x0, x1) in enumerate(((-2.6, -4.8), (2.6, 4.6))):
-        path = [(x0, 12.0, 6.8), (x0 * 1.1, 11.6, 9.4), ((x0 + x1) / 2, 9.8, 10.2), (x1, 7.0, 9.8), (x1, 4.4, 9.1)]
-        L.tube(t, path, 0.42 - 0.05 * k, 10)
-    for x in (6.3, -6.3):
-        band(t, (x, 5.4, -11.8), (4.2, 4.2), 0.5, 0.16, (90, 0, 0))
-    L.lathe(c.g("FloatMagentaCrystal", MAG, None), [(0, -1.5), (1.0, 0), (0, 1.5)], 6, (0, 7.6, -12.1), "Y")
-    out.append(c)
     return out
 
 

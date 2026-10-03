@@ -333,6 +333,25 @@ function BattleStage.GroupMarks(tiles: { [string]: { { BasePart } } }, kind: "Pe
 	end
 end
 
+--[[
+	한쪽 진영 칸을 통째로 보이거나 숨긴다(2026-10-03 사용자: 보스 디버그 쪽 칸은 아예 없애기 — 보이는 것만, 규칙은 그대로).
+	칸 파트는 남겨 둔다(드래그·자리 계산이 쓴다). 윤곽선·글자만 끈다.
+]]
+function BattleStage.SetSideVisible(tiles: { [string]: { { BasePart } } }, side: string, visible: boolean)
+	for _, row in tiles[side] or {} do
+		for _, part in row do
+			local box = part:FindFirstChild("Mark") :: SelectionBox?
+			if box then
+				box.Visible = visible
+			end
+			local tag = part:FindFirstChild("Tag") :: BillboardGui?
+			if tag then
+				tag.Enabled = visible
+			end
+		end
+	end
+end
+
 -- 구경용(2026-09-29 요청: 남이 싸울 때 그 칸에 무슨 기능이 있는지 보이게): 보스 판만 칠하고 글자를 단다.
 -- 검수 칸(Pending·Gone)은 칸 글자 대신 묶음 표시(GroupMarks)
 function BattleStage.PaintBoard(tiles: { [string]: { { BasePart } } }, board: any)
@@ -367,6 +386,8 @@ function BattleStage.PaintBoard(tiles: { [string]: { { BasePart } } }, board: an
 	end
 	BattleStage.GroupMarks(tiles, "Pending", pending)
 	BattleStage.GroupMarks(tiles, "Gone", gone)
+	-- 보스 판이면 보스 쪽 칸은 숨긴다(SetSideVisible)
+	BattleStage.SetSideVisible(tiles, "Enemy", false)
 end
 
 return BattleStage

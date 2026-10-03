@@ -48,10 +48,12 @@ local ok, err = pcall(function()
 		rig.Pivot = CFrame.new(base + Vector3.new(-30 + i * 5, 0, -18))
 		rig:Apply({ Body = { 0, 0, 0 }, Eyes = { 0, if i == 3 then 100 else 0 } })
 	end
-	-- 보스: 부위 자리 = 칸 가운데 바닥. 코어 뒤, 머리 가운데 앞, 팔 양옆 앞(한 칸 6)
-	local homes = { Core = Vector3.new(6, 0, 6), Head = Vector3.new(6, 0, -9), DeleteArm = Vector3.new(12, 0, -9), PatchArm = Vector3.new(0, 0, -9) }
+	-- 보스: 코어는 칸 위 Lift, 위성은 코어 앞 궤도(연출과 같은 DebugBoss.Orbit). 정면(-Z)이 카메라 쪽
+	local face = CFrame.lookAt(Vector3.zero, Vector3.new(0, 0, -1))
+	local center = CFrame.new(base + Vector3.new(6, DebugBoss.Lift, 10)) * face
 	for _, key in DebugBoss.Parts do
-		local rig = DebugBoss.new(key, CFrame.new(base + homes[key]))
+		local home = if key == "Core" then center else CFrame.new(center * DebugBoss.Orbit(DebugBoss.OrbitPhase[key] + 0.4)) * center.Rotation
+		local rig = DebugBoss.new(key, home)
 		rig.Model.Parent = folder
 		rig:Apply({})
 	end

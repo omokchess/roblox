@@ -1,10 +1,13 @@
 --!strict
 --[[
-	보스 디버그 모션. (2026-09-29)
+	보스 디버그 모션. (2026-09-29, 2026-10-03 다시 짬 — 정십이면체 코어 + 위성 셋)
 
 	부위마다 따로 움직인다(Client/Combat/DebugBoss.luau 가 입힌다). 채널은 슬라임과 같다:
-	  Root = { x, y, z, rx, ry, rz }   부위 전체(바닥 가운데 기준). z+ = 뒤(아군 반대쪽), 회전은 도
+	  Root = { x, y, z, rx, ry, rz }   부위 전체(다면체 가운데 기준). z+ = 뒤(아군 반대쪽), 회전은 도
 	  Body = { sx, sy, sz }            늘고 줄기(%)
+	다면체가 도는 것·위성이 코어 앞을 도는 것은 모션이 아니라 DebugBoss·CombatDirector 가 늘 한다(공격 중엔 궤도가 멈춰 겨눈다).
+	2026-10-03 사용자: "돌아가거나, 움직이면서 투사체 같은 걸 발사하면서 공격" — 공격마다 투사체를 쏘고(Fx 의 d = 날아가는 초),
+	투사체가 닿는 순간이 Hit 이다. Hit·Duration 시각은 예전 그대로(연출 박자).
 	부위마다 Idle·Windup(예고)·Hit·Death 와 제 스킬(Skills[스킬 Id])을 가진다. 스킬 Id 는 BattleSkills 보스 스킬.
 	이펙트 이름(Fx·fx)은 Client/Combat/Fx/Debug.luau.
 ]]
@@ -15,29 +18,44 @@ end
 local Z = { 0, 0, 0, 0, 0, 0 }
 local B0 = { 0, 0, 0 }
 
--- 맞음: 뒤로 밀리며 눌렸다가 되돌아온다(부위 공통)
+-- 맞음: 뒤로 튕기며 기울었다가 되돌아온다(부위 공통)
 local HIT = {
 	Duration = 0.55,
 	BlendIn = 0.02,
 	Keys = {
 		K(0, nil, B0, Z),
-		K(0.04, "expoOut", { 8, -10, 8 }, { 0, 0, 0.6, 6, 0, 0 }),
-		K(0.2, "quadOut", { -4, 5, -4 }, { 0, 0, 0.3, -2, 0, 0 }),
+		K(0.04, "expoOut", { -8, -8, -8 }, { 0.2, 0.3, 0.9, 12, 0, 8 }),
+		K(0.2, "quadOut", { 4, 4, 4 }, { 0, 0.1, 0.4, -3, 0, -2 }),
 		K(0.55, "sineInOut", B0, Z),
 	},
 }
 
--- 부서짐: 좌우로 튀며 떨다가 무너져 가라앉는다(부위 공통, 뒤이어 연출이 흐리게 지운다)
+-- 부서짐(위성): 글리치로 떨다가 기울며 떨어진다(뒤이어 연출이 흐리게 지운다)
 local DEATH = {
 	Duration = 1.1,
 	BlendIn = 0.02,
 	Keys = {
 		K(0, nil, B0, Z),
-		K(0.08, "linear", { 4, -4, 4 }, { 0.35, 0, 0, 0, 0, 4 }),
-		K(0.16, "linear", { -4, 4, -4 }, { -0.35, 0, 0, 0, 0, -4 }),
-		K(0.24, "linear", { 6, -6, 6 }, { 0.25, 0, 0.2, 2, 0, 3 }),
-		K(0.9, "quadIn", { 20, -70, 20 }, { 0, -1.5, 0.4, 8, 0, 0 }),
-		K(1.1, "linear", { 24, -80, 24 }, { 0, -1.8, 0.4, 8, 0, 0 }),
+		K(0.08, "linear", { 6, -4, 6 }, { 0.35, 0, 0, 0, 0, 8 }),
+		K(0.16, "linear", { -4, 6, -4 }, { -0.35, 0, 0, 0, 0, -8 }),
+		K(0.24, "linear", { 8, 8, 8 }, { 0.25, 0.3, 0.2, 6, 0, 10 }),
+		K(0.9, "quadIn", { -30, -30, -30 }, { 0.6, -7, 1.0, 50, 0, 70 }),
+		K(1.1, "linear", { -40, -40, -40 }, { 0.7, -8.5, 1.1, 60, 0, 80 }),
+	},
+	Events = { { t = 0.1, k = "Fx", n = "Break" } },
+}
+
+-- 부서짐(코어): 크게 떨다가 안으로 무너져 줄어든다
+local DEATH_CORE = {
+	Duration = 1.1,
+	BlendIn = 0.02,
+	Keys = {
+		K(0, nil, B0, Z),
+		K(0.08, "linear", { 6, -6, 6 }, { 0.5, 0, 0, 0, 0, 4 }),
+		K(0.16, "linear", { -6, 6, -6 }, { -0.5, 0, 0, 0, 0, -4 }),
+		K(0.3, "quadOut", { 14, 14, 14 }, { 0, 0.4, 0, 4, 0, 2 }),
+		K(0.9, "quadIn", { -55, -55, -55 }, { 0, -3, 0, 10, 0, 0 }),
+		K(1.1, "linear", { -70, -70, -70 }, { 0, -3.5, 0, 12, 0, 0 }),
 	},
 	Events = { { t = 0.1, k = "Fx", n = "Break" } },
 }
@@ -52,30 +70,36 @@ local function windup(body: { number }, root: { number }): any
 		Loop = true,
 		Keys = {
 			K(0, "sineInOut", body, j(0, 0)),
-			K(0.09, "sineInOut", body, j(0.08, 2)),
-			K(0.18, "sineInOut", body, j(-0.08, -2)),
-			K(0.27, "sineInOut", body, j(0.05, 1)),
+			K(0.09, "sineInOut", body, j(0.1, 3)),
+			K(0.18, "sineInOut", body, j(-0.1, -3)),
+			K(0.27, "sineInOut", body, j(0.06, 1)),
 		},
 	}
 end
 
-local HEAD_WIND = { 0, 0.4, 0.5, 10, 0, 0 }
-local DEL_WIND = { 0, 1.2, 0.6, 18, 0, 0 }
-local PATCH_WIND = { 0, 0.8, 1.0, 10, -12, 0 }
+-- 예고 자세: 뒤로 살짝 물러나 겨눈다
+local HEAD_WIND = { 0, 0.3, 0.6, -6, 0, 0 }
+local DEL_WIND = { 0, 0.6, 0.8, -8, 0, 0 }
+local PATCH_WIND = { 0, 0.4, 0.8, -6, 0, 0 }
+
+-- 둥실(위성 공통 대기)
+local function bob(d: number, dy: number, tilt: number): any
+	return {
+		Duration = d,
+		Loop = true,
+		Keys = {
+			K(0, "sineInOut", B0, Z),
+			K(d / 2, "sineInOut", { 1.5, 1.5, 1.5 }, { 0, dy, 0, tilt, 0, tilt * 0.6 }),
+			K(d, "sineInOut", B0, Z),
+		},
+	}
+end
 
 return {
-	-- 머리: 둥실 떠서 천천히 끄덕인다. 광선은 젖혔다가 앞으로 탁 튕기며 쏜다
+	-- 머리: 중단점 탄. 뒤로 당기며 부풀었다가 붉은 탄을 탁 쏘고 반동으로 밀린다
 	Head = {
-		Idle = {
-			Duration = 3.1,
-			Loop = true,
-			Keys = {
-				K(0, "sineInOut", B0, Z),
-				K(1.55, "sineInOut", { 0, 2, 0 }, { 0, 0.35, 0.1, -3, 2, 0 }),
-				K(3.1, "sineInOut", B0, Z),
-			},
-		},
-		Windup = windup({ 4, -4, 4 }, HEAD_WIND),
+		Idle = bob(3.1, 0.4, -3),
+		Windup = windup({ 5, 5, 5 }, HEAD_WIND),
 		Hit = HIT,
 		Death = DEATH,
 		Skills = {
@@ -83,15 +107,15 @@ return {
 				Duration = 1.25,
 				BlendIn = 0.05,
 				Keys = {
-					K(0, nil, { 4, -4, 4 }, HEAD_WIND),
-					K(0.3, "quadIn", { 6, -6, 6 }, { 0, 0.6, 0.8, 14, 0, 0 }),
-					K(0.42, "expoOut", { -6, 8, -6 }, { 0, 0.2, -0.6, -8, 0, 0 }),
-					K(0.8, "sineInOut", { -2, 3, -2 }, { 0, 0.1, -0.3, -4, 0, 0 }),
+					K(0, nil, { 5, 5, 5 }, HEAD_WIND),
+					K(0.28, "quadIn", { 12, 12, 12 }, { 0, 0.4, 1.0, -8, 0, 0 }),
+					K(0.32, "expoOut", { -10, -10, -10 }, { 0, 0.2, 1.6, 6, 0, 0 }),
+					K(0.8, "sineInOut", { -2, -2, -2 }, { 0, 0.1, 0.5, 2, 0, 0 }),
 					K(1.25, "sineInOut", B0, Z),
 				},
 				Events = {
 					{ t = 0.08, k = "Fx", n = "BeamCharge" },
-					{ t = 0.42, k = "Fx", n = "Beam" },
+					{ t = 0.3, k = "Fx", n = "Bolt", d = 0.16 },
 					{ t = 0.46, k = "Hit", i = 1, fx = "BeamHit" },
 					{ t = 0.46, k = "Shake", a = 0.35, d = 0.25 },
 				},
@@ -99,17 +123,9 @@ return {
 		},
 	},
 
-	-- 삭제 팔: 느리게 흔들린다. 칸 삭제는 높이 들었다가 내리찍는다
+	-- 삭제 팔: 위로 솟으며 거꾸로 빨리 돌고, 마젠타 삭제 조각을 한 줌 흩뿌려 칸에 꽂는다
 	DeleteArm = {
-		Idle = {
-			Duration = 3.4,
-			Loop = true,
-			Keys = {
-				K(0, "sineInOut", B0, Z),
-				K(1.7, "sineInOut", B0, { 0, 0.2, 0.1, -3, 0, 1 }),
-				K(3.4, "sineInOut", B0, Z),
-			},
-		},
+		Idle = bob(3.4, 0.3, 3),
 		Windup = windup(B0, DEL_WIND),
 		Hit = HIT,
 		Death = DEATH,
@@ -119,12 +135,14 @@ return {
 				BlendIn = 0.05,
 				Keys = {
 					K(0, nil, B0, DEL_WIND),
-					K(0.3, "quadOut", { -4, 6, -4 }, { 0, 2.6, 1.0, 30, 0, 0 }),
-					K(0.56, "expoIn", { 10, -12, 10 }, { 0, -0.4, -1.2, -16, 0, 0 }),
-					K(0.85, "sineInOut", { 4, -5, 4 }, { 0, -0.2, -0.8, -10, 0, 0 }),
+					K(0.3, "quadOut", { 10, 10, 10 }, { 0, 1.8, 0.6, -14, 0, 20 }),
+					K(0.38, "expoOut", { -8, -8, -8 }, { 0, 1.2, -1.4, 10, 0, -10 }),
+					K(0.85, "sineInOut", { 2, 2, 2 }, { 0, 0.4, -0.4, 4, 0, 0 }),
 					K(1.35, "sineInOut", B0, Z),
 				},
 				Events = {
+					{ t = 0.12, k = "Fx", n = "DeleteCharge" },
+					{ t = 0.36, k = "Fx", n = "DeleteVolley", d = 0.2 },
 					{ t = 0.56, k = "Fx", n = "DeleteSlam" },
 					{ t = 0.58, k = "Hit", i = 1, fx = "DeleteHit" },
 					{ t = 0.56, k = "Shake", a = 0.5, d = 0.3 },
@@ -133,17 +151,9 @@ return {
 		},
 	},
 
-	-- 패치 팔: 강제 적용은 뒤로 젖혔다가 옆으로 쓸고, 패치 적용은 손바닥을 들어 초록빛을 낸다
+	-- 패치 팔: 강제 적용은 옆으로 비틀었다가 초록 탄 셋을 휘어 쏘고, 패치 적용은 위로 떠올라 초록빛을 뿌린다
 	PatchArm = {
-		Idle = {
-			Duration = 2.9,
-			Loop = true,
-			Keys = {
-				K(0, "sineInOut", B0, Z),
-				K(1.45, "sineInOut", B0, { 0, 0.18, 0.1, -2, -2, 0 }),
-				K(2.9, "sineInOut", B0, Z),
-			},
-		},
+		Idle = bob(2.9, 0.35, -2),
 		Windup = windup(B0, PATCH_WIND),
 		Hit = HIT,
 		Death = DEATH,
@@ -153,15 +163,15 @@ return {
 				BlendIn = 0.05,
 				Keys = {
 					K(0, nil, B0, PATCH_WIND),
-					K(0.28, "quadOut", B0, { 0, 1.2, 1.2, 12, -22, 0 }),
-					K(0.46, "expoOut", { 4, -4, 4 }, { 0, 0.4, -1.0, -6, 26, 0 }),
-					K(0.8, "sineInOut", B0, { 0, 0.2, -0.4, -2, 10, 0 }),
+					K(0.26, "quadOut", { 8, 8, 8 }, { 0, 0.6, 1.0, -6, -20, 0 }),
+					K(0.32, "expoOut", { -6, -6, -6 }, { 0, 0.3, -0.8, 4, 18, 0 }),
+					K(0.8, "sineInOut", B0, { 0, 0.1, -0.3, 1, 6, 0 }),
 					K(1.2, "sineInOut", B0, Z),
 				},
 				Events = {
-					{ t = 0.46, k = "Fx", n = "PatchSweep" },
+					{ t = 0.28, k = "Fx", n = "PatchShot", d = 0.22 },
 					{ t = 0.5, k = "Hit", i = 1, fx = "PatchHit" },
-					{ t = 0.46, k = "Shake", a = 0.3, d = 0.2 },
+					{ t = 0.5, k = "Shake", a = 0.3, d = 0.2 },
 				},
 			},
 			PatchCells = {
@@ -169,8 +179,8 @@ return {
 				BlendIn = 0.05,
 				Keys = {
 					K(0, nil, B0, Z),
-					K(0.3, "backOut", { -4, 6, -4 }, { 0, 1.4, 0.2, -12, 0, 0 }),
-					K(0.6, "sineInOut", { -2, 3, -2 }, { 0, 1.2, 0.2, -10, 0, 0 }),
+					K(0.3, "backOut", { 10, 10, 10 }, { 0, 1.6, 0.2, -10, 0, 0 }),
+					K(0.6, "sineInOut", { 4, 4, 4 }, { 0, 1.3, 0.2, -6, 0, 0 }),
 					K(1.1, "sineInOut", B0, Z),
 				},
 				Events = { { t = 0.36, k = "Fx", n = "PatchApply" } },
@@ -178,66 +188,69 @@ return {
 		},
 	},
 
-	-- 코어: 숨 쉬듯 부풀었다 가라앉는다. 코어 덤프는 크게 부풀었다가 터뜨린다
+	-- 코어: 숨 쉬듯 부풀었다 가라앉는다. 큰 공격은 크게 부풀며 모았다가 쏜다
 	Core = {
 		Idle = {
 			Duration = 3.6,
 			Loop = true,
 			Keys = {
 				K(0, "sineInOut", B0, Z),
-				K(1.8, "sineInOut", { 1.5, 3, 1.5 }, { 0, 0.1, 0, 0, 0, 0 }),
+				K(1.8, "sineInOut", { 2.5, 2.5, 2.5 }, { 0, 0.3, 0, 0, 0, 0 }),
 				K(3.6, "sineInOut", B0, Z),
 			},
 		},
-		Windup = windup({ 6, 8, 6 }, { 0, 0.2, 0, 0, 0, 0 }),
+		Windup = windup({ 6, 6, 6 }, { 0, 0.2, 0.3, 0, 0, 0 }),
 		Hit = HIT,
-		Death = DEATH,
+		Death = DEATH_CORE,
 		Skills = {
+			-- 코어 덤프: 크게 부풀며 결정에 마젠타를 모아 큰 덩어리를 쏜다 — 닿으면 아군 진영을 쓸어 터진다
 			CoreDump = {
 				Duration = 1.5,
 				BlendIn = 0.05,
 				Keys = {
-					K(0, nil, { 6, 8, 6 }, { 0, 0.2, 0, 0, 0, 0 }),
-					K(0.42, "quadIn", { 12, 15, 12 }, { 0, 0.5, 0, -2, 0, 0 }),
-					K(0.54, "expoOut", { -8, -10, -8 }, { 0, -0.2, -0.3, 3, 0, 0 }),
+					K(0, nil, { 6, 6, 6 }, { 0, 0.2, 0.3, 0, 0, 0 }),
+					K(0.4, "quadIn", { 14, 14, 14 }, { 0, 0.5, 0.6, -3, 0, 0 }),
+					K(0.46, "expoOut", { -10, -10, -10 }, { 0, -0.2, 1.4, 4, 0, 0 }),
 					K(0.9, "elasticOut", { 2, 2, 2 }, Z),
 					K(1.5, "sineInOut", B0, Z),
 				},
 				Events = {
-					{ t = 0.54, k = "Fx", n = "CoreDump" },
+					{ t = 0.1, k = "Fx", n = "DumpCharge" },
+					{ t = 0.42, k = "Fx", n = "CoreDump", d = 0.2 },
 					{ t = 0.62, k = "Hit", i = 1, fx = "DumpHit" },
-					{ t = 0.54, k = "Shake", a = 0.7, d = 0.4 },
+					{ t = 0.62, k = "Shake", a = 0.7, d = 0.4 },
 				},
 			},
-			-- 널 포인터: 몸을 낮췄다가 결정이 붉게 번쩍, 두 라인이 무너진다
+			-- 널 포인터: 몸을 움츠렸다가 붉은 화살표 탄 둘을 쏜다 — 두 라인이 무너진다
 			NullPointer = {
 				Duration = 1.3,
 				BlendIn = 0.05,
 				Keys = {
-					K(0, nil, { 6, 8, 6 }, { 0, 0.2, 0, 0, 0, 0 }),
-					K(0.34, "quadIn", { 8, -8, 8 }, { 0, -0.4, 0.2, 3, 0, 0 }),
-					K(0.46, "expoOut", { -4, 10, -4 }, { 0, 0.4, -0.2, -3, 0, 0 }),
+					K(0, nil, { 6, 6, 6 }, { 0, 0.2, 0.3, 0, 0, 0 }),
+					K(0.32, "quadIn", { -8, -8, -8 }, { 0, -0.3, 0.6, 3, 0, 0 }),
+					K(0.38, "expoOut", { 8, 8, 8 }, { 0, 0.3, 1.0, -3, 0, 0 }),
 					K(0.8, "sineInOut", { 1, 1, 1 }, Z),
 					K(1.3, "sineInOut", B0, Z),
 				},
 				Events = {
-					{ t = 0.46, k = "Fx", n = "NullPointer" },
+					{ t = 0.34, k = "Fx", n = "NullPointer", d = 0.18 },
 					{ t = 0.52, k = "Hit", i = 1, fx = "NullHit" },
-					{ t = 0.46, k = "Shake", a = 0.5, d = 0.3 },
+					{ t = 0.52, k = "Shake", a = 0.5, d = 0.3 },
 				},
 			},
-			-- 메모리 누수: 등 위 오류 조각이 떠올랐다가 쏟아진다
+			-- 메모리 누수: 위로 오류 조각을 쏘아 올렸다가 아군 위로 쏟아붓는다
 			MemoryLeak = {
 				Duration = 1.4,
 				BlendIn = 0.05,
 				Keys = {
 					K(0, nil, B0, Z),
-					K(0.4, "sineOut", { -3, 6, -3 }, { 0, 0.5, 0, -2, 0, 0 }),
-					K(0.6, "quadIn", { 4, -5, 4 }, { 0, -0.1, 0, 1, 0, 0 }),
+					K(0.4, "sineOut", { 6, 6, 6 }, { 0, 0.6, 0, -3, 0, 0 }),
+					K(0.6, "quadIn", { -4, -4, -4 }, { 0, -0.1, 0, 1, 0, 0 }),
 					K(1.4, "sineInOut", B0, Z),
 				},
 				Events = {
 					{ t = 0.3, k = "Fx", n = "LeakRise" },
+					{ t = 0.5, k = "Fx", n = "LeakRain", d = 0.22 },
 					{ t = 0.72, k = "Hit", i = 1, fx = "LeakHit" },
 					{ t = 0.72, k = "Shake", a = 0.25, d = 0.2 },
 				},

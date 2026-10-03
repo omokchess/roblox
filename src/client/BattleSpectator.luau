@@ -241,7 +241,8 @@ local function render(view: View)
 		director:SetHome(id, h)
 		local model = director:Model(id)
 		if model then
-			local lift = if unit.Part == "Core" then 19.5 elseif unit.Part then 9 else nil
+			-- 보스 부위 이름표: 다면체 가운데 기준(코어 반지름 6, 위성 2.3)
+			local lift = if unit.Part == "Core" then 9.5 elseif unit.Part then 4.4 else nil
 			labelSlime(model, string.format("%s  %d/%d%s", unit.Name, unit.Health, unit.MaxHealth, if unit.Stunned then "  ★그로기" else ""), lift)
 		end
 	end

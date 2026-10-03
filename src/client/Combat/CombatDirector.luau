@@ -8,7 +8,8 @@
 	배우(actor)
 	  Humanoid  아바타(R6). CombatRig + CombatWeapons. 자리 = HumanoidRootPart
 	  Slime     Slime 모델. 자리 = 바닥 가운데 Pivot
-	  Boss      보스 부위(DebugBoss). 자리 = 부위가 차지한 칸들 가운데 바닥. 움직이지 않는다
+	  Boss      보스 부위(DebugBoss). 자리 = 다면체 가운데(공중). 코어는 차지한 칸들 가운데 위 DebugBoss.Lift,
+	            위성(머리·삭제·패치)은 코어 앞을 돈다(가만히 있을 때만, DebugBoss.Orbit). 칸 자리는 TileHome 에 둔다
 	자리는 연출이 매 프레임 쓴다: 돌진(Dash) 중이면 그 길을, 들려 있으면 커서를, 아니면 집(Home)으로 미끄러진다.
 
 	시간: 매 프레임 dt 를 받아 모든 재생기·이펙트에 나눠 준다. Stop 사건(타격 정지) 동안은 0 을 준다 —
@@ -78,6 +79,11 @@ type Actor = {
 	-- 대기 버릇 모션들(없으면 nil)과 다음 버릇까지 남은 초
 	Fidgets: { any }?,
 	FidgetIn: number?,
+	-- 보스 부위: 부위 이름, 칸 자리(서버 칸들 가운데 바닥), 위성 궤도 시간, 돌진해 오는 쪽이 멈출 몸 반지름
+	BossKey: string?,
+	TileHome: CFrame?,
+	OrbitT: number?,
+	Reach: number?,
 }
 
 -- 관전용 연출기(Quiet)는 화면을 흔들지 않고, 치울 때 남(내 전투)의 효과까지 지우지 않는다
@@ -178,12 +184,12 @@ function CombatDirector:AddSlime(id: string, parent: Instance, home: CFrame, col
 	return actor
 end
 
--- 보스 부위(디버그). key = 부위 이름(Head·DeleteArm·PatchArm·Core). 이펙트는 Fx/Debug
-local BOSS_CHEST = { Head = 5.6, DeleteArm = 3.2, PatchArm = 2.8, Core = 7.5 }
-
+-- 보스 부위(디버그). key = 부위 이름(Head·DeleteArm·PatchArm·Core). 이펙트는 Fx/Debug.
+-- home = 칸 자리(바닥). 몸은 공중에 뜬다 — 처음 자리는 칸 위, 다음 프레임부터 _bossHome 이 정한다
 function CombatDirector:AddBossPart(id: string, key: string, parent: Instance, home: CFrame)
 	self:Remove(id)
-	local rig = DebugBoss.new(key, home)
+	local lifted = home + Vector3.new(0, DebugBoss.Lift, 0)
+	local rig = DebugBoss.new(key, lifted)
 	rig.Model.Parent = parent
 	local motions = (DebugMotions :: any)[key] or DebugMotions.Core
 	local animator = CombatAnimator.new(rig)
@@ -198,10 +204,10 @@ function CombatDirector:AddBossPart(id: string, key: string, parent: Instance, h
 		Weapons = nil,
 		ClassId = "Debug",
 		WeaponType = nil,
-		Home = home,
-		Pos = home,
-		Chest = BOSS_CHEST[key] or 4,
-		Ground = 0,
+		Home = lifted,
+		Pos = lifted,
+		Chest = 0,
+		Ground = -DebugBoss.Lift - 0.4,
 		Dash = nil,
 		Held = false,
 		HeldAt = nil,
@@ -209,9 +215,44 @@ function CombatDirector:AddBossPart(id: string, key: string, parent: Instance, h
 		Dying = false,
 		Idle = motions.Idle,
 		Motions = motions,
+		BossKey = key,
+		TileHome = home,
+		OrbitT = 0,
+		Reach = (DebugBoss.Radius[key] or 2) * 0.9,
 	}
 	self.Actors[id] = actor
 	return actor
+end
+
+-- 보스 부위의 공중 자리(매 프레임): 코어는 칸 위 Lift, 위성은 코어 앞 궤도(가만히 있을 때만 돈다)
+function CombatDirector:_bossHomes(dt: number)
+	local core: Actor? = nil
+	for _, a in self.Actors do
+		if a.BossKey == "Core" then
+			core = a
+		end
+	end
+	for _, a in self.Actors do
+		local key, tile = a.BossKey, a.TileHome
+		if not key or not tile or a.Dying then
+			continue
+		end
+		local ground = tile.Y - 0.4
+		if key == "Core" then
+			a.Home = tile + Vector3.new(0, DebugBoss.Lift, 0)
+		elseif core and core.TileHome then
+			if not a.Animator:IsBusy() then
+				a.OrbitT = (a.OrbitT or 0) + dt
+			end
+			local theta = (DebugBoss.OrbitPhase[key] or 0) + (a.OrbitT or 0) * DebugBoss.OrbitSpeed
+			local center = core.TileHome + Vector3.new(0, DebugBoss.Lift, 0)
+			a.Home = CFrame.new(center * DebugBoss.Orbit(theta)) * center.Rotation
+			ground = core.TileHome.Y - 0.4
+		else
+			a.Home = tile + Vector3.new(0, 7, 0)
+		end
+		a.Ground = ground - a.Pos.Y
+	end
 end
 
 -- 적 하나: 보스 부위면 부위 몸, 아니면 슬라임
@@ -234,6 +275,11 @@ end
 function CombatDirector:SetHome(id: string, home: CFrame, instant: boolean?)
 	local a = self.Actors[id]
 	if not a then
+		return
+	end
+	-- 보스 부위는 칸 자리만 기억하고 공중 자리는 _bossHomes 가 정한다
+	if a.Kind == "Boss" then
+		a.TileHome = home
 		return
 	end
 	local moved = (a.Home.Position - home.Position).Magnitude
@@ -528,7 +574,9 @@ function CombatDirector:_dash(a: Actor, play: any, ev: any)
 		local forward = flat(a.Home.LookVector)
 		if t then
 			local toward = flat(t.Pos.Position - a.Pos.Position)
-			local pos = t.Pos.Position - toward * (ev.gap or 3)
+			-- 큰 몸(보스 다면체)은 몸 반지름만큼 앞에서 멈추고, 뚫고 지나가는 돌진(gap < 0)은 그만큼 더 지나간다
+			local gap = ev.gap or 3
+			local pos = t.Pos.Position - toward * (gap + (if gap >= 0 then 1 else -1) * (t.Reach or 0))
 			to = CFrame.lookAt(Vector3.new(pos.X, a.Home.Y, pos.Z), Vector3.new(pos.X, a.Home.Y, pos.Z) + forward)
 		else
 			to = a.Home + forward * (ev.dist or 6)
@@ -776,6 +824,7 @@ function CombatDirector:_step(realDt: number)
 		self.StopLeft -= realDt
 		dt = realDt * 0.03
 	end
+	self:_bossHomes(dt)
 	for id, a in self.Actors do
 		-- 자리
 		if a.Dash then
