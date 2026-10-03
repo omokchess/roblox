@@ -390,18 +390,21 @@ local quasarEffects: { [string]: Effect } = {
 
 	--[[
 		특이점: [질량]을 전부 태운다. 소모 1당 피해 +5%(압축 +). 소모량으로 단계가 갈린다 —
-		1단계(1~7) 기본 18 · 2단계(8~14) 22 · 3단계(15~) 28. (2026-10-03 밸런스: 24·36·1당 5% → 22·28·1당 3%) 범위는 GrowResource(질량 ÷ 7.5)가 넓힌다.
+		1단계(1~7) 기본 10 · 2단계(8~14) 12 · 3단계(15~) 14. 질량 보너스는 20스택까지만 센다.
+		(2026-10-03 사용자 "딜탱 본분에 맞게 극 너프": 풀세팅 한 방 25만 — 거센 빛 50스택 × 압축 8% 로 ×5 까지 올랐다) 범위는 GrowResource(질량 ÷ 7.5)가 넓힌다.
 	]]
 	Singularity = {
 		Before = function(ctx)
 			local spent = BattleStatus.SpendAll(ctx.Status, R.MASS)
 			local tier = if spent >= 15 then 3 elseif spent >= 8 then 2 else 1
 			tier = math.max(tier, math.floor(ctx.Query("SingularityTier", 0)))
-			local per = ctx.Query("SingularityPerMass", 0.03)
+			local per = ctx.Query("SingularityPerMass", 0.01)
 			local power = ctx.Ally.Power or 0
-			local base = ({ 18, 22, 28 })[tier]
-			ctx.Log(string.format("특이점 %d단계 — 질량 %d 소모 (피해 +%d%%)", tier, spent, math.floor(spent * per * 100 + 0.5)))
-			return (1 + spent * per) * (power + base) / math.max(1, power + 18)
+			local base = ({ 10, 12, 14 })[tier]
+			local counted = math.min(spent, 20)
+			ctx.Log(string.format("특이점 %d단계 — 질량 %d 소모 (피해 +%d%%)", tier, spent, math.floor(counted * per * 100 + 0.5)))
+			-- 딜탱 계수 0.5(2026-10-03: 너프 뒤에도 풀세팅 38만으로 버서커 주력기와 같았다)
+			return 0.5 * (1 + counted * per) * (power + base) / math.max(1, power + 10)
 		end,
 	},
 
