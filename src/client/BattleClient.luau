@@ -599,7 +599,7 @@ function BattleClient:_bossAlerts(snapshot: any)
 		local id = "Grudge_" .. boss.FirstBroken
 		local def = GridBattle.BOSS_BUFFS[id]
 		if def then
-			self.hud:Flash("원한 — " .. def.Name, "먼저 부순 부위에 디버그가 반응했다", BattleHud.Colors.Red)
+			self.hud:Flash("원한 — " .. def.Name, "먼저 부순 부위에 디버그가 반응함", BattleHud.Colors.Red)
 		end
 	end
 	if boss.LastStand and not seen.LastStand then

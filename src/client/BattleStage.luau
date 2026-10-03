@@ -385,8 +385,12 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 	local stepX = tiles.Ally[1][2].Position - first.Position
 	local stepY = tiles.Ally[2][1].Position - first.Position
 	local ux, uy = stepX.Unit, stepY.Unit
-	-- 2026-10-03 사용자: 깜빡임을 조금 약하게 → 0.42초 → 0.8초, 밝기 폭도 줄임(줄무늬 0.15↔0.6 → 0.25↔0.45, 테두리 0↔0.5 → 0.1↔0.3)
-	local blink = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+	-- 2026-10-03 사용자: 밝았다 어두워지는 깜빡임은 없애고, 색을 더 또렷하게 + 약간의 네온.
+	-- 묶음 색을 채도·밝기 끝까지 올리고(vivid), 줄무늬·테두리는 Neon 재질(fxPart)로 은은히 빛나게 둔다
+	local function vivid(c: Color3): Color3
+		local h, sat = c:ToHSV()
+		return Color3.fromHSV(h, math.min(1, sat * 1.15 + 0.1), 1)
+	end
 
 	-- 묶음별 칸, 칸별 묶음들(줄무늬 색 돌리기)
 	local groups: { [string]: { Cells: { [string]: boolean }, Entry: any } } = {}
@@ -425,8 +429,7 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 			local mu = (u0 + u1) / 2
 			local mid = t.Position + ux * mu + uy * (mu - k) + Vector3.new(0, 0.3, 0)
 			local len = (u1 - u0) * math.sqrt(2)
-			local stripe = fxPart("Stripe", CFrame.lookAt(mid, mid + (ux + uy).Unit), Vector3.new(0.34, 0.05, len), e.Color, 0.25, folder)
-			TweenService:Create(stripe, blink, { Transparency = 0.45 }):Play()
+			fxPart("Stripe", CFrame.lookAt(mid, mid + (ux + uy).Unit), Vector3.new(0.34, 0.05, len), vivid(e.Color), 0.3, folder)
 		end
 	end
 
@@ -437,7 +440,7 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 		local i = slot[name]
 		local inset = 0.46 - math.min(i, 4) * 0.045
 		local lift = 0.34 + math.min(i, 4) * 0.03
-		local edgeColor = if e.Unavoid then Color3.new(1, 1, 1) else e.Color:Lerp(Color3.new(1, 1, 1), 0.45)
+		local edgeColor = if e.Unavoid then Color3.new(1, 1, 1) else vivid(e.Color)
 		-- 2026-10-03 사용자: 글자·레이저는 떨어진 덩어리마다가 아니라 묶음(Group)에 하나만.
 		-- 가장 큰 덩어리(같으면 묶음 전체 가운데에 가까운 것)에 단다. 테두리·줄무늬는 칸마다 그대로
 		local comps = components(g.Cells)
@@ -486,8 +489,7 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 					local across = stepX * d[1] + stepY * d[2]
 					local along = if d[1] ~= 0 then stepY else stepX
 					local mid = t.Position + across * inset + Vector3.new(0, lift, 0)
-					local edge = fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(if e.Unavoid then 0.42 else 0.3, 0.08, along.Magnitude * (inset * 2) + 0.3), edgeColor, 0.1, folder)
-					TweenService:Create(edge, blink, { Transparency = 0.3, Color = e.Color }):Play()
+					fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(if e.Unavoid then 0.42 else 0.3, 0.08, along.Magnitude * (inset * 2) + 0.3), edgeColor, 0.05, folder)
 				end
 			end
 			if comp ~= labelComp then

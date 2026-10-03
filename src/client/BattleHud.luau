@@ -1911,12 +1911,12 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 	if self.bossTab == "Active" then
 		moves(skillMoves)
 		if #skillMoves == 0 then
-			empty("이 부위는 쓰는 스킬이 없다.")
+			empty("이 부위는 쓰는 스킬이 없음.")
 		end
 	elseif self.bossTab == "Passive" then
 		entries(passives, CRIMSON)
 		if #passives == 0 then
-			empty("이 부위만의 패시브는 없다 — [보스 전체] 탭의 규칙이 모든 부위에 걸린다.")
+			empty("이 부위만의 패시브는 없음 — [보스 전체] 탭의 규칙이 모든 부위에 걸림.")
 		end
 	else
 		moves(gimmickMoves)
@@ -1932,7 +1932,7 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 			describe(make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody), table.concat(def.Rules, "\n"), CRIMSON)
 		end
 		if nGimmick == 0 then
-			empty("이 부위만의 기믹은 없다.")
+			empty("이 부위만의 기믹은 없음.")
 		end
 	end
 

@@ -151,7 +151,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "BreakpointBeam",
 		Name = "중단점 광선",
-		Description = "- 아군이 선 라인 하나를 통째로 꿰뚫는다.\n- 막기 불가 — 회피만 된다.\n- 라인을 비켜서면 맞지 않는다.",
+		Description = "- 아군이 선 라인 하나를 통째로 꿰뚫음.\n- 막기 불가 — 회피만 됨.\n- 라인을 비켜서면 맞지 않음.",
 		Damage = 12,
 		Range = "Ranged",
 		Shape = { Kind = "Row" },
@@ -162,7 +162,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "DeleteCells",
 		Name = "글리치",
-		Description = "- 매 턴 무늬 5개 중 하나로 아군 칸 12개를 [검수 준비중]으로 예고.\n- 턴 끝에 그 칸이 [검수됨!](검은 칸)이 된다. 검은 칸에도 설 수 있다.\n- [검수 준비중] 칸\n  - 그 칸에서 쓰는 스킬의 피해량 +400%.\n  - 거기서 턴을 마치면 다음 턴 이동 불가.\n- [검수중] (검은 칸 위)\n  - [받는 피해량] +200%.\n  - 턴 끝 최대 체력 9% 고정 피해.\n    - 위 효과로 사망하지 않음.\n  - 2턴 뒤 스테미나 −20.\n- 검은 칸에서 턴을 마치면 다음 턴 [테스터]\n  - [가하는 피해량] +3500%.",
+		Description = "- 매 턴 무늬 5개 중 하나로 아군 칸 12개를 [검수 준비중]으로 예고.\n- 턴 끝에 그 칸이 [검수됨!](검은 칸)이 됨. 검은 칸에도 설 수 있음.\n- [검수 준비중] 칸\n  - 그 칸에서 쓰는 스킬의 피해량 +400%.\n  - 거기서 턴을 마치면 다음 턴 이동 불가.\n- [검수중] (검은 칸 위)\n  - [받는 피해량] +200%.\n  - 턴 끝 최대 체력 9% 고정 피해.\n    - 위 효과로 사망하지 않음.\n  - 2턴 뒤 스테미나 −20.\n- 검은 칸에서 턴을 마치면 다음 턴 [테스터]\n  - [가하는 피해량] +3500%.",
 		-- 피해 0: 회피 QTE 공격이 아니라 선택이다(과부하 도박 — GridBattle 이 턴 끝에 처리)
 		Damage = 0,
 		Range = "Melee",
@@ -174,7 +174,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "ForcedPatch",
 		Name = "강제 적용",
-		Description = "- 아군이 선 열을 위아래로 쓸어내린다.\n- 회피·막기 가능.",
+		Description = "- 아군이 선 열을 위아래로 쓸어내림.\n- 회피·막기 가능.",
 		Damage = 10,
 		Range = "Melee",
 		Shape = { Kind = "Column" },
@@ -184,7 +184,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CoreDump",
 		Name = "코어 덤프",
-		Description = "- 아군 칸 전부를 덮친다.\n- 회피·막기 불가.\n- 버프 칸만 비켜 간다.",
+		Description = "- 아군 칸 전부를 덮침.\n- 회피·막기 불가.\n- 버프 칸만 비켜 감.",
 		Damage = 18,
 		Range = "Ranged",
 		Shape = { Kind = "All" },
@@ -196,7 +196,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "NullPointer",
 		Name = "널 포인터",
-		Description = "- 아군이 선 라인 + 다른 라인 하나가 통째로 무너진다.\n- 막기 불가 — 회피만 된다.",
+		Description = "- 아군이 선 라인 + 다른 라인 하나가 통째로 무너짐.\n- 막기 불가 — 회피만 됨.",
 		Damage = 14,
 		Range = "Ranged",
 		Shape = { Kind = "Row" },
@@ -207,7 +207,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "MemoryLeak",
 		Name = "메모리 누수",
-		Description = "- 아군 칸 절반에 체크무늬로 쏟아진다.\n  - 아군이 선 칸은 늘 포함.\n- 회피·막기 가능.",
+		Description = "- 아군 칸 절반에 체크무늬로 쏟아짐.\n  - 아군이 선 칸은 늘 포함.\n- 회피·막기 가능.",
 		Damage = 10,
 		Range = "Ranged",
 		Shape = { Kind = "Square", Radius = 1 },
@@ -220,7 +220,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "StackTrace",
 		Name = "스택 추적",
-		Description = "- 아군이 선 열(앞뒤 칸 셋)을 거슬러 올라가며 꿰뚫는다.\n- 회피·막기 가능.",
+		Description = "- 아군이 선 열(앞뒤 칸 셋)을 거슬러 올라가며 꿰뚫음.\n- 회피·막기 가능.",
 		Damage = 14,
 		Range = "Ranged",
 		Shape = { Kind = "Column" },
@@ -243,7 +243,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "BreakStorm",
 		Name = "중단점 폭풍",
-		Description = "- 아군 칸 전부에 중단점이 박힌다.\n  - 무작위 안전 칸 2개만 비켜 간다(예고에 보인다).\n- 회피·막기 불가.",
+		Description = "- 아군 칸 전부에 중단점이 박힘.\n  - 무작위 안전 칸 2개만 비켜 감(예고에 보임).\n- 회피·막기 불가.",
 		Damage = 20,
 		Range = "Ranged",
 		Shape = { Kind = "All" },
@@ -257,7 +257,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "ForceQuit",
 		Name = "강제 종료",
-		Description = "- 아군이 선 칸과 둘레 3×3을 지운다.\n- 회피·막기 가능.",
+		Description = "- 아군이 선 칸과 둘레 3×3을 지움.\n- 회피·막기 가능.",
 		Damage = 15,
 		Range = "Melee",
 		Shape = { Kind = "Square", Radius = 1 },
@@ -268,7 +268,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "Sudo",
 		Name = "루트 권한",
-		Description = "- 보스 버프 [루트 권한]: 2턴 동안 보스 공격을 막을 수 없다.\n  - 막음(가드)은 실패로 친다. 회피는 된다.\n- 피해 없음.",
+		Description = "- 보스 버프 [루트 권한]: 2턴 동안 보스 공격을 막을 수 없음.\n  - 막음(가드)은 실패로 침. 회피는 됨.\n- 피해 없음.",
 		Damage = 0,
 		Range = "Supporting",
 		Shape = { Kind = "Single" },
@@ -280,7 +280,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "Format",
 		Name = "포맷",
-		Description = "- [충전] 1턴: 서브코어-삭제에 최대 체력 12% 피해를 주면 끊긴다.\n- 끊지 못하면 다음 [검수]는 6칸이 아니라 2칸만 남긴다.\n- 끊으면 서브코어-삭제 1턴 멈춤 · 보스 스테미나 −30.",
+		Description = "- [충전] 1턴: 서브코어-삭제에 최대 체력 12% 피해를 주면 끊김.\n- 끊지 못하면 다음 [검수]는 6칸이 아니라 2칸만 남김.\n- 끊으면 서브코어-삭제 1턴 멈춤 · 보스 스테미나 −30.",
 		Damage = 0,
 		Range = "Supporting",
 		Shape = { Kind = "Single" },
@@ -294,7 +294,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "Hotfix",
 		Name = "핫픽스",
-		Description = "- 보스 스테미나 +40.\n- 보스 부위에 걸린 지속 피해·디버프를 모두 지운다.\n- 피해 없음.",
+		Description = "- 보스 스테미나 +40.\n- 보스 부위에 걸린 지속 피해·디버프를 모두 지움.\n- 피해 없음.",
 		Damage = 0,
 		Range = "Supporting",
 		Shape = { Kind = "Single" },
@@ -306,7 +306,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "BugPlant",
 		Name = "버그 심기",
-		Description = "- 아군이 선 칸 + 무작위 칸 3개를 친다.\n- 맞은 칸은 [버그 칸]이 된다.\n- 회피·막기 가능.",
+		Description = "- 아군이 선 칸 + 무작위 칸 3개를 침.\n- 맞은 칸은 [버그 칸]이 됨.\n- 회피·막기 가능.",
 		Damage = 12,
 		Range = "Ranged",
 		Shape = { Kind = "Single" },
@@ -342,7 +342,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "KernelPanic",
 		Name = "커널 패닉",
-		Description = "- [충전] 1턴: 코어에 최대 체력 10% 피해를 주면 끊긴다.\n  - 코어가 잠겨 있어도 준 피해는 센다.\n- 끊지 못하면 다음 턴 아군 칸 전부 큰 피해.\n  - 회피·막기 불가.\n- 끊으면 코어 1턴 멈춤 · 보스 스테미나 −30.",
+		Description = "- [충전] 1턴: 코어에 최대 체력 10% 피해를 주면 끊김.\n  - 코어가 잠겨 있어도 준 피해는 셈.\n- 끊지 못하면 다음 턴 아군 칸 전부 큰 피해.\n  - 회피·막기 불가.\n- 끊으면 코어 1턴 멈춤 · 보스 스테미나 −30.",
 		Damage = 0,
 		Range = "Supporting",
 		Shape = { Kind = "Single" },
@@ -356,7 +356,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "KernelPanicBurst",
 		Name = "커널 패닉",
-		Description = "- 충전이 끝났다 — 아군 칸 전부.\n- 회피·막기 불가.",
+		Description = "- 충전이 끝남 — 아군 칸 전부.\n- 회피·막기 불가.",
 		Damage = 60,
 		Range = "Ranged",
 		Shape = { Kind = "All" },
@@ -367,7 +367,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "InfiniteRecursion",
 		Name = "무한 재귀",
-		Description = "- 아군이 선 라인과 열을 동시에(십자) 친다.\n- 막기 불가 — 회피만 된다.",
+		Description = "- 아군이 선 라인과 열을 동시에(십자) 침.\n- 막기 불가 — 회피만 됨.",
 		Damage = 16,
 		Range = "Ranged",
 		Shape = { Kind = "Cross", Radius = 6 },
@@ -379,7 +379,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "BlueScreen",
 		Name = "블루스크린",
-		Description = "- 궁극기. 3턴째부터 쓴다.\n- 아군 칸 전부 — 지금 체력의 50% 피해.\n- 회피·막기 불가.\n- 맞으면 3턴 동안 어떤 회복도 받지 못한다.",
+		Description = "- 궁극기. 3턴째부터 씀.\n- 아군 칸 전부 — 지금 체력의 50% 피해.\n- 회피·막기 불가.\n- 맞으면 3턴 동안 어떤 회복도 받지 못함.",
 		Damage = 0,
 		Range = "Ranged",
 		Shape = { Kind = "All" },

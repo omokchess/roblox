@@ -467,9 +467,9 @@ local BOSS_BUFFS: { [string]: any } = {
 	마지막 발악(아이디어 14): 코어만 남으면 셋 중 하나.
 ]]
 local BOSS_VARIANTS: { { Id: string, Name: string, Text: string } } = {
-	{ Id = "NoHealCell", Name = "회복 칸 없음", Text = "이번 판은 회복 칸이 깔리지 않는다." },
-	{ Id = "DoubleBuff", Name = "버프 칸 넷", Text = "이번 판은 버프 칸이 넷 깔린다." },
-	{ Id = "LongBlack", Name = "오래 남는 검은 칸", Text = "이번 판은 검은 칸이 2턴 남는다." },
+	{ Id = "NoHealCell", Name = "회복 칸 없음", Text = "이번 판은 회복 칸이 깔리지 않음." },
+	{ Id = "DoubleBuff", Name = "버프 칸 넷", Text = "이번 판은 버프 칸이 넷 깔림." },
+	{ Id = "LongBlack", Name = "오래 남는 검은 칸", Text = "이번 판은 검은 칸이 2턴 남음." },
 	{ Id = "HotBlood", Name = "과열 체질", Text = "과부하 기준 30 · 보스 가하는 피해 +15%." },
 	{ Id = "FastThread", Name = "고속 스레드", Text = "2페이즈부터 부위마다 두 번 행동." },
 }
@@ -477,7 +477,7 @@ GridBattle.BOSS_VARIANTS = BOSS_VARIANTS
 local LAST_STANDS: { { Id: string, Name: string, Text: string } } = {
 	{ Id = "Overdrive", Name = "코어 폭주", Text = "코어가 한 턴에 세 번 행동 · 스킬 비용 −50%." },
 	{ Id = "BlueChain", Name = "블루스크린 연쇄", Text = "블루스크린 재사용 2턴 · 대신 지금 체력 35%." },
-	{ Id = "Purge", Name = "검수 폭주", Text = "검수가 네 칸만 남기고 · 검은 칸이 2턴 남는다." },
+	{ Id = "Purge", Name = "검수 폭주", Text = "검수가 네 칸만 남기고 · 검은 칸이 2턴 남음." },
 }
 GridBattle.BOSS_LAST_STANDS = LAST_STANDS
 -- 적응형 패치(아이디어 3): 같은 스킬을 잇달아 쓰면 보스가 받는 그 스킬 피해 −15%씩(최대 −45%)
