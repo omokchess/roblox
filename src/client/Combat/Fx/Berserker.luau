@@ -86,9 +86,10 @@ function Fx.AxeSlashB(ctx: any, _ev: any, at: Vector3?)
 	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.4, R1 = 3, Color = BLOOD, Life = 0.3, Width = 0.22, Facing = true })
 end
 
--- 회오리: 몸 둘레 핏빛 원호 + 흙먼지
+-- 회오리: 몸 둘레 핏빛 원호 + 흙먼지. 원호는 몸이 도는 쪽(모션 Root 돌림이 음수 = 위에서 보아 시계 방향)으로 돈다
+-- (2026-10-03 사용자: 회전 모션과 회전 이펙트 방향이 반대 — -180 → 180 으로 뒤집음)
 function Fx.Whirl(ctx: any)
-	Common.Arc(ctx, ctx.Root.Position + Vector3.new(0, 0.3, 0), 90, 180, -180, { Radius = 4.6, Color = BLOOD, Core = EMBER, Width = 1, Sweep = 0.22, Life = 0.25, Segments = 26 })
+	Common.Arc(ctx, ctx.Root.Position + Vector3.new(0, 0.3, 0), 90, -180, 180, { Radius = 4.6, Color = BLOOD, Core = EMBER, Width = 1, Sweep = 0.22, Life = 0.25, Segments = 26 })
 	ctx.Vfx.Dust(Common.Feet(ctx), { Count = 10, Size = 1.2, Speed = 14 })
 end
 

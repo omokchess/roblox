@@ -93,8 +93,9 @@ text += "\n" + motion("Hit", "피격: 거의 안 밀린다 — 몸만 뒤로 젖
 text += "\n" + motion("Guard", "방어: 순간 역수로 고쳐 쥐어 날이 허리 앞을 가로지르는 가로막이 — 면으로 받고 왼손이 날을 받친다", 0.75,
                       [(0, None, "STANCE", None), (0.1, "expoOut", "BARRIER", None), (0.25, "sineOut", "BARRIER", {"Root": [0, -0.55, 0.32, 0, -20, 0], "Torso": [-6, 4, 0]}), (0.75, "cubicInOut", "STANCE", None)],
                       ['{ t = 0.1, k = "Fx", n = "GravityWall" }'], "\t\tBlendIn = 0.03,\n", 1)
-text += "\n" + motion("Dodge", "회피(성공, 2026-10-03 사용자: 역수로 고쳐 쥐고 오른손을 왼 허리로 움직이며 우아하게): 순간 역수로 오른 허리를 덮었다가 → 몸을 비틀며 뒤로 비켜서고 역수 쥔 손이 왼 허리로 미끄러져 날이 골반을 따라 흐른다, 왼팔은 옆으로 펴 선을 긋는다 → 다시 두 손 낮은 겨눔", 0.9,
-                      [(0, None, "STANCE", None), (0.1, "expoOut", "RG_MID", None), (0.26, "cubicOut", "RG_LEFT", None), (0.5, "sineOut", "RG_LEFT", {"Root": [0.66, -0.52, 0.33, 0, -80, 0]}), (0.9, "cubicInOut", "STANCE", None)],
+text += "\n" + motion("Dodge", "회피(성공, 2026-10-03 사용자: 역수로 고쳐 쥐고 오른손을 왼 허리로 움직이며 우아하게): 순간 역수로 오른 허리를 덮었다가 → 몸을 비틀며 뒤로 비켜서고 역수 쥔 손이 왼 허리로 미끄러져 날이 골반을 따라 흐른다, 왼팔은 옆으로 펴 선을 긋는다 → 역수를 쥔 채 한동안 버티고(2026-10-03 사용자: 역수로 잡았다가 바로 원래대로 돌아가는 것 고치기) → 천천히 다시 두 손 낮은 겨눔", 1.7,
+                      [(0, None, "STANCE", None), (0.1, "expoOut", "RG_MID", None), (0.26, "cubicOut", "RG_LEFT", None), (0.5, "sineOut", "RG_LEFT", {"Root": [0.66, -0.52, 0.33, 0, -80, 0]}),
+                       (1.05, "sineInOut", "RG_LEFT", {"Root": [0.6, -0.46, 0.3, 0, -76, 0]}), (1.25, "cubicInOut", "RG_MID", None), (1.7, "cubicInOut", "STANCE", None)],
                       ['{ t = 0.06, k = "Trail", on = true }', '{ t = 0.14, k = "Fx", n = "Deflect" }', '{ t = 0.5, k = "Trail", on = false }'], "\t\tBlendIn = 0.02,\n", 1)
 
 skills = []
