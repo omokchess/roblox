@@ -58,7 +58,6 @@ WALLS = {"Wall_Segment", "Wall_Stone", "Fence_Brush"}
 
 # 비워 둘 자리. (이름, x0, z0, x1, z1)
 KEEP = [
-    ("스폰광장", 165, 420, 285, 600),
     ("관아", 202, 343, 248, 383),
 ]
 
@@ -234,7 +233,6 @@ TOWN = [
     # ---------------------------------------------------------- 서촌
     ("Building_Cottage", -236, 618, 15, "서촌"),
     ("Annex_Thatch", -262, 640, 75, "서촌"),
-    ("Prop_Haystack", -214, 640, 0, "서촌"),
     ("Building_House", -252, 568, -10, "서촌"),
     ("Building_HouseL", -204, 796, 70, "서촌"),
     ("Annex_Thatch", -200, 842, 40, "서촌"),
@@ -269,7 +267,6 @@ TOWN = [
     ("Annex_Thatch", 505, 826, 60, "동촌"),
     ("Building_House", 560, 832, -25, "동촌"),
     ("Prop_Garden", 598, 750, -8, "동촌"),
-    ("Prop_Haystack", 486, 848, 0, "동촌"),
     # 척수관. 동쪽 바위 밑. 짐승 표본을 갈무리해 내보내는 곳
     ("Building_Hall", 628, 858, -80, "척수관"),
     ("Granary", 596, 902, 190, "척수관"),
@@ -281,11 +278,9 @@ TOWN = [
     ("Building_Cottage", -210, 318, 10, "남촌"),
     ("Building_Cottage", -170, 298, -15, "남촌"),
     ("Annex_Thatch", -236, 294, 80, "남촌"),
-    ("Prop_Haystack", -190, 336, 0, "남촌"),
     ("Building_Cottage", -60, 312, 5, "남촌"),
     ("Building_Cottage", -22, 290, -20, "남촌"),
     ("Annex_Thatch", -84, 290, 70, "남촌"),
-    ("Prop_Haystack", -40, 332, 0, "남촌"),
     ("Building_Cottage", 72, 330, 0, "남촌"),
     ("Annex_Thatch", 100, 316, -80, "남촌"),
     ("Building_Cottage", 96, 284, 25, "남촌"),
@@ -295,9 +290,31 @@ TOWN = [
     ("Annex_Thatch", 482, 268, 90, "남촌"),
     ("Building_Cottage", 590, 336, 20, "남촌"),
     ("Building_Cottage", 566, 300, -5, "남촌"),
-    ("Prop_Haystack", 612, 312, 0, "남촌"),
-    # 산 정자 둘은 옛 자리 그대로
-    ("Pavilion_Jeongja", 285, 30, 180, "산정자"),
+    # ---------------------------------------------------------- 2026-10-03 평탄화 뒤 빈 자리 채움
+    # (사용자: "빈 공간은 광장을 놓든 뭘 하든 해서 채워넣자". 논밭·짚더미를 걷어 낸 자리에 집을 앉힌다. Jeolhwa_Infill 이 없는 것만 짓는다)
+    # 서촌 아랫말. 남서길 북쪽 옛 논밭 자리. 길(남, -Z)을 보고 선다
+    ("Building_House", -205, 432, 4, "서촌"),
+    ("Annex_Thatch", -238, 455, 80, "서촌"),
+    ("Prop_Jangdok", -182, 452, 4, "서촌"),
+    ("Building_Cottage", -150, 428, -6, "서촌"),
+    ("Building_HouseL", -100, 440, 2, "서촌"),
+    ("Prop_Well", -62, 470, 0, "서촌"),             # 서촌못 어귀 우물
+    ("Building_House", -20, 420, -8, "서촌"),
+    ("Annex_Tile", 16, 450, -90, "서촌"),
+    ("Building_Cottage", 62, 432, 8, "서촌"),
+    ("Prop_Jangdok", 88, 452, 0, "서촌"),
+    # 남촌 빈 틈
+    ("Building_Cottage", -120, 322, -10, "남촌"),
+    ("Building_House", 28, 328, 6, "남촌"),
+    ("Building_Cottage", 140, 330, 90, "남촌"),     # 관아 서쪽 담 밖. 서쪽 초가 무리를 본다
+    ("Annex_Thatch", 146, 280, 0, "남촌"),
+    ("Building_House", 338, 330, -90, "남촌"),       # 남산길 서쪽. 길(동)을 본다
+    ("Annex_Thatch", 330, 290, -90, "남촌"),
+    ("Prop_Well", 396, 362, 0, "남촌"),
+    ("Building_Cottage", 535, 262, 10, "남촌"),
+    # 마방. 저잣마당 장꾼 말과 짐을 맡는 집. 동순환 안쪽
+    ("Building_HouseL", 622, 490, 90, "마방"),
+    # 산 정자는 옛 자리 그대로(남산 정자는 2026-10-03 Plains_Build 가 남산 꼭대기 R_평원북 으로 옮겼다)
     ("Pavilion_Jeongja", 705, 250, 90, "산정자"),
 ]
 
@@ -355,19 +372,33 @@ TOWN_TREES = [
     (-280, 360), (-260, 700), (-230, 900), (360, 250), (240, 260), (180, 260),
     (-300, 262), (-278, 252), (-120, 226), (-98, 212), (30, 214), (205, 230), (470, 225),
     (500, 236), (660, 330), (-40, 250),
+    # 2026-10-03 채움 자리
+    (-252, 424), (-128, 466), (100, 430), (300, 300), (560, 250),
+    # 광장 가장자리(좌판 뒤 그늘)
+    (170, 446), (170, 470), (168, 524), (169, 592), (282, 446), (283, 463),
 ]
 
 # 논밭. (x0, z0, x1, z1) 두둑은 z 방향으로 선다
-FIELDS = [
-    (-140, 420, -60, 480), (-40, 410, 40, 470), (-250, 460, -170, 500),
-    (-120, 250, -60, 280), (10, 230, 70, 270), (-230, 240, -180, 280),
-    (400, 230, 470, 260), (520, 250, 600, 290), (120, 250, 170, 300),
-    (-296, 318, -256, 352), (-132, 318, -98, 348), (18, 318, 52, 350), (130, 322, 170, 360),
-    (378, 272, 408, 306), (-300, 390, -260, 420),
-]
+FIELDS = []  # 2026-10-03 사용자: "곳곳에 뜬금없이 있는 밭이나 건초더미 없애줘" — 논밭 15·짚더미 5 치움
 
 TOWN_PAVES = [
     ("저잣마당", 468, 548, 540, 612, "ground"),
+    ("광장", 165, 425, 285, 605, "ground"),  # 2026-10-03 옛 스폰광장 빈터 → 박석 광장
+]
+
+# 광장 꾸밈(2026-10-03). Jeolhwa_Infill 이 파트·소품으로 짓는다. (종류, x, z, yaw, 너비, 깊이)
+#   관아 대문(z 398)과 궁 정문(z 640)을 잇는 x 225 축은 비우고, 서쪽에 당산나무 단, 동쪽 운종가 어귀에 좌판, 관아 앞에 방(알림판)
+PLAZA = [
+    ("Dangsan", 190, 500, 0, 28, 28),   # 두 켜 돌 단 위 큰 느티나무 + 평상 둘
+    ("Sundial", 225, 520, 0, 4, 4),     # 앙부일구(해시계) 받침돌
+    ("Notice", 252, 440, 180, 9, 2),    # 방. 광장 쪽(+Z)을 본다
+    ("Booth", 270, 478, 90, 8, 6), ("Booth", 270, 500, 90, 8, 6), ("Booth", 270, 522, 90, 8, 6),
+    ("Booth", 270, 572, 90, 8, 6), ("Booth", 270, 594, 90, 8, 6),
+    ("Booth", 180, 576, -90, 8, 6), ("Booth", 180, 598, -90, 8, 6),
+    # 맞은편 줄 — 좌판끼리 마주 보아 장 골목(폭 15)이 된다
+    ("Booth", 248, 478, -90, 8, 6), ("Booth", 248, 500, -90, 8, 6), ("Booth", 248, 522, -90, 8, 6),
+    ("Booth", 248, 572, -90, 8, 6), ("Booth", 248, 594, -90, 8, 6),
+    ("Booth", 202, 576, 90, 8, 6), ("Booth", 202, 598, 90, 8, 6),
 ]
 
 # ------------------------------------------------------------------ 계산
@@ -465,6 +496,16 @@ def check():
         for wn, wr in wall_rects:
             if overlap(p, wr):
                 msgs.append("담겹침 " + n + " <> " + wn)
+    for k, x, z, y, w, d in PLAZA:
+        r = math.radians(y)
+        pr = [(x + px * math.cos(r) + pz * math.sin(r), z - px * math.sin(r) + pz * math.cos(r))
+              for px, pz in ((-w / 2 - 1, -d / 2 - 1), (w / 2 + 1, -d / 2 - 1), (w / 2 + 1, d / 2 + 1), (-w / 2 - 1, d / 2 + 1))]
+        for n, p, kk in polys:
+            if overlap(p, pr):
+                msgs.append("광장겹침 " + k + f"@({x},{z}) <> " + n)
+        for rn, rr in road_rects:
+            if overlap(pr, rr) and rn not in ("남서길", "남동길", "서촌길", "운종가", "관아앞"):
+                msgs.append("광장길겹침 " + k + f"@({x},{z}) <> " + rn)
     for name, x0, z0, x1, z1 in KEEP:
         kr = [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]
         for n, p, k in polys:
@@ -550,6 +591,11 @@ def render(path, region=(-340, -40, 740, 990), sc=1.0, heightmap=None):
         r = math.radians(y)
         fz = KIT[k][0][2]
         C.circle(x + fz * math.sin(r), z + fz * math.cos(r), 1.8, "#e03a2a")
+    for k, x, z, y, w, d in PLAZA:
+        r = math.radians(y)
+        pts = [(x + px * math.cos(r) + pz * math.sin(r), z - px * math.sin(r) + pz * math.cos(r))
+               for px, pz in ((-w / 2, -d / 2), (w / 2, -d / 2), (w / 2, d / 2), (-w / 2, d / 2))]
+        C.poly(pts, {"Dangsan": "#8f8b7d", "Booth": "#b5523b", "Notice": "#6b4a2e", "Sundial": "#3d5c6b"}[k], 0.95)
     for x, z in PALACE_TREES + TOWN_TREES:
         C.circle(x, z, 8, "#2f5d34", 0.85)
     for gx in range(-300, 741, 100):
@@ -578,6 +624,7 @@ def emit(path):
         ("WALLS", PALACE_WALLS + TOWN_WALLS), ("GATES", TOWN_GATES),
         ("ROADS", ROADS + PALACE_PATHS), ("POOLS", POOLS), ("ISLANDS", ISLANDS), ("BRIDGES", BRIDGES),
         ("PAVES", PAVES + TOWN_PAVES), ("FIELDS", FIELDS), ("TREES", PALACE_TREES + TOWN_TREES),
+        ("PLAZA", PLAZA),
     ]
     lines = ["-- jeolhwa_plan.py 가 적은 표. 손으로 고치지 말고 jeolhwa_plan.py 를 고쳐 다시 뽑는다", "local D = {}"]
     for name, rows in tables:
