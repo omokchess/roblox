@@ -8,13 +8,16 @@
 	  머리      작은 정십이면체(2.3, 청록 속 빛) + 앞면에 붉은 중단점 + 벌레 더듬이
 	  삭제 팔   작은 정십이면체(붉은 속 빛) + 앞면에 붉은 ✕
 	  패치 팔   작은 정십이면체(초록 속 빛) + 앞면에 초록 + + 비스듬히 감은 붕대 띠
-	위성은 코어 앞에서 코어를 둘러 돈다(자리는 CombatDirector 가 매 프레임 DebugBoss.Orbit 으로 정한다).
+	위성은 코어 둘레를 돈다 — 앞으로 지나 옆으로, 코어 뒤로 숨었다가 다시 나온다(2026-10-03 사용자: "코어 뒤쪽으로도 돌면서
+	진짜 공전하는 느낌"). 자리는 CombatDirector 가 매 프레임 DebugBoss.Orbit 으로 정한다.
+	2026-10-03 사용자: "공전·자전이 끊겨 보이지 않게, 불규칙한 방향으로" — 자전은 매끈한 잡음(math.noise)으로 축·빠르기가
+	천천히 바뀌는 각속도를 쌓아 돌리고, 공전은 멈추지 않고(공격 중에도 움직이며 쏜다) 빠르기·방향·궤도면이 잡음으로 흔들린다.
 	"블렌더랑 로블록스 내 제작을 섞어서": 다면체·이음새 빛·코드 고리·더듬이·붕대·결정은 블렌더 메시
 	(ReplicatedStorage.MonsterMeshes.Debug<부위> — models/monsters/build_monsters.py), 기호·떠다니는 오류 조각은 아래 Part 표.
 	메시가 없으면(가져오기 전) 공 Part 로 대신한다.
 
-	자리(Pivot) = 다면체 가운데, 정면 = 모델 -Z(아군 쪽). 메시 이름 Spin… 은 다면체와 함께 SPIN_AXIS 둘레로,
-	Ring… 은 RING_AXIS 둘레로 돌고(가운데 기준), Float… 은 떠서 돈다. 기호는 돌지 않고 늘 아군 쪽을 본다.
+	자리(Pivot) = 다면체 가운데, 정면 = 모델 -Z(아군 쪽). 메시 이름 Spin… 은 다면체와 함께 불규칙하게 구르고,
+	Ring… 은 RING_AXIS 둘레로 돌며 살짝 흔들리고(가운데 기준), Float… 은 떠서 돈다. 기호는 돌지 않고 늘 아군 쪽을 본다.
 
 	rig: Apply(pose) — Root {x,y,z,rx,ry,rz}, Body {sx,sy,sz}(%) 는 슬라임 모션과 같은 뜻(Motions/Debug.luau).
 	Fade 는 쓰러질 때 연출이 올린다.
@@ -39,19 +42,35 @@ local BANDAGE = { RGB(206, 198, 172), M.Fabric }
 -- 크기·자리(디자인 값 — Motions/Debug.luau·Fx/Debug.luau·CombatDirector 가 같이 쓴다)
 DebugBoss.Radius = { Core = 6, Head = 2.3, DeleteArm = 2.3, PatchArm = 2.3 }
 DebugBoss.Lift = 10 -- 코어 가운데가 칸 바닥 위로 뜨는 높이
--- 다면체가 도는 축(조금 기울어 굴러가듯)·코드 고리 축(build_monsters.py RING_N 과 같게)
-local SPIN_AXIS = Vector3.new(0.25, 0.35, -1).Unit
+-- 코드 고리 축(build_monsters.py RING_N 과 같게)
 local RING_AXIS = Vector3.new(0.35, 1, -0.2).Unit
-local SPIN_SPEED = { Core = 0.3, Head = 0.9, DeleteArm = -1.0, PatchArm = 0.8 }
+-- 자전 빠르기(라디안/초 어림 — 잡음이 곱해져 축과 함께 출렁인다)
+local SPIN_RATE = { Core = 0.35, Head = 1.0, DeleteArm = 1.1, PatchArm = 0.9 }
+local noise = math.noise
 
--- 위성 궤도: 코어 앞 12 스터드, 아군 쪽에서 보면 코어를 둘러싼 원(반지름 9, 위로 1 비켜)
-local ORBIT_R, ORBIT_FRONT, ORBIT_UP = 9, 12, 1
-DebugBoss.OrbitSpeed = 0.35 -- 라디안/초(가만히 있을 때만 돈다)
+-- 위성 궤도: 코어 가운데를 도는 기운 원(반지름 14 — 코드 고리 9.5·위성 2.3 과 닿지 않게). 궤도면은 15~37° 기울고
+-- 기운 쪽이 천천히 돌아(세차) 앞·옆·뒤 높낮이가 계속 바뀐다
+local ORBIT_R, ORBIT_UP = 14, 0.5
+DebugBoss.OrbitSpeed = 0.35 -- 라디안/초(기준 — 잡음으로 빨라졌다 느려졌다 가끔 거꾸로)
 DebugBoss.OrbitPhase = { Head = 0, DeleteArm = 2 * math.pi / 3, PatchArm = 4 * math.pi / 3 }
+local SEED = { Head = 11.3, DeleteArm = 27.9, PatchArm = 41.7 }
 
--- 위성 자리: 코어 가운데 기준 오프셋(코어 공간 — -Z 가 아군 쪽). theta 0 = 꼭대기, 시계 방향(아군이 볼 때)
-function DebugBoss.Orbit(theta: number): Vector3
-	return Vector3.new(ORBIT_R * math.sin(theta), ORBIT_UP + ORBIT_R * math.cos(theta), -ORBIT_FRONT + 1.5 * math.sin(theta * 2))
+-- 공전 각속도(셋이 함께 도는 바퀴 — 따로 돌면 서로 부딪친다). 대개 한 방향, 가끔 매끈하게 거꾸로
+function DebugBoss.OrbitRate(t: number): number
+	return DebugBoss.OrbitSpeed * (noise(t * 0.05, 3.7) * 3 + 0.45)
+end
+
+-- 위성 자리: 코어 가운데 기준 오프셋(코어 공간 — -Z 가 아군 쪽). theta = 궤도 위 각.
+-- t 를 주면 궤도면 기울기·세차, 반지름, 위성마다의 자리가 잡음으로 천천히 흔들린다(불규칙한 3차원 길)
+function DebugBoss.Orbit(theta: number, t: number?, key: string?): Vector3
+	local s = SEED[key or ""] or 0
+	local tt = t or 0
+	local r = ORBIT_R + noise(tt * 0.2, s) * 2.4
+	local incline = 0.45 + noise(tt * 0.04, 5.3) * 0.45
+	local azimuth = tt * 0.05 + noise(tt * 0.03, 7.7) * 2
+	local plane = CFrame.Angles(0, azimuth, 0) * CFrame.Angles(incline, 0, 0)
+	local wander = Vector3.new(noise(tt * 0.31, s, 1), noise(tt * 0.27, s, 2), noise(tt * 0.23, s, 3)) * 2.4
+	return plane * Vector3.new(r * math.cos(theta), 0, r * math.sin(theta)) + Vector3.new(0, ORBIT_UP, 0) + wander
 end
 
 -- { 이름, 크기, 자리, 빛, 돌림(도)?, 꾸밈? }  꾸밈: "Float" 떠다님 · "Cyl" 원기둥(축 = 로컬 X) · "Ball" 공
@@ -178,8 +197,12 @@ function DebugBoss.new(key: string, home: CFrame)
 	self.Pivot = home
 	self.Fade = 0
 	self.Parts = {}
-	self.SpinSpeed = SPIN_SPEED[key] or 0.5
-	self.SpinPhase = math.random() * math.pi * 2
+	-- 자전: 쌓아 가는 회전(축·빠르기가 잡음으로 바뀐다), 고리 각, 잡음 씨앗
+	self.SpinRate = SPIN_RATE[key] or 0.8
+	self.Spin = CFrame.fromOrientation(math.random() * 6, math.random() * 6, 0)
+	self.RingAngle = math.random() * 6
+	self.Seed = math.random() * 100
+	self.LastT = os.clock()
 	local list, meshes = buildSpecs(key)
 	for i, s in list do
 		local size, at, col, rot, flag = s[2], s[3], s[4], s[5], s[6]
@@ -211,8 +234,7 @@ function DebugBoss.new(key: string, home: CFrame)
 			Size = p.Size,
 			Alpha = 0,
 			Float = if flag == "Float" then i * 1.37 else nil,
-			Axis = if flag == "Spin" then SPIN_AXIS elseif flag == "Ring" then RING_AXIS else nil,
-			Rate = if flag == "Ring" then 0.5 else 1,
+			Turn = flag,
 		})
 	end
 	return self
@@ -233,14 +255,28 @@ function DebugBoss:Apply(pose: any)
 		primary.CFrame = self.Pivot
 	end
 	local t = os.clock()
-	local spin = self.SpinPhase + t * self.SpinSpeed
+	local dt = math.clamp(t - self.LastT, 0, 0.1)
+	self.LastT = t
+	-- 자전: 각속도 벡터가 잡음으로 천천히 방향을 바꾼다 → 매 프레임 그만큼 쌓아 돌린다(끊김 없이 불규칙하게 구른다)
+	local seed = self.Seed
+	local w = Vector3.new(noise(t * 0.13, seed), noise(t * 0.11, seed + 10), noise(t * 0.17, seed + 20)) * 2.4
+	if w.Magnitude < 0.4 then
+		w = (if w.Magnitude > 1e-4 then w.Unit else Vector3.new(0, 1, 0)) * 0.4
+	end
+	w *= self.SpinRate
+	self.Spin = (CFrame.fromAxisAngle(w.Unit, w.Magnitude * dt) * self.Spin):Orthonormalize()
+	-- 고리: 제 축으로 빨라졌다 느려졌다 돌고, 고리 면이 살짝 끄덕인다
+	self.RingAngle += (0.45 + noise(t * 0.09, seed + 30) * 0.7) * dt
+	local ring = CFrame.fromAxisAngle(Vector3.new(1, 0, 0), noise(t * 0.07, seed + 40) * 0.35) * CFrame.fromAxisAngle(RING_AXIS, self.RingAngle)
 	for _, e in self.Parts do
 		local rest = e.Rest
 		local at = CFrame.new(rest.X * sx, rest.Y * sy, rest.Z * sz) * rest.Rotation
 		local cf
-		if e.Axis then
+		if e.Turn == "Spin" then
 			-- 다면체·고리는 가운데(원점) 둘레로 돈다
-			cf = base * CFrame.fromAxisAngle(e.Axis, spin * e.Rate) * at
+			cf = base * self.Spin * at
+		elseif e.Turn == "Ring" then
+			cf = base * ring * at
 		else
 			cf = base * at
 		end

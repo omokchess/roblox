@@ -334,6 +334,107 @@ function BattleStage.GroupMarks(tiles: { [string]: { { BasePart } } }, kind: "Pe
 end
 
 --[[
+	공격 범위 표시(2026-10-03 사용자: "다른 칸에 묻혀서 공격 범위 표시가 잘 보이지 않는다").
+	칸 칠하기는 한 칸에 색 하나라 버프·버그·회복·검수 칸 위에서는 범위 주황이 지거나 섞였다. 그래서 범위는 **따로 한 층**:
+	  칸 위에 떠 있는 굵은 사선 줄무늬(다른 표시는 전부 평평한 판이라 무늬만으로 구별된다) + 묶음 바깥 둘레 굵은 테두리,
+	  둘 다 빠르게 깜박인다(다른 표시는 느리게 숨 쉰다). 묶음마다 글자 하나("공격 범위" / "회피 불가").
+	높이는 검수 판(0.18~0.21)보다 위(0.3~0.36)라 무엇에도 덮이지 않는다. keys[칸] = "Threat" | "Unavoid".
+]]
+local THREAT_LOOK = {
+	Threat = { Color3.fromRGB(255, 150, 40), Color3.fromRGB(255, 225, 150), "공격 범위" },
+	Unavoid = { Color3.fromRGB(255, 30, 40), Color3.fromRGB(255, 255, 255), "회피 불가" },
+}
+
+function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { [string]: string })
+	local first = tiles.Ally[1] and tiles.Ally[1][1]
+	if not first or not first.Parent then
+		return
+	end
+	local list = {}
+	for key, kind in keys do
+		table.insert(list, key .. "=" .. kind)
+	end
+	table.sort(list)
+	local sig = table.concat(list, ";")
+	local holder = first.Parent:FindFirstChild("Marks_Threat")
+	if holder and holder:GetAttribute("Sig") == sig then
+		return
+	end
+	if holder then
+		holder:Destroy()
+	end
+	if sig == "" then
+		return
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "Marks_Threat"
+	folder:SetAttribute("Sig", sig)
+	folder.Parent = first.Parent
+	local stepX = tiles.Ally[1][2].Position - first.Position
+	local stepY = tiles.Ally[2][1].Position - first.Position
+	local ux, uy = stepX.Unit, stepY.Unit
+	local blink = TweenInfo.new(0.42, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+	for _, kind in { "Threat", "Unavoid" } do
+		local mine: { [string]: boolean } = {}
+		for key, k in keys do
+			if k == kind then
+				mine[key] = true
+			end
+		end
+		local look = THREAT_LOOK[kind]
+		for _, group in components(mine) do
+			local sum = Vector3.zero
+			for _, c in group do
+				local t = tiles.Ally[c[2]] and tiles.Ally[c[2]][c[1]]
+				if not t then
+					continue
+				end
+				sum += t.Position
+				-- 사선 줄무늬 셋: 칸 안 정사각형(반 너비 h)에 u - v = k 선분
+				local h = t.Size.X * 0.42
+				for _, k in { -h * 0.66, 0, h * 0.66 } do
+					local u0, u1 = math.max(-h, -h + k), math.min(h, h + k)
+					local mu = (u0 + u1) / 2
+					local mid = t.Position + ux * mu + uy * (mu - k) + Vector3.new(0, 0.3, 0)
+					local len = (u1 - u0) * math.sqrt(2)
+					local dir = (ux + uy).Unit
+					local stripe = fxPart("Stripe", CFrame.lookAt(mid, mid + dir), Vector3.new(0.34, 0.05, len), look[1], 0.15, folder)
+					TweenService:Create(stripe, blink, { Transparency = 0.6 }):Play()
+				end
+				-- 묶음 바깥 둘레 굵은 테두리
+				for _, d in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
+					if mine[(c[1] + d[1]) .. "," .. (c[2] + d[2])] then
+						continue
+					end
+					local across = stepX * d[1] + stepY * d[2]
+					local along = if d[1] ~= 0 then stepY else stepX
+					local mid = t.Position + across * 0.46 + Vector3.new(0, 0.34, 0)
+					local edge = fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(0.3, 0.08, along.Magnitude + 0.3), look[2], 0, folder)
+					TweenService:Create(edge, blink, { Transparency = 0.5, Color = look[1] }):Play()
+				end
+			end
+			local center = sum / math.max(#group, 1)
+			local anchor = fxPart("Label", CFrame.new(center + Vector3.new(0, 0.5, 0)), Vector3.new(0.1, 0.1, 0.1), look[1], 1, folder)
+			local b = Instance.new("BillboardGui")
+			b.Size = UDim2.fromOffset(150, 30)
+			b.StudsOffset = Vector3.new(0, 2.6, 0)
+			b.AlwaysOnTop = true
+			b.MaxDistance = 220
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.fromScale(1, 1)
+			label.BackgroundTransparency = 1
+			label.Font = Enum.Font.GothamBlack
+			label.TextSize = 18
+			label.TextStrokeTransparency = 0.1
+			label.TextColor3 = look[1]
+			label.Text = "! " .. look[3]
+			label.Parent = b
+			b.Parent = anchor
+		end
+	end
+end
+
+--[[
 	한쪽 진영 칸을 통째로 보이거나 숨긴다(2026-10-03 사용자: 보스 디버그 쪽 칸은 아예 없애기 — 보이는 것만, 규칙은 그대로).
 	칸 파트는 남겨 둔다(드래그·자리 계산이 쓴다). 윤곽선·글자만 끈다.
 ]]

@@ -9,7 +9,8 @@
 	  Humanoid  아바타(R6). CombatRig + CombatWeapons. 자리 = HumanoidRootPart
 	  Slime     Slime 모델. 자리 = 바닥 가운데 Pivot
 	  Boss      보스 부위(DebugBoss). 자리 = 다면체 가운데(공중). 코어는 차지한 칸들 가운데 위 DebugBoss.Lift,
-	            위성(머리·삭제·패치)은 코어 앞을 돈다(가만히 있을 때만, DebugBoss.Orbit). 칸 자리는 TileHome 에 둔다
+	            위성(머리·삭제·패치)은 코어 둘레를 함께 돈다(뒤로도 — 멈추지 않고 움직이며 쏜다, 빠르기·방향·궤도면이 불규칙,
+	            DebugBoss.Orbit·OrbitRate). 칸 자리는 TileHome 에 둔다
 	자리는 연출이 매 프레임 쓴다: 돌진(Dash) 중이면 그 길을, 들려 있으면 커서를, 아니면 집(Home)으로 미끄러진다.
 
 	시간: 매 프레임 dt 를 받아 모든 재생기·이펙트에 나눠 준다. Stop 사건(타격 정지) 동안은 0 을 준다 —
@@ -79,10 +80,9 @@ type Actor = {
 	-- 대기 버릇 모션들(없으면 nil)과 다음 버릇까지 남은 초
 	Fidgets: { any }?,
 	FidgetIn: number?,
-	-- 보스 부위: 부위 이름, 칸 자리(서버 칸들 가운데 바닥), 위성 궤도 시간, 돌진해 오는 쪽이 멈출 몸 반지름
+	-- 보스 부위: 부위 이름, 칸 자리(서버 칸들 가운데 바닥), 돌진해 오는 쪽이 멈출 몸 반지름
 	BossKey: string?,
 	TileHome: CFrame?,
-	OrbitT: number?,
 	Reach: number?,
 }
 
@@ -100,6 +100,8 @@ function CombatDirector.new(opts: { Quiet: boolean? }?)
 	self.CameraBase = nil :: CFrame?
 	-- 적 진영 맨 뒷줄 가운데(BattleClient 가 칸을 놓고 정한다). 없으면 가장 먼 배우로 어림한다(돌진 to = "Far")
 	self.FarEnd = nil :: Vector3?
+	-- 보스 위성 셋이 함께 도는 바퀴의 각(라디안, _bossHomes)
+	self.BossOrbit = 0
 	-- PreSimulation: 애니메이션 단계(Animator 가 관절 Transform 을 다시 쓴다) 다음, 물리 단계 전.
 	-- RenderStepped 에서 넣으면 Animator 가 덮어써 몸이 차렷 그대로 보였다.
 	self.Connection = RunService.PreSimulation:Connect(function(dt)
@@ -217,14 +219,15 @@ function CombatDirector:AddBossPart(id: string, key: string, parent: Instance, h
 		Motions = motions,
 		BossKey = key,
 		TileHome = home,
-		OrbitT = 0,
 		Reach = (DebugBoss.Radius[key] or 2) * 0.9,
 	}
 	self.Actors[id] = actor
 	return actor
 end
 
--- 보스 부위의 공중 자리(매 프레임): 코어는 칸 위 Lift, 위성은 코어 앞 궤도(가만히 있을 때만 돈다)
+-- 보스 부위의 공중 자리(매 프레임): 코어는 칸 위 Lift, 위성은 코어 둘레 궤도(코어 뒤로도 돈다).
+-- 2026-10-03 사용자: "공전이 끊겨 보이지 않게, 불규칙한 방향으로" — 셋이 한 바퀴(BossOrbit)를 함께 돌되(따로 돌면 부딪친다)
+-- 빠르기·방향은 잡음으로 매끈하게 바뀌고, 공격 중에도 멈추지 않는다. 자리 흔들림은 DebugBoss.Orbit 이 더한다
 function CombatDirector:_bossHomes(dt: number)
 	local core: Actor? = nil
 	for _, a in self.Actors do
@@ -232,6 +235,8 @@ function CombatDirector:_bossHomes(dt: number)
 			core = a
 		end
 	end
+	local now = os.clock()
+	self.BossOrbit = (self.BossOrbit or 0) + DebugBoss.OrbitRate(now) * dt
 	for _, a in self.Actors do
 		local key, tile = a.BossKey, a.TileHome
 		if not key or not tile or a.Dying then
@@ -241,12 +246,9 @@ function CombatDirector:_bossHomes(dt: number)
 		if key == "Core" then
 			a.Home = tile + Vector3.new(0, DebugBoss.Lift, 0)
 		elseif core and core.TileHome then
-			if not a.Animator:IsBusy() then
-				a.OrbitT = (a.OrbitT or 0) + dt
-			end
-			local theta = (DebugBoss.OrbitPhase[key] or 0) + (a.OrbitT or 0) * DebugBoss.OrbitSpeed
+			local theta = (DebugBoss.OrbitPhase[key] or 0) + self.BossOrbit
 			local center = core.TileHome + Vector3.new(0, DebugBoss.Lift, 0)
-			a.Home = CFrame.new(center * DebugBoss.Orbit(theta)) * center.Rotation
+			a.Home = CFrame.new(center * DebugBoss.Orbit(theta, now, key)) * center.Rotation
 			ground = core.TileHome.Y - 0.4
 		else
 			a.Home = tile + Vector3.new(0, 7, 0)

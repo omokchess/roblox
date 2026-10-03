@@ -1134,8 +1134,7 @@ function BattleClient:_paintTiles()
 			-- 검수 칸(검수됨!·검수 준비중)은 칸 글자 대신 덩어리마다 글자 하나 + 칸 위 효과(아래 GroupMarks, 2026-10-02 요청)
 			BattleStage.Tag(
 				ally,
-				if gone[cellKey] or deleting[cellKey] then nil
-					elseif unavoid[cellKey] then "! 회피 불가"
+				if gone[cellKey] or deleting[cellKey] or unavoid[cellKey] then nil
 					elseif mod == "Buff" then "▲ 버프"
 					elseif mod == "Debuff" then "▼ 버그"
 					elseif mod == "Heal" then "✚ 회복"
@@ -1181,6 +1180,15 @@ function BattleClient:_paintTiles()
 	-- 검수 칸 묶음 표시(덩어리마다 글자 하나 + 칸 위 효과). 같은 묶음이면 다시 짓지 않는다
 	BattleStage.GroupMarks(self.tiles, "Pending", deleting)
 	BattleStage.GroupMarks(self.tiles, "Gone", gone)
+	-- 공격 범위는 따로 한 층(줄무늬 + 굵은 테두리 + 묶음 글자) — 버프·검수 칸 위에서도 묻히지 않게(2026-10-03 요청)
+	local threatKeys: { [string]: string } = {}
+	for key in threatened do
+		threatKeys[key] = "Threat"
+	end
+	for key in unavoid do
+		threatKeys[key] = "Unavoid"
+	end
+	BattleStage.ThreatMarks(self.tiles, threatKeys)
 
 	--[[
 		슬롯·공격 버튼 칠하기. 재사용 대기·카드 잠김·스테미나 부족을 슬롯마다 보여 준다(값만 있고 화면에

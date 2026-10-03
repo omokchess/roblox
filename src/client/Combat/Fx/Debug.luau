@@ -74,7 +74,8 @@ end
 function Fx.Bolt(ctx: any, ev: any)
 	local from = muzzle(ctx)
 	ctx.Vfx.Flash(from, { Color = RED, Size = 5, Life = 0.2 })
-	ctx.Vfx.Projectile(from, ctx.Target, { Time = flight(ev, 0.16), Build = orb(ctx.Vfx, 1.3, RED), TrailColor = RED })
+	-- 코어 뒤에서 쏠 때도 있어 살짝 위로 휘어 날린다
+	ctx.Vfx.Projectile(from, ctx.Target, { Time = flight(ev, 0.16), Arc = 2, Build = orb(ctx.Vfx, 1.3, RED), TrailColor = RED })
 end
 
 function Fx.BeamHit(ctx: any, _ev: any, at: Vector3?)
