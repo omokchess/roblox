@@ -2,7 +2,8 @@
 
 -- 보스 정보 창(BattleHud:ShowBossInfo)에 보이는 부위의 행동 하나. Id 가 있으면 BattleSkills 의 스킬(이름·설명·피해·방어 규칙),
 -- 없으면 공격이 아닌 기믹이라 Name·Description 을 여기 적는다. When = 언제 쓰나(턴 박자 — GridBattle 보스 예고와 맞출 것)
-export type BossMove = { Id: string?, Name: string?, When: string, Description: string? }
+-- Phase = 이 페이즈부터 쓴다(정보 창이 "N페이즈 해금"으로 보여 준다)
+export type BossMove = { Id: string?, Name: string?, When: string, Description: string?, Phase: number? }
 
 -- 보스 부위 하나. 칸 여러 개를 한 유닛이 차지한다(부위파괴 — 부위마다 체력이 따로다)
 export type BossPart = {
@@ -14,6 +15,8 @@ export type BossPart = {
 	-- 정보 창: 이 부위가 쓰는 것과 부쉈을 때 일어나는 일(GridBattle.bossPartBroken)
 	Moves: { BossMove }?,
 	Break: string?,
+	-- 예고 범위·레이저 색(2026-10-03 사용자: 부위마다 색을 달리해 어디를 때리는지 나눠 보이게)
+	Color: Color3?,
 }
 
 export type EnemyDefinition = {
@@ -26,8 +29,11 @@ export type EnemyDefinition = {
 	Behavior: "Strike" | "Guard" | "Focus" | "Boss",
 	-- 있으면 보스다. 이 부위들이 적 진영을 나눠 차지하고, Core 가 쓰러지면 끝난다(GridBattle 보스 규칙)
 	Parts: { BossPart }?,
-	-- 정보 창 맨 위 보스 규칙(글머리 줄)
+	-- 정보 창 맨 위 보스 규칙(글머리 줄) — 2026-10-03 부터 패시브·기믹으로 나눠 적는다
 	Rules: { string }?,
+	-- 정보 창 [패시브]·[기믹] 칸: { 이름, 설명 } (2026-10-03 사용자: 액티브 / 패시브 / 기믹으로 나눠 읽기 편하게)
+	Passives: { { Name: string, Description: string } }?,
+	Gimmicks: { { Name: string, Description: string } }?,
 }
 
 local CORE_CELLS = {}
@@ -70,10 +76,19 @@ local definitions: { [string]: EnemyDefinition } = {
 		Color = Color3.fromRGB(190, 60, 255),
 		MotionId = "Debug",
 		Behavior = "Boss",
-		Rules = {
-			"- [디버그 코어]는 다른 부위를 모두 부수기 전까지 쓰러지지 않음.\n  - 체력 1에서 버팀.",
-			"- 코어가 쓰러지면 남은 부위도 함께 무너짐.",
-			"- 지속 피해([출혈]·[독]·[화상]) −99%.",
+		Passives = {
+			{ Name = "코어 보호", Description = "- [디버그 코어]는 다른 부위를 모두 부수기 전까지 쓰러지지 않음.\n  - 체력 1에서 버팀.\n- 코어가 쓰러지면 남은 부위도 함께 무너짐." },
+			{ Name = "도트 차단", Description = "- 지속 피해([출혈]·[독]·[화상]) −99%." },
+			{ Name = "4페이즈", Description = "- 보스 체력 합 75% · 50% · 25% 아래로 내려갈 때마다 다음 페이즈.\n- 페이즈마다 부위 넷 모두 스킬 하나씩 해금.\n- 1페이즈는 정해진 박자, 2페이즈부터 부위마다 쓸 수 있는 스킬 중에 고른다.\n  - 같은 부위가 같은 스킬을 두 번 잇달아 쓰지 않음." },
+			{ Name = "최적화 (2페이즈)", Description = "- 보스 최대 스테미나 +20 · 스테미나 가득." },
+			{ Name = "멀티스레드 (3페이즈)", Description = "- 한 턴에 부위마다 두 번 행동." },
+			{ Name = "커널 모드 (4페이즈)", Description = "- 보스 [가하는 피해량] +30% · 스테미나 회복 +15." },
+		},
+		Gimmicks = {
+			{ Name = "보스 스테미나", Description = "- 스킬마다 스테미나를 쓴다. 매 턴 40 회복(최대 100).\n- 모자라면 그 부위는 쉰다.\n- 턴 시작에 15 아래면 [과부하]\n  - 그 턴 공격하지 않음(칸 기믹만).\n  - 보스가 받는 피해 +50%.\n- 깎는 법\n  - 회피 성공 −6 · 패리 −10 · [충전] 끊기 −30." },
+			{ Name = "충전", Description = "- [포맷]·[커널 패닉]은 한 턴 충전한 뒤 터진다.\n- 충전한 부위에 정해진 피해를 주면 끊긴다.\n  - 끊으면 그 부위 1턴 멈춤 · 보스 스테미나 −30." },
+			{ Name = "검수 칸", Description = "- 부위가 모두 부서져도 [검수]는 계속된다.\n- 검은 칸 위 부작용은 부위를 부술 때마다 하나씩 사라진다.\n  - 머리 → 스테미나 −20 후유증 · 삭제 팔 → 최대 체력 9% 고정 피해 · 패치 팔 → [받는 피해량] +200%." },
+			{ Name = "회복 불가", Description = "- [블루스크린]을 맞으면 3턴 동안 어떤 회복도 받지 못한다." },
 		},
 		Parts = {
 			{
@@ -81,41 +96,62 @@ local definitions: { [string]: EnemyDefinition } = {
 				Name = "중단점 머리",
 				Health = 20000,
 				Cells = { { 1, 2 }, { 2, 2 } },
-				Moves = { { Id = "BreakpointBeam", When = "매 턴" } },
-				Break = "- 디버그가 1턴 멈칫.\n  - 그 턴엔 어느 부위도 예고하지 않음.",
+				Color = Color3.fromRGB(255, 70, 70),
+				Moves = {
+					{ Id = "BreakpointBeam", When = "1페이즈 매 턴" },
+					{ Id = "StackTrace", When = "2페이즈 해금", Phase = 2 },
+					{ Id = "Watchpoint", When = "3페이즈 해금 · 버프", Phase = 3 },
+					{ Id = "BreakStorm", When = "4페이즈 해금", Phase = 4 },
+				},
+				Break = "- 디버그가 1턴 멈칫.\n  - 그 턴엔 어느 부위도 예고하지 않음.\n- 검은 칸 부작용 [스테미나 −20 후유증]이 사라짐.",
 			},
 			{
 				Key = "DeleteArm",
 				Name = "삭제 팔",
 				Health = 16000,
 				Cells = { { 1, 1 }, { 2, 1 } },
-				Moves = { { Id = "DeleteCells", When = "매 턴" } },
-				Break = "- [검수됨!] 칸이 모두 돌아옴.\n- 더는 칸을 지우지 않음.",
+				Color = Color3.fromRGB(255, 80, 210),
+				Moves = {
+					{ Id = "DeleteCells", When = "매 턴 · 기믹" },
+					{ Id = "ForceQuit", When = "2페이즈 해금", Phase = 2 },
+					{ Id = "Sudo", When = "3페이즈 해금 · 버프", Phase = 3 },
+					{ Id = "Format", When = "4페이즈 해금 · 충전", Phase = 4 },
+				},
+				Break = "- [검수]는 코어가 이어서 한다(칸은 계속 지워짐).\n- 검은 칸 부작용 [최대 체력 9% 고정 피해]가 사라짐.",
 			},
 			{
 				Key = "PatchArm",
 				Name = "패치 팔",
 				Health = 16000,
 				Cells = { { 1, 3 }, { 2, 3 } },
+				Color = Color3.fromRGB(70, 235, 110),
 				Moves = {
 					{
 						Name = "패치 적용",
-						When = "홀수 턴",
+						When = "홀수 턴 · 기믹",
 						Description = "- 아군 칸을 새로 칠한다.\n  - 검은 칸에는 깔지 않음.\n- 버프 칸 2\n  - [가하는 피해량] +40%, [받는 피해량] −20%.\n- 회복 칸 1\n  - 턴 끝 최대 체력 15% 회복.\n- 버그 칸 2\n  - [가하는 피해량] −30%, [받는 피해량] +40%.\n- 그 칸에 서 있을 때만 효과.",
 					},
-					{ Id = "ForcedPatch", When = "짝수 턴" },
+					{ Id = "ForcedPatch", When = "1페이즈 짝수 턴" },
+					{ Id = "Hotfix", When = "2페이즈 해금 · 버프", Phase = 2 },
+					{ Id = "BugPlant", When = "3페이즈 해금", Phase = 3 },
+					{ Id = "DependencyHell", When = "4페이즈 해금 · 버프", Phase = 4 },
 				},
-				Break = "- 버그 칸이 사라짐.\n- 버프·회복 칸은 그대로 굳음.",
+				Break = "- 버그 칸이 사라짐.\n- 버프·회복 칸은 그대로 굳음.\n- 검은 칸 부작용 [받는 피해량 +200%]가 사라짐.",
 			},
 			{
 				Key = "Core",
 				Name = "디버그 코어",
 				Health = 48000,
 				Cells = CORE_CELLS,
+				Color = Color3.fromRGB(150, 110, 255),
 				Moves = {
-					{ Id = "MemoryLeak", When = "홀수 턴" },
-					{ Id = "NullPointer", When = "짝수 턴(4의 배수 턴 빼고)" },
-					{ Id = "CoreDump", When = "4의 배수 턴" },
+					{ Id = "MemoryLeak", When = "1페이즈 홀수 턴" },
+					{ Id = "NullPointer", When = "1페이즈 짝수 턴" },
+					{ Id = "CoreDump", When = "1페이즈 4의 배수 턴" },
+					{ Id = "BlueScreen", When = "궁극기 · 3턴째부터" },
+					{ Id = "Overclock", When = "2페이즈 해금 · 버프", Phase = 2 },
+					{ Id = "KernelPanic", When = "3페이즈 해금 · 충전", Phase = 3 },
+					{ Id = "InfiniteRecursion", When = "4페이즈 해금", Phase = 4 },
 				},
 				Break = "- 디버그가 무너짐 — 승리.",
 			},

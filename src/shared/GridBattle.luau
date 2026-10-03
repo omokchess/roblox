@@ -93,8 +93,10 @@ export type Unit = {
 	-- 보스 부위(EnemyDefinitions.Parts 의 Key)와 차지한 칸들. 보통 적은 nil
 	Part: string?,
 	Block: { { number } }?,
-	-- 보스 부위가 이번 턴에 예고한 행동: 스킬과 겨눈 아군 칸 {x, y}
+	-- 보스 부위가 이번 턴에 예고한 행동: 스킬과 겨눈 아군 칸 {x, y}. Plan = Plans[1](예전 코드·스냅샷 호환)
+	-- 2026-10-03: 3페이즈부터 부위마다 두 번 행동 → Plans 에 차례로. Safe = 비켜 간 칸, Canceled = 충전이 끊겨 안 나감
 	Plan: { SkillId: string, Cells: { { number } } }?,
+	Plans: { any }?,
 }
 
 --[[
@@ -123,6 +125,20 @@ export type BossState = {
 	Locked: number?,
 	-- 검수중이 남긴 스테미나 빚: 남은 턴 뒤 Amount 만큼 깎는다
 	StaminaDebt: { { Turns: number, Amount: number } }?,
+	-- 2026-10-03 사용자: 4페이즈·보스 스테미나·보스 버프·충전·궁극기(회복 불가)·부위마다 검은 칸 부작용 하나씩 없앰
+	Phase: number,
+	Stamina: number,
+	MaxStamina: number,
+	Overheat: number,
+	Buffs: { { Id: string, Turns: number } },
+	Cooldowns: { [string]: number },
+	LastUsed: { [string]: string },
+	PartStun: { [string]: number },
+	Charge: any?,
+	NoHeal: number,
+	Removed: { [string]: boolean },
+	-- 이번 턴 칸 삭제 예고(주인 부위가 부서져도 코어가 이어 한다)
+	DeletePlan: { Cells: { { number } }, Owner: string }?,
 }
 
 export type State = {
@@ -400,8 +416,79 @@ GridBattle.TESTER_OUT, GridBattle.TESTER_IN, GridBattle.TESTER_SHIELD = TESTER_O
 local BUFF_OUT, BUFF_IN = 0.4, 0.8
 local DEBUFF_OUT, DEBUFF_IN = -0.3, 1.4
 
+--[[
+	2026-10-03 사용자 요청으로 더한 것 — 핵심은 "반복성을 통한 지루함을 최대한 줄이는 것".
+	  4페이즈   보스 체력 합 75·50·25% 아래로 갈 때마다. 페이즈마다 부위 넷 모두 스킬 하나씩 해금(BattleSkills Phase).
+	            1페이즈는 정해진 박자(배우는 단계), 2페이즈부터 부위마다 쓸 수 있는 스킬 중 가중 무작위(같은 스킬 연속 금지 — 그것뿐이면 쉰다).
+	            페이즈 진입 버프: 2 최적화(최대 스테미나 +20, 가득) · 3 멀티스레드(부위마다 두 번 행동) · 4 커널 모드(피해 +30%·회복 +15)
+	  스테미나  스킬마다 비용(StaminaCost), 매 턴 BOSS_STAMINA_REGEN 회복. 모자라면 그 부위는 쉰다.
+	            턴 시작에 BOSS_OVERHEAT_AT 아래면 과부하 — 공격 없이 칸 기믹만, 보스가 받는 피해 ×BOSS_OVERHEAT_TAKEN.
+	            플레이어가 깎는다: 회피 성공 −6 · 패리 −10 · 충전 끊기 −30 (뇌지컬: 보스 스테미나를 말려 과부하를 만든다)
+	  보스 버프 감시식·루트 권한·오버클럭·의존성 지옥·커널 모드(BOSS_BUFFS). 방어력 증가·자힐은 없다(사용자).
+	  충전      포맷·커널 패닉 — 한 턴 충전, 그 부위에 BreakRatio 만큼 피해를 주면 끊긴다(다음 턴 터지기 전까지 두 턴 기회).
+	  궁극기    블루스크린 — 3턴째부터, 아군 칸 전부 지금 체력 50%(회피·막기 불가), 맞으면 3턴 회복 불가.
+	  검수 칸   부위가 모두 부서져도 계속(삭제 팔이 부서지면 코어가 이어 한다). 검은 칸 부작용은 부위를 부술 때마다 하나씩 사라진다:
+	            머리 → 스테미나 후유증 · 삭제 팔 → 최대 체력 9% 고정 피해 · 패치 팔 → 받는 피해 +200%.
+]]
+local BOSS_STAMINA_MAX, BOSS_STAMINA_START, BOSS_STAMINA_REGEN = 100, 80, 40
+local BOSS_OVERHEAT_AT, BOSS_OVERHEAT_TAKEN = 15, 1.5
+local BOSS_DRAIN_DODGE, BOSS_DRAIN_PARRY, BOSS_DRAIN_BREAK = 6, 10, 30
+local BOSS_ULT_FROM_TURN = 3
+local BOSS_PHASE_AT = { 0.75, 0.5, 0.25 }
+GridBattle.BOSS_PHASE_AT = BOSS_PHASE_AT
+GridBattle.BOSS_OVERHEAT_AT, GridBattle.BOSS_ULT_FROM_TURN = BOSS_OVERHEAT_AT, BOSS_ULT_FROM_TURN
+-- 보스 버프: Damage 가하는 피해 +비율, Regen 스테미나 회복 +, CostCut 스킬 비용 −비율, NoGuard 막기(가드) 무시
+local BOSS_BUFFS: { [string]: any } = {
+	Watchpoint = { Name = "감시식", Turns = 2, Damage = 0.4 },
+	Sudo = { Name = "루트 권한", Turns = 2, NoGuard = true },
+	Overclock = { Name = "오버클럭", Turns = 3, Damage = 0.25, Regen = 20 },
+	DependencyHell = { Name = "의존성 지옥", Turns = 2, CostCut = 0.5 },
+	KernelMode = { Name = "커널 모드", Turns = math.huge, Damage = 0.3, Regen = 15 },
+}
+GridBattle.BOSS_BUFFS = BOSS_BUFFS
+-- 부위마다 고를 수 있는 스킬(칸 기믹 DeleteCells·패치 적용은 따로 돈다). 해금 페이즈는 BattleSkills 의 Phase
+local PART_POOL: { [string]: { string } } = {
+	Head = { "BreakpointBeam", "StackTrace", "Watchpoint", "BreakStorm" },
+	DeleteArm = { "ForceQuit", "Sudo", "Format" },
+	PatchArm = { "ForcedPatch", "Hotfix", "BugPlant", "DependencyHell" },
+	Core = { "MemoryLeak", "NullPointer", "CoreDump", "Overclock", "KernelPanic", "InfiniteRecursion", "BlueScreen" },
+}
+local PART_ORDER = { "Core", "Head", "PatchArm", "DeleteArm" }
+local KIND_WEIGHT: { [string]: number } = { Attack = 3, Buff = 2, Charge = 2, Ultimate = 4 }
+
+local function bossBuffTotal(boss: BossState, field: string): number
+	local total = 0
+	for _, b in boss.Buffs do
+		local v = (BOSS_BUFFS[b.Id] or {})[field]
+		if type(v) == "number" then
+			total += v
+		elseif v == true then
+			total += 1
+		end
+	end
+	return total
+end
+
 local function spawnBoss(state: State, def: EnemyDefinitions.EnemyDefinition, healthScale: number, powerScale: number)
-	local boss: BossState = { Id = def.Id, Parts = {}, Deleted = {}, Mods = {}, Stagger = 0 }
+	local boss: BossState = {
+		Id = def.Id,
+		Parts = {},
+		Deleted = {},
+		Mods = {},
+		Stagger = 0,
+		Phase = 1,
+		Stamina = BOSS_STAMINA_START,
+		MaxStamina = BOSS_STAMINA_MAX,
+		Overheat = 0,
+		Buffs = {},
+		Cooldowns = {},
+		LastUsed = {},
+		PartStun = {},
+		Charge = nil,
+		NoHeal = 0,
+		Removed = {},
+		DeletePlan = nil,
+	}
 	for _, part in def.Parts or {} do
 		local id = "boss_" .. part.Key
 		local health = math.max(1, math.floor(part.Health * healthScale))
@@ -481,25 +568,33 @@ end
 GridBattle.CoreLocked = coreLocked
 
 -- 부위가 부서졌다(damageUnit·DebugSetHealth 가 쓰러뜨린 직후)
+-- 2026-10-03 사용자: 검수 칸은 남기고, 부위마다 검은 칸 부작용을 하나씩 없앤다
 local function bossPartBroken(state: State, unit: Unit)
 	local boss = state.Boss
 	if not boss or not unit.Part then
 		return
 	end
 	unit.Plan = nil
+	unit.Plans = nil
+	if boss.Charge and boss.Charge.Part == unit.Part then
+		boss.Charge = nil
+	end
 	if unit.Part == "Head" then
 		boss.Stagger = 1
-		pushLog(state, "중단점 머리 파괴 — 디버그가 한 턴 멈칫한다")
+		boss.Removed.Stamina = true
+		boss.StaminaDebt = {}
+		pushLog(state, "중단점 머리 파괴 — 디버그가 한 턴 멈칫한다 · 검은 칸 스테미나 후유증이 사라졌다")
 	elseif unit.Part == "DeleteArm" then
-		boss.Deleted = {}
-		pushLog(state, "삭제 팔 파괴 — 검은 칸이 모두 돌아왔다")
+		boss.Removed.Cost = true
+		pushLog(state, "삭제 팔 파괴 — 검수는 코어가 이어 한다 · 검은 칸 고정 피해가 사라졌다")
 	elseif unit.Part == "PatchArm" then
 		for key, kind in boss.Mods do
 			if kind == "Debuff" then
 				boss.Mods[key] = nil
 			end
 		end
-		pushLog(state, "패치 팔 파괴 — 버그 칸이 사라지고 버프·회복 칸은 그대로 굳었다")
+		boss.Removed.Hurt = true
+		pushLog(state, "패치 팔 파괴 — 버그 칸이 사라지고 버프·회복 칸은 굳었다 · 검은 칸 받는 피해 증가가 사라졌다")
 	elseif unit.Part == "Core" then
 		for _, id in boss.Parts do
 			local other = state.Units[id]
@@ -507,11 +602,34 @@ local function bossPartBroken(state: State, unit: Unit)
 				other.Health = 0
 				other.Alive = false
 				other.Plan = nil
+				other.Plans = nil
 				BattleGrid.Remove(state.Grid, id)
 			end
 		end
 		pushLog(state, "디버그 코어 파괴 — 디버그가 무너진다")
 	end
+end
+
+-- 충전을 끊었다(damageUnit 이 충전한 부위에 피해를 쌓아 BreakRatio 를 넘겼을 때)
+local function breakCharge(state: State)
+	local boss = state.Boss :: BossState
+	local charge = boss.Charge
+	if not charge or charge.Broken then
+		return
+	end
+	charge.Broken = true
+	boss.Stamina = math.max(0, boss.Stamina - BOSS_DRAIN_BREAK)
+	boss.PartStun[charge.Part] = 1
+	for _, id in boss.Parts do
+		local u = state.Units[id]
+		for _, plan in (u and u.Plans) or {} do
+			if plan.Release then
+				plan.Canceled = true
+			end
+		end
+	end
+	local skill = BattleSkills.ById(charge.SkillId)
+	pushLog(state, string.format("%s 충전을 끊었다 — 1턴 멈춤 · 보스 스테미나 −%d", if skill then skill.Name else "?", BOSS_DRAIN_BREAK))
 end
 
 -- 아군이 검은 칸(검수됨!) 위에 있나
@@ -523,12 +641,13 @@ end
 
 -- 아군이 이번 턴 끝에 검은 칸이 될 칸(검수 준비중) 위에 있나
 local function onPending(state: State): boolean
-	local arm = bossPart(state, "DeleteArm")
+	local boss = state.Boss
+	local plan = boss and boss.DeletePlan
 	local cell = BattleGrid.CellOf(state.Grid, ALLY_ID)
-	if not arm or not arm.Plan or arm.Plan.SkillId ~= "DeleteCells" or not cell then
+	if not plan or not cell then
 		return false
 	end
-	for _, c in arm.Plan.Cells do
+	for _, c in plan.Cells do
 		if c[1] == cell.X and c[2] == cell.Y then
 			return true
 		end
@@ -593,15 +712,232 @@ local function patchCells(state: State, rng: () -> number, beamLane: number?, ke
 	pushLog(state, "패치 적용 — 버프·버그·회복 칸이 바뀌었다")
 end
 
--- 보스 예고. 부위는 움직이지 않고, 턴 번호대로 겨눌 아군 칸을 정한다
+-- 보스 체력 합 비율(부위 넷)
+local function bossHealthRatio(state: State): number
+	local boss = state.Boss :: BossState
+	local hp, max = 0, 0
+	for _, id in boss.Parts do
+		local u = state.Units[id]
+		if u then
+			hp += math.max(0, u.Health)
+			max += u.MaxHealth
+		end
+	end
+	return if max > 0 then hp / max else 0
+end
+GridBattle.BossHealthRatio = bossHealthRatio
+
+-- 페이즈 올리기(내려가지 않는다). 들어갈 때 특수 버프
+local function updateBossPhase(state: State)
+	local boss = state.Boss :: BossState
+	local ratio = bossHealthRatio(state)
+	local want = 1
+	for i, at in BOSS_PHASE_AT do
+		if ratio < at then
+			want = i + 1
+		end
+	end
+	while boss.Phase < want do
+		boss.Phase += 1
+		if boss.Phase == 2 then
+			boss.MaxStamina += 20
+			boss.Stamina = boss.MaxStamina
+			pushLog(state, "2페이즈 — [최적화] 최대 스테미나 +20 · 스테미나 가득 · 부위마다 새 스킬 해금")
+		elseif boss.Phase == 3 then
+			pushLog(state, "3페이즈 — [멀티스레드] 부위마다 한 턴에 두 번 행동 · 새 스킬 해금")
+		elseif boss.Phase == 4 then
+			table.insert(boss.Buffs, { Id = "KernelMode", Turns = math.huge })
+			pushLog(state, "4페이즈 — [커널 모드] 보스 가하는 피해 +30% · 스테미나 회복 +15 · 새 스킬 해금")
+		end
+	end
+end
+
+local function bossCost(boss: BossState, skill: BattleSkills.Skill): number
+	return math.floor((skill.StaminaCost or 0) * (1 - math.min(0.9, bossBuffTotal(boss, "CostCut"))))
+end
+
+local function buffActive(boss: BossState, id: string): boolean
+	for _, b in boss.Buffs do
+		if b.Id == id then
+			return true
+		end
+	end
+	return false
+end
+
+-- 이 부위가 지금 이 스킬을 쓸 수 있나(해금·비용·재사용·버프 중복·충전 하나만·궁극기 3턴)
+local function bossCanUse(state: State, skillId: string): boolean
+	local boss = state.Boss :: BossState
+	local skill = BattleSkills.ById(skillId)
+	if not skill then
+		return false
+	end
+	if (skill.Phase or 1) > boss.Phase or (boss.Cooldowns[skillId] or 0) > 0 or bossCost(boss, skill) > boss.Stamina then
+		return false
+	end
+	if skill.BossKind == "Buff" and BOSS_BUFFS[skillId] and buffActive(boss, skillId) then
+		return false
+	end
+	if skill.BossKind == "Charge" and boss.Charge then
+		return false
+	end
+	if skill.BossKind == "Ultimate" and state.Turn < BOSS_ULT_FROM_TURN then
+		return false
+	end
+	if skillId == "Hotfix" and boss.Stamina > boss.MaxStamina - 30 then
+		return false
+	end
+	return true
+end
+
+-- 1페이즈: 읽을 수 있는 정해진 박자(배우는 단계). 궁극기만 3턴째부터 끼어든다
+local function phaseOneSkill(state: State, key: string): string?
+	local turn = state.Turn
+	if key == "Head" then
+		return "BreakpointBeam"
+	elseif key == "PatchArm" then
+		return if turn % 2 == 0 then "ForcedPatch" else nil
+	elseif key == "Core" then
+		if bossCanUse(state, "BlueScreen") then
+			return "BlueScreen"
+		end
+		return if turn % 4 == 0 then "CoreDump" elseif turn % 2 == 0 then "NullPointer" else "MemoryLeak"
+	end
+	return nil
+end
+
+-- 2페이즈부터: 쓸 수 있는 것 중 가중 무작위. 바로 전에 쓴 것·이번 턴에 이미 쓴 것은 고르지 않는다 —
+-- 그것밖에 없으면 차라리 쉰다(같은 스킬 반복 금지, 2026-10-03 사용자: 반복성 줄이기)
+local function pickBossSkill(state: State, key: string, rng: () -> number, usedNow: { [string]: boolean }): string?
+	local boss = state.Boss :: BossState
+	local options = {}
+	for _, id in PART_POOL[key] or {} do
+		if not usedNow[id] and boss.LastUsed[key] ~= id and bossCanUse(state, id) then
+			table.insert(options, id)
+		end
+	end
+	local total = 0
+	for _, id in options do
+		total += KIND_WEIGHT[(BattleSkills.ById(id) :: any).BossKind or "Attack"] or 1
+	end
+	if total <= 0 then
+		return nil
+	end
+	local roll = rng() * total
+	for _, id in options do
+		roll -= KIND_WEIGHT[(BattleSkills.ById(id) :: any).BossKind or "Attack"] or 1
+		if roll <= 0 then
+			return id
+		end
+	end
+	return options[#options]
+end
+
+-- 스킬이 겨눌 아군 칸(켜진 칸만). Safe = 비켜 간 칸(중단점 폭풍)
+local function bossCells(state: State, skillId: string, rng: () -> number, ally: BattleGrid.Cell): ({ { number } }, { { number } }?)
+	local boss = state.Boss :: BossState
+	local grid = state.Grid
+	local all = enabledAllyCells(state)
+	local cells = {}
+	local function where(ok: (c: { number }) -> boolean)
+		for _, c in all do
+			if ok(c) then
+				table.insert(cells, c)
+			end
+		end
+	end
+	if skillId == "BreakpointBeam" then
+		where(function(c)
+			return c[2] == ally.Y
+		end)
+	elseif skillId == "ForcedPatch" or skillId == "StackTrace" then
+		where(function(c)
+			return c[1] == ally.X
+		end)
+	elseif skillId == "CoreDump" then
+		where(function(c)
+			return boss.Mods[BattleGrid.CellKey("Ally", c[1], c[2])] ~= "Buff"
+		end)
+	elseif skillId == "NullPointer" then
+		local other = ally.Y
+		while other == ally.Y do
+			other = math.floor(rng() * grid.Height) + 1
+		end
+		where(function(c)
+			return c[2] == ally.Y or c[2] == other
+		end)
+	elseif skillId == "MemoryLeak" then
+		local parity = (ally.X + ally.Y) % 2
+		where(function(c)
+			return (c[1] + c[2]) % 2 == parity
+		end)
+	elseif skillId == "ForceQuit" then
+		where(function(c)
+			return math.abs(c[1] - ally.X) <= 1 and math.abs(c[2] - ally.Y) <= 1
+		end)
+	elseif skillId == "InfiniteRecursion" then
+		where(function(c)
+			return c[1] == ally.X or c[2] == ally.Y
+		end)
+	elseif skillId == "BugPlant" then
+		local pool = {}
+		for _, c in all do
+			if c[1] == ally.X and c[2] == ally.Y then
+				table.insert(cells, c)
+			else
+				table.insert(pool, c)
+			end
+		end
+		for _ = 1, 3 do
+			local c = takeCell(pool, rng)
+			if c then
+				table.insert(cells, c)
+			end
+		end
+	elseif skillId == "BreakStorm" then
+		local pool = table.clone(all)
+		local safe = {}
+		for _ = 1, 2 do
+			local c = takeCell(pool, rng)
+			if c then
+				table.insert(safe, c)
+			end
+		end
+		return pool, safe
+	elseif skillId == "BlueScreen" or skillId == "KernelPanicBurst" then
+		cells = all
+	end
+	return cells, nil
+end
+
+-- 보스 버프를 건다(이미 있으면 남은 턴을 새로)
+local function addBossBuff(state: State, id: string)
+	local boss = state.Boss :: BossState
+	local def = BOSS_BUFFS[id]
+	if not def then
+		return
+	end
+	for _, b in boss.Buffs do
+		if b.Id == id then
+			b.Turns = def.Turns
+			return
+		end
+	end
+	table.insert(boss.Buffs, { Id = id, Turns = def.Turns })
+end
+
+-- 보스 예고. 부위는 움직이지 않는다. 1페이즈는 박자대로, 2페이즈부터 고른다(위 설명)
 local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 	local boss = state.Boss :: BossState
 	for _, id in boss.Parts do
 		local unit = state.Units[id]
 		if unit then
 			unit.Plan = nil
+			unit.Plans = nil
 		end
 	end
+	boss.DeletePlan = nil
+	updateBossPhase(state)
 	if boss.Stagger > 0 then
 		boss.Stagger -= 1
 		pushLog(state, "디버그가 멈칫했다 — 이번 턴은 예고가 없다")
@@ -613,38 +949,98 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 	end
 	local grid = state.Grid
 	local turn = state.Turn
-	local function plan(unit: Unit, skillId: string, cells: { { number } }): boolean
+
+	-- 계획 하나를 부위에 단다(같은 부위에 두 번째면 Plans 뒤에)
+	local function attach(unit: Unit, plan: any)
+		unit.Plans = unit.Plans or {}
+		table.insert(unit.Plans :: { any }, plan)
+		unit.Plan = (unit.Plans :: { any })[1]
+		if #(unit.Plans :: { any }) == 1 then
+			table.insert(planned, unit)
+		end
+		table.insert(state.Planned, unit.Id)
+	end
+	local function stunned(unit: Unit): boolean
 		if GroggyGauge.IsStunned(unit.Groggy) then
 			pushLog(state, string.format("%s 그로기 — 행동 불가", unit.Name))
+			return true
+		end
+		if (boss.PartStun[unit.Part or ""] or 0) > 0 then
+			pushLog(state, string.format("%s 멈춤 — 이번 턴 쉰다", unit.Name))
+			return true
+		end
+		return false
+	end
+	-- 스킬 하나를 계획한다(스테미나·재사용·버프·충전 처리). 못 하면 false
+	local function useSkill(unit: Unit, skillId: string): boolean
+		local skill = BattleSkills.ById(skillId)
+		if not skill then
 			return false
 		end
-		if #cells == 0 then
+		local cells, safe = bossCells(state, skillId, rng, ally)
+		local kind = skill.BossKind or "Attack"
+		if (kind == "Attack" or kind == "Ultimate") and #cells == 0 then
 			return false
 		end
-		unit.Plan = { SkillId = skillId, Cells = cells }
-		table.insert(planned, unit)
-		table.insert(state.Planned, unit.Id)
+		boss.Stamina -= bossCost(boss, skill)
+		if (skill.BossCooldown or 0) > 0 then
+			boss.Cooldowns[skillId] = skill.BossCooldown :: number
+		end
+		boss.LastUsed[unit.Part or ""] = skillId
+		local plan = { SkillId = skillId, Cells = cells, Kind = kind, Safe = safe }
+		if kind == "Buff" then
+			if BOSS_BUFFS[skillId] then
+				addBossBuff(state, skillId)
+				pushLog(state, string.format("%s — [%s] (%s)", unit.Name, skill.Name, BOSS_BUFFS[skillId].Name))
+			elseif skillId == "Hotfix" then
+				boss.Stamina = math.min(boss.MaxStamina, boss.Stamina + 40)
+				for _, id in boss.Parts do
+					local u = state.Units[id]
+					if u and u.Alive then
+						u.Status = BattleStatus.New()
+					end
+				end
+				pushLog(state, string.format("%s — [핫픽스] 보스 스테미나 +40 · 부위 상태이상 해제", unit.Name))
+			end
+		elseif kind == "Charge" then
+			boss.Charge = {
+				Part = unit.Part,
+				SkillId = skillId,
+				Need = math.floor(unit.MaxHealth * (skill.BreakRatio or 0.1)),
+				Dealt = 0,
+				Stage = "Charging",
+				Broken = false,
+			}
+			pushLog(state, string.format("%s — [%s] 충전 시작! %s에 %d 피해를 주면 끊긴다", unit.Name, skill.Name, unit.Name, boss.Charge.Need))
+		end
+		attach(unit, plan)
 		return true
 	end
 
-	local beamLane: number? = nil
-	local head = bossPart(state, "Head")
-	if head then
-		local cells = {}
-		for x = 1, grid.Width do
-			if BattleGrid.IsEnabled(grid, "Ally", x, ally.Y) then
-				table.insert(cells, { x, ally.Y })
-			end
-		end
-		if plan(head, "BreakpointBeam", cells) then
-			beamLane = ally.Y
+	-- 과부하: 턴 시작 스테미나가 바닥이면 공격 없이 칸 기믹만
+	boss.Overheat = if boss.Stamina < BOSS_OVERHEAT_AT then 1 else 0
+	if boss.Overheat > 0 then
+		pushLog(state, string.format("디버그 과부하 — 스테미나 %d · 이번 턴 공격하지 않음 · 받는 피해 +%d%%", boss.Stamina, math.floor((BOSS_OVERHEAT_TAKEN - 1) * 100 + 0.5)))
+	end
+
+	-- 충전 단계: 지난 턴 충전한 것이 끊기지 않았으면 이번 턴 터진다
+	local release: string? = nil
+	local charge = boss.Charge
+	if charge then
+		if charge.Broken then
+			boss.Charge = nil
+			charge = nil
+		elseif charge.Stage == "Charging" then
+			charge.Stage = "Release"
+			release = charge.Part
 		end
 	end
 
-	-- 칸 삭제: 매 턴 무늬 하나(전투마다 시작점·방향을 정하고 규칙적으로 돈다)
+	-- 칸 기믹 1: 검수(삭제 팔, 없으면 코어가 이어 한다). 포맷이 터지면 남는 칸이 둘뿐
 	local arm = bossPart(state, "DeleteArm")
+	local owner = arm or bossPart(state, "Core")
 	local keepNext: { [string]: boolean } = {}
-	if arm then
+	if owner and not (arm and stunned(arm)) then
 		if not boss.PresetStart then
 			boss.PresetStart = math.floor(rng() * #DELETE_PRESETS) + 1
 			boss.PresetStep = if rng() < 0.5 then 1 else -1
@@ -652,7 +1048,15 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 		end
 		local index = (boss.PresetStart - 1 + (boss.PresetCount :: number) * (boss.PresetStep :: number)) % #DELETE_PRESETS + 1
 		local preset = DELETE_PRESETS[index]
-		for _, c in preset.Keep do
+		local keep = table.clone(preset.Keep)
+		local formatted = charge and charge.SkillId == "Format" and charge.Stage == "Release"
+		if formatted then
+			while #keep > 2 do
+				table.remove(keep, math.floor(rng() * #keep) + 1)
+			end
+			pushLog(state, "포맷! — 이번 검수는 두 칸만 남긴다")
+		end
+		for _, c in keep do
 			keepNext[c[1] .. "," .. c[2]] = true
 		end
 		local cells = {}
@@ -663,61 +1067,58 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 				end
 			end
 		end
-		if plan(arm, "DeleteCells", cells) then
-			boss.PresetCount = (boss.PresetCount :: number) + 1
-			boss.PresetName = preset.Name
-		end
+		boss.PresetCount = (boss.PresetCount :: number) + 1
+		boss.PresetName = if formatted then preset.Name .. " (포맷)" else preset.Name
+		boss.DeletePlan = { Cells = cells, Owner = owner.Id }
+		attach(owner, { SkillId = "DeleteCells", Cells = cells, Kind = "Gimmick" })
 	end
 
+	-- 칸 기믹 2: 패치 적용(패치 팔, 홀수 턴)
 	local patch = bossPart(state, "PatchArm")
-	if patch and not GroggyGauge.IsStunned(patch.Groggy) then
-		if turn % 2 == 1 then
-			patchCells(state, rng, beamLane, keepNext)
-		else
-			local cells = {}
-			for y = 1, grid.Height do
-				if BattleGrid.IsEnabled(grid, "Ally", ally.X, y) then
-					table.insert(cells, { ally.X, y })
-				end
-			end
-			plan(patch, "ForcedPatch", cells)
-		end
+	local headLane: number? = if bossPart(state, "Head") then ally.Y else nil
+	if patch and turn % 2 == 1 and not GroggyGauge.IsStunned(patch.Groggy) and (boss.PartStun.PatchArm or 0) <= 0 then
+		patchCells(state, rng, headLane, keepNext)
 	end
 
-	-- 코어: 매 턴 광역기
-	local core = bossPart(state, "Core")
-	if core then
-		local cells = {}
-		local all = enabledAllyCells(state)
-		if turn % 4 == 0 then
-			-- 코어 덤프: 버프 칸만 빼고 전부(회피·가드 불가 — 버프 칸에 서는 것만이 답)
-			for _, c in all do
-				if boss.Mods[BattleGrid.CellKey("Ally", c[1], c[2])] ~= "Buff" then
-					table.insert(cells, c)
+	if boss.Overheat > 0 then
+		return
+	end
+
+	-- 행동: 코어 → 머리 → 패치 팔 → 삭제 팔(스테미나를 이 순서로 쓴다). 3페이즈부터 두 번
+	local actions = if boss.Phase >= 3 then 2 else 1
+	for _, key in PART_ORDER do
+		local unit = bossPart(state, key)
+		if not unit or stunned(unit) then
+			continue
+		end
+		local usedNow: { [string]: boolean } = {}
+		for k = 1, actions do
+			local id: string? = nil
+			if k == 1 and release == key and charge then
+				-- 충전이 터진다(비용은 충전 때 냈다)
+				local chargeSkill = BattleSkills.ById(charge.SkillId)
+				local releaseId = chargeSkill and chargeSkill.Release
+				if releaseId then
+					local cells = bossCells(state, releaseId, rng, ally)
+					attach(unit, { SkillId = releaseId, Cells = cells, Kind = "Attack", Release = true })
+					pushLog(state, string.format("%s — 충전 완료! 이번 턴 [%s]가 터진다(아직 끊을 수 있다)", unit.Name, (BattleSkills.ById(releaseId) :: any).Name))
+					usedNow[releaseId] = true
+					continue
 				end
 			end
-			plan(core, "CoreDump", cells)
-		elseif turn % 2 == 0 then
-			-- 널 포인터: 아군이 선 라인 + 다른 라인 하나(회피만)
-			local other = ally.Y
-			while other == ally.Y do
-				other = math.floor(rng() * grid.Height) + 1
-			end
-			for _, c in all do
-				if c[2] == ally.Y or c[2] == other then
-					table.insert(cells, c)
+			if boss.Phase == 1 then
+				id = if k == 1 then phaseOneSkill(state, key) else nil
+				if id and not bossCanUse(state, id) then
+					id = nil
 				end
+			else
+				id = pickBossSkill(state, key, rng, usedNow)
 			end
-			plan(core, "NullPointer", cells)
-		else
-			-- 메모리 누수: 체크무늬 절반(턴마다 무늬가 바뀐다). 아군 칸이 들도록 무늬를 맞춘다
-			local parity = (ally.X + ally.Y) % 2
-			for _, c in all do
-				if (c[1] + c[2]) % 2 == parity then
-					table.insert(cells, c)
-				end
+			if not id then
+				break
 			end
-			plan(core, "MemoryLeak", cells)
+			usedNow[id] = true
+			useSkill(unit, id)
 		end
 	end
 end
@@ -734,30 +1135,58 @@ local function bossEndTurn(state: State)
 			boss.Deleted[key] = nil
 		end
 	end
-	local arm = bossPart(state, "DeleteArm")
-	if arm and arm.Plan and arm.Plan.SkillId == "DeleteCells" then
-		for _, c in arm.Plan.Cells do
+	if boss.DeletePlan then
+		for _, c in boss.DeletePlan.Cells do
 			local key = BattleGrid.CellKey("Ally", c[1], c[2])
 			boss.Deleted[key] = { X = c[1], Y = c[2], Turns = BOSS_DELETE_TURNS }
 			boss.Mods[key] = nil
 		end
 		pushLog(state, string.format("검수됨! — %s 무늬만 남았다", boss.PresetName or "?"))
+		boss.DeletePlan = nil
 	end
 	for _, id in boss.Parts do
 		local unit = state.Units[id]
 		if unit then
 			unit.Plan = nil
+			unit.Plans = nil
 		end
 	end
+	-- 보스 쪽 시간: 버프·재사용·부위 멈춤·회복 불가가 한 턴 흐르고, 터진 충전은 끝, 스테미나 회복
+	for i = #boss.Buffs, 1, -1 do
+		local b = boss.Buffs[i]
+		b.Turns -= 1
+		if b.Turns <= 0 then
+			table.remove(boss.Buffs, i)
+		end
+	end
+	for id, left in boss.Cooldowns do
+		boss.Cooldowns[id] = math.max(0, left - 1)
+	end
+	for key, left in boss.PartStun do
+		boss.PartStun[key] = math.max(0, left - 1)
+	end
+	boss.NoHeal = math.max(0, boss.NoHeal - 1)
+	if boss.Charge and boss.Charge.Stage == "Release" then
+		boss.Charge = nil
+	end
+	boss.Overheat = 0
+	boss.Stamina = math.min(boss.MaxStamina, math.max(0, boss.Stamina) + BOSS_STAMINA_REGEN + bossBuffTotal(boss, "Regen"))
 end
 
 --[[
 	적이 이번 턴에 쓰는 스킬. 보스 부위는 예고(Plan)의 스킬, 보통 적은 고른 번호.
 	판정(위협·회피)·서버 대기열이 모두 이것을 본다.
 ]]
-function GridBattle.EnemySkill(enemy: Unit): BattleSkills.Skill
-	if enemy.Plan then
-		local skill = BattleSkills.ById(enemy.Plan.SkillId)
+-- 보스 부위의 index 번째 계획(없으면 첫 계획)
+local function planAt(enemy: Unit, index: number?): any
+	return (enemy.Plans and enemy.Plans[index or 1]) or enemy.Plan
+end
+GridBattle.PlanAt = planAt
+
+function GridBattle.EnemySkill(enemy: Unit, index: number?): BattleSkills.Skill
+	local plan = planAt(enemy, index)
+	if plan then
+		local skill = BattleSkills.ById(plan.SkillId)
 		if skill then
 			return skill
 		end
@@ -1125,7 +1554,18 @@ local function damageUnit(
 	canKill: boolean?
 ): number
 	local kind: BattleStatus.Element = element or "Physical"
+	local bossNow = if unit.Part then state.Boss else nil
+	if bossNow and bossNow.Overheat > 0 then
+		amount *= BOSS_OVERHEAT_TAKEN
+	end
 	local scaled = BattleStatus.IncomingDamage(unit.Status, amount, kind)
+	-- 충전 끊기: 충전한 부위가 받은 피해를 쌓는다(코어가 잠겨 체력이 안 깎여도 센다)
+	if bossNow and bossNow.Charge and not bossNow.Charge.Broken and bossNow.Charge.Part == unit.Part and scaled > 0 then
+		bossNow.Charge.Dealt += scaled
+		if bossNow.Charge.Dealt >= bossNow.Charge.Need then
+			breakCharge(state)
+		end
+	end
 	if state.Debug and state.Debug.God and unit.Side == "Ally" then
 		scaled = 0
 	end
@@ -1182,6 +1622,10 @@ end
 
 -- 회복하고, 아군이 실제로 회복했으면 카드 훅(Healed)을 쏜다
 local function heal(state: State, unit: Unit, amount: number): number
+	-- 보스 궁극기(블루스크린)를 맞은 뒤 몇 턴은 아군이 어떤 회복도 못 받는다
+	if unit.Id == ALLY_ID and state.Boss and state.Boss.NoHeal > 0 then
+		return 0
+	end
 	local gained = healUnit(unit, amount)
 	if gained > 0 and unit.Id == ALLY_ID then
 		fire(state, "Healed", { Amount = gained })
@@ -1295,6 +1739,17 @@ end
 	[디버그] 유닛 체력을 바로 정한다. 0 이면 쓰러뜨리고(처치 카드 훅이 돈다) 승패를 다시 본다.
 	`BattleService` 디버그 명령(즉시 승리·패배·처치·회복)만 쓴다.
 ]]
+-- 디버그·점검: 부위(또는 유닛)에 피해를 그대로 준다(방어·잠금·충전 끊기 규칙은 damageUnit 그대로)
+function GridBattle.DebugHitPart(state: State, unitId: string, amount: number): number
+	local unit = state.Units[unitId]
+	if not unit or not unit.Alive then
+		return 0
+	end
+	local dealt = damageUnit(state, unit, amount, "True", true)
+	refreshOutcome(state)
+	return dealt
+end
+
 function GridBattle.DebugSetHealth(state: State, unitId: string, value: number)
 	local unit = state.Units[unitId]
 	if not unit or not unit.Alive then
@@ -1716,36 +2171,49 @@ end
 	플레이어가 이동한 **뒤에** 부른다. 예고된 라인에서 비켜섰으면 그 공격은
 	여기서 빠진다 — 그게 위치로 피한다는 뜻이다.
 ]]
-function GridBattle.PlannedThreats(state: State): { Unit }
-	local threats: { Unit } = {}
+function GridBattle.PlannedThreatList(state: State): { { Unit: Unit, Index: number } }
+	local threats = {}
 	if state.Outcome ~= "Ongoing" then
 		return threats
 	end
+	-- 같은 부위가 두 번 행동하면 Planned 에 두 번 있다 — 몇 번째인지가 계획 번호
+	local seen: { [string]: number } = {}
 	for _, enemyId in state.Planned do
+		seen[enemyId] = (seen[enemyId] or 0) + 1
 		local enemy = state.Units[enemyId]
-		if enemy and enemy.Alive and GridBattle.EnemyThreatensAlly(state, enemy) then
-			table.insert(threats, enemy)
+		if enemy and enemy.Alive and GridBattle.EnemyThreatensAlly(state, enemy, seen[enemyId]) then
+			table.insert(threats, { Unit = enemy, Index = seen[enemyId] })
 		end
 	end
 	return threats
+end
+
+function GridBattle.PlannedThreats(state: State): { Unit }
+	local units = {}
+	for _, t in GridBattle.PlannedThreatList(state) do
+		table.insert(units, t.Unit)
+	end
+	return units
 end
 
 --[[
 	적 하나의 공격이 아군에게 닿는지. 닿으면 회피/패리 QTE를 띄울 차례다.
 	사양의 라인 규칙을 그대로 쓰므로, 아군이 다른 라인에 있으면 그냥 빗나간다.
 ]]
-function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit): boolean
+function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?): boolean
 	local cell = BattleGrid.CellOf(state.Grid, enemy.Id)
 	if not cell then
 		return false
 	end
-	-- 보스 부위: 예고 때 고른 칸에 서 있으면 맞는다(피해 없는 행동은 위협이 아니다)
-	if enemy.Plan then
+	-- 보스 부위: 예고 때 고른 칸에 서 있으면 맞는다(피해 없는 행동·끊긴 충전은 위협이 아니다)
+	local plan = planAt(enemy, index)
+	if plan then
 		local here = BattleGrid.CellOf(state.Grid, state.AllyId)
-		if not here or GridBattle.EnemySkill(enemy).Damage <= 0 then
+		local foeSkill = GridBattle.EnemySkill(enemy, index)
+		if not here or plan.Canceled or (foeSkill.Damage <= 0 and not foeSkill.HpRatio) then
 			return false
 		end
-		for _, c in enemy.Plan.Cells do
+		for _, c in plan.Cells do
 			if c[1] == here.X and c[2] == here.Y then
 				return true
 			end
@@ -1773,7 +2241,7 @@ end
 	사양: 패리 성공 시 상대 그로기가 오른다(QteDefinitions.PARRY_GROGGY_GAIN).
 	Dodge 배율은 Success 0 / Partial 0.5 / Fail 1.0 — 즉 성공하면 아예 안 맞는다.
 ]]
-function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefinitions.Grade): (boolean, string?)
+function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefinitions.Grade, planIndex: number?): (boolean, string?)
 	if state.Outcome ~= "Ongoing" then
 		return false, "전투가 끝났습니다."
 	end
@@ -1783,7 +2251,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	end
 
 	local ally = GridBattle.Ally(state)
-	local skill = GridBattle.EnemySkill(enemy)
+	local skill = GridBattle.EnemySkill(enemy, planIndex)
 	local watch = watchBegin(state)
 	--[[
 		카드: 맞기 직전(배율·자동 패링 확률). 자동 패링은 QTE 를 못 막았을 때 확률로 패링으로 바꾼다
@@ -1801,7 +2269,8 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	if state.Boss and (state.Boss.Tester or 0) > 0 then
 		before.Mult *= TESTER_IN
 	end
-	if state.Boss and onChecked(state) then
+	-- 검수중 받는 피해 증가(패치 팔을 부수면 사라진다)
+	if state.Boss and onChecked(state) and not state.Boss.Removed.Hurt then
 		before.Mult *= CHECKING_IN
 	end
 	-- 보스전 버프/버그 칸: 받는 피해
@@ -1827,8 +2296,9 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 			autoParried = true
 			pushLog(state, "자동 패링")
 		end
-		-- 회피만 가능(가드 불가): 막음(Partial)은 실패로 친다
-		if (skill.DodgeOnly or skill.Unavoidable) and grade == "Partial" then
+		-- 회피만 가능(가드 불가): 막음(Partial)은 실패로 친다. 보스 [루트 권한] 동안은 모든 보스 공격이 그렇다
+		local noGuard = enemy.Part ~= nil and state.Boss ~= nil and bossBuffTotal(state.Boss, "NoGuard") > 0
+		if (skill.DodgeOnly or skill.Unavoidable or noGuard) and grade == "Partial" then
 			grade = "Fail"
 			pushLog(state, skill.Name .. " — 막을 수 없는 공격")
 		end
@@ -1839,9 +2309,27 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		multiplier *= math.max(1, before.CritMult)
 		pushLog(state, enemy.Name .. " 치명타")
 	end
-	-- 적에게 걸린 주는 피해 보정(광신·섬광·중력)을 먹인다.
+	-- 적에게 걸린 주는 피해 보정(광신·섬광·중력)을 먹인다. 보스는 보스 버프(감시식·오버클럭·커널 모드)도
 	local incoming = BattleStatus.OutgoingDamage(enemy.Status, (enemy.Power + skill.Damage) * multiplier)
-	local taken = damageUnit(state, ally, incoming, "Physical", true)
+	local boss = if enemy.Part then state.Boss else nil
+	if boss then
+		incoming *= 1 + bossBuffTotal(boss, "Damage")
+	end
+	local element: BattleStatus.Element = "Physical"
+	if skill.HpRatio then
+		-- 체퍼댐(궁극기): 지금 체력의 비율. 버프 칸·검수 배율은 안 먹는다(받는 쪽 등급·패리만)
+		incoming = ally.Health * skill.HpRatio * (if parried then PARRY_KEEP else QteDefinitions.Multiplier("Dodge", grade))
+		element = "True"
+	end
+	local taken = damageUnit(state, ally, incoming, element, true)
+	if boss and skill.NoHealTurns and taken > 0 then
+		boss.NoHeal = math.max(boss.NoHeal, skill.NoHealTurns)
+		pushLog(state, string.format("%s — %d턴 동안 회복 불가", skill.Name, skill.NoHealTurns))
+	end
+	-- 뇌지컬: 잘 피하면 보스 스테미나가 깎인다
+	if boss and grade == "Success" then
+		boss.Stamina = math.max(0, boss.Stamina - (if parried then BOSS_DRAIN_PARRY else BOSS_DRAIN_DODGE))
+	end
 	local parryBack = 0
 	if parried and enemy.Alive then
 		local full = BattleStatus.OutgoingDamage(enemy.Status, (enemy.Power + skill.Damage) * math.max(0, before.Mult))
@@ -1972,10 +2460,18 @@ local function bossTurnEffects(state: State, boss: BossState)
 	bossEndTurn(state)
 
 	if checked and ally.Alive then
-		-- 고정 피해지만 이 효과로는 죽지 않는다(canKill false → 체력 1 아래로 안 깎음)
-		local lost = damageUnit(state, ally, ally.MaxHealth * CHECKING_COST, "True", false)
-		table.insert(debts, { Turns = CHECKING_STAMINA_TURNS, Amount = CHECKING_STAMINA })
-		pushLog(state, string.format("검수중 — 체력 %d 잃음 · %d턴 뒤 스테미나 %d", lost, CHECKING_STAMINA_TURNS, CHECKING_STAMINA))
+		-- 부작용은 부위를 부술 때마다 하나씩 사라진다(삭제 팔 → 고정 피해, 머리 → 스테미나 후유증)
+		local notes = {}
+		if not boss.Removed.Cost then
+			-- 고정 피해지만 이 효과로는 죽지 않는다(canKill false → 체력 1 아래로 안 깎음)
+			local lost = damageUnit(state, ally, ally.MaxHealth * CHECKING_COST, "True", false)
+			table.insert(notes, string.format("체력 %d 잃음", lost))
+		end
+		if not boss.Removed.Stamina then
+			table.insert(debts, { Turns = CHECKING_STAMINA_TURNS, Amount = CHECKING_STAMINA })
+			table.insert(notes, string.format("%d턴 뒤 스테미나 %d", CHECKING_STAMINA_TURNS, CHECKING_STAMINA))
+		end
+		pushLog(state, "검수중" .. (if #notes > 0 then " — " .. table.concat(notes, " · ") else " — 부작용 없음"))
 		if ally.Alive then
 			boss.Tester = 1
 			boss.TesterShield = TESTER_SHIELD
@@ -2138,6 +2634,28 @@ local function bossSnapshot(state: State): any
 		Tester = boss.Tester or 0,
 		Locked = boss.Locked or 0,
 		StaminaDebt = boss.StaminaDebt and boss.StaminaDebt[1] and boss.StaminaDebt[1].Turns or 0,
+		-- 2026-10-03: 페이즈·스테미나·버프·충전·회복 불가·없앤 부작용(HUD 체력바·정보 창)
+		Phase = boss.Phase,
+		PhaseAt = BOSS_PHASE_AT,
+		HealthRatio = bossHealthRatio(state),
+		Stamina = math.max(0, boss.Stamina),
+		MaxStamina = boss.MaxStamina,
+		Overheat = boss.Overheat > 0,
+		NoHeal = boss.NoHeal,
+		Buffs = (function()
+			local list = {}
+			for _, b in boss.Buffs do
+				local def = BOSS_BUFFS[b.Id] or {}
+				table.insert(list, { Id = b.Id, Name = def.Name or b.Id, Turns = if b.Turns == math.huge then -1 else b.Turns })
+			end
+			return list
+		end)(),
+		Charge = if boss.Charge
+			then { Part = boss.Charge.Part, SkillId = boss.Charge.SkillId, Need = boss.Charge.Need, Dealt = math.floor(boss.Charge.Dealt), Stage = boss.Charge.Stage, Broken = boss.Charge.Broken }
+			else nil,
+		Removed = table.clone(boss.Removed),
+		DeleteCells = if boss.DeletePlan then boss.DeletePlan.Cells else nil,
+		UltFromTurn = BOSS_ULT_FROM_TURN,
 	}
 end
 
@@ -2168,6 +2686,7 @@ function GridBattle.Snapshot(state: State): any
 			Part = unit.Part,
 			Cells = if unit.Alive then unit.Block else nil,
 			Plan = unit.Plan,
+			Plans = unit.Plans,
 		}
 	end
 	--[[

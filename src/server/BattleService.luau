@@ -452,13 +452,8 @@ local function spectatePacket(player: Player, session: Session, snapshot: any): 
 	-- 보스 판(구경하는 쪽도 칸마다 무슨 칸인지 보이게): 버프·버그·회복, 검은 칸, 이번 턴 예고 칸
 	local board = nil
 	if snapshot.Boss then
-		local pending = {}
-		for _, id in snapshot.Planned or {} do
-			local u = snapshot.Units[id]
-			if u and u.Plan and u.Plan.SkillId == "DeleteCells" then
-				pending = u.Plan.Cells
-			end
-		end
+		-- 이번 턴 검수 예고 칸(삭제 팔이 부서지면 코어가 잇는다 — 판 상태에서 바로 읽는다)
+		local pending = snapshot.Boss.DeleteCells or {}
 		board = { Deleted = snapshot.Boss.Deleted, Mods = snapshot.Boss.Mods, Pending = pending }
 	end
 	return {
@@ -757,10 +752,13 @@ function BattleService:_queueThreats(player: Player)
 		return
 	end
 	local threats = {}
-	for _, enemy in GridBattle.PlannedThreats(battle) do
-		local foeSkill = GridBattle.EnemySkill(enemy)
+	-- 보스 부위는 한 턴에 두 번 행동할 수 있다(3페이즈~) — 몇 번째 계획인지(PlanIndex)를 같이 줄 세운다
+	for _, t in GridBattle.PlannedThreatList(battle) do
+		local enemy = t.Unit
+		local foeSkill = GridBattle.EnemySkill(enemy, t.Index)
 		table.insert(threats, {
 			Id = enemy.Id,
+			PlanIndex = t.Index,
 			Name = enemy.Name,
 			SkillId = foeSkill.Id,
 			SkillName = foeSkill.Name,
@@ -846,7 +844,7 @@ function BattleService:HandleGridAction(player: Player, request: any)
 		end
 		-- 대상은 서버가 고른다(대기열 맨 앞). 클라이언트 Id 를 믿으면 어긋날 때 턴이 멈춘다.
 		local pending = table.remove(session.Threats, 1)
-		GridBattle.ResolveDodge(battle, pending.Id, grade :: any)
+		GridBattle.ResolveDodge(battle, pending.Id, grade :: any, pending.PlanIndex)
 		if self:_settle(player) then
 			return
 		end

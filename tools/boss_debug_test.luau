@@ -195,7 +195,8 @@ do
 	check(buff > plain and debuff < plain, string.format("버프/버그 칸 피해 %d / %d / %d", buff, plain, debuff))
 end
 
--- 5) 부위 파괴 효과: 삭제 팔 → 칸 복구, 패치 팔 → 버그 칸 사라짐, 머리 → 멈칫, 코어 → 승리
+-- 5) 부위 파괴 효과(2026-10-03 사용자: 검수 칸은 남기고 부위마다 검은 칸 부작용을 하나씩 없앤다):
+--    삭제 팔 → 검수는 코어가 이어 함·고정 피해 없음, 패치 팔 → 버그 칸 사라짐·받는 피해 증가 없음, 머리 → 멈칫·스테미나 후유증 없음, 코어 → 승리
 do
 	local s = newBoss()
 	s.Turn = 2
@@ -203,16 +204,16 @@ do
 	GridBattle.EndTurn(s)
 	check(next(s.Boss.Deleted) ~= nil, "칸이 지워져 있어야 한다")
 	GridBattle.DebugSetHealth(s, "boss_DeleteArm", 0)
-	check(next(s.Boss.Deleted) == nil, "삭제 팔을 부수면 칸이 돌아온다")
-	for x = 1, 6 do
-		for y = 1, 3 do
-			check(BattleGrid.IsEnabled(s.Grid, "Ally", x, y), "복구 안 된 칸")
-		end
-	end
+	check(next(s.Boss.Deleted) ~= nil, "삭제 팔을 부숴도 검은 칸은 남는다")
+	check(s.Boss.Removed.Cost, "삭제 팔 → 검은 칸 고정 피해가 사라진다")
+	GridBattle.EnemyPlan(s, rng)
+	check(s.Boss.DeletePlan and s.Boss.DeletePlan.Owner == "boss_Core" and #s.Boss.DeletePlan.Cells == 12, "삭제 팔이 없으면 코어가 검수를 잇는다")
 	s.Boss.Mods = { [BattleGrid.CellKey("Ally", 2, 2)] = "Buff", [BattleGrid.CellKey("Ally", 3, 3)] = "Debuff" }
 	GridBattle.DebugSetHealth(s, "boss_PatchArm", 0)
 	check(s.Boss.Mods[BattleGrid.CellKey("Ally", 3, 3)] == nil and s.Boss.Mods[BattleGrid.CellKey("Ally", 2, 2)] == "Buff", "패치 팔: 버그만 사라진다")
+	check(s.Boss.Removed.Hurt, "패치 팔 → 검은 칸 받는 피해 증가가 사라진다")
 	GridBattle.DebugSetHealth(s, "boss_Head", 0)
+	check(s.Boss.Removed.Stamina, "머리 → 검은 칸 스테미나 후유증이 사라진다")
 	GridBattle.EnemyPlan(s, rng)
 	check(#s.Planned == 0, "머리를 부순 다음 예고는 멈칫")
 	GridBattle.DebugSetHealth(s, "boss_Core", 0)
@@ -291,6 +292,7 @@ do
 	s3.Turn = 4
 	GridBattle.EndTurn(s3)
 	s3.Turn = 4
+	s3.Boss.Cooldowns.BlueScreen = 99 -- 궁극기(3턴째부터)를 막아 두고 1페이즈 박자만 본다
 	GridBattle.EnemyPlan(s3, rng)
 	check(s3.Units.boss_Core.Plan and s3.Units.boss_Core.Plan.SkillId == "CoreDump", "4턴 코어 덤프")
 	hp = s3.Units.player.Health
@@ -362,6 +364,8 @@ do
 	-- 검은 칸에서 마친다 → 최대 체력 9% 고정 피해(죽지 않음), 테스터(방어막 200), 2턴 뒤 스테미나 20
 	s.Units.player.Health = 5000
 	local st0 = s.Units.player.Stamina
+	-- 다음 무늬가 하필 이 칸을 또 예고하면 다시 묶인다(무작위 차례에 달림) — 묶임 한 턴만 보려고 이번 예고는 지운다
+	s.Boss.DeletePlan = nil
 	GridBattle.EndTurn(s)
 	check(math.abs((5000 - s.Units.player.Health) - 450) <= 1, "검수중 최대 체력 9%: " .. (5000 - s.Units.player.Health))
 	check(s.Boss.Tester == 1 and s.Units.player.Status.Shield >= 200, "테스터 + 방어막 200")
@@ -470,8 +474,8 @@ do
 			end
 			local skills = GridBattle.SkillList(s)
 			GridBattle.ResolveSkill(s, math.floor(r() * #skills) + 1, ({ "Success", "Partial", "Fail" })[math.floor(r() * 3) + 1], r)
-			for _, enemy in GridBattle.PlannedThreats(s) do
-				GridBattle.ResolveDodge(s, enemy.Id, ({ "Success", "Partial", "Fail" })[math.floor(r() * 3) + 1])
+			for _, t in GridBattle.PlannedThreatList(s) do
+				GridBattle.ResolveDodge(s, t.Unit.Id, ({ "Success", "Partial", "Fail" })[math.floor(r() * 3) + 1], t.Index)
 			end
 			GridBattle.EndTurn(s)
 			local me = s.Units.player
@@ -481,13 +485,215 @@ do
 			for _ in s.Boss.Deleted do
 				black += 1
 			end
-			check(black <= 12, def.Id .. " 검은 칸이 12 칸보다 많다: " .. black)
+			-- 보통 12 칸, 포맷이 터진 턴은 16 칸(두 칸만 남김)
+			check(black <= 16, def.Id .. " 검은 칸이 16 칸보다 많다: " .. black)
 			if s.Outcome == "Ongoing" then
 				GridBattle.EnemyPlan(s, r)
 			end
 			local _ = turn
 		end
 	end
+end
+
+-- 8) 2026-10-03 사용자: 4페이즈·스킬 해금·3페이즈 두 번 행동·보스 스테미나(과부하)·버프·충전 끊기·궁극기(체퍼댐 50%·회복 불가)
+do
+	local function setRatio(st, ratio)
+		for _, id in st.Boss.Parts do
+			local u = st.Units[id]
+			u.Health = math.max(1, math.floor(u.MaxHealth * ratio))
+		end
+	end
+	local function plans(st)
+		local n, ids = 0, {}
+		for _, id in st.Boss.Parts do
+			for _, p in st.Units[id].Plans or {} do
+				n += 1
+				ids[p.SkillId] = (ids[p.SkillId] or 0) + 1
+			end
+		end
+		return n, ids
+	end
+
+	-- 페이즈: 체력 합 비율로만 오르고 내려가지 않는다. 2페이즈 최적화(최대 스테미나 +20, 가득)
+	local s = newBoss()
+	check(s.Boss.Phase == 1, "처음은 1페이즈")
+	setRatio(s, 0.7)
+	GridBattle.EnemyPlan(s, rng)
+	check(s.Boss.Phase == 2 and s.Boss.MaxStamina == 120, "75% 아래 → 2페이즈 · 최대 스테미나 120")
+	setRatio(s, 0.2)
+	GridBattle.EndTurn(s)
+	GridBattle.EnemyPlan(s, rng)
+	check(s.Boss.Phase == 4, "25% 아래 → 4페이즈: " .. s.Boss.Phase)
+	local kernel = false
+	for _, b in s.Boss.Buffs do
+		kernel = kernel or b.Id == "KernelMode"
+	end
+	check(kernel, "4페이즈 커널 모드 버프")
+
+	-- 3페이즈: 부위마다 두 번 행동(스테미나가 넉넉할 때)
+	local t = newBoss()
+	setRatio(t, 0.4)
+	t.Boss.Stamina, t.Boss.MaxStamina = 999, 999
+	GridBattle.EnemyPlan(t, rng)
+	check(t.Boss.Phase == 3, "40% → 3페이즈")
+	local doubled = 0
+	for _, id in t.Boss.Parts do
+		local acts = 0
+		for _, p in t.Units[id].Plans or {} do
+			if p.SkillId ~= "DeleteCells" then
+				acts += 1
+			end
+		end
+		if acts >= 2 then
+			doubled += 1
+		end
+	end
+	check(doubled >= 3, "3페이즈 부위 셋 이상이 두 번 행동: " .. doubled)
+	check(#GridBattle.PlannedThreatList(t) >= 0, "3페이즈 위협 목록")
+
+	-- 같은 부위가 같은 스킬을 잇달아 쓰지 않는다(2페이즈 이상)
+	local u = newBoss()
+	setRatio(u, 0.6)
+	local last = {}
+	for turn = 1, 12 do
+		u.Turn = turn
+		u.Boss.Stamina, u.Boss.MaxStamina = 999, 999
+		GridBattle.EnemyPlan(u, rng)
+		for _, id in u.Boss.Parts do
+			local key = u.Units[id].Part
+			for _, p in u.Units[id].Plans or {} do
+				if p.SkillId ~= "DeleteCells" and p.SkillId ~= "KernelPanicBurst" then
+					check(last[key] ~= p.SkillId, key .. " 같은 스킬을 잇달아 썼다: " .. p.SkillId)
+					last[key] = p.SkillId
+					break
+				end
+			end
+		end
+		GridBattle.EndTurn(u)
+	end
+
+	-- 과부하: 스테미나가 바닥이면 공격 없이 칸 기믹만 · 받는 피해 +50%
+	local o = newBoss()
+	o.Boss.Stamina = 5
+	GridBattle.EnemyPlan(o, rng)
+	check(o.Boss.Overheat == 1, "스테미나 5 → 과부하")
+	local n, ids = plans(o)
+	check(n == (ids.DeleteCells or 0), "과부하 턴엔 칸 기믹만: " .. n)
+	local ref2 = newBoss()
+	GridBattle.MoveAlly(o, 1, 2)
+	GridBattle.MoveAlly(ref2, 1, 2)
+	o.Boss.Mods, ref2.Boss.Mods = {}, {}
+	local hh, hr = o.Units.boss_Head.Health, ref2.Units.boss_Head.Health
+	GridBattle.ResolveSkill(o, 1, "Success", function()
+		return 0.99
+	end)
+	GridBattle.ResolveSkill(ref2, 1, "Success", function()
+		return 0.99
+	end)
+	local dO, dR = hh - o.Units.boss_Head.Health, hr - ref2.Units.boss_Head.Health
+	check(dR > 0 and dO >= dR * 1.4, string.format("과부하 받는 피해 %d vs 보통 %d", dO, dR))
+
+	-- 회피 성공은 보스 스테미나를 깎는다
+	local d = newBoss()
+	GridBattle.EnemyPlan(d, rng)
+	local st = d.Boss.Stamina
+	GridBattle.ResolveDodge(d, "boss_Head", "Success")
+	check(d.Boss.Stamina == st - 6, "회피 성공 → 보스 스테미나 −6")
+
+	-- 충전(커널 패닉): 끊지 못하면 다음 턴 터지고, 코어에 10% 피해를 주면 끊긴다(코어가 잠겨 있어도)
+	local BLOCK = { "MemoryLeak", "NullPointer", "CoreDump", "Overclock", "InfiniteRecursion", "BlueScreen" }
+	local function chargeBoss()
+		local c = newBoss()
+		setRatio(c, 0.45)
+		c.Turn = 1
+		c.Boss.Stamina, c.Boss.MaxStamina = 999, 999
+		for _, sid in BLOCK do
+			c.Boss.Cooldowns[sid] = 99
+		end
+		GridBattle.EnemyPlan(c, rng)
+		return c
+	end
+	local c = chargeBoss()
+	check(c.Boss.Charge and c.Boss.Charge.SkillId == "KernelPanic" and c.Boss.Charge.Stage == "Charging", "코어가 커널 패닉 충전")
+	GridBattle.EndTurn(c)
+	c.Boss.Stamina = 999
+	GridBattle.EnemyPlan(c, rng)
+	local burst = false
+	for _, p in c.Units.boss_Core.Plans or {} do
+		burst = burst or (p.SkillId == "KernelPanicBurst" and p.Release == true)
+	end
+	check(burst, "끊지 못하면 다음 턴 커널 패닉이 터진다")
+	local c2 = chargeBoss()
+	local stBefore = c2.Boss.Stamina
+	local core = c2.Units.boss_Core
+	core.Health = 2 -- 잠긴 코어(체력 1에서 버팀)여도 충전 피해는 센다
+	for _ = 1, 20 do
+		if c2.Boss.Charge.Broken then
+			break
+		end
+		GridBattle.DebugHitPart(c2, "boss_Core", math.ceil(c2.Boss.Charge.Need / 4))
+	end
+	check(c2.Boss.Charge.Broken, "코어에 충전량만큼 피해를 주면 끊긴다")
+	check(core.Alive and core.Health >= 1, "잠긴 코어는 그래도 버틴다")
+	check(c2.Boss.Stamina <= stBefore - 30, "충전을 끊으면 보스 스테미나 −30")
+	check((c2.Boss.PartStun.Core or 0) == 1, "충전을 끊으면 코어 1턴 멈춤")
+
+	-- 궁극기(블루스크린): 3턴째부터, 지금 체력의 50%, 회피 성공이어도 맞고, 3턴 동안 회복 불가
+	local g = newBoss()
+	g.Turn = 2
+	GridBattle.EnemyPlan(g, rng)
+	check(g.Units.boss_Core.Plan.SkillId ~= "BlueScreen", "2턴엔 궁극기를 안 쓴다")
+	GridBattle.EndTurn(g)
+	g.Turn = 3
+	g.Boss.Stamina = 100
+	GridBattle.EnemyPlan(g, rng)
+	check(g.Units.boss_Core.Plan.SkillId == "BlueScreen", "3턴째 궁극기")
+	local hp = g.Units.player.Health
+	GridBattle.ResolveDodge(g, "boss_Core", "Success")
+	local lost = hp - g.Units.player.Health
+	check(math.abs(lost - math.floor(hp * 0.5)) <= 2, string.format("블루스크린 = 지금 체력 50%%: %d / %d", lost, hp))
+	check(g.Boss.NoHeal == 3, "회복 불가 3턴")
+	g.Boss.Mods = { [BattleGrid.CellKey("Ally", 1, 2)] = "Heal" }
+	g.Boss.DeletePlan = nil
+	g.Boss.Deleted = {}
+	GridBattle.MoveAlly(g, 1, 2)
+	local before = g.Units.player.Health
+	GridBattle.EndTurn(g)
+	check(g.Units.player.Health <= before, "회복 불가 동안 회복 칸이 안 듣는다")
+	check(g.Boss.NoHeal == 2, "회복 불가가 한 턴 흐른다")
+
+	-- 보스 버프: 감시식이 걸리면 보스 공격 피해가 오른다
+	local w1, w2 = newBoss(), newBoss()
+	GridBattle.EnemyPlan(w1, rng)
+	GridBattle.EnemyPlan(w2, rng)
+	table.insert(w2.Boss.Buffs, { Id = "Watchpoint", Turns = 2 })
+	local a1, a2 = w1.Units.player.Health, w2.Units.player.Health
+	GridBattle.ResolveDodge(w1, "boss_Head", "Fail")
+	GridBattle.ResolveDodge(w2, "boss_Head", "Fail")
+	check((a2 - w2.Units.player.Health) > (a1 - w1.Units.player.Health), "감시식: 보스 피해 증가")
+
+	-- 루트 권한: 막음(Partial)이 실패가 된다(가드 무시)
+	local function forced(st)
+		GridBattle.EnemyPlan(st, rng)
+		st.Units.boss_PatchArm.Plans = { { SkillId = "ForcedPatch", Cells = { { 1, 1 }, { 1, 2 }, { 1, 3 } } } }
+		st.Units.boss_PatchArm.Plan = st.Units.boss_PatchArm.Plans[1]
+		GridBattle.MoveAlly(st, 1, 2)
+		st.Boss.Mods = {}
+		local h = st.Units.player.Health
+		return h
+	end
+	local r1, r2 = newBoss(), newBoss()
+	local q1 = forced(r1)
+	table.insert(r1.Boss.Buffs, { Id = "Sudo", Turns = 2 })
+	local q2 = forced(r2)
+	GridBattle.ResolveDodge(r1, "boss_PatchArm", "Partial")
+	GridBattle.ResolveDodge(r2, "boss_PatchArm", "Partial")
+	check((q1 - r1.Units.player.Health) > (q2 - r2.Units.player.Health), "루트 권한: 막음이 통하지 않는다")
+
+	-- 스냅샷: 페이즈·스테미나·버프·충전·회복 불가·계획 목록
+	local snap = GridBattle.Snapshot(t)
+	check(snap.Boss.Phase == 3 and snap.Boss.MaxStamina ~= nil and snap.Boss.Buffs ~= nil, "스냅샷 보스 상태")
+	check(snap.Units.boss_Core.Plans ~= nil, "스냅샷 계획 목록")
 end
 
 print("보스 디버그 점검 통과")
