@@ -385,7 +385,8 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 	local stepX = tiles.Ally[1][2].Position - first.Position
 	local stepY = tiles.Ally[2][1].Position - first.Position
 	local ux, uy = stepX.Unit, stepY.Unit
-	local blink = TweenInfo.new(0.42, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+	-- 2026-10-03 사용자: 깜빡임을 조금 약하게 → 0.42초 → 0.8초, 밝기 폭도 줄임(줄무늬 0.15↔0.6 → 0.25↔0.45, 테두리 0↔0.5 → 0.1↔0.3)
+	local blink = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
 
 	-- 묶음별 칸, 칸별 묶음들(줄무늬 색 돌리기)
 	local groups: { [string]: { Cells: { [string]: boolean }, Entry: any } } = {}
@@ -424,8 +425,8 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 			local mu = (u0 + u1) / 2
 			local mid = t.Position + ux * mu + uy * (mu - k) + Vector3.new(0, 0.3, 0)
 			local len = (u1 - u0) * math.sqrt(2)
-			local stripe = fxPart("Stripe", CFrame.lookAt(mid, mid + (ux + uy).Unit), Vector3.new(0.34, 0.05, len), e.Color, 0.15, folder)
-			TweenService:Create(stripe, blink, { Transparency = 0.6 }):Play()
+			local stripe = fxPart("Stripe", CFrame.lookAt(mid, mid + (ux + uy).Unit), Vector3.new(0.34, 0.05, len), e.Color, 0.25, folder)
+			TweenService:Create(stripe, blink, { Transparency = 0.45 }):Play()
 		end
 	end
 
@@ -485,8 +486,8 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 					local across = stepX * d[1] + stepY * d[2]
 					local along = if d[1] ~= 0 then stepY else stepX
 					local mid = t.Position + across * inset + Vector3.new(0, lift, 0)
-					local edge = fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(if e.Unavoid then 0.42 else 0.3, 0.08, along.Magnitude * (inset * 2) + 0.3), edgeColor, 0, folder)
-					TweenService:Create(edge, blink, { Transparency = 0.5, Color = e.Color }):Play()
+					local edge = fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(if e.Unavoid then 0.42 else 0.3, 0.08, along.Magnitude * (inset * 2) + 0.3), edgeColor, 0.1, folder)
+					TweenService:Create(edge, blink, { Transparency = 0.3, Color = e.Color }):Play()
 				end
 			end
 			if comp ~= labelComp then
