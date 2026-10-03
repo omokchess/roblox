@@ -170,7 +170,7 @@ local cards: { Card } = {
 		Art = "Berserker_R_Momentum",
 		Name = "가속",
 		Description = "공격 스킬을 사용하는 턴이 연속될 때마다 스테미나 소모가 {10}%씩 감소한다.\n"
-			.. "`가드` 혹은 `명상` 시 스테미나 소모량 감소는 초기화 된다.",
+			.. "`가드` 혹은 `호흡` 시 스테미나 소모량 감소는 초기화 된다.",
 		Levels = { { 10, 15, 20, 25, 30 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,

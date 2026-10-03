@@ -244,15 +244,15 @@ return {
 			Events = { { t = 0.14, k = "Fx", n = "StaffBlock" } },
 		},
 
-		-- 명상: 지팡이를 세워 짚고 기대어 서서 눈을 감는다(가만히 있질 못해 발끝을 까딱)
+		-- 호흡('명상' → '호흡'): 지팡이를 세워 짚고 기대어, 크게 들이쉬어 가슴을 펴고 길게 내쉬며 고개를 떨군다
 		Meditate = {
-			Duration = 2.0,
+			Duration = 2.4,
 			Keys = {
 				K(0, nil, GUARD),
 				K(0.4, "cubicInOut", LEAN),
-				K(1.0, "sineInOut", LEAN, { Head = { -18, 10, 8 }, RLeg = { 16, 0, 4 } }),
-				K(1.5, "sineInOut", LEAN),
-				K(2.0, "sineInOut", GUARD),
+				K(1.0, "sineInOut", LEAN, { Torso = { 8, 0, 4 }, Head = { 6, 10, 6 } }),
+				K(1.7, "sineInOut", LEAN, { Root = { 0, -0.24, 0, 0, -18, -4 }, Torso = { -8, 0, 4 }, Head = { -22, 10, 8 } }),
+				K(2.4, "cubicInOut", GUARD),
 			},
 			Events = { { t = 0.5, k = "Fx", n = "Meditate" } },
 		},

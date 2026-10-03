@@ -43,8 +43,6 @@ local SHUDDER = { Root = { 0, -0.5, 0.1, 0, -30, 0 }, Torso = { -30, 0, 0 }, Hea
 local BURST = { Root = { 0, 0, 0, 0, -30, 0 }, Torso = { 16, 0, 0 }, Head = { 26, 20, 0 }, RArm = { 120, -40, 60 }, LArm = { 120, 40, -60 }, RLeg = { 4, 0, 12 }, LLeg = { -4, 0, -12 }, W = { 0, 0, 0, -13.8, 0, 41.5 }, O = { 0, 0, 0, -13.8, 0, -41.5 } }
 -- 피격: 오른팔이 휙 튀어 병이 기운다(놓칠 뻔)
 local JOLT = { Root = { 0, -0.1, 0.8, 0, -40, 10 }, Torso = { 12, 14, -10 }, Head = { 24, 30, 0 }, RArm = { 170, -30, 40 }, LArm = { 60, 0, -60 }, RLeg = { 8, 0, -2 }, LLeg = { -6, 0, 2 }, W = { 0, 0, 0, -105.3, 0, -8 }, O = { 0, 0, 0, 10.5, 0, 17.8 } }
--- 명상: 쪼그려 앉아 두 병을 눈 위로 들어 빛에 비춘다
-local LIGHT = { Root = { 0, -1.1, 0, 0, -30, 0 }, Torso = { -6, 0, 0 }, Head = { 16, 10, 0 }, RArm = { 120, 20, 0 }, LArm = { 120, -20, 0 }, RLeg = { 90, 0, 16 }, LLeg = { 90, 0, -16 }, W = { 0, 0, 0, -24.4, 0, 2 }, O = { 0, 0, 0, -24.4, 0, -2 } }
 
 return {
 	Stance = READY,
@@ -246,14 +244,15 @@ return {
 			Events = { { t = 0.14, k = "Fx", n = "Huddle" } },
 		},
 
-		-- 명상: 쪼그려 앉아 두 병을 나란히 들어 빛에 비춰 본다
+		-- 호흡('명상' → '호흡'): 두 병을 가슴에 끌어안고 크게 들이쉬었다(어깨가 들썩) 휴 하고 길게 내쉰다
 		Meditate = {
-			Duration = 2.0,
+			Duration = 2.4,
 			Keys = {
 				K(0, nil, READY),
-				K(0.4, "cubicInOut", LIGHT),
-				K(1.5, "sineInOut", LIGHT, { Torso = { -4, 0, 0 }, Head = { 20, 14, 0 } }),
-				K(2.0, "sineInOut", READY),
+				K(0.4, "cubicInOut", HUG, { Root = { 0, -0.05, 0, 0, -30, 0 } }),
+				K(1.0, "sineInOut", HUG, { Root = { 0, 0.04, 0, 0, -30, 0 }, Torso = { -4, 0, 0 }, Head = { 6, 30, 0 } }),
+				K(1.7, "sineInOut", HUG, { Root = { 0, -0.12, 0, 0, -30, 0 }, Torso = { -20, 0, 0 }, Head = { -18, 30, 0 } }),
+				K(2.4, "cubicInOut", READY),
 			},
 			Events = { { t = 0.5, k = "Fx", n = "Meditate" } },
 		},

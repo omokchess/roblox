@@ -210,19 +210,20 @@ return {
 			},
 		},
 
-		-- 명상: 공중에서 책상다리로 앉아 두 손을 무릎에, 오브가 머리 위에서 돈다
+		-- 호흡('명상' → '호흡'): 기공의 '하늘 받치기' — 들숨에 두 손을 앞으로 천천히 들어 올리며 몸이 떠오르고, 날숨에 두 손으로 눌러 내리며 가라앉는다. 오브는 머리 위에서 돈다
 		Meditate = {
-			Duration = 2.2,
+			Duration = 2.6,
 			Keys = {
 				K(0, nil, FLOAT),
-				K(0.45, "sineInOut", FLOAT, { Root = { 0, 0.3, 0, 0, -16, 0 }, Torso = { 0, 0, 0 }, Head = { -14, 0, 0 }, RArm = { 30, 0, 14 }, LArm = { 30, 0, -14 }, RLeg = { 84, 0, 30 }, LLeg = { 84, 0, -30 } }),
-				K(1.7, "sineInOut", FLOAT, { Root = { 0, 0.45, 0, 0, -16, 0 }, Torso = { 2, 0, 0 }, Head = { -10, 0, 0 }, RArm = { 32, 0, 14 }, LArm = { 32, 0, -14 }, RLeg = { 84, 0, 30 }, LLeg = { 84, 0, -30 } }),
-				K(2.2, "sineInOut", FLOAT),
+				K(0.4, "sineInOut", FLOAT, { RArm = { 40, 10, 10 }, LArm = { 40, -10, -10 }, Head = { -6, 0, 0 } }),
+				K(1.1, "sineInOut", FLOAT, { Root = { 0, 1.15, 0, 0, -16, 0 }, Torso = { 8, 0, 0 }, Head = { 12, 0, 0 }, RArm = { 165, 12, 8 }, LArm = { 165, -12, -8 } }),
+				K(1.9, "sineInOut", FLOAT, { Root = { 0, 0.6, 0, 0, -16, 0 }, Torso = { -4, 0, 0 }, Head = { -10, 0, 0 }, RArm = { 22, 14, 18 }, LArm = { 22, -14, -18 } }),
+				K(2.6, "sineInOut", FLOAT),
 			},
 			Events = {
 				{ t = 0.2, k = "Orbs", mode = "Crown" },
 				{ t = 0.6, k = "Fx", n = "Meditate" },
-				{ t = 1.9, k = "Orbs", mode = "Orbit" },
+				{ t = 2.3, k = "Orbs", mode = "Orbit" },
 			},
 		},
 	},

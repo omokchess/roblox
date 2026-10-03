@@ -371,16 +371,18 @@ return {
 			Events = { { t = 0.16, k = "Fx", n = "GuardRing" } },
 		},
 
-		-- 명상: 한쪽 무릎을 꿇고 칼을 얼굴 앞에 세워(칼끝 위) 고개를 숙인다
+		-- 호흡(2026-10-03 사용자: '명상' → '호흡'): 칼을 얼굴 앞에 세워(경례) 눈을 감고, 크게 들이쉬어 가슴을 펴고 턱을 들었다가 길게 내쉰다
 		Meditate = {
-			Duration = 1.8,
+			Duration = 2.4,
 			Keys = {
 				K(0, nil, EG),
-				{ t = 0.35, e = "cubicInOut", Root = { 0, -0.9, 0, 0, 20, 0 }, Torso = { -4, 0, 0 }, Head = { -22, -10, 0 }, RArm = { 70, 24, 0 }, LArm = { 20, 0, -10 }, RLeg = { 86, 0, 6 }, LLeg = { -40, 0, -6 }, W = { 0, 0, 0, 24, 0, 2 } },
-				{ t = 1.3, e = "sineInOut", Root = { 0, -0.86, 0, 0, 20, 0 }, Torso = { -1, 0, 0 }, Head = { -16, -10, 0 }, RArm = { 70, 24, 0 }, LArm = { 20, 0, -10 }, RLeg = { 86, 0, 6 }, LLeg = { -40, 0, -6 }, W = { 0, 0, 0, 24, 0, 2 } },
-				K(1.8, "cubicInOut", EG),
+				K(0.35, "cubicInOut", SALUTE),
+				K(0.95, "sineInOut", SALUTE, { Root = { 0, 0.12, 0, 0, 12, 0 }, Torso = { 10, 0, 0 }, Head = { 14, -10, 0 }, RArm = { 106, 30, 0 }, W = { 0, 0, 0, -17, 0, 0 } }),
+				K(1.65, "sineInOut", SALUTE, { Root = { 0, -0.08, 0, 0, 12, 0 }, Torso = { -4, 0, 0 }, Head = { -8, -10, 0 }, RArm = { 100, 30, 0 }, W = { 0, 0, 0, -11, 0, 0 } }),
+				K(2.0, "sineInOut", SALUTE),
+				K(2.4, "cubicInOut", EG),
 			},
-			Events = { { t = 0.4, k = "Fx", n = "Meditate" } },
+			Events = { { t = 0.5, k = "Fx", n = "Meditate" } },
 		},
 	},
 }

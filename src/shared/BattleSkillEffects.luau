@@ -1123,10 +1123,10 @@ local commonEffects: { [string]: Effect } = {
 	},
 	Meditate = {
 		After = function(ctx)
-			BattleStatus.AddModifier(ctx.Status, "DamageTaken", 0.25, 1, "명상")
+			BattleStatus.AddModifier(ctx.Status, "DamageTaken", 0.25, 1, "호흡")
 			local gained = ctx.RestoreStamina(30)
 			-- `%%`로 이스케이프해야 한다. `25%`로 두면 string.format이 변환 지시자로 읽는다.
-			ctx.Log(string.format("명상 — 스테미나 +%d, 이번 턴 받는 피해 25%% 증가", gained))
+			ctx.Log(string.format("호흡 — 스테미나 +%d, 이번 턴 받는 피해 25%% 증가", gained))
 		end,
 	},
 }

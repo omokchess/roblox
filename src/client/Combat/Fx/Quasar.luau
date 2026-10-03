@@ -99,21 +99,53 @@ end
 -- 특이점: 대상 위 하늘에 거대한 빛의 검이 거꾸로 나타난다
 local summoned: { [any]: Model } = {}
 
+-- 2026-10-03 사용자: 떨어지는 검을 퀘이사 무기(블렌더 대검)로 — 손에 든 대검 조각을 복제해 2.2배로 키우고 거꾸로(끝이 아래) 세운다.
+-- 무기가 없으면(구경 등) 예전 빛의 검 조각으로
+local GIANT = 2.2
+-- 모델을 피벗 기준으로 k 배(부품 크기·자리 모두)
+local function scaleModel(model: Model, k: number)
+	local pivot = model:GetPivot()
+	for _, p in model:GetDescendants() do
+		if p:IsA("BasePart") then
+			local rel = pivot:ToObjectSpace(p.CFrame)
+			p.Size *= k
+			p.CFrame = pivot * (CFrame.new(rel.Position * k) * rel.Rotation)
+		end
+	end
+end
+
 function Fx.SummonSword(ctx: any)
 	local Vfx = ctx.Vfx
 	local top = ctx.Target + Vector3.new(0, 14, 0)
-	local model = Instance.new("Model")
-	model.Name = "SingularitySword"
-	local function piece(size: Vector3, off: Vector3, color: Color3, alpha: number)
-		local p = Vfx.Part(size, CFrame.new(top + off), color)
-		p.Transparency = alpha
-		p.Parent = model
-		return p
+	local model = if ctx.Weapons then ctx.Weapons:ClonePiece("W") else nil
+	if model then
+		model.Name = "SingularitySword"
+		for _, p in model:GetDescendants() do
+			if p:IsA("BasePart") and p.Name ~= "Grip" then
+				p.CastShadow = false
+				p.Transparency = math.max(p.Transparency, 0.08)
+			end
+		end
+		scaleModel(model, GIANT)
+		-- 손잡이(원점)를 위에, 날끝(6.9 × 배율)이 아래로
+		model:PivotTo(CFrame.new(top + Vector3.new(0, 6, 0)) * CFrame.Angles(math.pi, 0, 0))
+		local light = Instance.new("PointLight")
+		light.Color, light.Range, light.Brightness = VIOLET, 18, 3
+		light.Parent = model.PrimaryPart
+	else
+		model = Instance.new("Model")
+		model.Name = "SingularitySword"
+		local function piece(size: Vector3, off: Vector3, color: Color3, alpha: number)
+			local p = Vfx.Part(size, CFrame.new(top + off), color)
+			p.Transparency = alpha
+			p.Parent = model
+			return p
+		end
+		piece(Vector3.new(2.2, 11, 0.5), Vector3.new(0, -1, 0), VIOLET, 0.25)
+		piece(Vector3.new(0.7, 11.5, 0.7), Vector3.new(0, -1, 0), STAR, 0.05)
+		piece(Vector3.new(5, 0.8, 1.2), Vector3.new(0, 4.6, 0), DEEP, 0.1)
+		piece(Vector3.new(0.9, 3, 0.9), Vector3.new(0, 6.4, 0), DEEP, 0.1)
 	end
-	piece(Vector3.new(2.2, 11, 0.5), Vector3.new(0, -1, 0), VIOLET, 0.25)
-	piece(Vector3.new(0.7, 11.5, 0.7), Vector3.new(0, -1, 0), STAR, 0.05)
-	piece(Vector3.new(5, 0.8, 1.2), Vector3.new(0, 4.6, 0), DEEP, 0.1)
-	piece(Vector3.new(0.9, 3, 0.9), Vector3.new(0, 6.4, 0), DEEP, 0.1)
 	model.Parent = Vfx.Folder()
 	summoned[ctx.Actor] = model
 	Vfx.Flash(top, { Color = VIOLET, Size = 18, Life = 0.5 })

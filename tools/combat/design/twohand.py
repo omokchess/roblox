@@ -76,3 +76,22 @@ def two_hand(P, grip_t, dir_t, zhint_t, left_y=-0.6, hintR=(70, 20, 0), hintL=(7
 def show(name, P, extra=""):
     keys = [k for k in ("Root", "Torso", "Head", "RArm", "LArm", "RLeg", "LLeg", "W") if k in P]
     print(f"local {name} = {{ " + ", ".join(f"{k} = {f(P[k])}" for k in keys) + " }" + (" -- " + extra if extra else ""))
+
+
+def two_fit(P, grip_t, dirxz, pitches, zhint_t, measure=None, want=None, left_y=-0.6, **kw):
+    """두 손 자세에서 날 기울기만 바꿔 가며 찾는다. 날 방향 = 몸통 공간 수평 성분 dirxz(dx, dz) + 기울기(도).
+    measure(P) 값이 want 에 가장 가깝고 두 팔 어긋남이 작은 기울기를 고른다(칼끝·도끼 머리를 땅 바로 위에 둘 때).
+    돌려주는 값: (기울기, 오른팔 어긋남, 왼팔 어긋남, measure 값)"""
+    best = None
+    for pitch in pitches:
+        p = math.radians(pitch)
+        d = (dirxz[0] * math.cos(p), math.sin(p), dirxz[1] * math.cos(p))
+        Q = dict(P)
+        eR, eL, _ = two_hand(Q, grip_t, d, zhint_t, left_y=left_y, **kw)
+        m = measure(Q) if measure else 0.0
+        score = max(eR, eL) * 4 + (abs(m - want) if want is not None else 0)
+        if best is None or score < best[0]:
+            best = (score, Q, pitch, eR, eL, m)
+    _, Q, pitch, eR, eL, m = best
+    P.update(Q)
+    return pitch, eR, eL, m

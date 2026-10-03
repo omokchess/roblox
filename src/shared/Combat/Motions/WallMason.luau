@@ -32,8 +32,6 @@ local BACK = { Root = { 0, -0.2, 0.3, 0, -30, 0 }, Torso = { 14, 20, 0 }, Head =
 local SLAM = { Root = { 0, -0.85, -0.45, 0, -8, 0 }, Torso = { -44, -6, 0 }, Head = { 20, 10, 0 }, RArm = { 70.6, 16.2, -4.1 }, LArm = { 20, -20, -30 }, RLeg = { 40, 0, 10 }, LLeg = { -30, 0, -10 }, W = { -0, -0.5, -0, -28.2, -14.8, 79.2 }, O = { 0, 0, 0, 85.4, 0, 24.3 } }
 -- 버팀(방어): 정 쥔 왼팔을 얼굴 앞에 세워 대고 웅크림, 망치는 낮게 준비
 local BRACE = { Root = { 0, -0.55, 0.4, 0, -10, 0 }, Torso = { -14, 0, 0 }, Head = { -6, 10, 0 }, RArm = { 50, 20, 10 }, LArm = { 111, -58.8, 2.9 }, RLeg = { 20, 0, 10 }, LLeg = { -16, 0, -10 }, W = { 0, 0, 0, -20.3, 0, 0.6 }, O = { 0, 0, 0, -8.4, 0, 1.4 } }
--- 명상: 쪼그려 앉아 망치 머리를 오른쪽 땅에 세워 짚고, 정 날을 눈앞에 들어 들여다봄
-local SQUAT = { Root = { 0, -1.1, 0, 0, -18, 0 }, Torso = { -10, 0, 0 }, Head = { -20, 10, 0 }, RArm = { 0.4, 8.5, -15.3 }, LArm = { 108.7, -38.1, 13 }, RLeg = { 90, 0, 16 }, LLeg = { 90, 0, -16 }, W = { -0.01, -0.51, 0, 9.9, -16.6, 19.7 }, O = { 0, 0, 0, -200.4, 0, -23.9 } }
 
 -- 땅을 치며 왼팔은 버팀 자세로 들어 올린다(방어 첫 키)
 local GUARD_HIT = { Root = GTAP.Root, Torso = { -30, 0, 0 }, Head = { -6, 10, 0 }, RArm = GTAP.RArm, LArm = BRACE.LArm, RLeg = GTAP.RLeg, LLeg = GTAP.LLeg, W = GTAP.W, O = BRACE.O }
@@ -220,14 +218,15 @@ return {
 			Events = { { t = 0.1, k = "Fx", n = "StoneWall" } },
 		},
 
-		-- 명상: 망치를 땅에 세워 짚고 쪼그려 앉아 정 끝을 들여다본다
+		-- 호흡('명상' → '호흡'): 망치를 어깨에 걸쳐 쉬며 어깨를 펴고 크게 들이쉬었다가 길게 내쉰다(일하다 숨 고르기)
 		Meditate = {
-			Duration = 2.0,
+			Duration = 2.4,
 			Keys = {
 				K(0, nil, LIFT),
-				K(0.4, "cubicInOut", SQUAT),
-				K(1.5, "sineInOut", SQUAT, { Torso = { -8, 0, 0 }, Head = { -16, 18, 6 } }),
-				K(2.0, "sineInOut", LIFT),
+				K(0.45, "cubicInOut", SHOULDER),
+				K(1.05, "sineInOut", SHOULDER, { Root = { 0, 0.02, 0, 0, -18, 0 }, Torso = { 12, 0, 0 }, Head = { 14, 14, 0 } }),
+				K(1.75, "sineInOut", SHOULDER, { Root = { 0, -0.12, 0, 0, -18, 0 }, Torso = { -6, 0, 0 }, Head = { -12, 14, 0 } }),
+				K(2.4, "cubicInOut", LIFT),
 			},
 			Events = { { t = 0.5, k = "Fx", n = "Meditate" } },
 		},

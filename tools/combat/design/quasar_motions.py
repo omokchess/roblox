@@ -3,30 +3,27 @@
 (성분마다 ±360) 키 사이가 늘 쿼터니언 최단 호로 돈다(뜻하지 않은 오일러 돌기 없음 — check_wrap.py 로 확인).
 쓰는 법: python quasar_motions.py"""
 import os
-import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from motion_writer import fmt, load_poses, make  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "..", "..", "src", "shared", "Combat", "Motions", "Quasar.luau")
-SRC = open(os.path.join(HERE, "quasar2_out.txt"), encoding="utf-8").read()
 
-POSES = {}
-for name, body in re.findall(r"^local (\w+) = \{ (.*) \}$", SRC, re.M):
-    pose = {}
-    for k, v in re.findall(r"(\w+) = \{ ([^}]*) \}", body):
-        pose[k] = [float(x) for x in v.split(",")]
-    POSES[name] = pose
-ORDER = ["STANCE", "SALUTE", "RECOIL", "RGUARD", "BARRIER", "TAG", "NEBEN", "LOW", "OCHS_L", "VIGIL", "LANG", "SKY", "CMD", "FLOURISH"]
+POSES = load_poses(os.path.join(HERE, "quasar2_out.txt"))
+ORDER = ["STANCE", "SALUTE", "RECOIL", "RG_MID", "RG_LEFT", "BARRIER", "TAG", "NEBEN", "LOW", "OCHS_L", "LANG", "SKY", "CMD", "FLOURISH"]
 NOTE = {
     "STANCE": "대기 — 바흐셀·알버: 몸을 오른쪽으로 틀어 왼발을 앞에, 두 손은 오른 허리 앞, 칼끝은 앞 아래 땅 가까이, 앞날은 아래",
     "SALUTE": "경례(들림·버릇): 두 손을 명치 앞에 모으고 날을 얼굴 앞에 곧게",
     "RECOIL": "피격: 두 손은 그대로 몸만 뒤로 젖혀 밀림",
-    "RGUARD": "회피 — 역수 허리 막기: 왼쪽으로 비켜서며 오른손 역수, 날이 팔뚝을 따라 오른 허리 바깥으로 뒤 아래 — 골반·옆구리를 덮고 왼손은 폼멜",
+    "RG_MID": "회피 1 — 왼손을 놓고 오른손 하나로 역수: 날이 팔뚝을 따라 오른 허리 바깥 뒤로(골반 덮기), 왼팔은 펴기 시작",
+    "RG_LEFT": "회피 2 — 골반은 오른쪽으로 크게 돌려 뒤로 비켜서고 상체는 왼쪽으로 감아, 역수 쥔 오른손이 왼 허리 앞에 — 날은 왼 허리 바깥을 따라 뒤로(칼집에 꽂듯), 왼팔은 옆으로 길게 (quasar_dodge_gen.py)",
     "BARRIER": "방어 — 역수 가로막이: 오른손 역수로 가슴 앞, 날이 허리 앞을 왼쪽 아래로 가로질러 면이 적을 막고 왼손은 날 가운데(하프소드)",
     "TAG": "폼 탁(오른 어깨 위): 날은 위로, 앞날은 적 쪽",
     "NEBEN": "네벤훗: 오른 허리 뒤로 칼끝을 뒤 아래로(감기)",
     "LOW": "내려친 끝: 오른발 내딛고 깊게, 칼끝이 앞 땅에 닿는다",
     "OCHS_L": "왼쪽 옥스(올려벤 끝): 손이 왼 어깨 앞, 칼끝은 적 쪽, 앞날 위",
-    "VIGIL": "무릎 꿇은 기도(명상): 두 손을 가슴 앞에 모으고 날을 곧게 땅에 꽂는다",
     "LANG": "한 손 랑고르트(끌어당기기): 팔·칼이 한 줄로 적을 겨누고 왼손을 뻗어 움켜쥔다",
     "SKY": "하늘 가리키기(한 손, 날 위로 곧게)",
     "CMD": "한 손으로 적을 내려 가리킴(명령)",
@@ -34,49 +31,11 @@ NOTE = {
 }
 
 
-def fmt(v):
-    return "{ " + ", ".join(("%g" % round(x, 2)) for x in v) + " }"
-
-
-def wrap_to(w, prev):
-    return w[:3] + [w[i] + 360 * round((prev[i] - w[i]) / 360) for i in (3, 4, 5)]
-
-
-def keys(spec):
-    """spec = [(t, e, 자세 이름, {덮을 것})] → Luau 키 줄. W 는 앞 키에 맞춰 감는다"""
-    lines, prev = [], None
-    for t, e, pose, over in spec:
-        over = dict(over or {})
-        w = list(over.get("W", POSES[pose]["W"]))
-        if prev is not None:
-            w = wrap_to(w, prev)
-        if w != POSES[pose]["W"]:
-            over["W"] = w
-        prev = w
-        es = "nil" if e is None else '"%s"' % e
-        if over:
-            body = ", ".join("%s = %s" % (k, fmt(v)) for k, v in over.items())
-            lines.append("\t\t\t\tK(%s, %s, %s, { %s })," % (t, es, pose, body))
-        else:
-            lines.append("\t\t\t\tK(%s, %s, %s)," % (t, es, pose))
-    return "\n".join(lines)
+keys, motion = make(POSES)
 
 
 def tremble(t, dx, lift):
     return (t, "sineInOut", "TAG", {"Root": [dx, -0.25 - lift, 0.15 + lift, 0, -30, 0], "Torso": [6 + lift * 40, 8, 0]})
-
-
-def motion(name, comment, duration, spec, events, extra="", indent=2):
-    tab = "\t" * indent
-    ev = "\n".join(tab + "\t\t" + e + "," for e in events)
-    body = keys(spec)
-    if indent == 1:
-        body = "\n".join(l[1:] for l in body.split("\n"))
-    return (
-        f"{tab}-- {comment}\n{tab}{name} = {{\n{tab}\tDuration = {duration},\n{extra}{tab}\tKeys = {{\n{body}\n{tab}\t}},\n"
-        + (f"{tab}\tEvents = {{\n{ev}\n{tab}\t}},\n" if events else "")
-        + f"{tab}}},\n"
-    )
 
 
 head = '''--!strict
@@ -134,9 +93,9 @@ text += "\n" + motion("Hit", "피격: 거의 안 밀린다 — 몸만 뒤로 젖
 text += "\n" + motion("Guard", "방어: 순간 역수로 고쳐 쥐어 날이 허리 앞을 가로지르는 가로막이 — 면으로 받고 왼손이 날을 받친다", 0.75,
                       [(0, None, "STANCE", None), (0.1, "expoOut", "BARRIER", None), (0.25, "sineOut", "BARRIER", {"Root": [0, -0.55, 0.32, 0, -20, 0], "Torso": [-6, 4, 0]}), (0.75, "cubicInOut", "STANCE", None)],
                       ['{ t = 0.1, k = "Fx", n = "GravityWall" }'], "\t\tBlendIn = 0.03,\n", 1)
-text += "\n" + motion("Dodge", "회피(성공): 왼쪽으로 비켜서며 대검을 순간 역수로 — 날이 팔뚝을 따라 오른 허리 바깥을 덮어 공격을 흘리고, 다시 낮은 겨눔으로 돌려 쥔다", 0.85,
-                      [(0, None, "STANCE", None), (0.15, "expoOut", "RGUARD", None), (0.45, "sineOut", "RGUARD", {"Root": [-0.75, -0.48, 0.22, 0, -56, 0]}), (0.85, "cubicInOut", "STANCE", None)],
-                      ['{ t = 0.06, k = "Trail", on = true }', '{ t = 0.14, k = "Fx", n = "Deflect" }', '{ t = 0.45, k = "Trail", on = false }'], "\t\tBlendIn = 0.02,\n", 1)
+text += "\n" + motion("Dodge", "회피(성공, 2026-10-03 사용자: 역수로 고쳐 쥐고 오른손을 왼 허리로 움직이며 우아하게): 순간 역수로 오른 허리를 덮었다가 → 몸을 비틀며 뒤로 비켜서고 역수 쥔 손이 왼 허리로 미끄러져 날이 골반을 따라 흐른다, 왼팔은 옆으로 펴 선을 긋는다 → 다시 두 손 낮은 겨눔", 0.9,
+                      [(0, None, "STANCE", None), (0.1, "expoOut", "RG_MID", None), (0.26, "cubicOut", "RG_LEFT", None), (0.5, "sineOut", "RG_LEFT", {"Root": [0.66, -0.52, 0.33, 0, -80, 0]}), (0.9, "cubicInOut", "STANCE", None)],
+                      ['{ t = 0.06, k = "Trail", on = true }', '{ t = 0.14, k = "Fx", n = "Deflect" }', '{ t = 0.5, k = "Trail", on = false }'], "\t\tBlendIn = 0.02,\n", 1)
 
 skills = []
 skills.append(motion("Collapse", "붕괴: 네벤훗으로 감았다가 원을 그려 폼 탁으로 — 대검 위에 중력이 뭉쳐 떨리고 → 한 걸음 내딛으며 내려쳐 칼끝이 땅에", 2.2,
@@ -162,8 +121,8 @@ skills.append(motion("Infall", "낙하: 네벤훗(오른 허리 뒤)에서 왼�
 skills.append(motion("Guard", "가드(스킬): 역수 가로막이로 오래 버틴다", 1.1,
                      [(0, None, "STANCE", None), (0.2, "backOut", "BARRIER", None), (0.8, "sineInOut", "BARRIER", {"Root": [0, -0.52, 0.2, 0, -20, 0], "Torso": [-5, 4, 0]}), (1.1, "sineInOut", "STANCE", None)],
                      ['{ t = 0.2, k = "Fx", n = "GravityWall" }']))
-skills.append(motion("Meditate", "명상: 무릎 꿇고 대검을 앞 땅에 곧게 꽂아 두 손을 모으고 고개를 숙인다(기사의 기도)", 2.0,
-                     [(0, None, "STANCE", None), (0.45, "cubicInOut", "VIGIL", None), (1.5, "sineInOut", "VIGIL", {"Root": [0, -1.12, 0.2, 0, -14, 0], "Head": [-24, 0, 0]}), (2.0, "sineInOut", "STANCE", None)],
+skills.append(motion("Meditate", "호흡(2026-10-03 사용자: '명상' → '호흡'): 대검을 얼굴 앞에 세워 경례하듯 들고 눈을 감아, 크게 들이쉬어 가슴을 펴고 길게 내쉰다(기사의 숨 고르기)", 2.6,
+                     [(0, None, "STANCE", None), (0.45, "cubicInOut", "SALUTE", None), (1.05, "sineInOut", "SALUTE", {"Root": [0, 0.06, 0, 0, -20, 0], "Torso": [6, 0, 0], "Head": [6, 20, 0]}), (1.75, "sineInOut", "SALUTE", {"Root": [0, -0.1, 0, 0, -20, 0], "Torso": [-6, 0, 0], "Head": [-14, 20, 0]}), (2.05, "sineInOut", "SALUTE", None), (2.6, "cubicInOut", "STANCE", None)],
                      ['{ t = 0.5, k = "Fx", n = "Meditate" }']))
 text += "\n\tSkills = {\n" + "\n".join(skills) + "\t},\n}\n"
 open(OUT, "w", encoding="utf-8", newline="\n").write(text)

@@ -309,22 +309,17 @@ return {
 			Events = { { t = 0.14, k = "Fx", n = "StaveShield" } },
 		},
 
-		-- 명상: 눈을 감고 턱을 바이올린에 깊이 묻은 채 아주 느린 활 한 번으로 음을 고른다
+		-- 호흡('명상' → '호흡'): 바이올린을 턱에서 내려 가슴에 안고 활을 옆으로 내린 채, 크게 들이쉬고(고개를 들어) 길게 내쉰 뒤 다시 턱에 괸다
 		Meditate = {
-			Duration = 2.0,
+			Duration = 2.4,
 			Keys = {
 				K(0, nil, READY),
-				K(0.3, "sineInOut", PLAY(11, { Head = { -20, 34, 20 }, Torso = { 0, 8, 0 } })),
-				K(0.5, "sineInOut", PLAY(14, { Head = { -21, 34, 20 }, Torso = { 0, 8, 0 } })),
-				K(1.0, "sineInOut", PLAY(23, { Head = { -22, 34, 20 }, Torso = { -1, 8, 0 } })),
-				K(1.5, "sineInOut", PLAY(14, { Head = { -18, 32, 18 }, Torso = { 1, 8, 0 } })),
-				K(2.0, "sineInOut", READY),
+				K(0.4, "cubicInOut", with(READY, VHUG, BOWDOWN, { Torso = { 0, 6, 0 }, Head = { -6, 26, 6 } })),
+				K(1.0, "sineInOut", with(READY, VHUG, BOWDOWN, { Root = { 0, 0.04, 0, 0, -48, 0 }, Torso = { 8, 6, 0 }, Head = { 8, 26, 4 } })),
+				K(1.7, "sineInOut", with(READY, VHUG, BOWDOWN, { Root = { 0, -0.1, 0, 0, -48, 0 }, Torso = { -6, 6, 0 }, Head = { -14, 26, 6 } })),
+				K(2.4, "cubicInOut", READY),
 			},
-			Events = {
-				{ t = 0.5, k = "Fx", n = "Pizz" },
-				{ t = 1.0, k = "Fx", n = "Pizz" },
-				{ t = 1.1, k = "Fx", n = "Meditate" },
-			},
+			Events = { { t = 0.5, k = "Fx", n = "Meditate" } },
 		},
 	},
 }
