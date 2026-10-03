@@ -1,8 +1,8 @@
 --!nocheck
 --[[
 	Plains_Build.luau — 2026-10-03. 평원 섬 지형을 새 방식으로 짓는다(편집 모드, StudioJobs 로 돌린다).
-	지역마다 손 배치표 하나(REGIONS): 북쪽(시범, R_평원북) · 동쪽 해안(R_평원동). 서쪽은 숲 섬·지협과 땅이 이어져 있어
-	숲을 바꿀 때 같이 한다(절벽으로 막으면 숲으로 못 간다). 도성 아래 옛 타일은 건물이 올라앉아 있어 건드리지 않는다.
+	지역마다 손 배치표 하나(REGIONS): 북쪽(시범, R_평원북) · 동쪽 해안(R_평원동) · 나머지 전부(R_평원중 — 2026-10-03 "평원 전체 평탄화",
+	도성 아래 타일까지 걷고 물건은 새 땅 높이로 옮겨 앉힌다). 서쪽 끝은 숲 섬·지협과 땅이 이어져 절벽을 두지 않는다.
 
 	사용자 확정: 지형은 지역마다 큰 Part 평면 + 큰 구조물(손 배치), 삼각형 법칙, 옛 지형은 ServerStorage 에 백업 후 교체.
 	2026-10-03 사용자: "돌산 같은 것도 기본적으로는 커다란 육면체", "대륙이 사각형이라는 건 곡선을 가지고 있지 않다는 거야"
@@ -218,6 +218,7 @@ local EAST: any = {
 	RAMPS = {
 		{ 850, 850, 812, 12, 0, 10 }, -- 동남 바위산 첫 켜로(남쪽에서)
 		{ 1090, 520, 482, 10, 0, 14 }, -- 동쪽 언덕 첫 켜로
+		{ 676, 322, 290, 28, 0, 6.4 }, -- 동산길 끝 → 동산 둔덕 위 정자(평탄화 뒤 길이 비탈째 떠 있던 자리)
 	},
 	-- 모래 만(동쪽 해안 z 700~780)
 	SAND = {
@@ -245,7 +246,70 @@ local EAST: any = {
 	},
 }
 
-local REGIONS = { NORTH, EAST }
+
+--=== 평원 나머지 전부(R_평원중) — 2026-10-03 사용자: "평원 전체 평탄화" ===--
+-- 남은 옛 타일(도성 아래 포함)을 모두 걷고 평면 하나 높이(1.90)로. 도성 물건(건물·길·밭·못·나무 …)은 옛 타일 위에
+-- 앉아 있던 높이만큼 새 땅 위로 옮겨 앉힌다(Reseat — 물건마다 속성 ReseatDelta 에 옮긴 만큼 적어 되돌릴 수 있다).
+-- 서쪽(x -745)은 숲 섬·지협과 땅이 붙어 절벽을 두지 않는다(북서·남서 바다 쪽만).
+local CENTER: any = {
+	Folder = "R_평원중",
+	Backup = "PlainsCenter",
+	Note = "2026-10-03 평원 전체 평탄화 전 남은 옛 지형 타일(도성 아래 포함)",
+	Select = function(p: Vector3, _empty: boolean): boolean
+		return p.X > -800 and p.X < 1300 and p.Z > -400 and p.Z < 1100
+	end,
+	-- 옛 타일 위에 앉은 것들(물건 단위 = 폴더 바로 아래 Model·Part)
+	Reseat = function(): { Instance }
+		local list = { workspace:FindFirstChild("Jeolhwa") }
+		local flora = workspace.Surface:FindFirstChild("R_평원")
+		if flora then
+			table.insert(list, flora)
+		end
+		return list
+	end,
+	LAND = {
+		{ -745, -600, 60, 200 },
+		{ -745, 700, 200, 980 },
+		{ -560, 760, 980, 1050 },
+	},
+	CLIFFS = {
+		-- 북서 바다 쪽
+		{ -770, -742, 56, 204, 4 }, { -749, -596, 36, 64, 0 },
+		-- 남서 바다 쪽
+		{ -770, -742, 896, 984, 5 }, { -749, -556, 976, 1000, 0 }, { -584, -556, 976, 1054, 5 },
+		-- 남쪽 해안 z 1050
+		{ -564, -400, 1046, 1070, 3 }, { -400, -200, 1046, 1066, 0 }, { -200, 0, 1046, 1072, 6 }, { 0, 200, 1046, 1068, 0 },
+		{ 200, 420, 1046, 1070, 4 }, { 420, 600, 1046, 1066, 0 }, { 600, 764, 1046, 1070, 7 },
+		-- 남동 이음(동쪽 해안 남쪽 끝과)
+		{ 756, 780, 996, 1054, 4 },
+	},
+	MASSES = {
+		-- 서촌 바깥 빈 들(숲 쪽)에 높고 낮은 상자 — 숲으로 넘어가는 길목을 가렸다 드러낸다(삼각형 법칙)
+		{ "서언덕", -700, -590, 380, 500, 16 },
+		{ "서언덕", -680, -610, 400, 470, 30 },
+		{ "서남바위", -650, -560, 760, 860, 12 },
+		{ "서남바위", -632, -578, 776, 844, 24 },
+		{ "북서둔덕", -700, -630, 230, 290, 8 },
+	},
+	RAMPS = {
+		{ -645, 530, 502, 10, 0, 16 },
+	},
+	SAND = {},
+	RUINS = {},
+	ROCKS = {
+		{ -520, 330, 8, 5, 7, 0 }, { -506, 342, 4, 3, 4, 30 }, { -560, 640, 9, 6, 8, 0 }, { -700, 700, 7, 5, 6, 15 },
+		{ -480, 920, 6, 4, 5, 0 }, { -660, 940, 8, 5, 7, 45 },
+	},
+	PATHS = {},
+	FIELDS = {},
+	TREES = {
+		{ -540, 260, 0, 1 }, { -500, 300, 90, 0.9 }, { -560, 420, 200, 1.1 }, { -520, 560, 30, 1 }, { -470, 600, 120, 0.9 },
+		{ -690, 600, 60, 1 }, { -640, 660, 150, 1.1 }, { -520, 720, 300, 0.9 }, { -420, 800, 10, 1 }, { -700, 860, 80, 0.85 },
+		{ -480, 880, 240, 1 }, { -380, 960, 0, 1.1 },
+	},
+}
+
+local REGIONS = { NORTH, EAST, CENTER }
 
 --=== 짓기 ===--
 local lines = {}
@@ -280,6 +344,26 @@ local function build(R: any)
 	local surface = workspace:FindFirstChild("Surface")
 	assert(surface, "Surface 폴더가 없다")
 	local kit = SS:FindFirstChild("PlainsKit")
+
+	-- 0. (Reseat) 옛 타일 위 물건마다 지금 앉은 옛 땅 높이를 잰다 — 타일을 걷기 전에
+	local units = {}
+	if R.Reseat and surface.World:FindFirstChild(TILE_FOLDER) then
+		local oldRay = RaycastParams.new()
+		oldRay.FilterType = Enum.RaycastFilterType.Include
+		oldRay.FilterDescendantsInstances = { surface.World[TILE_FOLDER] }
+		for _, holder in R.Reseat() do
+			for _, d in holder:GetDescendants() do
+				if (d:IsA("Model") or d:IsA("BasePart")) and d.Parent and d.Parent:IsA("Folder") then
+					local cf = if d:IsA("Model") then d:GetBoundingBox() else d.CFrame
+					local r = workspace:Raycast(Vector3.new(cf.X, 300, cf.Z), Vector3.new(0, -500, 0), oldRay)
+					if r then
+						table.insert(units, { Inst = d, X = cf.X, Z = cf.Z, Old = r.Position.Y })
+					end
+				end
+			end
+		end
+		say("%s: 옮겨 앉힐 물건 %d", R.Folder, #units)
+	end
 
 	-- 1. 옛 지형 백업(처음 한 번만)
 	local backupRoot = SS:FindFirstChild("TerrainBackup") or Instance.new("Folder")
@@ -371,6 +455,48 @@ local function build(R: any)
 	local sand = folder("Sand")
 	for i, s in SAND do
 		part("Sand" .. i, Vector3.new(s[2] - s[1], s[5] + 24, s[4] - s[3]), CFrame.new((s[1] + s[2]) / 2, (s[5] - 24) / 2, (s[3] + s[4]) / 2), SANDC, M.Sand, sand)
+	end
+
+	-- 2f. (Reseat) 새 땅(이 지역 + 이웃 지역의 땅·절벽·덩어리·오르막·모래) 높이로 물건을 옮겨 앉힌다
+	if #units > 0 then
+		local terrain: { Instance } = { root }
+		for _, other in REGIONS do
+			local f = surface:FindFirstChild(other.Folder)
+			if f and f ~= root then
+				for _, sub in { "Land", "Cliffs", "Masses", "Ramps", "Sand" } do
+					local x = f:FindFirstChild(sub)
+					if x then
+						table.insert(terrain, x)
+					end
+				end
+			end
+		end
+		local newRay = RaycastParams.new()
+		newRay.FilterType = Enum.RaycastFilterType.Include
+		newRay.FilterDescendantsInstances = terrain
+		local moved, lifted, sunk = 0, 0, 0
+		for _, u in units do
+			local r = workspace:Raycast(Vector3.new(u.X, 300, u.Z), Vector3.new(0, -500, 0), newRay)
+			if r then
+				local dy = r.Position.Y - u.Old
+				if math.abs(dy) > 0.01 then
+					local inst = u.Inst
+					if inst:IsA("Model") then
+						inst:PivotTo(inst:GetPivot() + Vector3.new(0, dy, 0))
+					else
+						inst.CFrame += Vector3.new(0, dy, 0)
+					end
+					inst:SetAttribute("ReseatDelta", (inst:GetAttribute("ReseatDelta") or 0) + dy)
+					moved += 1
+					if dy > 0.5 then
+						lifted += 1
+					elseif dy < -0.5 then
+						sunk += 1
+					end
+				end
+			end
+		end
+		say("%s: 물건 %d개 옮겨 앉힘(0.5 넘게 올림 %d · 내림 %d)", R.Folder, moved, lifted, sunk)
 	end
 
 	local ray = RaycastParams.new()
