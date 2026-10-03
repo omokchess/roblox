@@ -13,6 +13,10 @@
 
 	rig: Apply(pose) — Root {x,y,z,rx,ry,rz}, Body {sx,sy,sz}(%) 는 슬라임 모션과 같은 뜻(Motions/Debug.luau).
 	Float 조각은 모션과 따로 매 프레임 떠서 돌고 가끔 튄다(살아 있는 버그). Fade 는 쓰러질 때 연출이 올린다.
+
+	2026-10-03 사용자: "블렌더랑 로블록스 내 제작을 섞어서". 몸은 아래 블록 표 그대로, 블록으로 못 만드는 장식
+	(더듬이·유압 실린더·케이블·감은 붕대·베젤·볼트·발톱·팔면체 결정)은 블렌더 메시(ReplicatedStorage.MonsterMeshes.Debug<부위>
+	— models/monsters/build_monsters.py)를 더 얹는다. 메시가 대신하는 블록(REPLACED)은 뺀다. 메시가 없으면 블록만.
 ]]
 
 local DebugBoss = {}
@@ -28,7 +32,7 @@ local TRIM = { RGB(88, 80, 116), M.Metal }
 local CYAN = { RGB(50, 170, 210), M.Neon } -- 코드 줄: 네온 번짐이 커서 조금 어둡게
 local MAGENTA = { RGB(255, 70, 200), M.Neon }
 local RED = { RGB(255, 48, 60), M.Neon }
-local GREEN = { RGB(90, 255, 150), M.Neon }
+local GREEN = { RGB(60, 235, 100), M.Neon } -- 네온이 밝혀 청록으로 보이지 않게 조금 짙게(2026-10-03)
 local BANDAGE = { RGB(206, 198, 172), M.Fabric }
 
 -- { 이름, 크기, 자리, 빛, 돌림(도)?, 꾸밈? }  꾸밈: "Float" 떠다님 · "Cyl" 원기둥(축 = 로컬 X)
@@ -151,6 +155,52 @@ end
 
 DebugBoss.Parts = { "Head", "DeleteArm", "PatchArm", "Core" }
 
+-- 메시 이름의 낱말 → 빛(먼저 맞는 것)
+local MESH_LOOK: { { any } } = {
+	{ "Bandage", BANDAGE },
+	{ "Magenta", MAGENTA },
+	{ "Trim", TRIM },
+	{ "Panel", PANEL },
+}
+
+-- 메시가 있으면 빼는 블록(메시가 더 잘 만든 것)
+local REPLACED = { Wrap1 = true, Wrap2 = true, Wrap3 = true, Knuckle1 = true, Knuckle2 = true, Crystal = true }
+
+-- 블록 표 + 메시 장식 Spec 목록과 메시들. 메시 창고가 없으면 블록 표 그대로
+local function buildSpecs(key: string): ({ Spec }, { [string]: MeshPart })
+	local specs = SPECS[key] or SPECS.Core
+	local shared = game:GetService("ReplicatedStorage"):FindFirstChild("MonsterMeshes")
+	local folder = shared and shared:FindFirstChild("Debug" .. key)
+	if not folder then
+		return specs, {}
+	end
+	local list, meshes = {}, {}
+	for _, s in specs do
+		if not REPLACED[s[1]] then
+			table.insert(list, s)
+		end
+	end
+	for _, mp in folder:GetChildren() do
+		local offset = mp:GetAttribute("Offset")
+		if not (mp:IsA("MeshPart") and typeof(offset) == "CFrame") then
+			continue
+		end
+		local col = BODY
+		for _, look in MESH_LOOK do
+			if string.find(mp.Name, look[1], 1, true) then
+				col = look[2]
+				break
+			end
+		end
+		local rx, ry, rz = offset:ToOrientation()
+		local p = offset.Position
+		local flag = if string.sub(mp.Name, 1, 5) == "Float" then "Float" else nil
+		table.insert(list, S(mp.Name, { mp.Size.X, mp.Size.Y, mp.Size.Z }, { p.X, p.Y, p.Z }, col, { rx / RAD, ry / RAD, rz / RAD }, flag))
+		meshes[mp.Name] = mp
+	end
+	return list, meshes
+end
+
 --[[
 	부위 하나를 짓는다. 돌려주는 값이 곧 rig 다(`.Model`). home 은 Pivot 자리.
 ]]
@@ -171,9 +221,11 @@ function DebugBoss.new(key: string, home: CFrame)
 	self.Pivot = home
 	self.Fade = 0
 	self.Parts = {}
-	for i, s in SPECS[key] or SPECS.Core do
+	local list, meshes = buildSpecs(key)
+	for i, s in list do
 		local size, at, col, rot, flag = s[2], s[3], s[4], s[5], s[6]
-		local p = Instance.new("Part")
+		local mesh = meshes[s[1]]
+		local p: BasePart = if mesh then mesh:Clone() else Instance.new("Part")
 		p.Name = s[1]
 		p.Size = Vector3.new(size[1], size[2], size[3])
 		p.Color = col[1]
@@ -184,7 +236,7 @@ function DebugBoss.new(key: string, home: CFrame)
 		p.CanQuery = false
 		p.CastShadow = col[2] ~= M.Neon
 		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
-		if flag == "Cyl" then
+		if flag == "Cyl" and p:IsA("Part") then
 			p.Shape = Enum.PartType.Cylinder
 		end
 		local rest = CFrame.new(at[1], at[2], at[3]) * CFrame.fromOrientation(rot[1] * RAD, rot[2] * RAD, rot[3] * RAD)
