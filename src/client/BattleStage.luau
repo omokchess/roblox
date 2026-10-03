@@ -337,22 +337,33 @@ end
 	공격 범위 표시(2026-10-03 사용자: "다른 칸에 묻혀서 공격 범위 표시가 잘 보이지 않는다").
 	칸 칠하기는 한 칸에 색 하나라 버프·버그·회복·검수 칸 위에서는 범위 주황이 지거나 섞였다. 그래서 범위는 **따로 한 층**:
 	  칸 위에 떠 있는 굵은 사선 줄무늬(다른 표시는 전부 평평한 판이라 무늬만으로 구별된다) + 묶음 바깥 둘레 굵은 테두리,
-	  둘 다 빠르게 깜박인다(다른 표시는 느리게 숨 쉰다). 묶음마다 글자 하나("공격 범위" / "회피 불가").
-	높이는 검수 판(0.18~0.21)보다 위(0.3~0.36)라 무엇에도 덮이지 않는다. keys[칸] = "Threat" | "Unavoid".
+	  둘 다 빠르게 깜박인다(다른 표시는 느리게 숨 쉰다). 묶음마다 글자 하나.
+	2026-10-03 사용자: 보스는 부위마다 색을 달리해 나누고, 부위에서 그 범위로 레이저를 쏜다.
+	  keys[칸] = { { Group, Color, Label, Unavoid?, Source? } … } — 한 칸을 여러 묶음이 덮으면 줄무늬가 묶음 색을 돌아가며 칠한다.
+	  Group 이 같은 칸끼리 붙은 덩어리마다 테두리(묶음마다 조금씩 안쪽·위로 비켜 겹쳐도 보인다)·글자·레이저.
+	  source(Source) = 레이저가 나오는 부위 몸(BasePart). 부위가 움직여도(공전) Beam 이 따라간다.
+	높이는 검수 판(0.18~0.21)보다 위(0.3~0.5)라 무엇에도 덮이지 않는다.
 ]]
-local THREAT_LOOK = {
-	Threat = { Color3.fromRGB(255, 150, 40), Color3.fromRGB(255, 225, 150), "공격 범위" },
-	Unavoid = { Color3.fromRGB(255, 30, 40), Color3.fromRGB(255, 255, 255), "회피 불가" },
-}
+-- 레이저 원점 Attachment 는 부위 몸에 붙는다 — 표시를 다시 짓거나 지울 때 같이 치운다
+local laserRoots: { Instance } = {}
+local function clearLasers()
+	for _, a in laserRoots do
+		a:Destroy()
+	end
+	table.clear(laserRoots)
+end
 
-function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { [string]: string })
+function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { [string]: { any } }, source: ((id: string) -> BasePart?)?)
 	local first = tiles.Ally[1] and tiles.Ally[1][1]
 	if not first or not first.Parent then
 		return
 	end
+	-- 같은 내용이면 다시 짓지 않는다(레이저 원점 부위가 바뀌어도 Group 이름이 같으면 같다)
 	local list = {}
-	for key, kind in keys do
-		table.insert(list, key .. "=" .. kind)
+	for key, entries in keys do
+		for _, e in entries do
+			table.insert(list, key .. "=" .. e.Group .. "/" .. e.Label)
+		end
 	end
 	table.sort(list)
 	local sig = table.concat(list, ";")
@@ -363,6 +374,7 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 	if holder then
 		holder:Destroy()
 	end
+	clearLasers()
 	if sig == "" then
 		return
 	end
@@ -374,62 +386,120 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 	local stepY = tiles.Ally[2][1].Position - first.Position
 	local ux, uy = stepX.Unit, stepY.Unit
 	local blink = TweenInfo.new(0.42, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
-	for _, kind in { "Threat", "Unavoid" } do
-		local mine: { [string]: boolean } = {}
-		for key, k in keys do
-			if k == kind then
-				mine[key] = true
+
+	-- 묶음별 칸, 칸별 묶음들(줄무늬 색 돌리기)
+	local groups: { [string]: { Cells: { [string]: boolean }, Entry: any } } = {}
+	local order = {}
+	for key, entries in keys do
+		for _, e in entries do
+			local g = groups[e.Group]
+			if not g then
+				g = { Cells = {}, Entry = e }
+				groups[e.Group] = g
+				table.insert(order, e.Group)
 			end
+			g.Cells[key] = true
 		end
-		local look = THREAT_LOOK[kind]
-		for _, group in components(mine) do
+	end
+	table.sort(order)
+	local slot = {}
+	for i, name in order do
+		slot[name] = i - 1
+	end
+
+	-- 줄무늬: 칸마다 셋, 덮은 묶음 색을 돌아가며
+	for key, entries in keys do
+		local x, y = string.match(key, "(%d+),(%d+)")
+		local t = tiles.Ally[tonumber(y) :: number] and tiles.Ally[tonumber(y) :: number][tonumber(x) :: number]
+		if not t then
+			continue
+		end
+		table.sort(entries, function(a, b)
+			return a.Group < b.Group
+		end)
+		local h = t.Size.X * 0.42
+		for si, k in { -h * 0.66, 0, h * 0.66 } do
+			local e = entries[(si - 1) % #entries + 1]
+			local u0, u1 = math.max(-h, -h + k), math.min(h, h + k)
+			local mu = (u0 + u1) / 2
+			local mid = t.Position + ux * mu + uy * (mu - k) + Vector3.new(0, 0.3, 0)
+			local len = (u1 - u0) * math.sqrt(2)
+			local stripe = fxPart("Stripe", CFrame.lookAt(mid, mid + (ux + uy).Unit), Vector3.new(0.34, 0.05, len), e.Color, 0.15, folder)
+			TweenService:Create(stripe, blink, { Transparency = 0.6 }):Play()
+		end
+	end
+
+	-- 묶음 덩어리마다 테두리·글자·레이저
+	for _, name in order do
+		local g = groups[name]
+		local e = g.Entry
+		local i = slot[name]
+		local inset = 0.46 - math.min(i, 4) * 0.045
+		local lift = 0.34 + math.min(i, 4) * 0.03
+		local edgeColor = if e.Unavoid then Color3.new(1, 1, 1) else e.Color:Lerp(Color3.new(1, 1, 1), 0.45)
+		for _, comp in components(g.Cells) do
+			local inComp: { [string]: boolean } = {}
+			for _, c in comp do
+				inComp[c[1] .. "," .. c[2]] = true
+			end
 			local sum = Vector3.zero
-			for _, c in group do
+			for _, c in comp do
 				local t = tiles.Ally[c[2]] and tiles.Ally[c[2]][c[1]]
 				if not t then
 					continue
 				end
 				sum += t.Position
-				-- 사선 줄무늬 셋: 칸 안 정사각형(반 너비 h)에 u - v = k 선분
-				local h = t.Size.X * 0.42
-				for _, k in { -h * 0.66, 0, h * 0.66 } do
-					local u0, u1 = math.max(-h, -h + k), math.min(h, h + k)
-					local mu = (u0 + u1) / 2
-					local mid = t.Position + ux * mu + uy * (mu - k) + Vector3.new(0, 0.3, 0)
-					local len = (u1 - u0) * math.sqrt(2)
-					local dir = (ux + uy).Unit
-					local stripe = fxPart("Stripe", CFrame.lookAt(mid, mid + dir), Vector3.new(0.34, 0.05, len), look[1], 0.15, folder)
-					TweenService:Create(stripe, blink, { Transparency = 0.6 }):Play()
-				end
-				-- 묶음 바깥 둘레 굵은 테두리
 				for _, d in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
-					if mine[(c[1] + d[1]) .. "," .. (c[2] + d[2])] then
+					if inComp[(c[1] + d[1]) .. "," .. (c[2] + d[2])] then
 						continue
 					end
 					local across = stepX * d[1] + stepY * d[2]
 					local along = if d[1] ~= 0 then stepY else stepX
-					local mid = t.Position + across * 0.46 + Vector3.new(0, 0.34, 0)
-					local edge = fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(0.3, 0.08, along.Magnitude + 0.3), look[2], 0, folder)
-					TweenService:Create(edge, blink, { Transparency = 0.5, Color = look[1] }):Play()
+					local mid = t.Position + across * inset + Vector3.new(0, lift, 0)
+					local edge = fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(if e.Unavoid then 0.42 else 0.3, 0.08, along.Magnitude * (inset * 2) + 0.3), edgeColor, 0, folder)
+					TweenService:Create(edge, blink, { Transparency = 0.5, Color = e.Color }):Play()
 				end
 			end
-			local center = sum / math.max(#group, 1)
-			local anchor = fxPart("Label", CFrame.new(center + Vector3.new(0, 0.5, 0)), Vector3.new(0.1, 0.1, 0.1), look[1], 1, folder)
+			local center = sum / math.max(#comp, 1)
+			local anchor = fxPart("Label", CFrame.new(center + Vector3.new(0, 0.5, 0)), Vector3.new(0.1, 0.1, 0.1), e.Color, 1, folder)
 			local b = Instance.new("BillboardGui")
-			b.Size = UDim2.fromOffset(150, 30)
-			b.StudsOffset = Vector3.new(0, 2.6, 0)
+			b.Size = UDim2.fromOffset(190, 28)
+			b.StudsOffset = Vector3.new(0, 2.4 + math.min(i, 5) * 1.1, 0)
 			b.AlwaysOnTop = true
 			b.MaxDistance = 220
 			local label = Instance.new("TextLabel")
 			label.Size = UDim2.fromScale(1, 1)
 			label.BackgroundTransparency = 1
 			label.Font = Enum.Font.GothamBlack
-			label.TextSize = 18
+			label.TextSize = 16
 			label.TextStrokeTransparency = 0.1
-			label.TextColor3 = look[1]
-			label.Text = "! " .. look[3]
+			label.TextColor3 = e.Color
+			label.Text = "! " .. e.Label
 			label.Parent = b
 			b.Parent = anchor
+			-- 레이저: 부위 몸 → 덩어리 가운데(Beam 이라 부위가 움직여도 따라간다). 굵은 색 줄 + 가는 흰 심
+			local from = e.Source and source and source(e.Source)
+			if from then
+				local a0 = Instance.new("Attachment")
+				a0.Name = "Laser_" .. name
+				a0.Parent = from
+				local a1 = Instance.new("Attachment")
+				a1.Position = Vector3.new(0, 0.2, 0)
+				a1.Parent = anchor
+				for _, spec in { { 0.55, e.Color, 0.15 }, { 0.16, Color3.new(1, 1, 1), 0 } } do
+					local beam = Instance.new("Beam")
+					beam.Attachment0, beam.Attachment1 = a0, a1
+					beam.Width0, beam.Width1 = spec[1] * 0.6, spec[1]
+					beam.Color = ColorSequence.new(spec[2])
+					beam.LightEmission = 1
+					beam.LightInfluence = 0
+					beam.FaceCamera = true
+					beam.Segments = 1
+					beam.Transparency = NumberSequence.new(spec[3])
+					beam.Parent = anchor
+				end
+				table.insert(laserRoots, a0)
+			end
 		end
 	end
 end

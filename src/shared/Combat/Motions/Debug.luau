@@ -95,7 +95,7 @@ local function bob(d: number, dy: number, tilt: number): any
 	}
 end
 
-return {
+local M = {
 	-- 머리: 중단점 탄. 뒤로 당기며 부풀었다가 붉은 탄을 탁 쏘고 반동으로 밀린다
 	Head = {
 		Idle = bob(3.1, 0.4, -3),
@@ -258,3 +258,76 @@ return {
 		},
 	},
 }
+
+--[[
+	2026-10-03: 페이즈마다 해금되는 스킬·궁극기의 모션. 공격은 부위의 원래 공격 모션을 그대로 쓰되 이펙트(Fx 이름)만 바꾸고,
+	버프·충전은 부위 공통 모션(부풀며 빛을 모았다가 터뜨림 / 떨며 빛을 모음)이다. Hit 시각은 원래 모션 그대로.
+]]
+local function withFx(motion: any, rename: { [string]: string }): any
+	local copy = table.clone(motion)
+	copy.Events = {}
+	for _, ev in motion.Events or {} do
+		local e = table.clone(ev)
+		if e.n and rename[e.n] then
+			e.n = rename[e.n]
+		end
+		if e.fx and rename[e.fx] then
+			e.fx = rename[e.fx]
+		end
+		table.insert(copy.Events, e)
+	end
+	return copy
+end
+
+-- 버프: 부풀며 빛을 모았다가 한 번에 퍼뜨린다(피해 없음)
+local BUFF = {
+	Duration = 1.1,
+	BlendIn = 0.05,
+	Keys = {
+		K(0, nil, B0, Z),
+		K(0.35, "quadOut", { 12, 12, 12 }, { 0, 0.8, 0.2, -6, 0, 0 }),
+		K(0.5, "expoOut", { -6, -6, -6 }, { 0, 0.4, 0, 3, 0, 0 }),
+		K(1.1, "sineInOut", B0, Z),
+	},
+	Events = {
+		{ t = 0.1, k = "Fx", n = "BuffGather" },
+		{ t = 0.5, k = "Fx", n = "BuffPulse" },
+	},
+}
+-- 충전: 떨면서 빛을 빨아들인다(다음 턴에 터진다)
+local CHARGE = {
+	Duration = 1.3,
+	BlendIn = 0.05,
+	Keys = {
+		K(0, nil, B0, Z),
+		K(0.3, "quadOut", { 8, 8, 8 }, { 0.15, 0.6, 0.6, 0, 0, 4 }),
+		K(0.5, "linear", { 10, 10, 10 }, { -0.15, 0.6, 0.6, 0, 0, -4 }),
+		K(0.7, "linear", { 12, 12, 12 }, { 0.15, 0.7, 0.6, 0, 0, 4 }),
+		K(0.9, "linear", { 14, 14, 14 }, { -0.15, 0.7, 0.6, 0, 0, -4 }),
+		K(1.3, "sineInOut", { 6, 6, 6 }, { 0, 0.3, 0.3, 0, 0, 0 }),
+	},
+	Events = {
+		{ t = 0.1, k = "Fx", n = "ChargeStart" },
+		{ t = 0.6, k = "Fx", n = "ChargeStart" },
+	},
+}
+
+local head, del, patch, core = M.Head.Skills, M.DeleteArm.Skills, M.PatchArm.Skills, M.Core.Skills
+head.StackTrace = withFx(head.BreakpointBeam, { Bolt = "StackBolt" })
+head.Watchpoint = BUFF
+head.BreakStorm = withFx(head.BreakpointBeam, { Bolt = "StormBolts", BeamHit = "StormHit" })
+del.ForceQuit = withFx(del.DeleteCells, { DeleteSlam = "ForceSlam" })
+del.Sudo = BUFF
+del.Format = CHARGE
+patch.Hotfix = BUFF
+patch.BugPlant = withFx(patch.ForcedPatch, { PatchShot = "BugSeeds" })
+patch.DependencyHell = BUFF
+core.Overclock = BUFF
+core.KernelPanic = CHARGE
+core.KernelPanicBurst = withFx(core.CoreDump, { CoreDump = "PanicBurst", DumpHit = "PanicHit" })
+core.InfiniteRecursion = withFx(core.NullPointer, { NullPointer = "RecursionShot" })
+core.BlueScreen = withFx(core.CoreDump, { DumpCharge = "BlueCharge", CoreDump = "BlueScreen", DumpHit = "BlueHit" })
+-- 검수를 코어가 이어 할 때(삭제 팔이 부서진 뒤)
+core.DeleteCells = withFx(del.DeleteCells, {})
+
+return M

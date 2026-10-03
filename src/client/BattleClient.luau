@@ -23,6 +23,7 @@ local UserInputService = game:GetService("UserInputService")
 local BattleArena = require(ReplicatedStorage.Shared.BattleArena)
 local BattleGrid = require(ReplicatedStorage.Shared.BattleGrid)
 local BattleSkills = require(ReplicatedStorage.Shared.BattleSkills)
+local EnemyDefinitions = require(ReplicatedStorage.Shared.EnemyDefinitions)
 local QteDefinitions = require(ReplicatedStorage.Shared.QteDefinitions)
 local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
 local Keywords = require(ReplicatedStorage.Shared.Keywords)
@@ -510,6 +511,8 @@ function BattleClient:_onGridState(snapshot: any)
 	end
 
 	self:_bossBoard(snapshot)
+	-- 보스 체력바(부위별 체력·페이즈·스테미나·버프·이번 턴 예고)
+	self.hud:SetBoss(snapshot)
 	self:_refreshSkillBar(snapshot)
 	self:_refreshStance(snapshot)
 	self:_refreshStatusLine(snapshot)
@@ -590,6 +593,23 @@ function BattleClient:_bossBoard(snapshot: any)
 	end
 	self.goneCells = gone
 	self.bossModSig = modSig
+	-- 버프·충전 예고(2026-10-03): 피해가 없어 적 공격 연출로는 안 나온다 — 새 예고가 오면 그 부위가 바로 시전 모션
+	local played = self.bossCastPlayed or {}
+	local seen: { [string]: number } = {}
+	for _, id in snapshot.Planned or {} do
+		seen[id] = (seen[id] or 0) + 1
+		local u = snapshot.Units[id]
+		local plan = u and u.Plans and u.Plans[seen[id]]
+		local sk = plan and BattleSkills.ById(plan.SkillId)
+		if sk and (sk.BossKind == "Buff" or sk.BossKind == "Charge") then
+			local key = string.format("%d:%s:%d", snapshot.Turn or 0, id, seen[id])
+			if not played[key] and self.director and self.director:Has(id) then
+				played[key] = true
+				self.director:PlaySkill(id, plan.SkillId, { {} })
+			end
+		end
+	end
+	self.bossCastPlayed = played
 end
 
 -- 서버 사건(스킬·적 공격 결과)을 기다리던 연출에 붙인다
@@ -1029,13 +1049,46 @@ function BattleClient:_paintTiles()
 	-- 보스 디버그 예고: 겨눈 칸을 늘 보여 준다(라인·열을 보고 비켜서는 게 공략이다). 칸 삭제는 따로 칠한다
 	local deleting: { [string]: boolean } = {}
 	local unavoid: { [string]: boolean } = {}
+	--[[
+		2026-10-03 사용자: "각 부위별로 어디 부분을 때리는지 색깔을 다르게 해서 다 나누고, 부위 아이콘에서 레이저를 발사".
+		부위의 계획(두 번 행동이면 둘 다)마다 공격 범위 묶음 하나 — 색 = 부위 색(EnemyDefinitions), 레이저 = 부위 몸에서 묶음 가운데로.
+		묶음 이름은 "부위:계획번호" 라 같은 부위의 두 번째 공격도 따로 보인다.
+	]]
+	local partRanges: { [string]: { any } } = {}
+	local partColor: { [string]: Color3 } = {}
+	if snapshot.Boss then
+		for _, part in EnemyDefinitions.Get(snapshot.Boss.Id).Parts or {} do
+			partColor[part.Key] = part.Color or Color3.fromRGB(255, 150, 40)
+		end
+	end
+	local planSeen: { [string]: number } = {}
 	for _, enemyId in snapshot.Planned or {} do
 		local unit = snapshot.Units[enemyId]
-		if unit and unit.Alive and unit.Plan then
-			local planSkill = BattleSkills.ById(unit.Plan.SkillId)
-			for _, c in unit.Plan.Cells do
-				if unit.Plan.SkillId == "DeleteCells" then
+		planSeen[enemyId] = (planSeen[enemyId] or 0) + 1
+		local plan = unit and ((unit.Plans and unit.Plans[planSeen[enemyId]]) or (planSeen[enemyId] == 1 and unit.Plan))
+		if unit and unit.Alive and plan then
+			local planSkill = BattleSkills.ById(plan.SkillId)
+			local damaging = planSkill ~= nil and ((planSkill.Damage or 0) > 0 or planSkill.HpRatio ~= nil) and not plan.Canceled
+			if damaging and unit.Part then
+				local group = unit.Part .. ":" .. planSeen[enemyId]
+				local label = (planSkill :: any).Name .. (if planSkill and planSkill.Unavoidable then " · 회피 불가" elseif planSkill and planSkill.DodgeOnly then " · 회피만" else "")
+				for _, c in plan.Cells do
+					local key = c[1] .. "," .. c[2]
+					partRanges[key] = partRanges[key] or {}
+					table.insert(partRanges[key], {
+						Group = group,
+						Color = partColor[unit.Part] or Color3.fromRGB(255, 150, 40),
+						Label = label,
+						Unavoid = planSkill ~= nil and planSkill.Unavoidable == true,
+						Source = enemyId,
+					})
+				end
+			end
+			for _, c in plan.Cells do
+				if plan.SkillId == "DeleteCells" then
 					deleting[c[1] .. "," .. c[2]] = true
+				elseif not damaging then
+					continue
 				elseif planSkill and planSkill.Unavoidable then
 					unavoid[c[1] .. "," .. c[2]] = true
 				else
@@ -1181,14 +1234,23 @@ function BattleClient:_paintTiles()
 	BattleStage.GroupMarks(self.tiles, "Pending", deleting)
 	BattleStage.GroupMarks(self.tiles, "Gone", gone)
 	-- 공격 범위는 따로 한 층(줄무늬 + 굵은 테두리 + 묶음 글자) — 버프·검수 칸 위에서도 묻히지 않게(2026-10-03 요청)
-	local threatKeys: { [string]: string } = {}
-	for key in threatened do
-		threatKeys[key] = "Threat"
+	-- 보스전: 부위마다 색이 다른 범위 + 부위에서 쏘는 레이저 / 보통 적: 주황(공격 범위)·빨강(회피 불가)
+	local threatKeys: { [string]: { any } } = {}
+	if snapshot.Boss then
+		threatKeys = partRanges
+	else
+		for key in threatened do
+			threatKeys[key] = { { Group = "Threat", Color = Color3.fromRGB(255, 150, 40), Label = "공격 범위" } }
+		end
+		for key in unavoid do
+			threatKeys[key] = { { Group = "Unavoid", Color = Color3.fromRGB(255, 30, 40), Label = "회피 불가", Unavoid = true } }
+		end
 	end
-	for key in unavoid do
-		threatKeys[key] = "Unavoid"
-	end
-	BattleStage.ThreatMarks(self.tiles, threatKeys)
+	local director = self.director
+	BattleStage.ThreatMarks(self.tiles, threatKeys, function(id: string): BasePart?
+		local model = director and director:Model(id)
+		return model and model.PrimaryPart
+	end)
 
 	--[[
 		슬롯·공격 버튼 칠하기. 재사용 대기·카드 잠김·스테미나 부족을 슬롯마다 보여 준다(값만 있고 화면에

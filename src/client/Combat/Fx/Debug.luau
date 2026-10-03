@@ -241,4 +241,154 @@ function Fx.Break(ctx: any)
 	ctx.Vfx.Shake(0.4, 0.3)
 end
 
+
+--=== 2026-10-03: 페이즈 해금 스킬·궁극기·버프·충전 ===--
+
+local EnemyDefinitions = require(game:GetService("ReplicatedStorage").Shared.EnemyDefinitions)
+local BLUE = c(60, 120, 255)
+
+-- 부위 색(EnemyDefinitions 의 Color — 예고 범위·레이저와 같은 색)
+local function partColor(ctx: any): Color3
+	local key = ctx.Actor and ctx.Actor.BossKey
+	for _, part in EnemyDefinitions.Get("Debug").Parts or {} do
+		if part.Key == key then
+			return part.Color or MAGENTA
+		end
+	end
+	return MAGENTA
+end
+
+-- 버프: 둘레 빛이 빨려 들었다가(모으기) 고리 둘이 퍼진다(퍼뜨리기)
+function Fx.BuffGather(ctx: any)
+	local col = partColor(ctx)
+	ctx.Vfx.Implode(ctx.Root.Position, { Color = col, Radius = radius(ctx) * 2.5, Count = 14, Life = 0.35 })
+end
+
+function Fx.BuffPulse(ctx: any)
+	local col = partColor(ctx)
+	local p = ctx.Root.Position
+	ctx.Vfx.Flash(p, { Color = col, Size = radius(ctx) * 3, Life = 0.4, Brightness = 4 })
+	ctx.Vfx.Ring(CFrame.new(p), { R0 = radius(ctx), R1 = radius(ctx) * 3.2, Color = col, Life = 0.45, Width = 0.35, Height = 0.15 })
+	ctx.Vfx.Ring(CFrame.new(p) * CFrame.Angles(math.rad(90), 0, 0), { R0 = radius(ctx), R1 = radius(ctx) * 2.6, Color = c(255, 240, 200), Life = 0.4, Width = 0.25, Height = 0.12 })
+	ctx.Vfx.Sparks(p, { Color = col, Count = 18, Speed = 14 })
+end
+
+-- 충전: 큰 빛을 빨아들이고 떨린다(두 번 부른다)
+function Fx.ChargeStart(ctx: any)
+	local col = partColor(ctx)
+	local p = ctx.Root.Position
+	ctx.Vfx.Implode(p, { Color = col, Radius = radius(ctx) * 4, Count = 22, Life = 0.45 })
+	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = radius(ctx) * 3, R1 = radius(ctx) * 0.8, Color = col, Life = 0.45, Width = 0.4, Facing = true })
+	ctx.Vfx.Shake(0.15, 0.2)
+end
+
+-- 스택 추적: 붉은 탄 셋이 열을 따라 줄지어
+function Fx.StackBolt(ctx: any, ev: any)
+	local from = muzzle(ctx)
+	ctx.Vfx.Flash(from, { Color = RED, Size = 5, Life = 0.2 })
+	local right = ctx.Forward:Cross(Vector3.new(0, 1, 0))
+	for i = -1, 1 do
+		local to = ctx.Target + ctx.Forward * (i * 5) + right * 0.01
+		ctx.Vfx.Projectile(from, to, { Time = flight(ev, 0.16) * (1 + i * 0.08), Arc = 1.5, Build = orb(ctx.Vfx, 0.9, RED), TrailColor = RED })
+	end
+end
+
+-- 중단점 폭풍: 하늘에서 붉은 탄이 아군 진영 곳곳에 쏟아진다
+function Fx.StormBolts(ctx: any, ev: any)
+	local from = muzzle(ctx)
+	ctx.Vfx.Flash(from, { Color = RED, Size = 8, Life = 0.3, Brightness = 5 })
+	local right = ctx.Forward:Cross(Vector3.new(0, 1, 0))
+	local field = Vector3.new(ctx.Target.X, ctx.Ground + 0.3, ctx.Target.Z)
+	for i = 1, 12 do
+		local spot = field + right * (((i * 7) % 6) - 2.5) * 3 + ctx.Forward * (((i * 5) % 3) - 1) * 4
+		ctx.Vfx.Projectile(from + Vector3.new(0, 4, 0), spot, { Time = flight(ev, 0.16) * (0.85 + (i % 4) * 0.06), Arc = 6, Build = orb(ctx.Vfx, 0.8, RED), TrailColor = RED })
+	end
+end
+
+function Fx.StormHit(ctx: any, _ev: any, at: Vector3?)
+	local p = at or ctx.Target
+	ctx.Vfx.Shockwave(Vector3.new(p.X, ctx.Ground + 0.2, p.Z), { Color = RED, Radius = 14, Life = 0.45 })
+	ctx.Vfx.Flash(p, { Color = RED, Size = 7, Life = 0.25 })
+end
+
+-- 강제 종료: 3×3 네모 고리가 조여 든다
+function Fx.ForceSlam(ctx: any)
+	local p = ctx.Target
+	local g = Vector3.new(p.X, ctx.Ground + 0.2, p.Z)
+	ctx.Vfx.Ring(CFrame.new(g), { R0 = 9, R1 = 1.5, Color = MAGENTA, Life = 0.35, Width = 0.5, Height = 0.15, Segments = 4 })
+	shards(ctx.Vfx, g + Vector3.new(0, 0.5, 0), Vector3.new(0, 1, 0), 14, 16)
+end
+
+-- 버그 심기: 마젠타·초록 씨앗이 칸마다 꽂힌다
+function Fx.BugSeeds(ctx: any, ev: any)
+	local from = muzzle(ctx)
+	local right = ctx.Forward:Cross(Vector3.new(0, 1, 0))
+	local field = Vector3.new(ctx.Target.X, ctx.Ground + 0.3, ctx.Target.Z)
+	for i = 1, 4 do
+		local spot = if i == 1 then field else field + right * ((i - 2.5) * 5) + ctx.Forward * ((i % 2) * 4 - 2)
+		ctx.Vfx.Projectile(from, spot, {
+			Time = flight(ev, 0.22),
+			Arc = 4,
+			Spin = 2,
+			Build = cube(ctx.Vfx, 0.55, if i % 2 == 0 then MAGENTA else GREEN),
+			TrailColor = GREEN,
+			OnArrive = function(at: Vector3)
+				ctx.Vfx.Ring(CFrame.new(at), { R0 = 0.5, R1 = 3, Color = MAGENTA, Life = 0.3, Width = 0.25, Height = 0.1, Segments = 4 })
+			end,
+		})
+	end
+end
+
+-- 커널 패닉: 결정에서 거대한 보랏빛 덩어리 → 아군 진영 전체를 덮는 충격파
+function Fx.PanicBurst(ctx: any, ev: any)
+	local from = crystal(ctx)
+	ctx.Vfx.Flash(from, { Color = c(170, 120, 255), Size = 18, Life = 0.5, Brightness = 7 })
+	ctx.Vfx.Projectile(from, ctx.Target, { Time = flight(ev, 0.2), Arc = 6, Build = orb(ctx.Vfx, 5, c(150, 100, 255)), TrailColor = MAGENTA })
+	ctx.Vfx.Shake(0.5, 0.4)
+end
+
+function Fx.PanicHit(ctx: any, _ev: any, at: Vector3?)
+	local p = at or ctx.Target
+	local g = Vector3.new(p.X, ctx.Ground + 0.2, p.Z)
+	ctx.Vfx.Flash(p, { Color = c(170, 120, 255), Size = 14, Life = 0.4, Brightness = 8 })
+	ctx.Vfx.Shockwave(g, { Color = c(150, 100, 255), Radius = 24, Life = 0.6 })
+	ctx.Vfx.Shockwave(g + Vector3.new(0, 0.1, 0), { Color = MAGENTA, Radius = 14, Life = 0.4 })
+	shards(ctx.Vfx, p, Vector3.new(0, 1, 0), 24, 22)
+	ctx.Vfx.Shake(0.9, 0.5)
+end
+
+-- 무한 재귀: 라인·열 두 갈래 화살표 탄
+function Fx.RecursionShot(ctx: any, ev: any)
+	local from = crystal(ctx)
+	local right = ctx.Forward:Cross(Vector3.new(0, 1, 0))
+	ctx.Vfx.Flash(from, { Color = RED, Size = 10, Life = 0.35, Brightness = 5 })
+	for _, off in { right * 6, -right * 6, ctx.Forward * 5, -ctx.Forward * 5 } do
+		ctx.Vfx.Projectile(from, ctx.Target + off, { Time = flight(ev, 0.18), Arc = 1, Build = orb(ctx.Vfx, 0.9, RED), TrailColor = MAGENTA })
+	end
+	ctx.Vfx.Projectile(from, ctx.Target, { Time = flight(ev, 0.18), Build = orb(ctx.Vfx, 1.4, c(255, 200, 200)), TrailColor = RED })
+end
+
+-- 블루스크린(궁극기): 푸른 빛을 크게 모아 → 화면을 덮는 푸른 번쩍임과 충격파
+function Fx.BlueCharge(ctx: any)
+	local p = crystal(ctx)
+	ctx.Vfx.Implode(p, { Color = BLUE, Radius = 16, Count = 30, Life = 0.4 })
+	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 12, R1 = 1, Color = BLUE, Life = 0.4, Width = 0.5, Facing = true })
+	ctx.Vfx.Shake(0.3, 0.4)
+end
+
+function Fx.BlueScreen(ctx: any, ev: any)
+	local from = crystal(ctx)
+	ctx.Vfx.Flash(from, { Color = BLUE, Size = 26, Life = 0.6, Brightness = 9 })
+	ctx.Vfx.Projectile(from, ctx.Target, { Time = flight(ev, 0.2), Arc = 3, Build = orb(ctx.Vfx, 6, BLUE), TrailColor = c(200, 220, 255) })
+end
+
+function Fx.BlueHit(ctx: any, _ev: any, at: Vector3?)
+	local p = at or ctx.Target
+	local g = Vector3.new(p.X, ctx.Ground + 0.2, p.Z)
+	ctx.Vfx.Flash(p, { Color = BLUE, Size = 30, Life = 0.6, Brightness = 10 })
+	ctx.Vfx.Shockwave(g, { Color = BLUE, Radius = 30, Life = 0.7 })
+	ctx.Vfx.Shockwave(g + Vector3.new(0, 0.1, 0), { Color = c(220, 235, 255), Radius = 16, Life = 0.5 })
+	ctx.Vfx.Shake(1.1, 0.6)
+end
+
 return Fx

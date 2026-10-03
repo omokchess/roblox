@@ -627,8 +627,185 @@ function BattleHud:_rescale()
 	end
 end
 
+--[[
+	보스 체력바(2026-10-03 사용자: "보스 체력도 잘 보이게 체력바를 놓고, 부위별로 체력 볼 수 있게").
+	화면 위 가운데. 한 줄씩:
+	  이름 · 페이즈 · 체력 합          큰 체력바(페이즈 눈금 75/50/25%)
+	  부위 넷(부위 색 · 이름 · 체력)     보스 스테미나 + 상태(과부하·회복 불가·버프·충전)
+	  이번 턴: 부위마다 예고한 행동(부위 색)
+	스냅샷이 올 때마다 다시 그린다(가볍다). 보스가 없으면 숨긴다.
+]]
+local function comma(n: number): string
+	local s = tostring(math.floor(n)):reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return (s:gsub("^,", ""))
+end
+
+local BOSS_BAR_W = 660
+function BattleHud:SetBoss(snapshot: any?)
+	local bossSnap = snapshot and snapshot.Boss
+	if not self.bossBar then
+		self.bossBar = make("Frame", {
+			Name = "BossBar",
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 104),
+			Size = UDim2.fromOffset(BOSS_BAR_W, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundColor3 = INK,
+			BackgroundTransparency = 0.18,
+			BorderSizePixel = 0,
+			Visible = false,
+		}, self.gui)
+		stroke(self.bossBar, CRIMSON, 0.55)
+		make("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }, self.bossBar)
+		make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5) }, self.bossBar)
+		self.bossBarScale = make("UIScale", {}, self.bossBar)
+	end
+	local bar = self.bossBar
+	bar.Visible = self.active and bossSnap ~= nil
+	if not bar.Visible then
+		return
+	end
+	if self.bossBarScale then
+		self.bossBarScale.Scale = self.scale
+	end
+	for _, child in bar:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	local def = EnemyDefinitions.Get(bossSnap.Id)
+	local units: { [string]: any } = {}
+	for _, u in snapshot.Units or {} do
+		if u.Part then
+			units[u.Part] = u
+		end
+	end
+	local hp, maxHp = 0, 0
+	for _, part in def.Parts or {} do
+		local u = units[part.Key]
+		if u then
+			hp += math.max(0, u.Health or 0)
+			maxHp += u.MaxHealth or 0
+		end
+	end
+	local sep = string.format('<font color="%s">   |   </font>', hex(Color3.fromRGB(80, 74, 66)))
+	local function line(order: number, height: number): Frame
+		return make("Frame", { Size = UDim2.new(1, 0, 0, height), BackgroundTransparency = 1, LayoutOrder = order }, bar)
+	end
+	local function text(parent: Instance, rich: string, size: number, x: number, w: number, align: Enum.TextXAlignment?, color: Color3?): TextLabel
+		return make("TextLabel", {
+			Position = UDim2.fromOffset(x, 0),
+			Size = UDim2.new(if w > 0 then 0 else 1, if w > 0 then w else -x, 1, 0),
+			BackgroundTransparency = 1,
+			Text = rich,
+			RichText = true,
+			TextColor3 = color or BONE,
+			Font = Enum.Font.GothamBold,
+			TextSize = size,
+			TextXAlignment = align or Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+		}, parent)
+	end
+	local function fill(parent: Instance, y: number, h: number, ratio: number, color: Color3, w: number?): Frame
+		local track = make("Frame", { Position = UDim2.fromOffset(0, y), Size = if w then UDim2.fromOffset(w, h) else UDim2.new(1, 0, 0, h), BackgroundColor3 = Color3.fromRGB(30, 27, 34), BorderSizePixel = 0 }, parent)
+		stroke(track, BONE, 0.85)
+		make("Frame", { Size = UDim2.fromScale(math.clamp(ratio, 0, 1), 1), BackgroundColor3 = color, BorderSizePixel = 0 }, track)
+		return track
+	end
+
+	-- 1) 이름 · 페이즈 · 체력 합
+	local top = line(1, 20)
+	text(top, string.format('<b>%s</b>   <font color="%s">%d페이즈</font>', def.Name, hex(GOLD), bossSnap.Phase or 1), 17, 0, 300)
+	text(top, string.format("체력 합  %s / %s  (%d%%)", comma(hp), comma(maxHp), math.floor((if maxHp > 0 then hp / maxHp else 0) * 100 + 0.5)), 13, 300, 0, Enum.TextXAlignment.Right, BODY)
+	-- 2) 큰 체력바 + 페이즈 눈금
+	local big = line(2, 16)
+	local track = fill(big, 2, 12, if maxHp > 0 then hp / maxHp else 0, CRIMSON)
+	for _, at in bossSnap.PhaseAt or {} do
+		make("Frame", { Position = UDim2.new(at, -1, 0, -3), Size = UDim2.new(0, 2, 1, 6), BackgroundColor3 = GOLD, BorderSizePixel = 0, ZIndex = 2 }, track)
+	end
+	-- 3) 부위 넷
+	local parts = line(3, 30)
+	local n = #(def.Parts or {})
+	local w = math.floor((BOSS_BAR_W - 24 - (n - 1) * 8) / math.max(n, 1))
+	for i, part in def.Parts or {} do
+		local u = units[part.Key]
+		local alive = u ~= nil and u.Alive == true
+		local box = make("Frame", { Position = UDim2.fromOffset((i - 1) * (w + 8), 0), Size = UDim2.fromOffset(w, 30), BackgroundTransparency = 1 }, parts)
+		local color = part.Color or CRIMSON
+		make("Frame", { Position = UDim2.fromOffset(0, 3), Size = UDim2.fromOffset(8, 8), BackgroundColor3 = if alive then color else MUTED, BorderSizePixel = 0 }, box)
+		local label = make("TextLabel", {
+			Position = UDim2.fromOffset(12, 0),
+			Size = UDim2.new(1, -12, 0, 14),
+			BackgroundTransparency = 1,
+			Text = if alive then string.format("%s  %s", part.Name, comma(math.max(0, u.Health or 0))) else part.Name .. "  파괴됨",
+			TextColor3 = if alive then BONE else MUTED,
+			Font = Enum.Font.GothamBold,
+			TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+		}, box)
+		local _ = label
+		fill(box, 18, 7, if u and (u.MaxHealth or 0) > 0 then (u.Health or 0) / u.MaxHealth else 0, if alive then color else MUTED)
+	end
+	-- 4) 보스 스테미나 + 상태
+	local st = line(4, 16)
+	local maxSt = math.max(1, bossSnap.MaxStamina or 100)
+	fill(st, 4, 8, (bossSnap.Stamina or 0) / maxSt, if bossSnap.Overheat then RED else STAMINA, 180)
+	local chips = { string.format("스테미나 %d/%d", math.floor(bossSnap.Stamina or 0), maxSt) }
+	if bossSnap.Overheat then
+		table.insert(chips, string.format('<font color="%s">과부하 — 공격 안 함 · 받는 피해 +50%%</font>', hex(RED)))
+	end
+	if (bossSnap.NoHeal or 0) > 0 then
+		table.insert(chips, string.format('<font color="%s">회복 불가 %d턴</font>', hex(RED), bossSnap.NoHeal))
+	end
+	for _, b in bossSnap.Buffs or {} do
+		table.insert(chips, string.format('<font color="%s">%s%s</font>', hex(GOLD), b.Name, if (b.Turns or -1) > 0 then " " .. b.Turns .. "턴" else ""))
+	end
+	local charge = bossSnap.Charge
+	if charge and not charge.Broken then
+		local cs = BattleSkills.ById(charge.SkillId)
+		table.insert(chips, string.format('<font color="%s">%s %s — 끊기 %s/%s</font>', hex(TEAL), if cs then cs.Name else "?", if charge.Stage == "Release" then "터지기 직전" else "충전 중", comma(charge.Dealt or 0), comma(charge.Need or 0)))
+	end
+	text(st, table.concat(chips, sep), 12, 190, 0, nil, BODY)
+	-- 5) 이번 턴 예고(부위 색)
+	local plans = {}
+	for _, part in def.Parts or {} do
+		local u = units[part.Key]
+		local names = {}
+		for _, p in (u and u.Alive and (u.Plans or (u.Plan and { u.Plan }))) or {} do
+			local sk = BattleSkills.ById(p.SkillId)
+			if sk then
+				local tag = if p.Canceled then " (끊김)" elseif sk.BossKind == "Buff" then " [버프]" elseif sk.BossKind == "Charge" then " [충전]" elseif sk.BossKind == "Ultimate" then " [궁극기]" else ""
+				table.insert(names, sk.Name .. tag)
+			end
+		end
+		if #names > 0 then
+			table.insert(plans, string.format('<font color="%s">● %s</font> %s', hex(part.Color or BONE), part.Name, table.concat(names, " → ")))
+		end
+	end
+	if #plans > 0 then
+		local row = make("TextLabel", {
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Text = "이번 턴  " .. table.concat(plans, sep),
+			RichText = true,
+			TextWrapped = true,
+			TextColor3 = BONE,
+			Font = Enum.Font.GothamBold,
+			TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			LayoutOrder = 5,
+		}, bar)
+		local _ = row
+	end
+end
+
 function BattleHud:SetActive(on: boolean)
 	self.active = on
+	if not on and self.bossBar then
+		self.bossBar.Visible = false
+	end
 	self.dock.Visible = on
 	self.exit.Visible = on
 	self.stance.Visible = on and self.stanceShown
@@ -1209,10 +1386,6 @@ local function richRow(parent: Instance, rich: string, color: Color3, order: num
 	}, parent)
 end
 
-local function comma(n: number): string
-	local s = tostring(math.floor(n)):reverse():gsub("(%d%d%d)", "%1,"):reverse()
-	return (s:gsub("^,", ""))
-end
 
 function BattleHud:_buildBossInfo()
 	local panel = make("Frame", {
@@ -1342,7 +1515,8 @@ function BattleHud:HideBossInfo()
 end
 
 -- 부위 행동 하나(스킬이면 BattleSkills 에서 이름·설명·피해·방어 규칙을 가져온다)
-function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned: string?, alive: boolean)
+local KIND_CHIP = { Attack = "공격", Buff = "버프", Charge = "충전", Ultimate = "궁극기", Gimmick = "기믹" }
+function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned: { [string]: boolean }, alive: boolean, phase: number)
 	local skill = if move.Id then BattleSkills.ById(move.Id) else nil
 	-- 머리(이름·꼬리표·수치 줄) 아래에 설명 줄 — 스킬 설명 말풍선과 같은 짜임
 	local holder = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = order }, parent)
@@ -1365,14 +1539,29 @@ function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned
 		TextSize = 15,
 		LayoutOrder = 1,
 	}, top)
-	if planned and move.Id == planned then
+	local locked = (move.Phase or 1) > phase
+	if move.Id and planned[move.Id] then
 		chip(top, "이번 턴 예고", RED, 2)
 	end
-	chip(top, move.When, STEEL, 3)
+	chip(top, move.When, if locked then MUTED else STEEL, 3)
+	if skill and skill.BossKind then
+		chip(top, KIND_CHIP[skill.BossKind] or skill.BossKind, if skill.BossKind == "Ultimate" then RED elseif skill.BossKind == "Buff" then GOLD else TEAL, 4)
+	end
+	if locked then
+		chip(top, "아직 잠김", MUTED, 5)
+	end
 	if skill then
 		local stats = {}
 		if (skill.Damage or 0) > 0 then
 			table.insert(stats, statPart("피해", tostring(skill.Damage)))
+		elseif skill.HpRatio then
+			table.insert(stats, statPart("피해", string.format("지금 체력 %d%%", math.floor(skill.HpRatio * 100 + 0.5)), RED))
+		end
+		if (skill.StaminaCost or 0) > 0 then
+			table.insert(stats, statPart("스테미나", tostring(skill.StaminaCost)))
+		end
+		if (skill.BossCooldown or 0) > 0 then
+			table.insert(stats, statPart("재사용", skill.BossCooldown .. "턴"))
 		end
 		table.insert(stats, if skill.Unavoidable then statPart("방어", "회피·막기 불가", RED)
 			elseif skill.DodgeOnly then statPart("방어", "회피만", GOLD)
@@ -1441,12 +1630,32 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 		order += 1
 		return order
 	end
-	-- 보스 규칙
-	if def.Rules then
-		local rules = make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody)
-		make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, rules)
-		describe(rules, table.concat(def.Rules, "\n"), CRIMSON)
+	-- 2026-10-03 사용자: 보스 스킬 설명을 액티브 / 패시브 / 기믹으로 나눠 읽기 편하게
+	local function heading(title: string, sub: string)
+		local h = make("Frame", { Size = UDim2.new(1, -6, 0, 24), BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody)
+		make("TextLabel", {
+			Size = UDim2.new(1, 0, 1, -3),
+			BackgroundTransparency = 1,
+			Text = string.format('<b>%s</b>   <font color="%s">%s</font>', title, hex(MUTED), sub),
+			RichText = true,
+			TextColor3 = GOLD,
+			Font = Enum.Font.GothamBlack,
+			TextSize = 16,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, h)
+		make("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = GOLD, BackgroundTransparency = 0.6, BorderSizePixel = 0 }, h)
 	end
+	local function entries(list: { any }, accent: Color3)
+		for _, entry in list do
+			local box = make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody)
+			make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, box)
+			make("UIPadding", { PaddingLeft = UDim.new(0, 4) }, box)
+			richRow(box, string.format('<font color="%s"><b>%s</b></font>', hex(BONE), entry.Name), BONE, 0)
+			describe(box, entry.Description, accent, 1)
+		end
+	end
+	local phase = bossSnap.Phase or 1
+	heading("액티브", string.format("부위마다 쓰는 스킬 · 지금 %d페이즈", phase))
 	-- 부위마다 칸 하나
 	local focusFrame: Frame? = nil
 	for _, part in def.Parts or {} do
@@ -1510,10 +1719,13 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 			TextSize = 12,
 			TextXAlignment = Enum.TextXAlignment.Right,
 		}, bar)
-		-- 행동
-		local planned = if isAlive and u and u.Plan then u.Plan.SkillId else nil
+		-- 행동(두 번 행동이면 둘 다 "이번 턴 예고")
+		local planned: { [string]: boolean } = {}
+		for _, p in (isAlive and u and (u.Plans or (u.Plan and { u.Plan }))) or {} do
+			planned[p.SkillId] = true
+		end
 		for i, move in part.Moves or {} do
-			self:_bossMove(box, move, 2 + i, planned, isAlive)
+			self:_bossMove(box, move, 2 + i, planned, isAlive, phase)
 		end
 		-- 부수면
 		if part.Break then
@@ -1522,6 +1734,17 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 			richRow(brk, string.format('<font color="%s"><b>부수면</b></font>', hex(GOLD)), BONE, 0)
 			describe(brk, part.Break, GOLD, 0, not isAlive)
 		end
+	end
+	if def.Passives then
+		heading("패시브", "늘 걸려 있는 보스 규칙·페이즈 버프")
+		entries(def.Passives, CRIMSON)
+	end
+	if def.Gimmicks then
+		heading("기믹", "판·스테미나·충전 규칙")
+		entries(def.Gimmicks, TEAL)
+	end
+	if def.Rules then
+		describe(make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody), table.concat(def.Rules, "\n"), CRIMSON)
 	end
 	self.boss.Visible = true
 	self:_fitBossInfo()
