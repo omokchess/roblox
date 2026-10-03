@@ -452,7 +452,7 @@ local function spectatePacket(player: Player, session: Session, snapshot: any): 
 	-- 보스 판(구경하는 쪽도 칸마다 무슨 칸인지 보이게): 버프·버그·회복, 검은 칸, 이번 턴 예고 칸
 	local board = nil
 	if snapshot.Boss then
-		-- 이번 턴 검수 예고 칸(삭제 팔이 부서지면 코어가 잇는다 — 판 상태에서 바로 읽는다)
+		-- 이번 턴 검수 예고 칸(서브코어-삭제가 부서지면 코어가 잇는다 — 판 상태에서 바로 읽는다)
 		local pending = snapshot.Boss.DeleteCells or {}
 		board = { Deleted = snapshot.Boss.Deleted, Mods = snapshot.Boss.Mods, Pending = pending }
 	end

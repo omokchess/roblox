@@ -24,6 +24,8 @@ local BattleArena = require(ReplicatedStorage.Shared.BattleArena)
 local BattleGrid = require(ReplicatedStorage.Shared.BattleGrid)
 local BattleSkills = require(ReplicatedStorage.Shared.BattleSkills)
 local EnemyDefinitions = require(ReplicatedStorage.Shared.EnemyDefinitions)
+local GridBattle = require(ReplicatedStorage.Shared.GridBattle)
+local DebugBoss = require(script.Parent.Combat.DebugBoss)
 local QteDefinitions = require(ReplicatedStorage.Shared.QteDefinitions)
 local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
 local Keywords = require(ReplicatedStorage.Shared.Keywords)
@@ -60,7 +62,7 @@ local TILE_DELETE = BattleStage.BOARD.Pending
 local TILE_UNAVOID = Color3.fromRGB(200, 20, 30)
 
 -- 보스 부위 이름표 높이(부위 바닥 기준)
--- 먼 라인(1)일수록 화면에서 위로 올라가 보이므로 삭제 팔은 낮게, 머리는 높게 달아 겹치지 않게 한다
+-- 먼 라인(1)일수록 화면에서 위로 올라가 보이므로 서브코어-삭제는 낮게, 머리는 높게 달아 겹치지 않게 한다
 -- 보스 부위 이름표 높이(다면체 가운데 기준 — 코어 반지름 6, 위성 2.3)
 local BOSS_LABEL = { Head = 5.4, DeleteArm = 3.8, PatchArm = 3.8, Core = 9.5 }
 
@@ -513,6 +515,7 @@ function BattleClient:_onGridState(snapshot: any)
 	self:_bossBoard(snapshot)
 	-- 보스 체력바(부위별 체력·페이즈·스테미나·버프·이번 턴 예고)
 	self.hud:SetBoss(snapshot)
+	self:_bossAlerts(snapshot)
 	self:_refreshSkillBar(snapshot)
 	self:_refreshStance(snapshot)
 	self:_refreshStatusLine(snapshot)
@@ -554,8 +557,61 @@ end
 
 --[[
 	보스 디버그 판(지워진 칸·버프/버그 칸). 지운 칸은 드래그가 피하도록 기억하고,
-	새로 지워진 칸엔 조각이 튀고, 버프/버그 칸이 새로 깔리면 패치 팔이 손을 든다.
+	새로 지워진 칸엔 조각이 튀고, 버프/버그 칸이 새로 깔리면 서브코어-패치가 손을 든다.
 ]]
+--[[
+	아이디어 8(2026-10-03 사용자): 페이즈가 오르면 화면 글자(ERROR → FATAL)로 알리고, 원한·마지막 발악도 한 번씩 띄운다.
+	보스 연출(공전·자전·이펙트 크기)은 DebugBoss.Phase 로 페이즈만큼 커진다.
+]]
+local PHASE_FLASH = {
+	[2] = { "2페이즈", "ERROR 0x02 — 최적화 · 부위마다 새 스킬" },
+	[3] = { "3페이즈", "ERROR 0x03 — 멀티스레드 · 부위마다 두 번 행동" },
+	[4] = { "4페이즈", "FATAL — 커널 모드 · 가하는 피해 +30%" },
+}
+function BattleClient:_bossAlerts(snapshot: any)
+	local boss = snapshot.Boss
+	if not boss then
+		self.bossSeen = nil
+		DebugBoss.Phase = 1
+		return
+	end
+	DebugBoss.Phase = boss.Phase or 1
+	local seen = self.bossSeen
+	if not seen then
+		-- 전투 처음: 판 변주만 알린다
+		self.bossSeen = { Phase = boss.Phase or 1, FirstBroken = boss.FirstBroken, LastStand = boss.LastStand }
+		for _, v in GridBattle.BOSS_VARIANTS do
+			if v.Id == boss.Variant then
+				self.hud:Flash("판 변주: " .. v.Name, v.Text, BattleHud.Colors.Gold or Color3.fromRGB(236, 186, 78))
+			end
+		end
+		return
+	end
+	if (boss.Phase or 1) > seen.Phase then
+		local f = PHASE_FLASH[boss.Phase]
+		if f then
+			self.hud:Flash(f[1], f[2], if boss.Phase >= 4 then BattleHud.Colors.Red else Color3.fromRGB(236, 186, 78))
+		end
+		seen.Phase = boss.Phase
+	end
+	if boss.FirstBroken and not seen.FirstBroken then
+		seen.FirstBroken = boss.FirstBroken
+		local id = "Grudge_" .. boss.FirstBroken
+		local def = GridBattle.BOSS_BUFFS[id]
+		if def then
+			self.hud:Flash("원한 — " .. def.Name, "먼저 부순 부위에 디버그가 반응했다", BattleHud.Colors.Red)
+		end
+	end
+	if boss.LastStand and not seen.LastStand then
+		seen.LastStand = boss.LastStand
+		for _, v in GridBattle.BOSS_LAST_STANDS do
+			if v.Id == boss.LastStand then
+				self.hud:Flash("마지막 발악: " .. v.Name, v.Text, BattleHud.Colors.Red)
+			end
+		end
+	end
+end
+
 function BattleClient:_bossBoard(snapshot: any)
 	local board = snapshot.Boss
 	local gone: { [string]: boolean } = {}

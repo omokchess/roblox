@@ -6,8 +6,8 @@
 	답: 부위 처리 = "코어 + 위성 셋", 적 칸 = "보이는 것만 없앰"(규칙·칸 차지는 그대로).
 	  코어      큰 정십이면체(둘레 반지름 6, 마젠타 속 빛) + 기운 코드 고리 + 앞에 뜬 마젠타 결정. 칸 위 10 스터드에 뜬다
 	  머리      작은 정십이면체(2.3, 청록 속 빛) + 앞면에 붉은 중단점 + 벌레 더듬이
-	  삭제 팔   작은 정십이면체(붉은 속 빛) + 앞면에 붉은 ✕
-	  패치 팔   작은 정십이면체(초록 속 빛) + 앞면에 초록 + + 비스듬히 감은 붕대 띠
+	  서브코어-삭제   작은 정십이면체(붉은 속 빛) + 앞면에 붉은 ✕
+	  서브코어-패치   작은 정십이면체(초록 속 빛) + 앞면에 초록 + + 비스듬히 감은 붕대 띠
 	위성은 코어 둘레를 돈다 — 앞으로 지나 옆으로, 코어 뒤로 숨었다가 다시 나온다(2026-10-03 사용자: "코어 뒤쪽으로도 돌면서
 	진짜 공전하는 느낌"). 자리는 CombatDirector 가 매 프레임 DebugBoss.Orbit 으로 정한다.
 	2026-10-03 사용자: "공전·자전이 끊겨 보이지 않게, 불규칙한 방향으로" — 자전은 매끈한 잡음(math.noise)으로 축·빠르기가
@@ -56,8 +56,14 @@ DebugBoss.OrbitPhase = { Head = 0, DeleteArm = 2 * math.pi / 3, PatchArm = 4 * m
 local SEED = { Head = 11.3, DeleteArm = 27.9, PatchArm = 41.7 }
 
 -- 공전 각속도(셋이 함께 도는 바퀴 — 따로 돌면 서로 부딪친다). 대개 한 방향, 가끔 매끈하게 거꾸로
+-- 지금 보스 페이즈(BattleClient 가 스냅샷마다 맞춘다). 페이즈마다 공전·자전·이펙트가 커진다(아이디어 8)
+DebugBoss.Phase = 1
+local function phaseBoost(): number
+	return 1 + 0.25 * math.max(0, DebugBoss.Phase - 1)
+end
+
 function DebugBoss.OrbitRate(t: number): number
-	return DebugBoss.OrbitSpeed * (noise(t * 0.05, 3.7) * 3 + 0.45)
+	return DebugBoss.OrbitSpeed * (noise(t * 0.05, 3.7) * 3 + 0.45) * phaseBoost()
 end
 
 -- 위성 자리: 코어 가운데 기준 오프셋(코어 공간 — -Z 가 아군 쪽). theta = 궤도 위 각.
@@ -263,7 +269,7 @@ function DebugBoss:Apply(pose: any)
 	if w.Magnitude < 0.4 then
 		w = (if w.Magnitude > 1e-4 then w.Unit else Vector3.new(0, 1, 0)) * 0.4
 	end
-	w *= self.SpinRate
+	w *= self.SpinRate * phaseBoost()
 	self.Spin = (CFrame.fromAxisAngle(w.Unit, w.Magnitude * dt) * self.Spin):Orthonormalize()
 	-- 고리: 제 축으로 빨라졌다 느려졌다 돌고, 고리 면이 살짝 끄덕인다
 	self.RingAngle += (0.45 + noise(t * 0.09, seed + 30) * 0.7) * dt

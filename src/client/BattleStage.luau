@@ -134,7 +134,7 @@ end
 
 --[[
 	보스 판 칸 색과 글자. 싸우는 사람(BattleClient)과 구경하는 사람(BattleSpectator)이 같게 쓴다.
-	  Buff/Debuff/Heal  패치 팔이 깐 칸 · Pending  검수 준비중(예고) · Gone  검수됨!(검은 칸)
+	  Buff/Debuff/Heal  서브코어-패치가 깐 칸 · Pending  검수 준비중(예고) · Gone  검수됨!(검은 칸)
 ]]
 BattleStage.BOARD = {
 	Buff = Color3.fromRGB(70, 225, 255), -- 하늘색(주황 위협 칸과 헷갈리지 않게)

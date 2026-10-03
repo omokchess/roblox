@@ -5,8 +5,8 @@
 	2026-10-03 사용자: "돌아가거나, 움직이면서 투사체 같은 걸 발사하면서 공격". 자리는 부위 가운데(ctx.Root = 다면체 가운데,
 	정면 = 아군 쪽 ctx.Forward). 쏘는 이펙트의 ev.d = 날아가는 초 — 모션의 Hit 시각에 닿게 맞춰 두었다(Motions/Debug.luau).
 	  머리      붉은 중단점 탄 하나
-	  삭제 팔   마젠타 삭제 조각 한 줌(아군 칸에 흩어져 꽂힌다)
-	  패치 팔   휘어 날아가는 초록 탄 셋 / 패치 적용은 초록 빛방울을 아군 진영에 뿌린다
+	  서브코어-삭제   마젠타 삭제 조각 한 줌(아군 칸에 흩어져 꽂힌다)
+	  서브코어-패치   휘어 날아가는 초록 탄 셋 / 패치 적용은 초록 빛방울을 아군 진영에 뿌린다
 	  코어      큰 마젠타 덩어리(코어 덤프) · 붉은 화살표 탄 둘(널 포인터) · 하늘로 쏜 오류 조각이 쏟아짐(메모리 누수)
 ]]
 local Common = require(script.Parent.Common)
@@ -85,7 +85,7 @@ function Fx.BeamHit(ctx: any, _ev: any, at: Vector3?)
 	shards(ctx.Vfx, p, ctx.Forward, 8, 14, { RED, c(255, 200, 200) })
 end
 
---=== 삭제 팔: 삭제 조각 한 줌 ===--
+--=== 서브코어-삭제: 삭제 조각 한 줌 ===--
 
 function Fx.DeleteCharge(ctx: any)
 	ctx.Vfx.Implode(muzzle(ctx), { Color = MAGENTA, Radius = 4, Count = 12, Life = 0.24 })
@@ -113,7 +113,7 @@ function Fx.DeleteHit(ctx: any, _ev: any, at: Vector3?)
 	ctx.Vfx.Flash(at or ctx.Target, { Color = MAGENTA, Size = 5, Life = 0.22 })
 end
 
---=== 패치 팔 ===--
+--=== 서브코어-패치 ===--
 
 -- 강제 적용: 초록 탄 셋이 양옆·위로 휘어 한 점에 모인다
 function Fx.PatchShot(ctx: any, ev: any)
@@ -389,6 +389,49 @@ function Fx.BlueHit(ctx: any, _ev: any, at: Vector3?)
 	ctx.Vfx.Shockwave(g, { Color = BLUE, Radius = 30, Life = 0.7 })
 	ctx.Vfx.Shockwave(g + Vector3.new(0, 0.1, 0), { Color = c(220, 235, 255), Radius = 16, Life = 0.5 })
 	ctx.Vfx.Shake(1.1, 0.6)
+end
+
+--[[
+	아이디어 8(2026-10-03 사용자): 같은 스킬도 페이즈가 오를수록 커진다. 이펙트 크기·반지름·굵기를 페이즈마다 +15%
+	(DebugBoss.Phase 는 BattleClient 가 스냅샷마다 맞춘다). 모든 Fx 함수를 감싸 ctx.Vfx 만 키운 것으로 바꿔 넘긴다.
+]]
+local SCALE_KEYS = { "Size", "Radius", "R0", "R1", "Width" }
+local function scaledVfx(Vfx: any, k: number): any
+	return setmetatable({}, {
+		__index = function(_, name)
+			local f = Vfx[name]
+			if type(f) ~= "function" then
+				return f
+			end
+			return function(...)
+				local args = table.pack(...)
+				for i = 1, args.n do
+					local a = args[i]
+					if type(a) == "table" and (a.Size or a.Radius or a.R1 or a.Width) then
+						local opts = table.clone(a)
+						for _, key in SCALE_KEYS do
+							if type(opts[key]) == "number" then
+								opts[key] *= k
+							end
+						end
+						args[i] = opts
+					end
+				end
+				return f(table.unpack(args, 1, args.n))
+			end
+		end,
+	})
+end
+for name, fn in Fx do
+	Fx[name] = function(ctx: any, ...)
+		local k = 1 + 0.15 * math.max(0, (DebugBoss.Phase or 1) - 1)
+		if k == 1 then
+			return fn(ctx, ...)
+		end
+		local scaled = table.clone(ctx)
+		scaled.Vfx = scaledVfx(ctx.Vfx, k)
+		return fn(scaled, ...)
+	end
 end
 
 return Fx

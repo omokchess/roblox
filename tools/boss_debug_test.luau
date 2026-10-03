@@ -42,6 +42,9 @@ end
 local function newBoss(classId: string?)
 	local state = GridBattle.New(1, "시험", 5000, 20, classId or "Berserker", 20, 999, {}, { Name = "보스 시험", Enemies = { "Debug", "Slime" }, HealthScale = 0.012, PowerScale = 0.15 })
 	state.Debug = { NoCooldown = true }
+	-- 판 변주(전투마다 무작위)는 아래 9번에서 따로 본다 — 나머지 시험은 변주 없이
+	state.Boss.Variant = ""
+	state.Boss.Buffs = {}
 	return state
 end
 
@@ -196,7 +199,7 @@ do
 end
 
 -- 5) 부위 파괴 효과(2026-10-03 사용자: 검수 칸은 남기고 부위마다 검은 칸 부작용을 하나씩 없앤다):
---    삭제 팔 → 검수는 코어가 이어 함·고정 피해 없음, 패치 팔 → 버그 칸 사라짐·받는 피해 증가 없음, 머리 → 멈칫·스테미나 후유증 없음, 코어 → 승리
+--    서브코어-삭제 → 검수는 코어가 이어 함·고정 피해 없음, 서브코어-패치 → 버그 칸 사라짐·받는 피해 증가 없음, 머리 → 멈칫·스테미나 후유증 없음, 코어 → 승리
 do
 	local s = newBoss()
 	s.Turn = 2
@@ -204,14 +207,14 @@ do
 	GridBattle.EndTurn(s)
 	check(next(s.Boss.Deleted) ~= nil, "칸이 지워져 있어야 한다")
 	GridBattle.DebugSetHealth(s, "boss_DeleteArm", 0)
-	check(next(s.Boss.Deleted) ~= nil, "삭제 팔을 부숴도 검은 칸은 남는다")
-	check(s.Boss.Removed.Cost, "삭제 팔 → 검은 칸 고정 피해가 사라진다")
+	check(next(s.Boss.Deleted) ~= nil, "서브코어-삭제를 부숴도 검은 칸은 남는다")
+	check(s.Boss.Removed.Cost, "서브코어-삭제 → 검은 칸 고정 피해가 사라진다")
 	GridBattle.EnemyPlan(s, rng)
-	check(s.Boss.DeletePlan and s.Boss.DeletePlan.Owner == "boss_Core" and #s.Boss.DeletePlan.Cells == 12, "삭제 팔이 없으면 코어가 검수를 잇는다")
+	check(s.Boss.DeletePlan and s.Boss.DeletePlan.Owner == "boss_Core" and #s.Boss.DeletePlan.Cells == 12, "서브코어-삭제가 없으면 코어가 검수를 잇는다")
 	s.Boss.Mods = { [BattleGrid.CellKey("Ally", 2, 2)] = "Buff", [BattleGrid.CellKey("Ally", 3, 3)] = "Debuff" }
 	GridBattle.DebugSetHealth(s, "boss_PatchArm", 0)
-	check(s.Boss.Mods[BattleGrid.CellKey("Ally", 3, 3)] == nil and s.Boss.Mods[BattleGrid.CellKey("Ally", 2, 2)] == "Buff", "패치 팔: 버그만 사라진다")
-	check(s.Boss.Removed.Hurt, "패치 팔 → 검은 칸 받는 피해 증가가 사라진다")
+	check(s.Boss.Mods[BattleGrid.CellKey("Ally", 3, 3)] == nil and s.Boss.Mods[BattleGrid.CellKey("Ally", 2, 2)] == "Buff", "서브코어-패치: 버그만 사라진다")
+	check(s.Boss.Removed.Hurt, "서브코어-패치 → 검은 칸 받는 피해 증가가 사라진다")
 	GridBattle.DebugSetHealth(s, "boss_Head", 0)
 	check(s.Boss.Removed.Stamina, "머리 → 검은 칸 스테미나 후유증이 사라진다")
 	GridBattle.EnemyPlan(s, rng)
@@ -233,7 +236,7 @@ do
 	check(core.Alive and core.Health == 1, "부위가 남아 있으면 코어는 1에서 버틴다: " .. core.Health)
 	GridBattle.DebugSetHealth(s, "boss_Head", 0)
 	GridBattle.DebugSetHealth(s, "boss_DeleteArm", 0)
-	check(GridBattle.CoreLocked(s, core), "패치 팔이 남아 있으면 아직 잠김")
+	check(GridBattle.CoreLocked(s, core), "서브코어-패치가 남아 있으면 아직 잠김")
 	GridBattle.DebugSetHealth(s, "boss_PatchArm", 0)
 	check(not GridBattle.CoreLocked(s, core), "부위가 다 부서지면 풀린다")
 	GridBattle.ResolveDodge(s, "boss_Core", "Success")
@@ -253,7 +256,7 @@ end
 
 -- 6b) 2026-09-29 버프 규칙
 do
-	-- 라인이 안 맞으면 못 때린다: 라인 1(삭제 팔)에서 쓴 스킬은 머리(라인 2)를 못 맞힌다, 카드 피해도 막힌다
+	-- 라인이 안 맞으면 못 때린다: 라인 1(서브코어-삭제)에서 쓴 스킬은 머리(라인 2)를 못 맞힌다, 카드 피해도 막힌다
 	local s = newBoss("Berserker")
 	GridBattle.MoveAlly(s, 1, 1)
 	local hits = {}
@@ -667,6 +670,8 @@ do
 	GridBattle.EnemyPlan(w1, rng)
 	GridBattle.EnemyPlan(w2, rng)
 	table.insert(w2.Boss.Buffs, { Id = "Watchpoint", Turns = 2 })
+	-- 선 칸 효과(버프·버그 칸)가 다르면 비교가 흔들린다 — 둘 다 지운다
+	w1.Boss.Mods, w2.Boss.Mods = {}, {}
 	local a1, a2 = w1.Units.player.Health, w2.Units.player.Health
 	GridBattle.ResolveDodge(w1, "boss_Head", "Fail")
 	GridBattle.ResolveDodge(w2, "boss_Head", "Fail")
@@ -694,6 +699,123 @@ do
 	local snap = GridBattle.Snapshot(t)
 	check(snap.Boss.Phase == 3 and snap.Boss.MaxStamina ~= nil and snap.Boss.Buffs ~= nil, "스냅샷 보스 상태")
 	check(snap.Units.boss_Core.Plans ~= nil, "스냅샷 계획 목록")
+end
+
+-- 9) 2026-10-03 사용자가 고른 반복 줄이기: 판 변주(5)·원한 버프(4)·마지막 발악(14)·적응형 패치(3)·연계(1)
+do
+	-- 판 변주: 보스전마다 하나가 걸리고, 시작 로그에 남는다
+	local raw = GridBattle.New(1, "시험", 5000, 20, "Berserker", 20, 999, {}, { Name = "보스 시험", Enemies = { "Debug" }, HealthScale = 0.012, PowerScale = 0.15 })
+	local known = {}
+	for _, v in GridBattle.BOSS_VARIANTS do
+		known[v.Id] = true
+	end
+	check(known[raw.Boss.Variant], "판 변주가 하나 걸려야 한다: " .. tostring(raw.Boss.Variant))
+	check(table.concat(raw.Log, " "):find("판 변주", 1, true) ~= nil, "판 변주 로그")
+	-- 회복 칸 없음 / 버프 칸 넷
+	local nh = newBoss()
+	nh.Boss.Variant = "NoHealCell"
+	nh.Turn = 1
+	GridBattle.EnemyPlan(nh, rng)
+	local heals, buffs = 0, 0
+	for _, kind in nh.Boss.Mods do
+		heals += if kind == "Heal" then 1 else 0
+	end
+	check(heals == 0, "회복 칸 없음 변주")
+	local db = newBoss()
+	db.Boss.Variant = "DoubleBuff"
+	db.Turn = 1
+	GridBattle.EnemyPlan(db, rng)
+	for _, kind in db.Boss.Mods do
+		buffs += if kind == "Buff" then 1 else 0
+	end
+	check(buffs >= 3, "버프 칸 넷 변주: " .. buffs)
+
+	-- 원한: 먼저 부순 부위에 따라 남은 보스 버프가 다르다
+	local function grudge(first)
+		local g = newBoss()
+		GridBattle.DebugSetHealth(g, "boss_" .. first, 0)
+		local got = nil
+		for _, b in g.Boss.Buffs do
+			if string.sub(b.Id, 1, 7) == "Grudge_" then
+				got = b.Id
+			end
+		end
+		return g, got
+	end
+	local _, g1 = grudge("Head")
+	local _, g2 = grudge("PatchArm")
+	check(g1 == "Grudge_Head" and g2 == "Grudge_PatchArm", "원한 버프가 먼저 부순 부위를 따른다")
+
+	-- 마지막 발악: 코어만 남으면 셋 중 하나
+	local l = newBoss()
+	GridBattle.DebugSetHealth(l, "boss_Head", 0)
+	GridBattle.DebugSetHealth(l, "boss_DeleteArm", 0)
+	check(l.Boss.LastStand == nil, "부위가 남아 있으면 아직 발악 아님")
+	GridBattle.DebugSetHealth(l, "boss_PatchArm", 0)
+	check(l.Boss.LastStand ~= nil, "코어만 남으면 마지막 발악")
+	-- 코어 폭주: 코어가 세 번
+	l.Boss.LastStand = "Overdrive"
+	l.Boss.Stamina, l.Boss.MaxStamina = 999, 999
+	l.Boss.Cooldowns = {}
+	l.Boss.Stagger = 0 -- 머리를 부순 다음 턴 멈칫은 따로 본다
+	GridBattle.EndTurn(l)
+	l.Boss.Stamina = 999
+	GridBattle.EnemyPlan(l, rng)
+	local acts = 0
+	for _, p in l.Units.boss_Core.Plans or {} do
+		acts += if p.SkillId ~= "DeleteCells" then 1 else 0
+	end
+	check(acts == 3, "코어 폭주: 세 번 행동 " .. acts)
+	-- 검수 폭주: 네 칸만 남긴다
+	local pu = newBoss()
+	GridBattle.DebugSetHealth(pu, "boss_Head", 0)
+	GridBattle.DebugSetHealth(pu, "boss_DeleteArm", 0)
+	GridBattle.DebugSetHealth(pu, "boss_PatchArm", 0)
+	pu.Boss.LastStand = "Purge"
+	pu.Boss.Stagger = 0
+	GridBattle.EndTurn(pu)
+	GridBattle.EnemyPlan(pu, rng)
+	check(pu.Boss.DeletePlan and #pu.Boss.DeletePlan.Cells == 14, "검수 폭주: 네 칸만 남김 " .. (pu.Boss.DeletePlan and #pu.Boss.DeletePlan.Cells or -1))
+
+	-- 적응형 패치: 같은 스킬 연속이면 피해가 줄고, 다른 스킬을 쓰면 풀린다
+	local a = newBoss("Berserker")
+	GridBattle.MoveAlly(a, 1, 2)
+	a.Boss.Mods = {}
+	local function hit(index)
+		local h = a.Units.boss_Head.Health
+		GridBattle.ResolveSkill(a, index, "Success", function()
+			return 0.99
+		end)
+		a.Acted = false
+		a.Attacked = false
+		return h - a.Units.boss_Head.Health
+	end
+	local d1 = hit(1)
+	local d2 = hit(1)
+	check(d1 > 0 and d2 < d1 and a.Boss.AdaptCount == 1, string.format("적응형 패치 2연속 %d → %d", d1, d2))
+	hit(2)
+	check(a.Boss.AdaptCount == 0, "다른 스킬을 쓰면 적응형 패치가 풀린다")
+
+	-- 연계: 머리 광선 다음 턴 → 그 라인에 버그 칸(오염 추적)
+	local c = newBoss()
+	c.Turn = 2
+	GridBattle.MoveAlly(c, 3, 3)
+	GridBattle.EnemyPlan(c, rng)
+	check(#c.Boss.ComboNotes >= 1, "광선이 다음 턴 연계를 예고한다")
+	local lane = 3
+	GridBattle.EndTurn(c)
+	c.Boss.Mods = {}
+	c.Boss.Deleted = {} -- 검은 칸에는 버그 칸을 깔지 않는다 — 라인이 통째로 검은 칸이면 시험이 흔들린다
+	GridBattle.EnemyPlan(c, rng)
+	local tainted = 0
+	for key, kind in c.Boss.Mods do
+		local _, y = string.match(key, "(%d+),(%d+)$")
+		if kind == "Debuff" and tonumber(y) == lane then
+			tainted += 1
+		end
+	end
+	check(tainted >= 1, "오염 추적: 광선 라인에 버그 칸 " .. tainted)
+	check(GridBattle.Snapshot(c).Boss.Variant ~= nil, "스냅샷에 판 변주")
 end
 
 print("보스 디버그 점검 통과")

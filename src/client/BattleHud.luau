@@ -23,6 +23,7 @@ local TweenService = game:GetService("TweenService")
 
 local BattleSkills = require(ReplicatedStorage.Shared.BattleSkills)
 local EnemyDefinitions = require(ReplicatedStorage.Shared.EnemyDefinitions)
+local GridBattle = require(ReplicatedStorage.Shared.GridBattle)
 local Keywords = require(ReplicatedStorage.Shared.Keywords)
 local QteDefinitions = require(ReplicatedStorage.Shared.QteDefinitions)
 
@@ -715,8 +716,22 @@ function BattleHud:SetBoss(snapshot: any?)
 
 	-- 1) 이름 · 페이즈 · 체력 합
 	local top = line(1, 20)
-	text(top, string.format('<b>%s</b>   <font color="%s">%d페이즈</font>', def.Name, hex(GOLD), bossSnap.Phase or 1), 17, 0, 300)
-	text(top, string.format("체력 합  %s / %s  (%d%%)", comma(hp), comma(maxHp), math.floor((if maxHp > 0 then hp / maxHp else 0) * 100 + 0.5)), 13, 300, 0, Enum.TextXAlignment.Right, BODY)
+	-- 판 변주·마지막 발악 이름(GridBattle 표와 같은 Id)
+	local variantName, lastName = "", ""
+	for _, v in GridBattle.BOSS_VARIANTS do
+		if v.Id == bossSnap.Variant then
+			variantName = v.Name
+		end
+	end
+	for _, v in GridBattle.BOSS_LAST_STANDS do
+		if v.Id == bossSnap.LastStand then
+			lastName = v.Name
+		end
+	end
+	text(top, string.format('<b>%s</b>   <font color="%s">%d페이즈</font>%s%s', def.Name, hex(GOLD), bossSnap.Phase or 1,
+		if variantName ~= "" then string.format('   <font color="%s">판 변주: %s</font>', hex(STEEL), variantName) else "",
+		if lastName ~= "" then string.format('   <font color="%s">마지막 발악: %s</font>', hex(RED), lastName) else ""), 15, 0, 420)
+	text(top, string.format("체력 합  %s / %s  (%d%%)", comma(hp), comma(maxHp), math.floor((if maxHp > 0 then hp / maxHp else 0) * 100 + 0.5)), 13, 420, 0, Enum.TextXAlignment.Right, BODY)
 	-- 2) 큰 체력바 + 페이즈 눈금
 	local big = line(2, 16)
 	local track = fill(big, 2, 12, if maxHp > 0 then hp / maxHp else 0, CRIMSON)
@@ -766,7 +781,46 @@ function BattleHud:SetBoss(snapshot: any?)
 		local cs = BattleSkills.ById(charge.SkillId)
 		table.insert(chips, string.format('<font color="%s">%s %s — 끊기 %s/%s</font>', hex(TEAL), if cs then cs.Name else "?", if charge.Stage == "Release" then "터지기 직전" else "충전 중", comma(charge.Dealt or 0), comma(charge.Need or 0)))
 	end
+	if (bossSnap.AdaptCount or 0) > 0 then
+		local sk = BattleSkills.ById(bossSnap.AdaptSkill or "")
+		table.insert(chips, string.format('<font color="%s">적응형 패치 — %s 피해 −%d%%</font>', hex(RED), if sk then sk.Name else "?", math.floor(GridBattle.ADAPT_CUT * bossSnap.AdaptCount * 100 + 0.5)))
+	end
 	text(st, table.concat(chips, sep), 12, 190, 0, nil, BODY)
+	-- 스테미나가 모자라 지금 못 쓰는 해금 스킬(아이디어 11 — 무엇을 막을지 보이게)
+	local starved = {}
+	local cut = 0
+	for _, b in bossSnap.Buffs or {} do
+		local bdef = GridBattle.BOSS_BUFFS[b.Id]
+		cut += (bdef and bdef.CostCut) or 0
+	end
+	for _, part in def.Parts or {} do
+		local u = units[part.Key]
+		if u and u.Alive then
+			for _, move in part.Moves or {} do
+				local sk = move.Id and BattleSkills.ById(move.Id)
+				local cost = sk and math.floor((sk.StaminaCost or 0) * (1 - math.min(0.9, cut))) or 0
+				if sk and (move.Phase or 1) <= (bossSnap.Phase or 1) and cost > (bossSnap.Stamina or 0) then
+					table.insert(starved, string.format('<font color="%s">%s(%d)</font>', hex(part.Color or BONE), sk.Name, cost))
+				end
+			end
+		end
+	end
+	if #starved > 0 then
+		local row = make("TextLabel", {
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Text = string.format('<font color="%s">스테미나 부족 — 못 씀</font>  %s', hex(MUTED), table.concat(starved, "  ")),
+			RichText = true,
+			TextWrapped = true,
+			TextColor3 = BODY,
+			Font = Enum.Font.GothamBold,
+			TextSize = 11,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			LayoutOrder = 4,
+		}, bar)
+		local _ = row
+	end
 	-- 5) 이번 턴 예고(부위 색)
 	local plans = {}
 	for _, part in def.Parts or {} do
@@ -788,7 +842,9 @@ function BattleHud:SetBoss(snapshot: any?)
 			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
-			Text = "이번 턴  " .. table.concat(plans, sep),
+			Text = "이번 턴  " .. table.concat(plans, sep) .. (if bossSnap.ComboNotes and #bossSnap.ComboNotes > 0
+				then string.format('\n<font color="%s">연계 예고</font>  %s', hex(TEAL), table.concat(bossSnap.ComboNotes, sep))
+				else ""),
 			RichText = true,
 			TextWrapped = true,
 			TextColor3 = BONE,
@@ -1516,7 +1572,7 @@ end
 
 -- 부위 행동 하나(스킬이면 BattleSkills 에서 이름·설명·피해·방어 규칙을 가져온다)
 local KIND_CHIP = { Attack = "공격", Buff = "버프", Charge = "충전", Ultimate = "궁극기", Gimmick = "기믹" }
-function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned: { [string]: boolean }, alive: boolean, phase: number)
+function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned: { [string]: boolean }, alive: boolean, phase: number, stamina: number?)
 	local skill = if move.Id then BattleSkills.ById(move.Id) else nil
 	-- 머리(이름·꼬리표·수치 줄) 아래에 설명 줄 — 스킬 설명 말풍선과 같은 짜임
 	local holder = make("Frame", { Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = order }, parent)
@@ -1549,6 +1605,8 @@ function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned
 	end
 	if locked then
 		chip(top, "아직 잠김", MUTED, 5)
+	elseif skill and stamina and (skill.StaminaCost or 0) > stamina and alive then
+		chip(top, "스테미나 부족", RED, 5)
 	end
 	if skill then
 		local stats = {}
@@ -1558,7 +1616,7 @@ function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned
 			table.insert(stats, statPart("피해", string.format("지금 체력 %d%%", math.floor(skill.HpRatio * 100 + 0.5)), RED))
 		end
 		if (skill.StaminaCost or 0) > 0 then
-			table.insert(stats, statPart("스테미나", tostring(skill.StaminaCost)))
+			table.insert(stats, statPart("스테미나", tostring(skill.StaminaCost), if stamina and skill.StaminaCost > stamina then RED else nil))
 		end
 		if (skill.BossCooldown or 0) > 0 then
 			table.insert(stats, statPart("재사용", skill.BossCooldown .. "턴"))
@@ -1725,7 +1783,7 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 			planned[p.SkillId] = true
 		end
 		for i, move in part.Moves or {} do
-			self:_bossMove(box, move, 2 + i, planned, isAlive, phase)
+			self:_bossMove(box, move, 2 + i, planned, isAlive, phase, bossSnap.Stamina)
 		end
 		-- 부수면
 		if part.Break then

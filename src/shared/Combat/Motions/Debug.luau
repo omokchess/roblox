@@ -123,7 +123,7 @@ local M = {
 		},
 	},
 
-	-- 삭제 팔: 위로 솟으며 거꾸로 빨리 돌고, 마젠타 삭제 조각을 한 줌 흩뿌려 칸에 꽂는다
+	-- 서브코어-삭제: 위로 솟으며 거꾸로 빨리 돌고, 마젠타 삭제 조각을 한 줌 흩뿌려 칸에 꽂는다
 	DeleteArm = {
 		Idle = bob(3.4, 0.3, 3),
 		Windup = windup(B0, DEL_WIND),
@@ -151,7 +151,7 @@ local M = {
 		},
 	},
 
-	-- 패치 팔: 강제 적용은 옆으로 비틀었다가 초록 탄 셋을 휘어 쏘고, 패치 적용은 위로 떠올라 초록빛을 뿌린다
+	-- 서브코어-패치: 강제 적용은 옆으로 비틀었다가 초록 탄 셋을 휘어 쏘고, 패치 적용은 위로 떠올라 초록빛을 뿌린다
 	PatchArm = {
 		Idle = bob(2.9, 0.35, -2),
 		Windup = windup(B0, PATCH_WIND),
@@ -327,7 +327,7 @@ core.KernelPanic = CHARGE
 core.KernelPanicBurst = withFx(core.CoreDump, { CoreDump = "PanicBurst", DumpHit = "PanicHit" })
 core.InfiniteRecursion = withFx(core.NullPointer, { NullPointer = "RecursionShot" })
 core.BlueScreen = withFx(core.CoreDump, { DumpCharge = "BlueCharge", CoreDump = "BlueScreen", DumpHit = "BlueHit" })
--- 검수를 코어가 이어 할 때(삭제 팔이 부서진 뒤)
+-- 검수를 코어가 이어 할 때(서브코어-삭제가 부서진 뒤)
 core.DeleteCells = withFx(del.DeleteCells, {})
 
 return M

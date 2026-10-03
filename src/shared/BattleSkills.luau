@@ -253,7 +253,7 @@ local bossSkills: { Skill } = {
 		StaminaCost = 40,
 		BossCooldown = 3,
 	},
-	-- 삭제 팔
+	-- 서브코어-삭제
 	{
 		Id = "ForceQuit",
 		Name = "강제 종료",
@@ -280,7 +280,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "Format",
 		Name = "포맷",
-		Description = "- [충전] 1턴: 삭제 팔에 최대 체력 12% 피해를 주면 끊긴다.\n- 끊지 못하면 다음 [검수]는 6칸이 아니라 2칸만 남긴다.\n- 끊으면 삭제 팔 1턴 멈춤 · 보스 스테미나 −30.",
+		Description = "- [충전] 1턴: 서브코어-삭제에 최대 체력 12% 피해를 주면 끊긴다.\n- 끊지 못하면 다음 [검수]는 6칸이 아니라 2칸만 남긴다.\n- 끊으면 서브코어-삭제 1턴 멈춤 · 보스 스테미나 −30.",
 		Damage = 0,
 		Range = "Supporting",
 		Shape = { Kind = "Single" },
@@ -290,7 +290,7 @@ local bossSkills: { Skill } = {
 		BossCooldown = 5,
 		BreakRatio = 0.12,
 	},
-	-- 패치 팔
+	-- 서브코어-패치
 	{
 		Id = "Hotfix",
 		Name = "핫픽스",
