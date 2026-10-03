@@ -124,8 +124,9 @@ local cards: { Card } = {
 		Id = "Quasar_R_Compression",
 		Art = "Quasar_R_Compression",
 		Name = "압축",
-		Description = "2스킬의 스택당 피해량 증가가 {5}%에서 {7}%로 증가한다.",
-		Levels = { { 5, 5, 5, 5, 5, 5 }, { 7, 7.5, 8, 8.5, 9, 10 } },
+		-- 2026-10-03 특이점 기본 질량당 5% → 3% 너프에 맞춰 함께 내림(7~10% → 5~8%)
+		Description = "2스킬의 스택당 피해량 증가가 {3}%에서 {5}%로 증가한다.",
+		Levels = { { 3, 3, 3, 3, 3, 3 }, { 5, 5.5, 6, 6.5, 7, 8 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,
 		Tags = { "Overload", "Anchor" },

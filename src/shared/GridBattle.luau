@@ -121,8 +121,9 @@ export type BossState = {
 	-- 검수(아래 "검수" 설명). 테스터가 남은 턴 · 테스터가 준 방어막(끝나면 남은 만큼 걷는다)
 	Tester: number?,
 	TesterShield: number?,
-	-- 칸을 못 움직이는 턴(검수 준비중 칸에서 턴을 마친 다음 턴)
+	-- 칸을 못 움직이는 턴(검수 준비중 칸에서 턴을 마친 다음 턴) · 다시 안 묶이는 남은 턴 끝 수(LOCK_IMMUNE_TURNS)
 	Locked: number?,
+	LockImmune: number?,
 	-- 검수중이 남긴 스테미나 빚: 남은 턴 뒤 Amount 만큼 깎는다
 	StaminaDebt: { { Turns: number, Amount: number } }?,
 	-- 2026-10-03 사용자: 4페이즈·보스 스테미나·보스 버프·충전·궁극기(회복 불가)·부위마다 검은 칸 부작용 하나씩 없앰
@@ -143,6 +144,7 @@ export type BossState = {
 	--   Variant 판 변주(전투마다 하나) · FirstBroken 먼저 부순 부위(원한 버프) · LastStand 코어만 남았을 때 발악
 	--   Combo 다음 턴 연계(부위 행동이 이어지는 문장) · AdaptSkill/AdaptCount 적응형 패치(같은 스킬 연속 피해 감소)
 	Variant: string,
+	FixedVariant: boolean?,
 	FirstBroken: string?,
 	LastStand: string?,
 	Combo: { any },
@@ -411,8 +413,11 @@ local PENDING_OUT = 4.0
 -- 검수중: 받는 피해 +200%, 턴 끝 최대 체력 9% 고정 피해(이 효과로는 죽지 않음), 2턴 뒤 스테미나 20
 --   (2026-10-02 사용자 너프: 20% → 9%, 죽지 않게)
 local CHECKING_IN, CHECKING_COST, CHECKING_STAMINA, CHECKING_STAMINA_TURNS = 3.0, 0.09, 20, 2
--- 테스터: 주는 피해 +3500%, 치명 +100%, 받는 피해 −80%, 방어막 200(1턴) (2026-10-02 사용자: +3000% → +3500%)
-local TESTER_OUT, TESTER_CRIT, TESTER_IN, TESTER_SHIELD = 35.0, 1.0, 0.2, 200
+-- 테스터: 주는 피해 +3500%, 치명 +100%, 받는 피해 −80%, 방어막 80(1턴) (2026-10-02 사용자: +3000% → +3500%, 2026-10-03: 방어막 200 → 80)
+local TESTER_OUT, TESTER_CRIT, TESTER_IN, TESTER_SHIELD = 35.0, 1.0, 0.2, 80
+-- 묶임 면역(2026-10-03 사용자: 묶임을 한 번 당한 뒤 2턴은 다시 묶이지 않게). 묶이는 순간 3 — 묶인 그 턴 끝과 다음 두 턴 끝에는 안 묶인다
+-- (묶인 턴엔 칸을 못 옮겨 예고 칸 위에서 또 끝나기 쉽다 — 예전엔 내내 묶였다)
+local LOCK_IMMUNE_TURNS = 3
 -- 결투사 패리: 받는 피해 10%, 나머지 90% 를 되돌린다
 local PARRY_KEEP, PARRY_REFLECT = 0.1, 0.9
 GridBattle.PARRY_KEEP, GridBattle.PARRY_REFLECT = PARRY_KEEP, PARRY_REFLECT
@@ -507,6 +512,35 @@ local function bossBuffTotal(boss: BossState, field: string): number
 	return total
 end
 
+--[[
+	판 변주 뽑기. 2026-10-03 사용자: 판 변주가 늘 [회복 칸 없음]만 나왔다(전투 난수 씨앗이 층 번호라 1층은 늘 같은 것) →
+	매 턴 보스가 계획을 세울 때 새로 뽑는다(직전과 다른 것). 과열 체질 버프는 그 변주일 때만 붙는다.
+	FixedVariant 이면(시험) 그대로 둔다.
+]]
+local function rollVariant(state: State)
+	local boss = state.Boss :: BossState
+	if boss.FixedVariant then
+		return
+	end
+	local pool = {}
+	for _, v in BOSS_VARIANTS do
+		if v.Id ~= boss.Variant then
+			table.insert(pool, v)
+		end
+	end
+	local v = pool[math.floor(nextRandom(state) * #pool) + 1]
+	for i = #boss.Buffs, 1, -1 do
+		if boss.Buffs[i].Id == "Variant_HotBlood" then
+			table.remove(boss.Buffs, i)
+		end
+	end
+	boss.Variant = v.Id
+	if v.Id == "HotBlood" then
+		table.insert(boss.Buffs, { Id = "Variant_HotBlood", Turns = math.huge })
+	end
+	pushLog(state, string.format("판 변주 — [%s] %s", v.Name, v.Text))
+end
+
 local function spawnBoss(state: State, def: EnemyDefinitions.EnemyDefinition, healthScale: number, powerScale: number)
 	local boss: BossState = {
 		Id = def.Id,
@@ -531,11 +565,6 @@ local function spawnBoss(state: State, def: EnemyDefinitions.EnemyDefinition, he
 		ComboNotes = {},
 		AdaptCount = 0,
 	}
-	local variant = BOSS_VARIANTS[math.floor(nextRandom(state) * #BOSS_VARIANTS) + 1]
-	boss.Variant = variant.Id
-	if variant.Id == "HotBlood" then
-		table.insert(boss.Buffs, { Id = "Variant_HotBlood", Turns = math.huge })
-	end
 	for _, part in def.Parts or {} do
 		local id = "boss_" .. part.Key
 		local health = math.max(1, math.floor(part.Health * healthScale))
@@ -562,7 +591,7 @@ local function spawnBoss(state: State, def: EnemyDefinitions.EnemyDefinition, he
 		boss.Parts[part.Key] = id
 	end
 	state.Boss = boss
-	pushLog(state, string.format("판 변주 — [%s] %s", variant.Name, variant.Text))
+	rollVariant(state)
 end
 
 -- 아군이 선 칸의 효과("Buff" | "Debuff" | "Heal" | nil)
@@ -1020,6 +1049,10 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 	end
 	boss.DeletePlan = nil
 	updateBossPhase(state)
+	-- 판 변주는 턴마다 바뀐다(첫 턴은 전투 시작에 뽑은 것)
+	if state.Turn ~= 1 then
+		rollVariant(state)
+	end
 	if boss.Stagger > 0 then
 		boss.Stagger -= 1
 		pushLog(state, "디버그가 멈칫했다 — 이번 턴은 예고가 없다")
@@ -2608,6 +2641,9 @@ local function bossTurnEffects(state: State, boss: BossState)
 	if (boss.Locked or 0) > 0 then
 		boss.Locked = (boss.Locked :: number) - 1
 	end
+	if (boss.LockImmune or 0) > 0 then
+		boss.LockImmune = (boss.LockImmune :: number) - 1
+	end
 	local debts = boss.StaminaDebt or {}
 	boss.StaminaDebt = debts
 	for i = #debts, 1, -1 do
@@ -2639,12 +2675,17 @@ local function bossTurnEffects(state: State, boss: BossState)
 			boss.Tester = 1
 			boss.TesterShield = TESTER_SHIELD
 			BattleStatus.AddShield(ally.Status, TESTER_SHIELD)
-			pushLog(state, "테스터! 다음 턴 주는 피해 +3500% · 치명 +100% · 받는 피해 −80% · 방어막 200")
+			pushLog(state, string.format("테스터! 다음 턴 주는 피해 +3500%% · 치명 +100%% · 받는 피해 −80%% · 방어막 %d", TESTER_SHIELD))
 		end
 	end
 	if pending and ally.Alive then
-		boss.Locked = 1
-		pushLog(state, "검수 준비중 칸에서 턴을 마쳤다 — 다음 턴 움직일 수 없다")
+		if (boss.LockImmune or 0) > 0 then
+			pushLog(state, string.format("검수 준비중 칸에서 턴을 마쳤지만 묶임 면역(%d턴) — 움직일 수 있음", boss.LockImmune :: number))
+		else
+			boss.Locked = 1
+			boss.LockImmune = LOCK_IMMUNE_TURNS
+			pushLog(state, "검수 준비중 칸에서 턴을 마쳤다 — 다음 턴 움직일 수 없다")
+		end
 	end
 end
 
@@ -2796,6 +2837,8 @@ local function bossSnapshot(state: State): any
 		Pending = onPending(state),
 		Tester = boss.Tester or 0,
 		Locked = boss.Locked or 0,
+		-- 묶임 면역: 이번 턴 끝을 포함해 앞으로 안 묶이는 턴 끝 수(HUD 아이콘)
+		LockImmune = math.max(0, (boss.LockImmune or 0) - 1),
 		StaminaDebt = boss.StaminaDebt and boss.StaminaDebt[1] and boss.StaminaDebt[1].Turns or 0,
 		-- 2026-10-03: 페이즈·스테미나·버프·충전·회복 불가·없앤 부작용(HUD 체력바·정보 창)
 		Phase = boss.Phase,

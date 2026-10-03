@@ -395,33 +395,6 @@ end
 	아이디어 8(2026-10-03 사용자): 같은 스킬도 페이즈가 오를수록 커진다. 이펙트 크기·반지름·굵기를 페이즈마다 +15%
 	(DebugBoss.Phase 는 BattleClient 가 스냅샷마다 맞춘다). 모든 Fx 함수를 감싸 ctx.Vfx 만 키운 것으로 바꿔 넘긴다.
 ]]
-local SCALE_KEYS = { "Size", "Radius", "R0", "R1", "Width" }
-local function scaledVfx(Vfx: any, k: number): any
-	return setmetatable({}, {
-		__index = function(_, name)
-			local f = Vfx[name]
-			if type(f) ~= "function" then
-				return f
-			end
-			return function(...)
-				local args = table.pack(...)
-				for i = 1, args.n do
-					local a = args[i]
-					if type(a) == "table" and (a.Size or a.Radius or a.R1 or a.Width) then
-						local opts = table.clone(a)
-						for _, key in SCALE_KEYS do
-							if type(opts[key]) == "number" then
-								opts[key] *= k
-							end
-						end
-						args[i] = opts
-					end
-				end
-				return f(table.unpack(args, 1, args.n))
-			end
-		end,
-	})
-end
 for name, fn in Fx do
 	Fx[name] = function(ctx: any, ...)
 		local k = 1 + 0.15 * math.max(0, (DebugBoss.Phase or 1) - 1)
@@ -429,7 +402,7 @@ for name, fn in Fx do
 			return fn(ctx, ...)
 		end
 		local scaled = table.clone(ctx)
-		scaled.Vfx = scaledVfx(ctx.Vfx, k)
+		scaled.Vfx = Common.ScaledVfx(ctx.Vfx, k)
 		return fn(scaled, ...)
 	end
 end

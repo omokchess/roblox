@@ -21,6 +21,41 @@ local function c(r: number, g: number, b: number): Color3
 end
 Common.c = c
 
+--[[
+	ctx.Vfx 를 k 배로 키운 것으로 감싼다(크기·반지름·굵기 옵션만). 쓰는 곳:
+	  디버그 보스 페이즈(Fx/Debug), 단계 스킬(CombatDirector — 특이점·붕괴·분쇄·크레셴도의 단계, 2026-10-03)
+]]
+local SCALE_KEYS = { "Size", "Radius", "R0", "R1", "Width", "Height" }
+function Common.ScaledVfx(Vfx: any, k: number): any
+	if k == 1 then
+		return Vfx
+	end
+	return setmetatable({}, {
+		__index = function(_, name)
+			local f = Vfx[name]
+			if type(f) ~= "function" then
+				return f
+			end
+			return function(...)
+				local args = table.pack(...)
+				for i = 1, args.n do
+					local a = args[i]
+					if type(a) == "table" and (a.Size or a.Radius or a.R1 or a.Width or a.Height) then
+						local opts = table.clone(a)
+						for _, key in SCALE_KEYS do
+							if type(opts[key]) == "number" then
+								opts[key] *= k
+							end
+						end
+						args[i] = opts
+					end
+				end
+				return f(table.unpack(args, 1, args.n))
+			end
+		end,
+	})
+end
+
 Common.BLOOD = { c(170, 16, 24), c(120, 8, 16), c(210, 40, 40) }
 
 -- 피 튀김(dir 쪽 원뿔)

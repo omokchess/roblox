@@ -220,6 +220,8 @@ return {
 			Events = {
 				{ t = 0.4, k = "Fx", n = "PointSky" },
 				{ t = 0.5, k = "Fx", n = "SummonSword" },
+				-- 2단계부터 빔(1단계엔 아무것도 안 함 — Fx 가 ctx.Stage 로 가른다)
+				{ t = 0.85, k = "Fx", n = "SingularityBeam" },
 				{ t = 1.1, k = "Trail", on = true },
 				{ t = 1.1, k = "Fx", n = "DropSword" },
 				{ t = 1.35, k = "Hit", i = 1, fx = "SingularityHit" },

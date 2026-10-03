@@ -44,6 +44,7 @@ local function newBoss(classId: string?)
 	state.Debug = { NoCooldown = true }
 	-- 판 변주(전투마다 무작위)는 아래 9번에서 따로 본다 — 나머지 시험은 변주 없이
 	state.Boss.Variant = ""
+	state.Boss.FixedVariant = true -- 턴마다 바뀌는 판 변주는 9번에서 따로 본다
 	state.Boss.Buffs = {}
 	return state
 end
@@ -371,7 +372,7 @@ do
 	s.Boss.DeletePlan = nil
 	GridBattle.EndTurn(s)
 	check(math.abs((5000 - s.Units.player.Health) - 450) <= 1, "검수중 최대 체력 9%: " .. (5000 - s.Units.player.Health))
-	check(s.Boss.Tester == 1 and s.Units.player.Status.Shield >= 200, "테스터 + 방어막 200")
+	check(s.Boss.Tester == 1 and s.Units.player.Status.Shield >= GridBattle.TESTER_SHIELD, "테스터 + 방어막")
 	check(s.Boss.Locked == 0, "묶임은 한 턴")
 	local stAfter1 = s.Units.player.Stamina
 	local d3 = hitAt(s, 1, 2)
@@ -464,6 +465,7 @@ do
 		local s = GridBattle.New(1, "시험", 5000, 20, def.Id, 20, 999, {}, { Name = "막 누르기", Enemies = { "Debug" }, HealthScale = 1, PowerScale = 0.15 })
 		s.Debug = { God = true }
 		GridBattle.EnemyPlan(s, r)
+		local prevTwoTurn = false
 		for turn = 1, 60 do
 			if s.Outcome ~= "Ongoing" then
 				break
@@ -488,8 +490,14 @@ do
 			for _ in s.Boss.Deleted do
 				black += 1
 			end
-			-- 보통 12 칸, 포맷이 터진 턴은 16 칸(두 칸만 남김)
-			check(black <= 16, def.Id .. " 검은 칸이 16 칸보다 많다: " .. black)
+			-- 보통 12 칸, 포맷이 터진 턴은 16 칸(두 칸만 남김). 검은 칸이 2턴 남는 판(오래 남는 검은 칸·검수 폭주)은
+			-- 앞 턴 것과 겹쳐 더 많을 수 있다 — 그때는 판 칸 수(18)만 넘지 않으면 된다
+			-- 판 변주는 턴마다 바뀌어 앞 턴(오래 남는 검은 칸)의 검은 칸이 이번 턴에도 남을 수 있다
+			local twoTurn = s.Boss.Variant == "LongBlack" or s.Boss.LastStand == "Purge"
+			-- 강제 종료 연계는 남길 칸이라도 그 3×3을 지운다 → 한 턴 치만으로도 17 칸까지(한 칸은 남는다)
+			local limit = if twoTurn or prevTwoTurn then 18 else 17
+			prevTwoTurn = twoTurn
+			check(black <= limit, string.format("%s 검은 칸이 %d 칸보다 많다: %d", def.Id, limit, black))
 			if s.Outcome == "Ongoing" then
 				GridBattle.EnemyPlan(s, r)
 			end
@@ -711,6 +719,20 @@ do
 	end
 	check(known[raw.Boss.Variant], "판 변주가 하나 걸려야 한다: " .. tostring(raw.Boss.Variant))
 	check(table.concat(raw.Log, " "):find("판 변주", 1, true) ~= nil, "판 변주 로그")
+	-- 판 변주는 턴마다 새로 뽑는다(직전과 다른 것)
+	local seenVariants, last = {}, raw.Boss.Variant
+	for _ = 1, 8 do
+		raw.Turn += 1
+		GridBattle.EnemyPlan(raw, rng)
+		check(raw.Boss.Variant ~= last, "턴마다 다른 판 변주")
+		last = raw.Boss.Variant
+		seenVariants[last] = true
+	end
+	local kinds = 0
+	for _ in seenVariants do
+		kinds += 1
+	end
+	check(kinds >= 3, "여러 판 변주가 돌아가며 나온다: " .. kinds)
 	-- 회복 칸 없음 / 버프 칸 넷
 	local nh = newBoss()
 	nh.Boss.Variant = "NoHealCell"
@@ -816,6 +838,24 @@ do
 	end
 	check(tainted >= 1, "오염 추적: 광선 라인에 버그 칸 " .. tainted)
 	check(GridBattle.Snapshot(c).Boss.Variant ~= nil, "스냅샷에 판 변주")
+end
+
+-- 10. 묶임 면역(2026-10-03): 한 번 묶이면 묶인 턴 끝과 다음 턴 끝에는 예고 칸 위에서 마쳐도 안 묶인다
+do
+	local s = newBoss()
+	local function endOnPending(): boolean
+		local me = BattleGrid.CellOf(s.Grid, "player")
+		s.Boss.DeletePlan = { Cells = { { me.X, me.Y } }, Owner = "boss_DeleteArm" }
+		s.Boss.Deleted = {}
+		s.Units.player.Health = s.Units.player.MaxHealth
+		GridBattle.EndTurn(s)
+		return (s.Boss.Locked or 0) > 0
+	end
+	check(endOnPending(), "처음엔 묶인다")
+	check(GridBattle.Snapshot(s).Boss.LockImmune == 2, "묶인 턴: 면역 2 남음")
+	check(not endOnPending(), "묶인 턴 끝: 면역")
+	check(not endOnPending(), "그다음 턴 끝: 면역")
+	check(endOnPending(), "면역이 끝나면 다시 묶인다")
 end
 
 print("보스 디버그 점검 통과")

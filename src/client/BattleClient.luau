@@ -320,10 +320,11 @@ end
 	음표(4·8·16분)는 한 아이콘에 묶는다(요청).
 ]]
 local NOTE_IDS = { [ClassResources.QUARTER] = true, [ClassResources.EIGHTH] = true, [ClassResources.SIXTEENTH] = true }
--- 키워드 사전의 첫 줄(없으면 nil)
+-- 키워드 사전의 설명 전부(없으면 nil). 2026-10-03 사용자: 첫 줄("- 최대 10스택.")만 보여서 무엇을 얻는지 몰랐다 →
+-- 수치당 얻는 버프·자동 패링 조건까지 사전 글을 통째로 보인다
 local function keywordLine(name: string): string?
 	local keyword = Keywords.ByName(name)
-	return keyword and keyword.Description:match("^[^\n]*") or nil
+	return keyword and keyword.Description or nil
 end
 
 function BattleClient:_refreshStatusLine(snapshot: any)
@@ -333,15 +334,16 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 		return
 	end
 	local list = {}
+	-- 사전에 있는 상태이상(출혈·독·보호막 …)은 사전 설명을 쓴다. 칸·검수처럼 사전에 없는 것만 아래 글
 	local function add(id: string, name: string, glyph: string, color: Color3, count: number?, desc: string)
-		table.insert(list, { Id = id, Name = name, Glyph = glyph, Color = color, Count = count, Desc = desc })
+		table.insert(list, { Id = id, Name = name, Glyph = glyph, Color = color, Count = count, Desc = keywordLine(name) or desc })
 	end
 
 	-- 보스전 칸·검수
 	local boss = snapshot.Boss
 	if boss then
 		if (boss.Tester or 0) > 0 then
-			add("Tester", "테스터", "T", Color3.fromRGB(255, 200, 80), nil, "이번 턴 가하는 피해량 +3500% · 치명타 확률 +100% · 받는 피해량 −80% · 방어막 200(이번 턴까지).")
+			add("Tester", "테스터", "T", Color3.fromRGB(255, 200, 80), nil, "이번 턴 가하는 피해량 +3500% · 치명타 확률 +100% · 받는 피해량 −80% · 방어막 80(이번 턴까지).")
 		end
 		if boss.Checking then
 			add("Checking", "검수중", "검", Color3.fromRGB(235, 235, 235), nil, "검은 칸(검수됨!) 위. 받는 피해량 +200%. 여기서 턴을 마치면 최대 체력 9% 고정 피해(이 효과로는 죽지 않음), 2턴 뒤 스테미나 20을 잃고 다음 턴 테스터를 얻는다.")
@@ -351,6 +353,9 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 		end
 		if (boss.Locked or 0) > 0 then
 			add("Locked", "묶임", "묶", Color3.fromRGB(200, 120, 255), boss.Locked, "검수 준비중 칸에서 턴을 마쳤다. 이번 턴은 칸을 움직일 수 없다.")
+		end
+		if (boss.LockImmune or 0) > 0 and (boss.Locked or 0) == 0 then
+			add("LockImmune", "묶임 면역", "免", Color3.fromRGB(170, 230, 255), boss.LockImmune, string.format("묶임을 당한 뒤라 앞으로 %d턴 동안 검수 준비중 칸에서 턴을 마쳐도 묶이지 않음.", boss.LockImmune))
 		end
 		if (boss.StaminaDebt or 0) > 0 then
 			add("StaminaDebt", "검수 후유증", "후", Color3.fromRGB(206, 214, 110), boss.StaminaDebt, string.format("%d턴 뒤 스테미나 20을 잃는다.", boss.StaminaDebt))
@@ -404,6 +409,54 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 	end
 
 	self.hud:SetEffects(list)
+end
+
+--[[
+	적 체력 실시간(2026-10-03 사용자: "적의 HP가 실시간으로 줄어드는 게 보이게").
+	서버 스냅샷은 스킬을 쓰자마자(맞기 전에) 깎인 체력을 보낸다. 그대로 그리면 맞기도 전에 체력바가 줄고,
+	이름표는 연출이 끝난 뒤에야 한꺼번에 줄었다. 그래서 적마다 "보이는 체력"(hpShown)을 따로 두고
+	  - 연출 중이 아니면 서버 값 그대로
+	  - 연출 중이면 앞 값을 지키다가, 피해 숫자가 뜰 때마다(CombatDirector.OnDamage) 그만큼 깎는다(서버 값 아래로는 안 내려감)
+	  - 연출이 끝나면 서버 값으로 맞춘다
+	회복으로 서버 값이 더 크면 바로 올린다.
+]]
+function BattleClient:_hpView(snapshot: any): any
+	if not snapshot or not snapshot.Units then
+		return snapshot
+	end
+	self.hpShown = self.hpShown or {}
+	local busy = self.director ~= nil and self.director:IsBusy()
+	local units = {}
+	for id, u in snapshot.Units do
+		if u.Side == "Enemy" and u.Health then
+			local shown = self.hpShown[id]
+			if not busy or shown == nil or u.Health > shown then
+				shown = u.Health
+			end
+			self.hpShown[id] = shown
+			if shown ~= u.Health then
+				local c = table.clone(u)
+				c.Health = shown
+				units[id] = c
+				continue
+			end
+		end
+		units[id] = u
+	end
+	local view = table.clone(snapshot)
+	view.Units = units
+	return view
+end
+
+-- 적 머리 위 이름표: 이름 · 보이는 체력 · 그로기
+function BattleClient:_setEnemyInfo(id: string, unit: any)
+	local model = self.director and self.director:Model(id)
+	local label = model and model.PrimaryPart and model.PrimaryPart:FindFirstChild("Info")
+	local info = label and label:FindFirstChild("Info")
+	if info and info:IsA("TextLabel") then
+		local hp = (self.hpShown and self.hpShown[id]) or unit.Health
+		info.Text = string.format("%s  %d/%d%s", unit.Name, hp, unit.MaxHealth, if unit.Stunned then "  ★그로기" else "")
+	end
 end
 
 -- (임시) 플레이어 체력을 전투 중에 보여 준다.
@@ -513,8 +566,8 @@ function BattleClient:_onGridState(snapshot: any)
 	end
 
 	self:_bossBoard(snapshot)
-	-- 보스 체력바(부위별 체력·페이즈·스테미나·버프·이번 턴 예고)
-	self.hud:SetBoss(snapshot)
+	-- 보스 체력바(부위별 체력·페이즈·스테미나·버프·이번 턴 예고). 체력은 맞는 순간마다 줄어드는 보이는 값(_hpView)
+	self.hud:SetBoss(self:_hpView(snapshot))
 	self:_bossAlerts(snapshot)
 	self:_refreshSkillBar(snapshot)
 	self:_refreshStance(snapshot)
@@ -579,13 +632,22 @@ function BattleClient:_bossAlerts(snapshot: any)
 	local seen = self.bossSeen
 	if not seen then
 		-- 전투 처음: 판 변주만 알린다
-		self.bossSeen = { Phase = boss.Phase or 1, FirstBroken = boss.FirstBroken, LastStand = boss.LastStand }
+		self.bossSeen = { Phase = boss.Phase or 1, FirstBroken = boss.FirstBroken, LastStand = boss.LastStand, Variant = boss.Variant }
 		for _, v in GridBattle.BOSS_VARIANTS do
 			if v.Id == boss.Variant then
 				self.hud:Flash("판 변주: " .. v.Name, v.Text, BattleHud.Colors.Gold or Color3.fromRGB(236, 186, 78))
 			end
 		end
 		return
+	end
+	-- 판 변주는 턴마다 바뀐다(2026-10-03) — 바뀌면 한 번 띄운다
+	if boss.Variant ~= seen.Variant then
+		seen.Variant = boss.Variant
+		for _, v in GridBattle.BOSS_VARIANTS do
+			if v.Id == boss.Variant then
+				self.hud:Flash("판 변주: " .. v.Name, v.Text, BattleHud.Colors.Gold or Color3.fromRGB(236, 186, 78))
+			end
+		end
 	end
 	if (boss.Phase or 1) > seen.Phase then
 		local f = PHASE_FLASH[boss.Phase]
@@ -742,6 +804,18 @@ function BattleClient:_setupBattle()
 	self.tiles = BattleStage.Build(self.folder, self.layout, arena and arena.BaseY, GRID_WIDTH, GRID_HEIGHT, self.rayParams) :: any
 
 	self.director = CombatDirector.new()
+	-- 피해 숫자가 뜨는 순간 그 적의 보이는 체력을 깎는다(체력바·이름표)
+	self.hpShown = {}
+	self.director.OnDamage = function(id: string, dmg: number)
+		local unit = self.snapshot and self.snapshot.Units and self.snapshot.Units[id]
+		local shown = self.hpShown[id]
+		if not unit or unit.Side ~= "Enemy" or not shown then
+			return
+		end
+		self.hpShown[id] = math.max(unit.Health, shown - dmg)
+		self.hud:SetBoss(self:_hpView(self.snapshot))
+		self:_setEnemyInfo(id, unit)
+	end
 	-- 적 진영 맨 뒷줄 가운데(결투사 강화 스킬이 그 너머까지 꿰뚫고 지나간다)
 	local back = Vector3.zero
 	for y = 1, GRID_HEIGHT do
@@ -927,19 +1001,9 @@ function BattleClient:_renderUnits()
 		local home = if unit.Cells
 			then BattleStage.BlockHome(self.layout, unit.Cells, GRID_WIDTH, GRID_HEIGHT, self.rayParams)
 			else self:_home("Enemy", unit.X, unit.Y)
-		local model = self:_ensureEnemyModel(id, unit.Name, home, unit.Part)
+		self:_ensureEnemyModel(id, unit.Name, home, unit.Part)
 		director:SetHome(id, home)
-		local label = model and model.PrimaryPart and model.PrimaryPart:FindFirstChild("Info")
-		local info = label and label:FindFirstChild("Info")
-		if info and info:IsA("TextLabel") then
-			info.Text = string.format(
-				"%s  %d/%d%s",
-				unit.Name,
-				unit.Health,
-				unit.MaxHealth,
-				if unit.Stunned then "  ★그로기" else ""
-			)
-		end
+		self:_setEnemyInfo(id, unit)
 	end
 
 	for id in director.Actors do
@@ -1469,6 +1533,8 @@ function BattleClient:_bindInput()
 			self.pendingRender = false
 			self:_renderUnits()
 			self:_paintTiles()
+			-- 연출이 끝났으면 보이는 체력을 서버 값에 맞춘다(숫자 나눔 끝수·지속 피해까지)
+			self.hud:SetBoss(self:_hpView(self.snapshot))
 		end
 		if self.dragging then
 			-- 칸 사이 틈·중앙선에 커서가 가도 이동이 취소되지 않게, 마지막으로 가리킨 칸을 기억한다
@@ -1678,7 +1744,13 @@ function BattleClient:_submitGrade(role: QteDefinitions.Role, grade: string)
 			if motionId == "Collapse" and ((stacks and stacks[ClassResources.CHARGE]) or 0) <= 0 then
 				motionId = "CollapseCharge"
 			end
-			self.pendingSkillPlay = self.director:PlaySkill("player", motionId, self:_predictTargets(chosen.Id))
+			-- 단계 스킬(특이점·붕괴·분쇄·크레셴도 강화): 범위가 몇 단계 켜졌는지로 연출 단계를 고른다(2026-10-03)
+			local stage = 1
+			local def = BattleSkills.ById(chosen.Id)
+			if def and def.GrowResource then
+				stage = 1 + self:_growCount(def, (stacks and stacks[def.GrowResource]) or 0)
+			end
+			self.pendingSkillPlay = self.director:PlaySkill("player", motionId, self:_predictTargets(chosen.Id), nil, stage)
 		end
 	else
 		--[[

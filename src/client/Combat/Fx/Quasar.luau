@@ -114,9 +114,19 @@ local function scaleModel(model: Model, k: number)
 	end
 end
 
+--[[
+	2026-10-03 단계 연출(사양: 특이점은 소모한 질량에 따라 3단계로 연출과 범위가 바뀜). ctx.Stage = 범위 단계 + 1
+	  1단계  검을 상대 위에 소환해 내려찍음
+	  2단계  큰 검 — 빔을 쏜 뒤 내려찍음(SingularityBeam)
+	  3단계  아주 큰 검 — 빔 뒤 파동이 퍼지도록 내려찍음(SingularityHit 의 파동)
+	ctx.Vfx 는 단계만큼 이미 커져 있다(CombatDirector). 검 모델 크기만 여기서 단계로 키운다
+]]
+local SWORD_STAGE = { 1, 1.4, 1.9 }
+
 function Fx.SummonSword(ctx: any)
 	local Vfx = ctx.Vfx
-	local top = ctx.Target + Vector3.new(0, 14, 0)
+	local S = SWORD_STAGE[ctx.Stage or 1] or SWORD_STAGE[#SWORD_STAGE]
+	local top = ctx.Target + Vector3.new(0, 14 * S, 0)
 	local model = if ctx.Weapons then ctx.Weapons:ClonePiece("W") else nil
 	if model then
 		model.Name = "SingularitySword"
@@ -126,9 +136,9 @@ function Fx.SummonSword(ctx: any)
 				p.Transparency = math.max(p.Transparency, 0.08)
 			end
 		end
-		scaleModel(model, GIANT)
+		scaleModel(model, GIANT * S)
 		-- 손잡이(원점)를 위에, 날끝(6.9 × 배율)이 아래로
-		model:PivotTo(CFrame.new(top + Vector3.new(0, 6, 0)) * CFrame.Angles(math.pi, 0, 0))
+		model:PivotTo(CFrame.new(top + Vector3.new(0, 6 * S, 0)) * CFrame.Angles(math.pi, 0, 0))
 		local light = Instance.new("PointLight")
 		light.Color, light.Range, light.Brightness = VIOLET, 18, 3
 		light.Parent = model.PrimaryPart
@@ -146,6 +156,11 @@ function Fx.SummonSword(ctx: any)
 		piece(Vector3.new(5, 0.8, 1.2), Vector3.new(0, 4.6, 0), DEEP, 0.1)
 		piece(Vector3.new(0.9, 3, 0.9), Vector3.new(0, 6.4, 0), DEEP, 0.1)
 	end
+	if not ctx.Weapons then
+		scaleModel(model, S)
+	end
+	-- 떨어질 거리(날끝이 땅에 박히게) — DropSword
+	model:SetAttribute("Drop", 12.5 * S)
 	model.Parent = Vfx.Folder()
 	summoned[ctx.Actor] = model
 	Vfx.Flash(top, { Color = VIOLET, Size = 18, Life = 0.5 })
@@ -160,7 +175,7 @@ function Fx.DropSword(ctx: any)
 		return
 	end
 	local start = model:GetPivot()
-	local goal = start - Vector3.new(0, 12.5, 0)
+	local goal = start - Vector3.new(0, model:GetAttribute("Drop") or 12.5, 0)
 	local t0 = os.clock()
 	task.spawn(function()
 		while os.clock() - t0 < 0.25 do
@@ -179,10 +194,31 @@ function Fx.DropSword(ctx: any)
 	end)
 end
 
+-- 2단계부터: 떠 있는 검에서 대상으로 빔(내려찍기 전)
+function Fx.SingularityBeam(ctx: any)
+	if (ctx.Stage or 1) < 2 then
+		return
+	end
+	local Vfx = ctx.Vfx
+	local S = SWORD_STAGE[ctx.Stage] or SWORD_STAGE[#SWORD_STAGE]
+	local from = ctx.Target + Vector3.new(0, 14 * S - 4, 0)
+	Vfx.Beam(from, ctx.Target, { Color = VIOLET, Width = 1.4, Life = 0.4 })
+	Vfx.Flash(ctx.Target, { Color = STAR, Size = 8, Life = 0.3 })
+	Vfx.Shockwave(Vector3.new(ctx.Target.X, ctx.Ground + 0.1, ctx.Target.Z), { Color = VIOLET, Radius = 4, Life = 0.3 })
+end
+
 function Fx.SingularityHit(ctx: any, _ev: any, at: Vector3?)
 	local Vfx = ctx.Vfx
 	local p = at or ctx.Target
 	local ground = Vector3.new(p.X, ctx.Ground, p.Z)
+	-- 3단계: 내려찍은 자리에서 파동 셋이 차례로 퍼진다
+	if (ctx.Stage or 1) >= 3 then
+		for i, r in { 14, 20, 26 } do
+			task.delay(0.1 * i, function()
+				Vfx.Shockwave(ground + Vector3.new(0, 0.15, 0), { Color = if i == 2 then STAR else VIOLET, Radius = r, Life = 0.6 })
+			end)
+		end
+	end
 	Vfx.Flash(p, { Color = STAR, Size = 16, Life = 0.4, Brightness = 9 })
 	Vfx.Shockwave(ground + Vector3.new(0, 0.1, 0), { Color = VIOLET, Radius = 10, Life = 0.55 })
 	Vfx.Pillar(ground, { Color = VIOLET, Height = 16, Width = 3.5, Life = 0.5 })

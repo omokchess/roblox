@@ -313,7 +313,8 @@ local duelistEffects: { [string]: Effect } = {
 		Before = function(ctx)
 			local focus = BattleStatus.Stack(ctx.Status, R.FOCUS)
 			BattleStatus.AddModifier(ctx.Status, "CritChance", 0.15, 1, "연계")
-			return 1 + focus * 0.025
+			-- 2026-10-03 사용자: 버프 받은 찔러찔러또찔러보다 약하다 → 이 스킬 자체 피해량 +1000%(집중 보너스와 합연산)
+			return 1 + 10 + focus * 0.025
 		end,
 		After = function(ctx)
 			local status = ctx.Status
@@ -389,16 +390,16 @@ local quasarEffects: { [string]: Effect } = {
 
 	--[[
 		특이점: [질량]을 전부 태운다. 소모 1당 피해 +5%(압축 +). 소모량으로 단계가 갈린다 —
-		1단계(1~7) 기본 18 · 2단계(8~14) 24 · 3단계(15~) 36. 범위는 GrowResource(질량 ÷ 7.5)가 넓힌다.
+		1단계(1~7) 기본 18 · 2단계(8~14) 22 · 3단계(15~) 28. (2026-10-03 밸런스: 24·36·1당 5% → 22·28·1당 3%) 범위는 GrowResource(질량 ÷ 7.5)가 넓힌다.
 	]]
 	Singularity = {
 		Before = function(ctx)
 			local spent = BattleStatus.SpendAll(ctx.Status, R.MASS)
 			local tier = if spent >= 15 then 3 elseif spent >= 8 then 2 else 1
 			tier = math.max(tier, math.floor(ctx.Query("SingularityTier", 0)))
-			local per = ctx.Query("SingularityPerMass", 0.05)
+			local per = ctx.Query("SingularityPerMass", 0.03)
 			local power = ctx.Ally.Power or 0
-			local base = ({ 18, 24, 36 })[tier]
+			local base = ({ 18, 22, 28 })[tier]
 			ctx.Log(string.format("특이점 %d단계 — 질량 %d 소모 (피해 +%d%%)", tier, spent, math.floor(spent * per * 100 + 0.5)))
 			return (1 + spent * per) * (power + base) / math.max(1, power + 18)
 		end,
@@ -1083,14 +1084,15 @@ local berserkerEffects: { [string]: Effect } = {
 	},
 
 	--[[
-		종베기: 분노 전부 소모, 1당 피해 +20%. 적중 시 출혈 3. (맞힌 적 / 2)만큼 분노를 돌려받는다.
+		종베기: 분노 전부 소모, 1당 피해 +40%(2026-10-03, 예전 20%). 적중 시 출혈 3. (맞힌 적 / 2)만큼 분노를 돌려받는다.
 		맞힌 적마다 자신 체력 5(피의 대가 10), 그리고 (최종 피해 / 5)만큼 체력.
 	]]
 	Burst = {
 		Before = function(ctx)
 			local spent = BattleStatus.SpendAll(ctx.Status, R.RAGE)
-			ctx.Log(string.format("종베기 — 분노 %d 소모 (피해 +%d%%)", spent, spent * 20))
-			return 1 + 0.2 * spent
+			-- 2026-10-03 사용자: 2스킬(횡베기)과 딜이 비슷 → 소모 분노 1당 +20% → +40%
+			ctx.Log(string.format("종베기 — 분노 %d 소모 (피해 +%d%%)", spent, spent * 40))
+			return 1 + 0.4 * spent
 		end,
 		After = function(ctx)
 			local perHit = ctx.Query("BurstSelfPerHit", 5)

@@ -100,6 +100,8 @@ function CombatDirector.new(opts: { Quiet: boolean? }?)
 	self.CameraBase = nil :: CFrame?
 	-- 적 진영 맨 뒷줄 가운데(BattleClient 가 칸을 놓고 정한다). 없으면 가장 먼 배우로 어림한다(돌진 to = "Far")
 	self.FarEnd = nil :: Vector3?
+	-- 피해 숫자를 띄울 때마다 부른다(id, 피해). BattleClient 가 체력바를 그 순간 깎는다
+	self.OnDamage = nil :: ((string, number) -> ())?
 	-- 보스 위성 셋이 함께 도는 바퀴의 각(라디안, _bossHomes)
 	self.BossOrbit = 0
 	-- PreSimulation: 애니메이션 단계(Animator 가 관절 Transform 을 다시 쓴다) 다음, 물리 단계 전.
@@ -358,7 +360,9 @@ function CombatDirector:_targetPoint(id: string): Vector3?
 	return t.Pos.Position + Vector3.new(0, t.Chest, 0)
 end
 
-function CombatDirector:_ctx(a: Actor, targets: { string }?)
+-- stage: 단계 스킬의 단계(1 = 기본). 2단계부터 이펙트를 단계마다 35%씩 키우고 Fx 가 ctx.Stage 로 연출을 고른다
+local STAGE_GROW = 0.35
+function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 	local points = {}
 	for _, id in targets or {} do
 		local p = self:_targetPoint(id)
@@ -368,8 +372,10 @@ function CombatDirector:_ctx(a: Actor, targets: { string }?)
 	end
 	local forward = flat(a.Home.LookVector)
 	local weapons = a.Weapons
+	local st = math.max(1, stage or 1)
 	local ctx = {
-		Vfx = if self.Quiet then QuietVfx else CombatVfx,
+		Vfx = FxCommon.ScaledVfx(if self.Quiet then QuietVfx else CombatVfx, 1 + STAGE_GROW * (st - 1)),
+		Stage = st,
 		Actor = a,
 		Root = a.Pos,
 		Forward = forward,
@@ -427,6 +433,7 @@ function CombatDirector:_play(a: Actor, motion: any, targetsByHit: { { string } 
 		OnHit = o.OnHit,
 		OnDone = o.OnDone,
 		NumberStyle = o.NumberStyle,
+		Stage = o.Stage or 1,
 		-- 안전장치: 모션 길이 + 2초가 지나도 안 끝나면 끝난 것으로 본다(연출이 멈춰 턴이 막히지 않게)
 		Deadline = os.clock() + (motion.Duration or 1) + 2,
 	}
@@ -481,7 +488,7 @@ function CombatDirector:_event(play: any, ev: any)
 		play.HitsSeen += 1
 		local i = ev.i or play.HitsSeen
 		local targets = play.Targets[groupOf(play, i)] or {}
-		local ctx = self:_ctx(a, targets)
+		local ctx = self:_ctx(a, targets, play.Stage)
 		if #targets == 0 then
 			-- 빈 곳을 쳐도 휘두른 자리에 이펙트는 나온다
 			self:_fx(a, ev.fx, ctx, ev, ctx.Target)
@@ -506,7 +513,7 @@ function CombatDirector:_event(play: any, ev: any)
 	elseif k == "Dash" then
 		self:_dash(a, play, ev)
 	elseif k == "Fx" then
-		self:_fx(a, ev.n, self:_ctx(a, play.Targets[1]), ev, nil)
+		self:_fx(a, ev.n, self:_ctx(a, play.Targets[1], play.Stage), ev, nil)
 	elseif k == "Trail" then
 		if a.Weapons then
 			a.Weapons:Trail(ev.slot, ev.on ~= false)
@@ -636,6 +643,10 @@ function CombatDirector:_showNumbers(play: any)
 					color = Color3.fromRGB(255, 190, 90)
 				end
 				CombatVfx.Number(p + Vector3.new(0, 1.6, 0), label, { Color = color, Big = dmg >= 30 })
+				-- 맞는 순간 체력 표시를 깎게 알린다(BattleClient 의 보이는 체력)
+				if self.OnDamage and dmg > 0 then
+					self.OnDamage(h.Id, dmg)
+				end
 			end
 		end
 	end
@@ -643,13 +654,14 @@ end
 
 --=== 밖에서 부르는 것 ===--
 
--- 스킬: 목록 targetsByHit 는 서버의 모양 묶음 순서와 같다
-function CombatDirector:PlaySkill(id: string, skillId: string, targetsByHit: { { string } }, onDone: (() -> ())?)
+-- 스킬: 목록 targetsByHit 는 서버의 모양 묶음 순서와 같다.
+-- stage(2026-10-03): 단계 스킬의 단계(1 = 기본, 범위 Stages 가 n 개 켜졌으면 n+1). 이펙트가 단계만큼 커지고 Fx 가 연출을 바꾼다
+function CombatDirector:PlaySkill(id: string, skillId: string, targetsByHit: { { string } }, onDone: (() -> ())?, stage: number?)
 	local a = self.Actors[id]
 	if not a then
 		return nil
 	end
-	return self:_play(a, self:_skillMotion(a, skillId), targetsByHit, { OnDone = onDone })
+	return self:_play(a, self:_skillMotion(a, skillId), targetsByHit, { OnDone = onDone, Stage = stage })
 end
 
 -- 적이 공격을 예고하는 동안(회피 QTE 중) 웅크려 떤다
