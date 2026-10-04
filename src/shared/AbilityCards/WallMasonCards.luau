@@ -140,8 +140,9 @@ local cards: { Card } = {
 		Id = "WallMason_R_BackRowAim",
 		Art = "WallMason_R_BackRowAim",
 		Name = "후열 조준",
-		Description = "`뒷벽 허물기`스킬의 [벽] 중첩당 [가하는 피해량] 증가가 {9}%로 증가한다.",
-		Levels = { { 9, 12, 15, 18, 21, 24 } },
+		-- 2026-10-04 기본 벽당 6% → 3% 에 맞춰 절반으로(9~24% → 4.5~12%)
+		Description = "`뒷벽 허물기`스킬의 [벽] 중첩당 [가하는 피해량] 증가가 {4.5}%로 증가한다.",
+		Levels = { { 4.5, 6, 7.5, 9, 10.5, 12 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,
 		Tags = { "Plating", "Construct" },

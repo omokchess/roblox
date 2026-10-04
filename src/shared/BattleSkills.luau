@@ -563,7 +563,7 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "BreakBackWall", Cooldown = 1,
 			Name = "뒷벽 허물기",
-			Description = "- 보유한 [벽] 수치 1당 [가하는 피해량] +6%.",
+			Description = "- 보유한 [벽] 수치 1당 [가하는 피해량] +3%.",
 			Damage = 16,
 			Range = "Ranged",
 			Shape = { Kind = "Line", Radius = 3 , Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } },
