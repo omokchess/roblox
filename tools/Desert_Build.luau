@@ -126,6 +126,59 @@ local function build()
 		block("Table" .. i, c[1], c[2], c[3], c[4], TOP + c[5], TOP - 4, canyon, if i % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
 	end
 	--[[
+		협곡 벽 꾸밈(2026-10-04 사용자: "협곡 벽면이 너무 휑하니까"): 탁상지 판마다 네 벽에
+		  지층 띠 둘(벽에서 1 튀어나온 얇은 띠, 높이 35%·68%, 색 다르게) · 기둥 버팀(26 마다, 폭·높이 엇갈림, 2.5 튀어나옴) ·
+		  밑동 돌무더기(18 마다, 크기 엇갈림). 규칙 반복이지만 폭·높이·크기를 표(무늬)로 돌려 같은 모양이 붙어 나오지 않게.
+	]]
+	local walls = folder("CanyonWalls")
+	local BAND1, BAND2 = RGB(176, 96, 60), RGB(234, 164, 112)
+	local COLW = { 7, 10, 6, 9, 8 }
+	local COLH = { 0.62, 0.9, 0.48, 0.78, 0.7, 0.55 }
+	local RUB = { 4.5, 3, 5.5, 3.5, 6, 4 }
+	local nWall = 0
+	for i = 1, CANYON_MAIN do
+		local c = CANYON[i]
+		local x0, x1, z0, z1, h = c[1], c[2], c[3], c[4], c[5]
+		local top = TOP + h
+		-- 네 벽: { 벽 위치, 따라가는 축 시작·끝, 바깥 방향(+1/-1), 축이 x 인가 }
+		for f, face in { { z0, x0, x1, -1, true }, { z1, x0, x1, 1, true }, { x0, z0, z1, -1, false }, { x1, z0, z1, 1, false } } do
+			local at, a0, a1, out, alongX = face[1], face[2], face[3], face[4], face[5]
+			local len = a1 - a0
+			local function box(name, along0, along1, off0, off1, y0, y1, color)
+				local o0, o1 = at + out * off0, at + out * off1
+				local bx0, bx1 = if alongX then along0 else math.min(o0, o1), if alongX then along1 else math.max(o0, o1)
+				local bz0, bz1 = if alongX then math.min(o0, o1) else along0, if alongX then math.max(o0, o1) else along1
+				part(name, Vector3.new(bx1 - bx0, y1 - y0, bz1 - bz0), CFrame.new((bx0 + bx1) / 2, (y0 + y1) / 2, (bz0 + bz1) / 2), color, M.Sandstone, walls)
+				nWall += 1
+			end
+			-- 지층 띠
+			box(string.format("Band%d_%d_a", i, f), a0, a1, -0.5, 1.0, TOP + h * 0.35 - 0.7, TOP + h * 0.35 + 0.7, BAND1)
+			box(string.format("Band%d_%d_b", i, f), a0, a1, -0.5, 0.8, TOP + h * 0.68 - 0.5, TOP + h * 0.68 + 0.5, BAND2)
+			-- 기둥 버팀
+			local k, pos = 0, a0 + 8 + (i * 7) % 11
+			while pos < a1 - 6 do
+				k += 1
+				local w = COLW[(i + k) % #COLW + 1]
+				local hh = COLH[(i * 3 + k) % #COLH + 1]
+				box(string.format("Col%d_%d_%d", i, f, k), pos - w / 2, math.min(a1, pos + w / 2), -0.5, 2.5, TOP - 2, TOP + h * hh, if k % 2 == 0 then STONE else STONE2)
+				pos += 26
+			end
+			-- 밑동 돌무더기
+			local r, q = 0, a0 + 5 + (i * 5) % 9
+			while q < a1 - 4 do
+				r += 1
+				local sz = RUB[(i + r * 2) % #RUB + 1]
+				local cx = if alongX then q else at + out * (sz / 2 + 0.5)
+				local cz = if alongX then at + out * (sz / 2 + 0.5) else q
+				part(string.format("Rubble%d_%d_%d", i, f, r), Vector3.new(sz, sz * 0.7, sz * 0.85), CFrame.new(cx, TOP + sz * 0.3, cz) * CFrame.Angles(0, math.rad(r * 37), 0), if r % 2 == 0 then STONE else STONE2, M.Sandstone, walls)
+				nWall += 1
+				q += 18
+			end
+			local _ = len
+		end
+	end
+	say("협곡 벽 꾸밈 %d", nWall)
+	--[[
 		오르막 = 바위 계단(2026-10-04 사용자: 매끈한 경사길 말고 계단식으로 풍경과 녹이게).
 		표(RAMPS)의 칸을 높은 쪽으로 단마다 높이 ≤ 2 로 나눈 사암 단(옆 = 탁상지와 같은 사암, 윗면 = 붉은 모래)을 쌓는다.
 		단마다 폭·옆 위치를 조금씩 엇갈리게(규칙 반복), 세 단마다 바깥 옆에 돌덩이 — 깎아 만든 길처럼.
@@ -138,18 +191,35 @@ local function build()
 		local sign = if dir == "+x" or dir == "+z" then 1 else -1
 		local a0, a1 = if alongX then x0 else z0, if alongX then x1 else z1 -- 오르는 축
 		local b0, b1 = if alongX then z0 else x0, if alongX then z1 else x1 -- 가로 축
-		local n = math.max(1, math.ceil((hi - lo) / 2))
-		local depth = (a1 - a0) / n
+		--[[ 2026-10-04 사용자: "계단도 형태를 그냥 지형처럼 올라갈 수 있게" → 고른 단 대신 들쭉날쭉한 바위 턱.
+		     턱 높이(≤ 2)·깊이·폭·옆 위치를 무늬로 엇갈려, 계단이 아니라 비탈의 바위 턱을 밟고 오르는 것처럼 ]]
+		local RISE = { 1.4, 2.0, 1.1, 1.8, 1.5, 1.2, 1.9 }
+		local RUN = { 1.2, 0.8, 1.4, 0.9, 1.1, 1.3 }
+		local steps, total = {}, 0
+		while total < hi - lo - 0.01 do
+			local rr = math.min(RISE[(#steps % #RISE) + 1], hi - lo - total)
+			total += rr
+			table.insert(steps, total)
+		end
+		local n = #steps
+		local runs, runSum = {}, 0
 		for k = 1, n do
-			local top = TOP + lo + (hi - lo) * k / n
-			-- 낮은 끝에서 k 번째 단(오르는 방향 sign)
-			local s0 = if sign > 0 then a0 + (k - 1) * depth else a1 - k * depth
-			local s1 = s0 + depth + 0.6 -- 단끼리 살짝 겹쳐 틈 없이
-			local jog = SHIFT[(k % #SHIFT) + 1]
-			local w0, w1 = b0 + jog - (k % 2) * 0.7, b1 + jog + ((k + 1) % 2) * 0.7
+			runs[k] = RUN[(k % #RUN) + 1]
+			runSum += runs[k]
+		end
+		local acc = 0
+		for k = 1, n do
+			local top = TOP + lo + steps[k]
+			local depth = (a1 - a0) * runs[k] / runSum
+			local s0 = if sign > 0 then a0 + acc else a1 - acc - depth
+			acc += depth
+			local s1 = s0 + depth + 0.6 -- 턱끼리 살짝 겹쳐 틈 없이
+			-- 턱마다 옆으로 크게 엇갈리고 폭도 달라 계단 줄이 아니라 비탈의 바위 턱으로(폭 ±5, 옆 ±6)
+			local jog = SHIFT[(k % #SHIFT) + 1] * 7
+			local w0, w1 = b0 + jog - (k % 3) * 2.5, b1 + jog + ((k + 1) % 3) * 2.5
 			local bx0, bx1, bz0, bz1 = if alongX then s0 else w0, if alongX then s1 else w1, if alongX then w0 else s0, if alongX then w1 else s1
 			block(string.format("Step%d_%d", i, k), bx0, bx1, bz0, bz1, top, TOP - 4, ramps, if k % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
-			if k % 3 == 0 then
+			if k % 2 == 0 then
 				-- 바깥 옆 돌덩이(번갈아 양쪽)
 				local side = if (k // 3) % 2 == 0 then w0 - 2.2 else w1 + 2.2
 				local mid = (s0 + s1) / 2
