@@ -67,7 +67,32 @@ end
 	  - 보이는 높이(윗면 - 바깥 땅)가 minH 안 되면 건너뜀
 ]]
 local DENSITY = { 1.0, 0.55, 0.85, 0.35, 0.7, 0.95, 0.45, 0.8, 0.6, 0.25, 0.9, 0.5 }
-local GAPS = { 0, 7, 3, 12, 5, 0, 9, 4, 15, 2, 6, 10 }
+--[[
+	벽 밑 바위 줄 높이 곡선(2026-10-04 사용자: 큰 바위가 띄엄띄엄, 사이를 중간·작은 돌이 메우고, 블록 윗면 가운데 점을 이으면
+	불규칙한 곡선 — 자연 마모 느낌, 파동함수처럼 극적이지 않게). 1차원 fBm(값 잡음 세 겹: 파장 80·34·14, 세기 1·0.4·0.15)을
+	부드럽게 0.22~0.95 로 편다. tools/wall_profile.py 가 같은 셈으로 그림을 그린다(바꾸면 둘 다).
+]]
+local function hash1(i: number, seed: number): number
+	local v = math.sin(i * 12.9898 + seed * 78.233) * 43758.5453
+	return v - math.floor(v)
+end
+local function vnoise(x: number, seed: number): number
+	local i = math.floor(x)
+	local t = x - i
+	t = t * t * (3 - 2 * t)
+	return hash1(i, seed) * (1 - t) + hash1(i + 1, seed) * t
+end
+local OCT = { { 80, 1.0 }, { 34, 0.4 }, { 14, 0.15 } }
+local function curve(s: number, seed: number): number
+	local total, norm = 0, 0
+	for k, o in OCT do
+		total += o[2] * vnoise(s / o[1] + (k - 1) * 17.31, seed + (k - 1) * 3.7)
+		norm += o[2]
+	end
+	local t = math.clamp((total / norm - 0.12) / 0.76, 0, 1)
+	t = t * t * (3 - 2 * t)
+	return 0.22 + 0.73 * t
+end
 local function wallPillars(blocks, solids, exclude, groundAt, parent, colors, capColor, capMat, sideMat, minH)
 	local over = OverlapParams.new()
 	over.FilterType = Enum.RaycastFilterType.Include
@@ -88,37 +113,55 @@ local function wallPillars(blocks, solids, exclude, groundAt, parent, colors, ca
 		for f, face in { { "x", z0, -1, x0, x1 }, { "x", z1, 1, x0, x1 }, { "z", x0, -1, z0, z1 }, { "z", x1, 1, z0, z1 } } do
 			local axis, at, out, a0, a1 = face[1], face[2], face[3], face[4], face[5]
 			local dens = DENSITY[(bi * 4 + f) % #DENSITY + 1]
-			local k = (bi * 7 + f * 11) % #PILLAR_BANK
-			local cursor = a0 + 1
+			local seed = bi * 13.7 + f * 5.3
+			local function place(name, s0, s1, d, hf, gy, visible, li2)
+				local h = visible * hf
+				for li, L in { { 0.55, 0, 0 }, { 1.0, 1.4, 1.3 } } do
+					local ls0, ls1 = s0 + L[2] / 2, s1 - L[2] / 2
+					local dd = d - L[3]
+					local o0, o1 = at - out * 1, at + out * dd
+					local bx0, bx1 = if axis == "x" then ls0 else math.min(o0, o1), if axis == "x" then ls1 else math.max(o0, o1)
+					local bz0, bz1 = if axis == "x" then math.min(o0, o1) else ls0, if axis == "x" then math.max(o0, o1) else ls1
+					local top = gy + h * L[1]
+					local bottom = if li == 1 then gy - 4 else gy + h * 0.55 - 0.6
+					block(string.format("%s_%d", name, li), bx0, bx1, bz0, bz1, top, bottom, parent, colors[(li + li2) % 2 + 1], sideMat, capColor, capMat)
+					n += 1
+				end
+			end
+			local cursor, k = a0 + 1, 0
 			while cursor < a1 - 2 do
-				k = k % #PILLAR_BANK + 1
-				local w, hf, d = PILLAR_BANK[k][1], PILLAR_BANK[k][2], PILLAR_BANK[k][3]
+				k += 1
+				local r = hash1(k * 7 + 3, seed)
+				local hHere = curve(cursor + 4, seed)
+				local slope = math.abs(curve(cursor + 9, seed) - curve(cursor - 1, seed))
+				local w, d, kind
+				if hHere > 0.72 and slope < 0.08 then
+					w, d, kind = 13 + r * 8, 7 + r * 2.5, 3 -- 큰 바위(마루)
+				elseif hHere > 0.5 then
+					w, d, kind = 7 + r * 4, 4.5 + r * 2, 2 -- 중간
+				else
+					w, d, kind = 3.5 + r * 3, 3 + r * 1.5, 1 -- 작은 돌
+				end
 				w = math.min(w, a1 - cursor + 1)
 				local s0, s1 = cursor, cursor + w
 				local mid = (s0 + s1) / 2
 				local px, pz = if axis == "x" then mid else at + out * 1.5, if axis == "x" then at + out * 1.5 else mid
 				local gy = groundAt(px, pz)
 				local visible = topAbs - gy
-				local hidden = excluded(px, pz) or visible < minH
-				if not hidden then
-					local probe = workspace:GetPartBoundsInBox(CFrame.new(px, gy + 3, pz), Vector3.new(0.6, 0.6, 0.6), over)
-					hidden = #probe > 0
+				local skip = (kind == 1 and hash1(k * 5 + 1, seed) < (1 - dens) * 0.9) or excluded(px, pz) or visible < minH
+				if not skip then
+					skip = #workspace:GetPartBoundsInBox(CFrame.new(px, gy + 3, pz), Vector3.new(0.6, 0.6, 0.6), over) > 0
 				end
-				if not hidden then
-					local h = visible * hf
-					for li, L in { { 0.55, 0, 0 }, { 1.0, 1.4, 1.3 } } do
-						local ls0, ls1 = s0 + L[2] / 2, s1 - L[2] / 2
-						local dd = d - L[3]
-						local o0, o1 = at - out * 1, at + out * dd
-						local bx0, bx1 = if axis == "x" then ls0 else math.min(o0, o1), if axis == "x" then ls1 else math.max(o0, o1)
-						local bz0, bz1 = if axis == "x" then math.min(o0, o1) else ls0, if axis == "x" then math.max(o0, o1) else ls1
-						local top = gy + h * L[1]
-						local bottom = if li == 1 then gy - 4 else gy + h * 0.55 - 0.6
-						block(string.format("Pillar%d_%d_%d_%d", bi, f, k, li), bx0, bx1, bz0, bz1, top, bottom, parent, colors[(k + li) % 2 + 1], sideMat, capColor, capMat)
-						n += 1
+				if not skip then
+					place(string.format("Rock%d_%d_%d", bi, f, k), s0, s1, d, curve(mid, seed), gy, visible, kind)
+					-- 중간·작은 돌 앞에 가끔 더 작은 돌(사이를 메움)
+					if kind < 3 and hash1(k * 11 + 7, seed) < 0.35 then
+						local fw = w * 0.55
+						local fs = s0 + (w - fw) * hash1(k * 3 + 2, seed)
+						place(string.format("Rock%d_%d_%d_앞", bi, f, k), fs, fs + fw, d + 2.5, curve(mid, seed) * 0.32, gy, visible, kind + 1)
 					end
 				end
-				cursor += w - 1 + (1 - dens) * GAPS[(k + bi) % #GAPS + 1]
+				cursor += w - 0.8
 			end
 		end
 	end
