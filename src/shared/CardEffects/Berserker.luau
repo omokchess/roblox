@@ -171,6 +171,19 @@ M.Berserker_E_Vampire = {
 }
 
 -- 불굴: 전투당 한 번, 쓰러질 공격을 체력 {2} 로 버티고 다음 턴부터 피해 +{3}%. (재기가 먼저)
+-- 불굴 켜진 뒤: [가하는 피해량] +(1 − 지금 체력/최대 체력). 체력이 바뀔 때마다 다시 건다(2026-10-04 리워크)
+local function undyingRefresh(c: Card)
+	if not c.Mem.on then
+		return
+	end
+	local ally = H.Ally(c)
+	H.Clear(c)
+	local missing = 1 - math.clamp(ally.Health / math.max(1, ally.MaxHealth), 0, 1)
+	if missing > 0 then
+		H.Mod(c, "DamageDealt", missing, -1)
+	end
+end
+
 M.Berserker_E_Undying = {
 	Lethal = function(c: Card, save: any)
 		if save.Cancel or c.Rt.Quiet then
@@ -190,12 +203,22 @@ M.Berserker_E_Undying = {
 		return true
 	end,
 	TurnStart = function(c: Card, turn: number)
-		if c.Mem.armed and turn > c.Mem.armed and not c.Mem.on then
+		if c.Mem.armed and turn > c.Mem.armed then
 			c.Mem.on = true
-			-- 2레벨: 최대 체력 10당 3%(2026-10-04 리워크)
-			local bonus = if c.Level >= 2 then math.floor(H.Ally(c).MaxHealth / 10) * c.P(3) else c.P(3)
-			H.Mod(c, "DamageDealt", bonus, -1)
 		end
+		undyingRefresh(c)
+	end,
+	BeforeSkill = function(c: Card)
+		undyingRefresh(c)
+		return false
+	end,
+	Damaged = function(c: Card)
+		undyingRefresh(c)
+		return false
+	end,
+	Healed = function(c: Card)
+		undyingRefresh(c)
+		return false
 	end,
 }
 

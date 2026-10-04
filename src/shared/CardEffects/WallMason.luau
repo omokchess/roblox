@@ -229,13 +229,24 @@ M.WallMason_R_Blessing = {
 	end,
 }
 
--- 후열 조준: 뒷벽 허물기 벽당 {1}%
+-- 허물어진 틈(옛 후열 조준, Id 그대로): 뒷벽 허물기에 맞은 적 2턴 받는 피해 +{1}% — 다시 맞으면 갱신(겹치지 않음)
 M.WallMason_R_BackRowAim = {
-	Rules = {
-		BackWallPerStack = function(c: Card, value: number): number
-			return math.max(value, c.P(1))
-		end,
-	},
+	AfterSkill = function(c: Card, info: any)
+		if not isSkill(info, "BreakBackWall") then
+			return false
+		end
+		local seen = {}
+		for _, list in info.Hits do
+			for _, enemy in list do
+				if not seen[enemy] then
+					seen[enemy] = true
+					BattleStatus.RemoveBySource(enemy.Status, "카드:" .. c.Id)
+					H.ModOn(c, enemy, "DamageTaken", c.P(1), 2)
+				end
+			end
+		end
+		return next(seen) ~= nil
+	end,
 }
 
 -- 버팀벽: 벽이 있는 동안 그로기가 {1}% 덜 찬다

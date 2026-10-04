@@ -19,9 +19,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 from card_edit import apply, CARD_DIR, RULE  # noqa: E402
 
-MANUAL = {
-    "WallMason_E_MasonHand": {"Levels": [[5, 8], [2, 4], [2, 3]]},
-}
+# 한 번만 쓰는 손 수정은 여기 두지 말 것 — 돌릴 때마다 카드 파일을 옛 값으로 덮어쓴다(2026-10-04 석공의 손 사고)
+MANUAL = {}
 
 
 def ladders():
