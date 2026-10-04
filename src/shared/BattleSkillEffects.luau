@@ -63,7 +63,7 @@ export type Context = {
 	-- 유닛의 상태이상 그릇을 꺼낸다.
 	StatusOf: (unit: any) -> BattleStatus.State,
 	-- 피해를 넣는다. 죽지 않는 피해는 canKill=false.
-	Damage: (unit: any, amount: number, element: BattleStatus.Element, canKill: boolean) -> number,
+	Damage: (unit: any, amount: number, element: BattleStatus.Element, canKill: boolean, ignore: number?) -> number,
 	-- 회복시킨다.
 	Heal: (unit: any, amount: number) -> number,
 	-- 스테미나를 채운다. 실제로 채워진 양을 돌려준다(명상).
@@ -845,7 +845,7 @@ function BattleSkillEffects.ThrowBottle(status: BattleStatus.State, bottle: stri
 	if bottle == R.POISON_BOTTLE then
 		BattleStatus.AddPoison(status, math.floor(query("PoisonBottleAmount", 10)))
 	elseif bottle == R.FIRE_BOTTLE then
-		BattleStatus.AddBurn(status, math.floor(query("FireBottleAmount", 10)))
+		BattleStatus.AddBurn(status, math.floor(query("FireBottleAmount", 10)), query("ResistIgnore", 0))
 	elseif bottle == R.OIL_BOTTLE then
 		BattleStatus.AddOil(status, 10)
 	end
@@ -1031,7 +1031,7 @@ local alchemistEffects: { [string]: Effect } = {
 			for _, target in ctx.Targets do
 				local targetStatus = ctx.StatusOf(target)
 				BattleStatus.AddPoison(targetStatus, 10)
-				BattleStatus.AddBurn(targetStatus, 10)
+				BattleStatus.AddBurn(targetStatus, 10, ctx.Query("ResistIgnore", 0))
 				BattleStatus.AddOil(targetStatus, 10)
 			end
 		end,

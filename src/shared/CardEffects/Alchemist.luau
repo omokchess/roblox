@@ -78,7 +78,8 @@ end
 
 --[[
 	2026-10-04 리워크 패시브 둘(키트가 늘 켠다):
-	  맹독성 물질 — 적의 도트·속성 경감률을 30% 합연산으로 무시(GridBattle damageUnit 의 ResistIgnore)
+	  맹독성 물질 — 연금술사가 건 화상(과 그 화상에 얹는 피해)만 적 경감률을 30% 합연산으로 무시.
+	                화상을 걸 때 BattleStatus.BurnIgnore 에 새기고 GridBattle damageUnit 이 본다
 	  깨진 병     — 던지기마다 [깨진 병] 1(최대 8), 수치 1당 주는 피해 +3%
 ]]
 local function refreshBroken(c: Card)
@@ -316,7 +317,7 @@ M.Alchemist_R_Accelerant = {
 		for _, enemy in H.Enemies(c) do
 			if enemy.Status.Oil > 0 and enemy.Status.Burn > 0 then
 				local tick = math.floor(enemy.MaxHealth * enemy.Status.Burn / 100)
-				c.Rt.Env.Damage(enemy, tick * c.P(1), "Fire", false)
+				c.Rt.Env.Damage(enemy, tick * c.P(1), "Fire", false, enemy.Status.BurnIgnore)
 				count += 1
 			end
 		end
@@ -382,7 +383,7 @@ M.Alchemist_R_Chain = {
 		for _, enemy in neighbours(c, target, 1) do
 			BattleStatus.AddBleed(enemy.Status, math.floor(s.Bleed * c.P(1)))
 			BattleStatus.AddPoison(enemy.Status, math.floor(s.Poison * c.P(1)))
-			BattleStatus.AddBurn(enemy.Status, math.floor(s.Burn * c.P(1)))
+			BattleStatus.AddBurn(enemy.Status, math.floor(s.Burn * c.P(1)), Q(c.Rt, "ResistIgnore", 0))
 			BattleStatus.AddOil(enemy.Status, math.floor(s.Oil * c.P(1)))
 			count += 1
 		end

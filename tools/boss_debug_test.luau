@@ -5,6 +5,7 @@
 ]]
 local loadShared = require("./lune_env")
 
+local BattleStatus = loadShared("BattleStatus")
 local GridBattle = loadShared("GridBattle")
 local BattleGrid = loadShared("BattleGrid")
 local BattleSkills = loadShared("BattleSkills")
@@ -286,6 +287,17 @@ do
 	GridBattle.EndTurn(s2)
 	check(h0 - core.Health == math.floor(h0 * 0.05), string.format("출혈 지금 체력 5%%: %d → %d", h0, core.Health))
 	check(core.Resist and core.Resist.Fire == 0.9, "디버그 화염 저항 90%")
+	-- 맹독성 물질: 연금술사가 건 화상(BurnIgnore 0.3)은 저항 90% → 60%, 받는 피해 10% → 40%
+	local function burnLoss(ignore)
+		local sb = newBoss()
+		local u = sb.Units.boss_Core
+		BattleStatus.AddBurn(u.Status, 20, ignore)
+		local h = u.Health
+		GridBattle.EndTurn(sb)
+		return h - u.Health
+	end
+	local plain, toxic = burnLoss(nil), burnLoss(0.3)
+	check(plain > 0 and math.abs(toxic / plain - 4) < 0.2, string.format("맹독 화상 4배: %d vs %d", toxic, plain))
 
 	-- 회피만(광선): 막음은 실패로 / 회피·가드 불가(코어 덤프): 성공해도 맞는다
 	local s3 = newBoss()

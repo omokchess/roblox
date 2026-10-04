@@ -238,7 +238,7 @@ local KITS: { [string]: ClassKit } = {
 			{
 				Id = "Alchemist_Toxic",
 				Name = "맹독성 물질",
-				Description = "- 대상의 도트·속성 경감률을 30%만큼 무시함(합연산).",
+				Description = "- 자신이 건 [화상]은 대상의 경감률을 30%만큼 무시함(합연산).\n  - 다른 아군이 건 [화상]도 자신이 다시 걸면 자신의 것으로 갱신됨.",
 			},
 			{
 				Id = "Alchemist_BrokenBottle",

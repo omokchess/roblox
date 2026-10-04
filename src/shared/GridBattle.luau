@@ -1742,7 +1742,8 @@ local function damageUnit(
 	unit: Unit,
 	amount: number,
 	element: BattleStatus.Element?,
-	canKill: boolean?
+	canKill: boolean?,
+	ignore: number?
 ): number
 	local kind: BattleStatus.Element = element or "Physical"
 	local bossNow = if unit.Part then state.Boss else nil
@@ -1752,14 +1753,12 @@ local function damageUnit(
 	local scaled = BattleStatus.IncomingDamage(unit.Status, amount, kind)
 	--[[
 		속성 저항(2026-10-04 리워크): 유닛 Resist[속성] 만큼 덜 받는다(디버그 화염 90%).
-		적이 받을 때는 아군 쪽 저항 무시(연금술사 맹독성 물질 — ResistIgnore)를 합연산으로 뺀다.
+		ignore = 연금술사 맹독성 물질(그가 건 화상의 BurnIgnore)만큼 합연산으로 뺀다 — 다른 직업 피해엔 없음.
 		화염 피해는 한 번에 FIRE_DAMAGE_CAP 까지만.
 	]]
 	local resist = (unit.Resist and unit.Resist[kind]) or 0
 	if resist > 0 then
-		if unit.Side == "Enemy" then
-			resist = math.max(0, resist - query(state, "ResistIgnore", 0))
-		end
+		resist = math.max(0, resist - (ignore or 0))
 		scaled *= 1 - resist
 	end
 	if kind == "Fire" then
@@ -1888,8 +1887,8 @@ makeEnv = function(state: State): any
 		Heal = function(unit: Unit, amount: number): number
 			return heal(state, unit, amount)
 		end,
-		Damage = function(unit: Unit, amount: number, element: BattleStatus.Element?, canKill: boolean?): number
-			return damageUnit(state, unit, amount, element, canKill)
+		Damage = function(unit: Unit, amount: number, element: BattleStatus.Element?, canKill: boolean?, ignore: number?): number
+			return damageUnit(state, unit, amount, element, canKill, ignore)
 		end,
 		Log = function(message: string)
 			pushLog(state, message)
@@ -2109,8 +2108,8 @@ function GridBattle.ResolveSkill(
 		StatusOf = function(unit)
 			return unit.Status
 		end,
-		Damage = function(unit, amount, element, canKill)
-			return damageUnit(state, unit, amount, element, canKill)
+		Damage = function(unit, amount, element, canKill, ignore)
+			return damageUnit(state, unit, amount, element, canKill, ignore)
 		end,
 		Heal = function(unit, amount)
 			return heal(state, unit, amount)
@@ -2776,6 +2775,7 @@ function GridBattle.EndTurn(state: State)
 				지속 피해. `TickDots`는 피해량만 돌려주고 감소까지 처리한다.
 				죽지 않아야 하므로 canKill=false로 넣는다.
 			]]
+			local burnIgnore = unit.Status.BurnIgnore -- 다 타면 TickDots 가 지우므로 먼저 받아 둔다
 			local tick = BattleStatus.TickDots(unit.Status, unit.MaxHealth, unit.Health)
 			-- 보스 부위는 도트를 BOSS_DOT_CUT(99%) 덜 받는다
 			if unit.Part and BOSS_DOT_CUT > 0 then
@@ -2786,7 +2786,7 @@ function GridBattle.EndTurn(state: State)
 			end
 			local total = 0
 			total += damageUnit(state, unit, tick.Physical, "Physical", false)
-			total += damageUnit(state, unit, tick.Fire, "Fire", false)
+			total += damageUnit(state, unit, tick.Fire, "Fire", false, burnIgnore)
 			total += damageUnit(state, unit, tick.True, "True", false)
 			if #tick.Notes > 0 then
 				-- 보스 부위는 깎인 실제 피해를 적는다(원래 줄은 경감 전 수치)

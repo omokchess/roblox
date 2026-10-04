@@ -88,6 +88,8 @@ export type State = {
 	Bleed: number,
 	Poison: number,
 	Burn: number,
+	-- 화상을 건 연금술사의 저항 무시(맹독성 물질). 연금술사가 걸 때마다 갱신, 화상이 다 타면 지움
+	BurnIgnore: number?,
 	Oil: number,
 	Stacks: { [string]: number },
 	Modifiers: { Modifier },
@@ -223,8 +225,11 @@ function BattleStatus.AddPoison(state: State, amount: number): number
 	return state.Poison
 end
 
-function BattleStatus.AddBurn(state: State, amount: number): number
+function BattleStatus.AddBurn(state: State, amount: number, ignore: number?): number
 	state.Burn = math.max(0, state.Burn + math.floor(amount))
+	if ignore and ignore > 0 then
+		state.BurnIgnore = ignore
+	end
 	return state.Burn
 end
 
@@ -263,6 +268,9 @@ function BattleStatus.TickDots(state: State, maxHealth: number, health: number?)
 		result.Fire += damage
 		table.insert(result.Notes, string.format("화상 %d%% (%d 피해)", state.Burn, damage))
 		state.Burn = math.max(0, state.Burn - BattleStatus.BURN_DECAY)
+		if state.Burn == 0 then
+			state.BurnIgnore = nil
+		end
 	end
 
 	if state.Oil > 0 then
@@ -343,6 +351,7 @@ function BattleStatus.Snapshot(state: State): any
 		Bleed = state.Bleed,
 		Poison = state.Poison,
 		Burn = state.Burn,
+		BurnIgnore = state.BurnIgnore,
 		Oil = state.Oil,
 		Stacks = stacks,
 		Modifiers = modifiers,
