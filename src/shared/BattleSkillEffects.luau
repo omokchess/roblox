@@ -46,6 +46,8 @@ local R = ClassResources
 	require하지 않아도 되고, 순환 참조가 생기지 않는다.
 ]]
 export type Context = {
+	-- 연타 수(Before 가 정한다 — 펄서 수렴. 없으면 1)
+	Repeat: number?,
 	-- 시전자 (아군)
 	Ally: any,
 	-- 시전자의 상태이상 그릇
@@ -520,7 +522,10 @@ local pulsarEffects: { [string]: Effect } = {
 				stacks = fixed
 			end
 			local qte = if ctx.Grade == "Success" then ctx.Query("ConvergeQteBonus", 0.2) else 0
-			return (1 + stacks * 0.3) * (1 + qte)
+			-- 2026-10-04: 설명대로 [공명] 수만큼 연타(없으면 한 번). 예전엔 한 번만 때리고 공명 1당 +30% 를 곱했다
+			ctx.Repeat = math.max(1, stacks)
+			ctx.Log(string.format("수렴 %d연타", ctx.Repeat))
+			return 1 + qte
 		end,
 		After = function(ctx)
 			local extra = 1 + (if ctx.Grade == "Success" then 1 else 0) + math.floor(ctx.Query("ConvergeDepolarBonus", 0))
@@ -746,7 +751,8 @@ local wallMasonEffects: { [string]: Effect } = {
 	-- 뒷벽 허물기: [벽] 중첩 1당 피해 +6%(후열 조준 +).
 	BreakBackWall = {
 		Before = function(ctx)
-			return 1 + BattleStatus.Stack(ctx.Status, R.WALL) * ctx.Query("BackWallPerStack", 0.06)
+			-- 2026-10-04 사용자 "뒷벽 허물기 기본 피해량 너프": 풀세팅 한 대상 51.6만(다음 스킬의 2.7배) → 이 스킬 피해 −70%
+			return 0.3 * (1 + BattleStatus.Stack(ctx.Status, R.WALL) * ctx.Query("BackWallPerStack", 0.06))
 		end,
 	},
 	-- 축성: 아군 전체에게 벽 3중첩(솔로라 자신뿐). 초석이면 한 아군에게 더 많이(카드가 더한다).

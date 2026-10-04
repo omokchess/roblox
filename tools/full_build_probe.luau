@@ -38,7 +38,7 @@ local function battle()
 end
 
 -- 자원 가득: 상한(거센 빛이면 질량 50), 붕괴 차징 3(과충전)
-local FULL = { Mass = 50, Charge = 3, Wall = 20 }
+local FULL = { Mass = 50, Charge = 3, Wall = 20, Rage = 8, Focus = 10 }
 local function fill(s)
 	local ally = GridBattle.Ally(s)
 	for _, id in ClassResources.ForClass(classId) do
@@ -47,11 +47,12 @@ local function fill(s)
 	end
 end
 
-local function hp(s): number
-	local t = 0
-	for _, u in s.Units do
+-- 적마다 남은 체력(한 대상 기준 피해를 보려고)
+local function hps(s): { [string]: number }
+	local t = {}
+	for id, u in s.Units do
 		if u.Side == "Enemy" then
-			t += u.Health
+			t[id] = u.Health
 		end
 	end
 	return t
@@ -70,10 +71,20 @@ for i, entry in list do
 				table.insert(stacks, id .. "=" .. n)
 			end
 		end
-		local h0 = hp(s)
+		local h0 = hps(s)
 		local ok, err = GridBattle.ResolveSkill(s, i, "Success", function()
 			return 0.999
 		end)
-		print(string.format("  %-14s %9d  %s  (재사용 %s, 자원 %s)", entry.Id, if ok then h0 - hp(s) else -1, if ok then "" else tostring(err), tostring(skill.Cooldown or 0), table.concat(stacks, " ")))
+		local h1 = hps(s)
+		local total, top, hit = 0, 0, 0
+		for id, h in h0 do
+			local d = h - (h1[id] or h)
+			if d > 0 then
+				total += d
+				top = math.max(top, d)
+				hit += 1
+			end
+		end
+		print(string.format("  %-16s 한 대상 %9d  (합 %9d · %d명)  재사용 %s %s", entry.Id, if ok then top else -1, total, hit, tostring(skill.Cooldown or 0), if ok then "" else tostring(err)))
 	end
 end

@@ -445,7 +445,7 @@ local LIST: { Keyword } = {
 		Name = "공명",
 		Kind = "Resource",
 		Description = "- 최대 3스택.\n"
-			.. "- 수치 1당 펄서의 `수렴` 스킬의 [가하는 피해량] + 30%.",
+			.. "- 펄서의 `수렴`이 수치만큼 연타함(없으면 한 번).",
 		Scalable = true,
 		Unit = "",
 		Color = "#5ad0b0",

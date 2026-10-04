@@ -2202,27 +2202,38 @@ function GridBattle.ResolveSkill(
 			앞뒤관통의 "9 × 2(합 18)"처럼, `skill.Damage`는 모션 하나의 몫이다.
 			같은 대상이 두 모션에 다 걸리면 두 번 맞는다(앞 모션에 쓰러졌으면 건너뛴다).
 		]]
+		-- 연타(2026-10-04): Before 가 context.Repeat 를 정하면 대상마다 그만큼 따로 때린다(펄서 수렴 — [공명] 수만큼).
+		-- 타격마다 치명타를 따로 굴리고 Hit 훅도 타격마다. 연출에는 대상마다 합친 피해 하나로 보낸다
+		local repeats = math.max(1, math.floor(context.Repeat or 1))
 		for index, aliveHits in motionHitUnits do
 			for _, target in aliveHits do
 				if not target.Alive then
 					continue
 				end
-				local hitInfo = { Target = target, Skill = skill, Bonus = 0 }
-				fire(state, "BeforeHit", hitInfo)
-				local amount = base * math.max(0, 1 + hitInfo.Bonus)
-				local roll = if rng then rng() else nextRandom(state)
-				local crit = roll < critChance
-				if crit then
-					amount *= critMultiplier
-					crits += 1
+				local sum, anyCrit = 0, false
+				for _ = 1, repeats do
+					if not target.Alive then
+						break
+					end
+					local hitInfo = { Target = target, Skill = skill, Bonus = 0 }
+					fire(state, "BeforeHit", hitInfo)
+					local amount = base * math.max(0, 1 + hitInfo.Bonus)
+					local roll = if rng then rng() else nextRandom(state)
+					local crit = roll < critChance
+					if crit then
+						amount *= critMultiplier
+						crits += 1
+						anyCrit = true
+					end
+					local dealt = damageUnit(state, target, amount, "Physical", true)
+					total += dealt
+					sum += dealt
+					hitCount += 1
+					-- 맞으면 그로기가 찬다. 패리만큼은 아니지만 누적되면 스턴이 난다.
+					GroggyGauge.AddFrom(target.Groggy, "Hit")
+					fire(state, "Hit", { Target = target, Damage = dealt, Crit = crit, Skill = skill })
 				end
-				local dealt = damageUnit(state, target, amount, "Physical", true)
-				total += dealt
-				table.insert(eventHits[index], { Id = target.Id, Damage = dealt, Crit = crit })
-				hitCount += 1
-				-- 맞으면 그로기가 찬다. 패리만큼은 아니지만 누적되면 스턴이 난다.
-				GroggyGauge.AddFrom(target.Groggy, "Hit")
-				fire(state, "Hit", { Target = target, Damage = dealt, Crit = crit, Skill = skill })
+				table.insert(eventHits[index], { Id = target.Id, Damage = sum, Crit = anyCrit })
 			end
 		end
 		pushLog(state, string.format("%s ×%.1f — %d명에게 %d 피해", skill.Name, multiplier, hitCount, total))
