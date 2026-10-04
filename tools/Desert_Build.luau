@@ -55,7 +55,8 @@ local function block(name, x0, x1, z0, z1, top, bottom, parent, side, sideMat, c
 	local h = top - bottom
 	local cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
 	part(name, Vector3.new(x1 - x0, h - 1.2, z1 - z0), CFrame.new(cx, bottom + (h - 1.2) / 2, cz), side, sideMat, parent)
-	part(name .. "_윗면", Vector3.new(x1 - x0, 1.2, z1 - z0), CFrame.new(cx, top - 0.6, cz), cap, capMat, parent)
+	-- 윗면(모래)은 0.2 낮추고 옆으로 0.1 넓힌다(2026-10-04 사용자: 바위 위 모래가 떠 보임 — ±0.1 흔들기로 생긴 틈을 덮고, 옆면이 바위 옆면과 겹쳐 깜박이지 않게)
+	part(name .. "_윗면", Vector3.new(x1 - x0 + 0.1, 1.2, z1 - z0 + 0.1), CFrame.new(cx, top - 0.8, cz), cap, capMat, parent)
 end
 
 

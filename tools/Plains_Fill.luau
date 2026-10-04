@@ -59,7 +59,8 @@ local function block(name, x0, x1, z0, z1, top, bottom, parent, rockColor, sideM
 	local h = top - bottom
 	local cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
 	part(name, Vector3.new(x1 - x0, h - 1.2, z1 - z0), CFrame.new(cx, bottom + (h - 1.2) / 2, cz), rockColor or ROCK, sideMat, parent)
-	part(name .. "_풀", Vector3.new(x1 - x0, 1.2, z1 - z0), CFrame.new(cx, top - 0.6, cz), capColor or GRASS, capMat or M.Grass, parent)
+	-- 윗판은 0.2 낮추고 옆으로 0.1 넓힌다(사막 모래와 같은 까닭 — 흔들기 틈·옆면 깜박임)
+	part(name .. "_풀", Vector3.new(x1 - x0 + 0.1, 1.2, z1 - z0 + 0.1), CFrame.new(cx, top - 0.8, cz), capColor or GRASS, capMat or M.Grass, parent)
 end
 
 
