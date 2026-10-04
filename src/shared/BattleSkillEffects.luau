@@ -316,7 +316,7 @@ local duelistEffects: { [string]: Effect } = {
 			local focus = BattleStatus.Stack(ctx.Status, R.FOCUS)
 			BattleStatus.AddModifier(ctx.Status, "CritChance", 0.15, 1, "연계")
 			-- 2026-10-03 사용자: 버프 받은 찔러찔러또찔러보다 약하다 → +1000%, 2026-10-04 연타 규칙 뒤 +500%(집중 보너스와 합연산)
-			return 1 + 5 + focus * 0.025
+			return 1 + 0.85 + focus * 0.025 -- 2026-10-04 서브딜러 18만 선: +500% → +85%
 		end,
 		After = function(ctx)
 			local status = ctx.Status

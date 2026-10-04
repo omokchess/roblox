@@ -2159,6 +2159,8 @@ function GridBattle.ResolveSkill(
 	if effect and effect.Before then
 		skillBonus = effect.Before(context)
 	end
+	-- 스킬마다 피해 배율(BattleSkills DamageScale)
+	skillBonus *= skill.DamageScale or 1
 
 	--[[
 		2) 피해. 주는 피해 보정(태세·허물 벽·다지기…)을 함께 먹인다.
