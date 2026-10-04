@@ -51,15 +51,18 @@ end
 local function build()
 	local surface = workspace:FindFirstChild("Surface")
 	assert(surface, "Surface 폴더가 없다")
-	-- 지난번에 언덕 위로 들어 올린 나무·바위를 먼저 내려놓는다(FillLift 속성 = 올린 만큼)
-	local liftables = {}
+	--[[
+		지난번에 들어 올린 평원 지형 물건을 먼저 내려놓는다(FillLift 속성 = 올린 만큼).
+		나무·바위: 언덕·단 위로(땅 높이 차이만큼). 옛 덩어리·오르막·잔해: 든 단 높이만큼(PLATEAUS — 2026-10-04 땅 판 높낮이).
+	]]
+	local liftables, lifters = {}, {}
 	for _, f in surface:GetChildren() do
 		if f.Name:match("^R_평원") and f.Name ~= "R_평원채움" then
-			for _, sub in { "Trees", "Rocks" } do
+			for _, sub in { "Trees", "Rocks", "Masses", "Ramps", "Ruins" } do
 				local x = f:FindFirstChild(sub)
 				if x then
 					for _, item in x:GetChildren() do
-						table.insert(liftables, item)
+						table.insert(if sub == "Trees" or sub == "Rocks" then liftables else lifters, item)
 					end
 				end
 			end
@@ -72,11 +75,13 @@ local function build()
 			inst.CFrame += Vector3.new(0, dy, 0)
 		end
 	end
-	for _, item in liftables do
-		local d = item:GetAttribute("FillLift")
-		if d then
-			shift(item, -d)
-			item:SetAttribute("FillLift", nil)
+	for _, list in { liftables, lifters } do
+		for _, item in list do
+			local d = item:GetAttribute("FillLift")
+			if d then
+				shift(item, -d)
+				item:SetAttribute("FillLift", nil)
+			end
 		end
 	end
 	local old = surface:FindFirstChild("R_평원채움")
@@ -92,15 +97,69 @@ local function build()
 		f.Parent = root
 		return f
 	end
+	local function centerOf(item)
+		return if item:IsA("Model") then item:GetBoundingBox().Position else item.Position
+	end
 
-	-- 1. 덩어리(같은 이름 켜는 아래 켜 윗면 2 아래에서, 첫 켜는 땅에 4 묻힌다)
+	-- 옛 지형 땅 높이(이번 단·언덕 짓기 전) — 나무·바위를 얼마나 올릴지 잰다
+	local baseHit = {}
+	for _, f in surface:GetChildren() do
+		if f ~= root and f.Name:match("^R_평원") then
+			for _, sub in { "Land", "Cliffs", "Masses", "Ramps", "Sand" } do
+				local x = f:FindFirstChild(sub)
+				if x then
+					table.insert(baseHit, x)
+				end
+			end
+		end
+	end
+	local baseRay = RaycastParams.new()
+	baseRay.FilterType = Enum.RaycastFilterType.Include
+	baseRay.FilterDescendantsInstances = baseHit
+	local baseY = {}
+	for _, item in liftables do
+		local p = centerOf(item)
+		local a = workspace:Raycast(Vector3.new(p.X, 300, p.Z), Vector3.new(0, -400, 0), baseRay)
+		baseY[item] = if a then a.Position.Y else TOP
+	end
+
+	-- 0. 땅 판 높낮이: 단(바위 옆 + 풀 윗면). 한 점의 단 높이 = 그 점을 덮는 단 중 가장 높은 것
+	local plateaus = folder("Plateaus")
+	for i, pl in PLATEAUS do
+		block(string.format("%s_%d", pl[1], i), pl[2], pl[3], pl[4], pl[5], TOP + pl[6], TOP - 4, plateaus, if i % 2 == 0 then ROCK2 else ROCK)
+	end
+	local function plateauAt(x, z)
+		local h = 0
+		for _, pl in PLATEAUS do
+			if pl[2] <= x and x <= pl[3] and pl[4] <= z and z <= pl[5] then
+				h = math.max(h, pl[6])
+			end
+		end
+		return h
+	end
+	-- 단 안의 옛 덩어리·오르막·잔해를 단 높이만큼 올린다(검사가 걸침 없음을 보장)
+	local raised = 0
+	for _, item in lifters do
+		local p = centerOf(item)
+		local dy = plateauAt(p.X, p.Z)
+		if dy > 0 then
+			shift(item, dy)
+			item:SetAttribute("FillLift", dy)
+			raised += 1
+		end
+	end
+
+	-- 1. 언덕(같은 이름 켜는 아래 켜 윗면 2 아래에서, 첫 켜는 땅에 4 묻힌다). 첫 켜가 단 위면 단 높이를 얹는다
 	local masses = folder("Masses")
-	local tierTop = {}
+	local tierTop, lift = {}, {}
 	for i, m in MASSES do
 		local name = m[1]
+		if lift[name] == nil then
+			lift[name] = plateauAt((m[2] + m[3]) / 2, (m[4] + m[5]) / 2)
+		end
 		local bottom = if tierTop[name] then tierTop[name] - 2 else TOP - 4
-		tierTop[name] = TOP + m[6]
-		block(string.format("%s_%d", name, i), m[2], m[3], m[4], m[5], TOP + m[6], bottom, masses, if i % 2 == 0 then ROCK2 else ROCK)
+		tierTop[name] = TOP + m[6] + lift[name]
+		block(string.format("%s_%d", name, i), m[2], m[3], m[4], m[5], tierTop[name], bottom, masses, if i % 2 == 0 then ROCK2 else ROCK)
 	end
 	-- 2. 오르막 쐐기(WedgePart 는 로컬 +Z 쪽이 높다)
 	local ramps = folder("Ramps")
@@ -160,17 +219,10 @@ local function build()
 		end
 	end
 
-	-- 땅 높이: 평원 지형(땅·덩어리·오르막·모래·절벽) + 이번 덩어리·오르막·못 물
-	local hit: { Instance } = { masses, ramps, ponds }
-	for _, f in surface:GetChildren() do
-		if f ~= root and f.Name:match("^R_평원") then
-			for _, sub in { "Land", "Cliffs", "Masses", "Ramps", "Sand" } do
-				local x = f:FindFirstChild(sub)
-				if x then
-					table.insert(hit, x)
-				end
-			end
-		end
+	-- 땅 높이: 평원 지형(땅·덩어리·오르막·모래·절벽, 단 안 것은 올린 뒤) + 이번 단·언덕·오르막·못 물
+	local hit: { Instance } = { plateaus, masses, ramps, ponds }
+	for _, h in baseHit do
+		table.insert(hit, h)
 	end
 	local ray = RaycastParams.new()
 	ray.FilterType = Enum.RaycastFilterType.Include
@@ -179,28 +231,18 @@ local function build()
 		local r = workspace:Raycast(Vector3.new(x, 300, z), Vector3.new(0, -400, 0), ray)
 		return if r then r.Position.Y else TOP
 	end
-	-- 언덕 안에 든 나무·바위를 언덕 윗면으로 들어 올린다(언덕 빼고 잰 땅 → 언덕 넣고 잰 땅 차이)
-	local baseHit = {}
-	for _, h in hit do
-		if h ~= masses and h ~= ramps and h ~= ponds then
-			table.insert(baseHit, h)
-		end
-	end
-	local baseRay = RaycastParams.new()
-	baseRay.FilterType = Enum.RaycastFilterType.Include
-	baseRay.FilterDescendantsInstances = baseHit
+	-- 단·언덕 안에 든 나무·바위를 새 땅 윗면으로 들어 올린다(짓기 전에 잰 땅 → 지은 뒤 땅 차이)
 	local lifted = 0
 	for _, item in liftables do
-		local p = if item:IsA("Model") then item:GetBoundingBox().Position else item.Position
-		local a = workspace:Raycast(Vector3.new(p.X, 300, p.Z), Vector3.new(0, -400, 0), baseRay)
-		local dy = groundY(p.X, p.Z) - (if a then a.Position.Y else TOP)
+		local p = centerOf(item)
+		local dy = groundY(p.X, p.Z) - baseY[item]
 		if dy > 0.05 then
 			shift(item, dy)
 			item:SetAttribute("FillLift", dy)
 			lifted += 1
 		end
 	end
-	say("언덕 위로 올린 나무·바위 %d", lifted)
+	say("단 %d · 단 따라 올린 옛 덩어리·오르막·잔해 %d · 언덕·단 위로 올린 나무·바위 %d", #PLATEAUS, raised, lifted)
 
 	-- 물건 밑면을 (x, z) 의 땅 + dy 에 앉힌다(경계 상자 가운데를 x, z 에)
 	local function seat(m, x, z, yaw, dy)

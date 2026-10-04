@@ -53,7 +53,7 @@ MASSES = [
     ("못재", -742, -660, 690, 800, 5), ("못재", -740, -668, 694, 790, 11), ("못재", -738, -680, 708, 775, 17), ("못재", -736, -695, 712, 758, 23), ("못재", -734, -708, 716, 745, 29),
     ("버들재", -556, -440, 750, 840, 4), ("버들재", -550, -455, 770, 838, 9), ("버들재", -545, -475, 795, 836, 14),
     # 도성 서순환 바로 바깥 낮은 둔덕(서촌에서 나서자마자 땅이 오르내리게)
-    ("서촌둔덕", -460, -350, 600, 720, 3), ("서촌둔덕", -450, -365, 612, 700, 6),
+    ("서촌둔덕", -428, -345, 600, 720, 3), ("서촌둔덕", -418, -360, 612, 700, 6),
     ("남서둔덕", -445, -335, 860, 950, 4), ("남서둔덕", -440, -360, 862, 930, 9),
     ("서남해", -740, -670, 885, 975, 4), ("서남해", -738, -685, 890, 950, 9), ("서남해", -736, -700, 895, 925, 14),
     # ── 북쪽 들 ──
@@ -72,6 +72,23 @@ MASSES = [
     ("동남해", 1005, 1120, 795, 872, 4), ("동남해", 1010, 1110, 800, 850, 9),
 ]
 RAMPS = []
+# 땅 판 높낮이(2026-10-04 사용자: "평원 전체에서, 큰 판도 높낮이를 줘서 입체감을 더 살릴 것").
+# 도성(서순환·궁) 바깥 들판에 넓은 단(바위 옆 + 풀 윗면)을 깔아 땅 자체가 층을 이루게 한다.
+#   { 이름, x0, x1, z0, z1, 높이(땅 위) } — 높이 3 = 한 단, 6 = 두 단(3 단 안쪽에만). 가장자리 3 은 뛰어 오른다.
+#   단 안의 옛 덩어리·오르막·잔해·나무·바위(평원 지형)는 단 높이만큼 함께 올린다. 언덕(MASSES)은 첫 켜가 든 단 위에 선다.
+#   도성 물건·돌길·사용자 물건은 단에 걸치면 안 된다(검사).
+PLATEAUS = [
+    # 서쪽: 서순환 바깥 남서 들 한 단 + 그 안쪽(버들마루·버들재) 두 단, 서들둔덕 쪽 한 단 — 사이(z 575~592)는 낮은 골
+    ("서들판", -650, -318, 592, 972, 3),
+    ("서들판위", -628, -436, 605, 748, 6),
+    ("서중판", -586, -318, 395, 575, 3),
+    # 북쪽: 북촌 바깥 들 한 단
+    ("북들판", -440, -75, 55, 198, 3),
+    # 북동: 바닷길 동쪽 한 단(동북들 언덕이 올라앉음)
+    ("동북판", 548, 690, -100, 104, 3),
+    # 동쪽: 갯둔덕·동언덕 들 한 단
+    ("동판", 868, 1144, 336, 524, 3),
+]
 KITS = []
 TREES = []
 ROCKS = []
@@ -175,8 +192,60 @@ def is_tree(tag, name):
     return "Trees" in tag or "Flora" in tag or "나무" in tag
 
 
-def check(occ, land):
+def plateau_at(x0, z0, x1, z1):
+    """네모 전체가 든 단 중 가장 높은 것의 높이(없으면 0)"""
+    h = 0
+    for _, a0, a1, b0, b1, ph in PLATEAUS:
+        if a0 <= x0 and x1 <= a1 and b0 <= z0 and z1 <= b1:
+            h = max(h, ph)
+    return h
+
+
+def check_plateaus(occ, land):
     probs = []
+    for pl in PLATEAUS:
+        name, x0, x1, z0, z1, h = pl
+        r = (x0, z0, x1, z1)
+        if not inside_land(r, land):
+            probs.append("단이 땅 밖: %s" % name)
+        if h > 3 and plateau_at(*r) < h and not any(
+            o is not pl and o[1] <= x0 and x1 <= o[2] and o[3] <= z0 and z1 <= o[4] and o[5] == h - 3 for o in PLATEAUS
+        ):
+            probs.append("두 단(%d)은 한 단 안쪽에: %s" % (h, name))
+        for tag, oname, orect, _ in occ:
+            if "/Sand" in tag:
+                continue
+            inside = r[0] <= orect[0] and orect[2] <= r[2] and r[1] <= orect[1] and orect[3] <= r[3]
+            lift = tag.startswith("R_평원") and any(tag.endswith(k) for k in ("/Trees", "/Rocks", "/Masses", "/Ramps", "/Ruins"))
+            if lift:
+                if is_tree(tag, oname):
+                    # 나무는 밑동(4)만 본다: 단 안쪽 5 이상 또는 바깥 4 넘게
+                    cx, cz = (orect[0] + orect[2]) / 2, (orect[1] + orect[3]) / 2
+                    inner = r[0] + 5 <= cx <= r[2] - 5 and r[1] + 5 <= cz <= r[3] - 5
+                    if not (inner or not overlap((cx, cz, cx, cz), r, 4)):
+                        probs.append("나무가 단 가장자리에: %s ↔ %s/%s" % (name, tag, oname))
+                elif not inside and overlap(r, orect, 2):
+                    probs.append("단에 걸침: %s ↔ %s/%s" % (name, tag, oname))
+                continue
+            pad = 0 if "/Cliffs" in tag else 3
+            if is_tree(tag, oname):
+                cx, cz = (orect[0] + orect[2]) / 2, (orect[1] + orect[3]) / 2
+                orect = (cx - 4, cz - 4, cx + 4, cz + 4)
+            if overlap(r, orect, pad):
+                probs.append("단이 덮음(못 올림): %s ↔ %s/%s" % (name, tag, oname))
+        # 언덕 첫 켜는 단 안이거나 2 넘게 떨어져야
+        firsts = {}
+        for m in MASSES:
+            firsts.setdefault(m[0], (m[1], m[3], m[2], m[4]))
+        for hn, hr in firsts.items():
+            inside = r[0] <= hr[0] and hr[2] <= r[2] and r[1] <= hr[1] and hr[3] <= r[3]
+            if not inside and overlap(r, hr, 2):
+                probs.append("언덕이 단에 걸침: %s ↔ %s" % (name, hn))
+    return probs
+
+
+def check(occ, land):
+    probs = check_plateaus(occ, land)
     items = new_items()
     # 덩어리·오르막 위에 얹는 것은 같은 덩어리 이름이면 괜찮다(정자를 언덕 위에) — 덩어리와 물건 겹침은 덩어리가 받침이면 허용
     mass_rects = [it[2] for it in items if it[0] == "mass"]
@@ -276,6 +345,8 @@ def render(path, occ, land, region=(-800, -280, 1220, 1090), sc=0.5):
     colors = [("/Cliffs", "#7c7c78"), ("/Masses", "#6c6a62"), ("/Ramps", "#9ab27e"), ("/Sand", "#d9cc98"),
               ("/Trees", "#2f5a2a"), ("Flora", "#2f5a2a"), ("나무", "#2f5a2a"), ("/Rocks", "#5d5d58"), ("/Paths", "#c9c3b0"),
               ("/Ruins", "#a09a8c"), ("길", "#a88f68")]
+    for _, x0, x1, z0, z1, h in sorted(PLATEAUS, key=lambda q: q[5]):
+        C.rect(x0, z0, x1, z1, "#6f9a55" if h <= 3 else "#557d40")
     for tag, name, r, top in occ:
         col = "#c0b49a"
         for key, c in colors:
@@ -308,7 +379,7 @@ def lua(v):
 def emit(path):
     kits = [(k, x, z, yaw, rest[0] if rest else 1, KIT_SRC.get(k, "JeolhwaKit")) for k, x, z, yaw, *rest in KITS]
     out = ["-- plains_fill_plan.py 가 만든 데이터(손으로 고치지 말고 표를 고칠 것)"]
-    for name, rows in (("MASSES", MASSES), ("RAMPS", RAMPS), ("KITS", kits), ("TREES", TREES), ("ROCKS", ROCKS),
+    for name, rows in (("PLATEAUS", PLATEAUS), ("MASSES", MASSES), ("RAMPS", RAMPS), ("KITS", kits), ("TREES", TREES), ("ROCKS", ROCKS),
                        ("PONDS", PONDS), ("GARDENS", GARDENS), ("MARKS", MARKS)):
         out.append("local %s = {" % name)
         out += ["\t%s," % lua(r) for r in rows]
