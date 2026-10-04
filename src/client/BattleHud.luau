@@ -460,7 +460,11 @@ end
 function BattleHud:SetEffects(effects: { any })
 	local parts = {}
 	for _, e in effects do
-		table.insert(parts, string.format("%s:%s", e.Id, tostring(e.Count)))
+		local multi = ""
+		for _, m in e.Multi or {} do
+			multi ..= "," .. tostring(m[2])
+		end
+		table.insert(parts, string.format("%s:%s%s", e.Id, tostring(e.Count), multi))
 	end
 	local sig = table.concat(parts, ";")
 	self.effects = {}
@@ -496,6 +500,45 @@ function BattleHud:SetEffects(effects: { any })
 			Font = Enum.Font.GothamBlack,
 			TextSize = 19,
 		}, icon)
+		--[[ 숫자 여럿(음표): 모서리마다 기호 + 개수. BR 오른쪽 아래 · BL 왼쪽 아래 · TL 왼쪽 위.
+		     기호는 제 숫자 쪽으로 조금씩 비켜 겹치되 색·테두리로 또렷하게(2026-10-04 사용자) ]]
+		if e.Multi then
+			icon.Size = UDim2.fromOffset(46, 46)
+			local SPOT = {
+				-- { 기호 자리(가운데 비율), 숫자 자리·정렬 }
+				BR = { Vector2.new(0.68, 0.52), UDim2.new(1, -2, 1, 0), Vector2.new(1, 1), Enum.TextXAlignment.Right },
+				BL = { Vector2.new(0.36, 0.6), UDim2.new(0, 2, 1, 0), Vector2.new(0, 1), Enum.TextXAlignment.Left },
+				TL = { Vector2.new(0.5, 0.3), UDim2.new(0, 2, 0, 1), Vector2.new(0, 0), Enum.TextXAlignment.Left },
+			}
+			for zi, m in e.Multi do
+				local spot = SPOT[m[3]]
+				local g = make("TextLabel", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(spot[1].X, spot[1].Y),
+					Size = UDim2.fromOffset(22, 22),
+					BackgroundTransparency = 1,
+					Text = m[1],
+					TextColor3 = m[4],
+					Font = Enum.Font.GothamBlack,
+					TextSize = 21,
+					ZIndex = 2 + zi,
+				}, icon)
+				make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, g)
+				local n = make("TextLabel", {
+					AnchorPoint = spot[3],
+					Position = spot[2],
+					Size = UDim2.fromOffset(18, 13),
+					BackgroundTransparency = 1,
+					Text = tostring(m[2]),
+					TextColor3 = m[4],
+					Font = Enum.Font.GothamBlack,
+					TextSize = 12,
+					TextXAlignment = spot[4],
+					ZIndex = 6,
+				}, icon)
+				make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, n)
+			end
+		end
 		if e.Count then
 			local count = make("TextLabel", {
 				AnchorPoint = Vector2.new(1, 1),

@@ -403,19 +403,27 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 			add(id, label, utf8.char(utf8.codepoint(label, 1)), Color3.fromRGB(255, 205, 90), count, keywordLine(label) or (label .. " — 직업 자원."))
 		end
 	end
-	-- 음악가면(또는 음표가 하나라도 있으면) 4·8·16분음표를 0 이어도 늘 셋 다 보인다 — 개수를 나란히 견주게
+	-- 음악가면(또는 음표가 하나라도 있으면) 음표 아이콘 하나에 숫자 셋(2026-10-04 사용자): 오른쪽 아래 4분 · 왼쪽 아래 8분 · 왼쪽 위 16분.
+	-- 스킬이 "음표를 얻음"이라 한 아이콘이되, 분음표마다 개수가 달라 셋을 따로 보인다(0 이어도)
 	if noteTotal > 0 or snapshot.AllyClassId == "Musician" then
-		for _, n in {
-			{ ClassResources.QUARTER, "♩", Color3.fromRGB(255, 196, 230) },
-			{ ClassResources.EIGHTH, "♪", Color3.fromRGB(255, 150, 210) },
-			{ ClassResources.SIXTEENTH, "♬", Color3.fromRGB(235, 100, 190) },
-		} do
-			local label = ClassResources.Label(n[1])
-			local count = status.Stacks[n[1]] or 0
-			add(n[1], label, n[2], n[3], count, string.format("%s %d개. 음표 합 %d.", label, count, noteTotal))
-		end
+		local q = status.Stacks[ClassResources.QUARTER] or 0
+		local e = status.Stacks[ClassResources.EIGHTH] or 0
+		local x = status.Stacks[ClassResources.SIXTEENTH] or 0
+		table.insert(list, {
+			Id = "Notes",
+			Name = "음표",
+			Glyph = "",
+			Color = Color3.fromRGB(255, 170, 220),
+			Count = nil,
+			-- { 기호, 개수, 모서리, 색 }
+			Multi = {
+				{ "♩", q, "BR", Color3.fromRGB(255, 205, 235) },
+				{ "♪", e, "BL", Color3.fromRGB(255, 140, 205) },
+				{ "♬", x, "TL", Color3.fromRGB(230, 90, 185) },
+			},
+			Desc = (keywordLine("음표") or "음표 — 음악가 자원.") .. string.format("\n4분음표 %d · 8분음표 %d · 16분음표 %d (합 %d)", q, e, x, noteTotal),
+		})
 	end
-
 	self.hud:SetEffects(list)
 end
 
