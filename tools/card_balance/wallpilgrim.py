@@ -21,7 +21,6 @@ EDITS = {
         "Levels": [[1, 1], [2, 3]],
     },
     "WallPilgrim_R_DeepNail": {"Levels": [[1, 1, 1, 2, 2, 2]]},
-    "WallPilgrim_R_DoubleStrike": {"Levels": [[1, 1, 1, 1, 1, 1], [1, 1, 1, 2, 2, 2]]},
     "WallPilgrim_R_Brand": {"Levels": [[3, 3, 3, 3, 3, 3], [15, 18, 21, 24, 27, 30]]},
     "WallPilgrim_R_MadeExample": {
         "Description": "[낙인]이 찍힌 적을 처치하면, 남은 [광신]이 흩어지지 않고 중첩이 가장 높은 적에게 통째로 옮겨가며 {1}중첩이 더해진다.",
@@ -30,7 +29,6 @@ EDITS = {
     "WallPilgrim_R_Sermon": {"Levels": [[1, 1, 1, 2, 2, 2]]},
     "WallPilgrim_R_Contagion": {"Levels": [[1, 1, 1, 2, 2, 2]]},
     "WallPilgrim_R_PilgrimStaff": {"Levels": [[12, 14, 16, 18, 20, 24]]},
-    "WallPilgrim_R_Offering": {"Levels": [[1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1], [10, 12, 14, 16, 18, 20]]},
     "WallPilgrim_R_DivineOffice": {"Levels": [[40, 40, 38, 36, 34, 30], [2, 2, 2, 2, 3, 3]]},
     "WallPilgrim_R_Penance": {"Levels": [[2, 2, 2, 2, 3, 3], [1, 1, 1, 1, 1, 2], [2, 2, 3, 3, 4, 4]]},
     "WallPilgrim_C_Setting": {"Levels": [[1, 1, 1, 1, 2, 2]]},
@@ -40,7 +38,6 @@ EDITS = {
         "Description": "공격하지 않고 턴을 마치면, 신앙심이 {4} 증가한다.",
         "Levels": [[4, 5, 6, 7, 8, 10]],
     },
-    "WallPilgrim_C_Companion": {"Levels": [[4, 5, 6, 7, 8, 10]], "Party": True},
     "WallPilgrim_C_Cleave": {
         "Description": "2스킬이 위아래 줄의 맨 앞 적에게도 {50}%의 피해와 [광신]을 준다.",
         "Levels": [[50, 55, 60, 65, 70, 80]],
@@ -51,13 +48,11 @@ EDITS = {
     },
     "WallPilgrim_C_Congregation": {"Levels": [[10, 12, 14, 16, 18, 20]]},
     "WallPilgrim_C_Hymn": {"Levels": [[8, 9, 10, 11, 12, 14]]},
-    "WallPilgrim_C_Weight": {"Levels": [[1, 1, 1, 1, 1, 1], [0.5, 0.6, 0.7, 0.8, 0.9, 1], [5, 6, 7, 8, 9, 10]]},
     "WallPilgrim_C_BleedNail": {
         "Description": "[광신]을 걸 때 [출혈]도 {1} 부여한다.",
         "Levels": [[1, 1, 2, 2, 3, 3]],
     },
     "WallPilgrim_C_Martyr": {"Levels": [[6, 7, 8, 9, 10, 12]]},
-    "WallPilgrim_C_Guilt": {"Levels": [[25, 28, 31, 34, 37, 40]], "Party": True},
     "WallPilgrim_C_Echo": {"Levels": [[1, 1, 1, 1, 2, 2]]},
     "WallPilgrim_C_Alms": {
         "Description": "같은 행의 아군(자신 포함)이 적을 처치하면 신앙심이 {4} 증가한다.",

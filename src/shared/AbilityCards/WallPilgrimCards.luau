@@ -93,17 +93,6 @@ local cards: { Card } = {
 		Tags = { "Judgment" },
 	},
 	{
-		Id = "WallPilgrim_R_DoubleStrike",
-		MaxLevel = 2,
-		Art = "WallPilgrim_R_DoubleStrike",
-		Name = "겹쳐 박기",
-		Description = "턴당 {1}회, 직전 턴에 [광신]을 건 적에게 연속으로 걸면 {1}중첩 더 부여한다.",
-		Levels = { { 1, 1 }, { 1, 2 } },
-		Grade = "Rare",
-		ClassId = CLASS_ID,
-		Tags = { "Judgment" },
-	},
-	{
 		Id = "WallPilgrim_R_Brand",
 		Art = "WallPilgrim_R_Brand",
 		Name = "낙인",
@@ -155,16 +144,6 @@ local cards: { Card } = {
 		Grade = "Rare",
 		ClassId = CLASS_ID,
 		Tags = { "Faith" },
-	},
-	{
-		Id = "WallPilgrim_R_Offering",
-		Art = "WallPilgrim_R_Offering",
-		Name = "헌납",
-		Description = "[광신] 중첩 {1}당 자신의 신앙심이 {1}씩, 최대 {10}까지 증가한다.",
-		Levels = { { 1, 1, 1, 1, 1, 1 }, { 1, 1, 1, 1, 1, 1 }, { 10, 12, 14, 16, 18, 20 } },
-		Grade = "Rare",
-		ClassId = CLASS_ID,
-		Tags = { "Faith", "Judgment" },
 	},
 	{
 		Id = "WallPilgrim_R_DivineOffice",
@@ -234,17 +213,6 @@ local cards: { Card } = {
 		Tags = { "Faith" },
 	},
 	{
-		Id = "WallPilgrim_C_Companion",
-		Art = "WallPilgrim_C_Companion",
-		Name = "동행",
-		Description = "같은 행의 월 필그림스 아군에게 주는 신앙심이 {4} 더 증가한다.",
-		Levels = { { 4, 5, 6, 7, 8, 10 } },
-		Party = true,
-		Grade = "Common",
-		ClassId = CLASS_ID,
-		Tags = { "Faith" },
-	},
-	{
 		Id = "WallPilgrim_C_Cleave",
 		Art = "WallPilgrim_C_Cleave",
 		Name = "쪼갬",
@@ -285,16 +253,6 @@ local cards: { Card } = {
 		Tags = { "Faith", "Spread" },
 	},
 	{
-		Id = "WallPilgrim_C_Weight",
-		Art = "WallPilgrim_C_Weight",
-		Name = "무게",
-		Description = "[광신] 중첩 {1}당 자신이 받는 피해량이 {0.5}%씩, 최대 {5}까지 줄어든다.",
-		Levels = { { 1, 1, 1, 1, 1, 1 }, { 0.5, 0.6, 0.7, 0.8, 0.9, 1 }, { 5, 6, 7, 8, 9, 10 } },
-		Grade = "Common",
-		ClassId = CLASS_ID,
-		Tags = { "Judgment", "Faith" },
-	},
-	{
 		Id = "WallPilgrim_C_BleedNail",
 		MaxLevel = 3,
 		Art = "WallPilgrim_C_BleedNail",
@@ -305,11 +263,11 @@ local cards: { Card } = {
 		ClassId = CLASS_ID,
 		Tags = { "Mark", "Judgment" },
 	},
-	--=== 2026-10-04 파상풍 카드(사용자: "파상풍 부여 관련 카드를 좀 추가") ===--
+	--=== 2026-10-04 파상풍 카드 — 동행·죄책·무게(일반)·헌납·겹쳐 박기(희귀)를 바꿈(사용자: 추가 아니라 변경) ===--
 	{
 		Id = "WallPilgrim_C_RustSpread",
 		MaxLevel = 2,
-		Art = "WallPilgrim_C_BleedNail",
+		Art = "WallPilgrim_C_Companion", -- 바꾼 카드의 그림을 물려받음
 		Name = "녹 번짐",
 		Description = "[파상풍]을 부여할 때마다 {1} 더 부여한다.",
 		Levels = { { 1, 2 } },
@@ -320,7 +278,7 @@ local cards: { Card } = {
 	{
 		Id = "WallPilgrim_C_RottenNail",
 		MaxLevel = 2,
-		Art = "WallPilgrim_R_DeepNail",
+		Art = "WallPilgrim_C_Guilt", -- 바꾼 카드의 그림을 물려받음
 		Name = "부패한 못",
 		Description = "1스킬이 [파상풍]을 {1} 더 부여한다.",
 		Levels = { { 1, 2 } },
@@ -330,7 +288,7 @@ local cards: { Card } = {
 	},
 	{
 		Id = "WallPilgrim_C_Debility",
-		Art = "WallPilgrim_C_RustyNail",
+		Art = "WallPilgrim_C_Weight", -- 바꾼 카드의 그림을 물려받음
 		Name = "쇠약",
 		Description = "[파상풍] 수치 1당 스킬 실패 확률이 {6}%가 된다.",
 		Levels = { { 6, 7, 8, 9, 10, 12 } },
@@ -340,7 +298,7 @@ local cards: { Card } = {
 	},
 	{
 		Id = "WallPilgrim_R_LockjawFit",
-		Art = "WallPilgrim_R_Brand",
+		Art = "WallPilgrim_R_Offering", -- 바꾼 카드의 그림을 물려받음
 		Name = "파상풍 발작",
 		Description = "[파상풍]이 터질 때 받는 피해가 최대 체력의 {12}%가 된다.",
 		Levels = { { 12, 14, 16, 18, 20, 22 } },
@@ -351,7 +309,7 @@ local cards: { Card } = {
 	{
 		Id = "WallPilgrim_R_Rigor",
 		MaxLevel = 3,
-		Art = "WallPilgrim_R_Contagion",
+		Art = "WallPilgrim_R_DoubleStrike", -- 바꾼 카드의 그림을 물려받음
 		Name = "경직",
 		Description = "[파상풍]이 터지면 다른 적 모두에게 [파상풍] {1}을 부여한다.",
 		Levels = { { 1, 2, 3 } },
@@ -368,17 +326,6 @@ local cards: { Card } = {
 		Grade = "Common",
 		ClassId = CLASS_ID,
 		Tags = { "Faith", "Mark" },
-	},
-	{
-		Id = "WallPilgrim_C_Guilt",
-		Art = "WallPilgrim_C_Guilt",
-		Name = "죄책",
-		Description = "[광신]이 걸린 적이 자신을 노릴 확률이 {25}% 감소한다.",
-		Levels = { { 25, 28, 31, 34, 37, 40 } },
-		Party = true,
-		Grade = "Common",
-		ClassId = CLASS_ID,
-		Tags = { "Mark" },
 	},
 	{
 		Id = "WallPilgrim_C_Echo",

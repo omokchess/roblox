@@ -340,23 +340,6 @@ M.WallPilgrim_R_DeepNail = {
 	},
 }
 
--- 겹쳐 박기: 턴당 {1}회, 직전 턴에 광신을 건 적에게 또 걸면 {2}중첩 더
-M.WallPilgrim_R_DoubleStrike = {
-	Status = function(c: Card, info: any)
-		if info.Kind ~= "Zeal" then
-			return false
-		end
-		c.Mem.last = c.Mem.last or {}
-		local turn = H.State(c).Turn
-		local fired = false
-		if c.Mem.last[info.Target.Id] == turn - 1 and H.PerTurn(c, "double", c.V(1)) then
-			zeal(c, info.Target, c.V(2))
-			fired = true
-		end
-		c.Mem.last[info.Target.Id] = turn
-		return fired
-	end,
-}
 
 -- 낙인: 낙인 찍힌 적은 {1}턴 동안 받는 피해 +{2}%
 M.WallPilgrim_R_Brand = {
@@ -423,18 +406,6 @@ M.WallPilgrim_R_PilgrimStaff = {
 	end,
 }
 
--- 헌납: 적들의 광신 {1}중첩당 신앙심 +{2}, 최대 {3} (턴마다 다시 센다)
-M.WallPilgrim_R_Offering = {
-	TurnStart = function(c: Card)
-		local total = 0
-		for _, enemy in H.Enemies(c) do
-			total += zealOf(enemy)
-		end
-		local want = math.min(math.floor(total / c.V(1)) * c.V(2), c.V(3))
-		addFaith(c, want - (c.Mem.given or 0))
-		c.Mem.given = want
-	end,
-}
 
 -- 성무일도: 신앙심 {1} 이상이면 낙인을 두 적에게, 지속 +{2}턴
 M.WallPilgrim_R_DivineOffice = {
@@ -498,10 +469,6 @@ M.WallPilgrim_C_Meditation = {
 	end,
 }
 
--- 동행(파티): 같은 행 월 필그림 아군에게 주는 신앙심 +{1}
-M.WallPilgrim_C_Companion = {
-	Party = true,
-}
 
 -- 쪼갬: 갈라진 신도가 위아래 줄 맨 앞 적에게도 {1}% 피해와 광신
 M.WallPilgrim_C_Cleave = {
@@ -576,20 +543,6 @@ M.WallPilgrim_C_Hymn = {
 	end,
 }
 
--- 무게: 적들의 광신 {1}중첩당 받는 피해 −{2}%, 최대 {3}%
-M.WallPilgrim_C_Weight = {
-	TurnStart = function(c: Card)
-		H.Clear(c)
-		local total = 0
-		for _, enemy in H.Enemies(c) do
-			total += zealOf(enemy)
-		end
-		local cut = math.min(math.floor(total / c.V(1)) * c.P(2), c.P(3))
-		if cut > 0 then
-			H.Mod(c, "DamageTaken", -cut, -1)
-		end
-	end,
-}
 
 -- 출혈 못: 광신을 걸 때 출혈 {1}도
 M.WallPilgrim_C_BleedNail = {
@@ -613,10 +566,6 @@ M.WallPilgrim_C_Martyr = {
 	end,
 }
 
--- 죄책(파티): 광신 걸린 적이 나를 노릴 확률 −{1}%
-M.WallPilgrim_C_Guilt = {
-	Party = true,
-}
 
 -- 메아리: 갈라진 신도 광신 +{1}
 M.WallPilgrim_C_Echo = {
