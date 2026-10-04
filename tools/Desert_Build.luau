@@ -125,59 +125,20 @@ local function build()
 	for i, c in CANYON do
 		block("Table" .. i, c[1], c[2], c[3], c[4], TOP + c[5], TOP - 4, canyon, if i % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
 	end
-	--[[
-		협곡 벽 꾸밈(2026-10-04 사용자: "협곡 벽면이 너무 휑하니까"): 탁상지 판마다 네 벽에
-		  지층 띠 둘(벽에서 1 튀어나온 얇은 띠, 높이 35%·68%, 색 다르게) · 기둥 버팀(26 마다, 폭·높이 엇갈림, 2.5 튀어나옴) ·
-		  밑동 돌무더기(18 마다, 크기 엇갈림). 규칙 반복이지만 폭·높이·크기를 표(무늬)로 돌려 같은 모양이 붙어 나오지 않게.
-	]]
-	local walls = folder("CanyonWalls")
-	local BAND1, BAND2 = RGB(176, 96, 60), RGB(234, 164, 112)
-	local COLW = { 7, 10, 6, 9, 8 }
-	local COLH = { 0.62, 0.9, 0.48, 0.78, 0.7, 0.55 }
-	local RUB = { 4.5, 3, 5.5, 3.5, 6, 4 }
-	local nWall = 0
-	for i = 1, CANYON_MAIN do
-		local c = CANYON[i]
-		local x0, x1, z0, z1, h = c[1], c[2], c[3], c[4], c[5]
-		local top = TOP + h
-		-- 네 벽: { 벽 위치, 따라가는 축 시작·끝, 바깥 방향(+1/-1), 축이 x 인가 }
-		for f, face in { { z0, x0, x1, -1, true }, { z1, x0, x1, 1, true }, { x0, z0, z1, -1, false }, { x1, z0, z1, 1, false } } do
-			local at, a0, a1, out, alongX = face[1], face[2], face[3], face[4], face[5]
-			local len = a1 - a0
-			local function box(name, along0, along1, off0, off1, y0, y1, color)
-				local o0, o1 = at + out * off0, at + out * off1
-				local bx0, bx1 = if alongX then along0 else math.min(o0, o1), if alongX then along1 else math.max(o0, o1)
-				local bz0, bz1 = if alongX then math.min(o0, o1) else along0, if alongX then math.max(o0, o1) else along1
-				part(name, Vector3.new(bx1 - bx0, y1 - y0, bz1 - bz0), CFrame.new((bx0 + bx1) / 2, (y0 + y1) / 2, (bz0 + bz1) / 2), color, M.Sandstone, walls)
-				nWall += 1
-			end
-			-- 지층 띠
-			box(string.format("Band%d_%d_a", i, f), a0, a1, -0.5, 1.0, TOP + h * 0.35 - 0.7, TOP + h * 0.35 + 0.7, BAND1)
-			box(string.format("Band%d_%d_b", i, f), a0, a1, -0.5, 0.8, TOP + h * 0.68 - 0.5, TOP + h * 0.68 + 0.5, BAND2)
-			-- 기둥 버팀
-			local k, pos = 0, a0 + 8 + (i * 7) % 11
-			while pos < a1 - 6 do
-				k += 1
-				local w = COLW[(i + k) % #COLW + 1]
-				local hh = COLH[(i * 3 + k) % #COLH + 1]
-				box(string.format("Col%d_%d_%d", i, f, k), pos - w / 2, math.min(a1, pos + w / 2), -0.5, 2.5, TOP - 2, TOP + h * hh, if k % 2 == 0 then STONE else STONE2)
-				pos += 26
-			end
-			-- 밑동 돌무더기
-			local r, q = 0, a0 + 5 + (i * 5) % 9
-			while q < a1 - 4 do
-				r += 1
-				local sz = RUB[(i + r * 2) % #RUB + 1]
-				local cx = if alongX then q else at + out * (sz / 2 + 0.5)
-				local cz = if alongX then at + out * (sz / 2 + 0.5) else q
-				part(string.format("Rubble%d_%d_%d", i, f, r), Vector3.new(sz, sz * 0.7, sz * 0.85), CFrame.new(cx, TOP + sz * 0.3, cz) * CFrame.Angles(0, math.rad(r * 37), 0), if r % 2 == 0 then STONE else STONE2, M.Sandstone, walls)
-				nWall += 1
-				q += 18
-			end
-			local _ = len
-		end
+	-- 협곡 벽 바위(손 배치 — 2026-10-04 사용자: 자동 생성 무늬는 사람이 꾸민 것 같다): 무너져 나온 덩어리·처마
+	local walls = folder("WallRocks")
+	for i, w in WALL_ROCKS do
+		local bottom = if w[5] > 0 then TOP + w[5] else TOP - 4
+		block("WallRock" .. i, w[1], w[2], w[3], w[4], TOP + w[6], bottom, walls, if i % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
 	end
-	say("협곡 벽 꾸밈 %d", nWall)
+	-- 들판 → 서쪽 벽 위 바위 턱 길(손 배치) + 밑동 모래 둔덕
+	local ledges = folder("Ledges")
+	for i, l in LEDGES do
+		block("Ledge" .. i, l[1], l[2], l[3], l[4], TOP + l[5], TOP - 4, ledges, if i % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
+	end
+	for i, d in LEDGE_SAND do
+		block("LedgeSand" .. i, d[1], d[2], d[3], d[4], TOP + d[5], TOP - 4, ledges, SAND_DARK, M.SmoothPlastic, SAND, M.Sand)
+	end
 	--[[
 		오르막 = 바위 계단(2026-10-04 사용자: 매끈한 경사길 말고 계단식으로 풍경과 녹이게).
 		표(RAMPS)의 칸을 높은 쪽으로 단마다 높이 ≤ 2 로 나눈 사암 단(옆 = 탁상지와 같은 사암, 윗면 = 붉은 모래)을 쌓는다.
@@ -272,7 +233,7 @@ local function build()
 	-- 바위
 	local ray = RaycastParams.new()
 	ray.FilterType = Enum.RaycastFilterType.Include
-	ray.FilterDescendantsInstances = { land, dunes, mesas, canyon, cliffs, shore, bridges, ramps, tops }
+	ray.FilterDescendantsInstances = { land, dunes, mesas, canyon, cliffs, shore, bridges, ramps, tops, ledges, walls }
 	local rocks = folder("Rocks")
 	for i, r in ROCKS do
 		local hit = workspace:Raycast(Vector3.new(r[1], 400, r[2]), Vector3.new(0, -500, 0), ray)
