@@ -16,12 +16,17 @@ AbilityCards.Register()
 local classId = process.args[1] or "Quasar"
 local power = tonumber(process.args[2] or "5000") :: number
 local LEVEL = 6
+-- 셋째 인자 "crit" 이면 치명타가 늘 터진다(난수 0)
+local CRIT = process.args[3] == "crit"
 
 local owned = {}
 for _, module in AbilityCards.Modules do
 	if module.ClassId == classId then
 		for _, card in module.Cards do
-			table.insert(owned, { CardId = card.Id, Level = LEVEL })
+			-- 결투사 필수 카드 가운데 공격 스킬을 막는 것이 있어 결투사는 필수 카드를 뺀다
+			if not (classId == "Duelist" and card.Grade == "Essential") then
+				table.insert(owned, { CardId = card.Id, Level = LEVEL })
+			end
 		end
 	end
 end
@@ -60,6 +65,10 @@ end
 
 print(string.format("== %s · 카드 %d장 Lv%d · 무기 %d", classId, #owned, LEVEL, power))
 local list = GridBattle.SkillList(battle())
+if classId == "Duelist" then
+	-- 강화 스킬(준비 자세 뒤 4번 칸)도 잰다
+	table.insert(list, { Id = "PointBlank", Probe = "PointBlank" })
+end
 for i, entry in list do
 	local skill = BattleSkills.ById(entry.Id)
 	if skill and skill.Damage > 0 then
@@ -73,8 +82,8 @@ for i, entry in list do
 		end
 		local h0 = hps(s)
 		local ok, err = GridBattle.ResolveSkill(s, i, "Success", function()
-			return 0.999
-		end)
+			return if CRIT then 0 else 0.999
+		end, entry.Probe)
 		local h1 = hps(s)
 		local total, top, hit = 0, 0, 0
 		for id, h in h0 do
