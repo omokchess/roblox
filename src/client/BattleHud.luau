@@ -1402,7 +1402,7 @@ function BattleHud:_showTip(index: number)
 	end
 	describe(self.tipBody, skill.Description or "", kind.Color)
 
-	-- 키워드 풀이: 사전에 있는 것 앞에서 셋. 풀이는 첫 줄만(공식 줄은 길다)
+	-- 키워드 풀이: 사전에 있는 것 앞에서 셋. 풀이는 상태이상 아이콘처럼 사전 글 전부(2026-10-04 사용자)
 	for _, child in self.gloss:GetChildren() do
 		if child:IsA("Frame") then
 			child:Destroy()
@@ -1455,7 +1455,7 @@ function BattleHud:_showTip(index: number)
 			BackgroundTransparency = 1,
 			RichText = true,
 			TextWrapped = true,
-			Text = BattleHud.Markup(keyword.Description:match("^[^\n]*") or ""),
+			Text = BattleHud.Markup(keyword.Description or ""),
 			TextColor3 = BODY,
 			Font = Enum.Font.GothamMedium,
 			TextSize = 13,
