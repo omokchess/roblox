@@ -5,6 +5,8 @@ set -e
 cd "$(dirname "$0")/../.."
 B="C:/Program Files/Blender Foundation/Blender 5.2/blender.exe"
 N="${3:-7}"
+# 모션 자료(motions.json)를 먼저 새로 뽑는다(2026-10-04: 안 뽑으면 옛 모션으로 그렸다)
+"/c/Users/hhksh/AppData/Local/Microsoft/WinGet/Packages/Lune.Lune_Microsoft.Winget.Source_8wekyb3d8bbwe/lune.exe" run tools/combat/export_motions.luau >/dev/null
 "$B" -b -P tools/combat/preview_motion.py -- "$1" all "$N" "$2" 2>&1 | grep -E "rror" || true
 cd tools/combat/out
 D="$(pwd -W)"
