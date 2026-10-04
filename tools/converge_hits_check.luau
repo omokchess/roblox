@@ -32,5 +32,5 @@ end
 local d0, n0 = hits(0)
 local d3, n3 = hits(3)
 assert(n0 == 1 and n3 == 3, string.format("연타 수 %d / %d", n0, n3))
-assert(math.abs(d3 / d0 - 3) < 0.05, string.format("3연타 피해가 한 번의 3배가 아니다: %d vs %d", d3, d0))
+assert(math.abs(d3 / d0 - 1.2) < 0.05, string.format("3연타 합이 한 방의 1.2배가 아니다: %d vs %d", d3, d0))
 print(string.format("수렴 연타 점검 통과: 공명 0 → 1회 %d, 공명 3 → 3회 %d", d0, d3))

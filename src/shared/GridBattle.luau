@@ -272,6 +272,9 @@ end
 
 -- 결정적 난수(카드·치명타). 선형 합동 — 같은 씨앗이면 같은 수열
 -- Park–Miller. 곱이 2^53 안에 머문다(예전 1103515245 곱은 double 정밀도를 넘어 수열이 무너졌다).
+-- 연타 규칙: 한 대상이 n 번(n ≥ 2) 맞으면 한 방 피해 × MULTI_HIT_BONUS / n 씩(합 = 한 방 × 1.2)
+local MULTI_HIT_BONUS = 1.2
+
 local function nextRandom(state: State): number
 	state.RandomState = (state.RandomState * 48271) % 2147483647
 	return state.RandomState / 2147483647
@@ -2205,6 +2208,17 @@ function GridBattle.ResolveSkill(
 		-- 연타(2026-10-04): Before 가 context.Repeat 를 정하면 대상마다 그만큼 따로 때린다(펄서 수렴 — [공명] 수만큼).
 		-- 타격마다 치명타를 따로 굴리고 Hit 훅도 타격마다. 연출에는 대상마다 합친 피해 하나로 보낸다
 		local repeats = math.max(1, math.floor(context.Repeat or 1))
+		--[[
+			연타 규칙(2026-10-04 사용자): 한 스킬에서 같은 대상이 여러 번 맞으면(공명 연타·여러 모션이 같은 대상을 다시 때림)
+			한 방의 최종 피해를 연타 수로 나누고 1.2 를 곱한 만큼씩 때린다 — 합은 한 방의 1.2배.
+			대상마다 맞는 횟수 = 그 대상이 든 모션 수 × 연타 수. 한 번만 맞는 대상은 그대로.
+		]]
+		local hitsOn: { [string]: number } = {}
+		for _, aliveHits in motionHitUnits do
+			for _, target in aliveHits do
+				hitsOn[target.Id] = (hitsOn[target.Id] or 0) + repeats
+			end
+		end
 		for index, aliveHits in motionHitUnits do
 			for _, target in aliveHits do
 				if not target.Alive then
@@ -2218,6 +2232,10 @@ function GridBattle.ResolveSkill(
 					local hitInfo = { Target = target, Skill = skill, Bonus = 0 }
 					fire(state, "BeforeHit", hitInfo)
 					local amount = base * math.max(0, 1 + hitInfo.Bonus)
+					local n = hitsOn[target.Id] or 1
+					if n >= 2 then
+						amount *= MULTI_HIT_BONUS / n
+					end
 					local roll = if rng then rng() else nextRandom(state)
 					local crit = roll < critChance
 					if crit then

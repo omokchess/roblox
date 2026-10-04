@@ -453,9 +453,9 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "TripleThrust", Cooldown = 4,
 			Name = "찔러찔러또찔러",
-			Description = "- 대상에게 [출혈] 3 부여.\n- 사용 후 3턴 간 [회피 시간] +(2.5×[집중])%.\n- [집중] 1 획득.\n- 피해량: 7 × 3 (다단히트)",
-			-- 2026-10-03: 모션 셋이 모두 22씩(합 66) 들어가 다른 스킬의 2~3배였다 → 모션 하나 몫 7
-			Damage = 7,
+			Description = "- 대상에게 [출혈] 3 부여.\n- 사용 후 3턴 간 [회피 시간] +(2.5×[집중])%.\n- [집중] 1 획득.\n- 피해량: 22를 3연타로 나눔(합은 한 방의 1.2배)",
+			-- 2026-10-04 연타 규칙(GridBattle MULTI_HIT_BONUS): 한 방 22 를 세 번에 나눠 × 1.2
+			Damage = 22,
 			Range = "Melee",
 			Shape = { Kind = "Line", Radius = 3 , Cells = { { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, Motions = { { Kind = "Single", Cells = { { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, { Kind = "Single", Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } } } },
 		{
@@ -511,7 +511,7 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "Converge", Cooldown = 2,
 			Name = "수렴",
-			Description = "- 보유한 [공명] 수 만큼 피해를 가함.\n- [공명]을 보유하지 않은 경우 한 번의 피해를 가함.\n- QTE 성공 시 [가하는 피해량] + 20%.\n- QTE 성공 시 [감극] 1 추가 부여.",
+			Description = "- 보유한 [공명] 수 만큼 나눠 연타함(합은 한 방의 1.2배).\n- [공명]을 보유하지 않은 경우 한 번의 피해를 가함.\n- QTE 성공 시 [가하는 피해량] + 20%.\n- QTE 성공 시 [감극] 1 추가 부여.",
 			Damage = 18,
 			Range = "Ranged",
 			Shape = { Kind = "Line", Radius = 4 , Cells = { { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } },

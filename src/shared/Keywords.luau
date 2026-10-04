@@ -445,7 +445,7 @@ local LIST: { Keyword } = {
 		Name = "공명",
 		Kind = "Resource",
 		Description = "- 최대 3스택.\n"
-			.. "- 펄서의 `수렴`이 수치만큼 연타함(없으면 한 번).",
+			.. "- 펄서의 `수렴`이 수치만큼 나눠 연타함(합은 한 방의 1.2배, 없으면 한 번).",
 		Scalable = true,
 		Unit = "",
 		Color = "#5ad0b0",
