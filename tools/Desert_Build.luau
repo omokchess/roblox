@@ -136,11 +136,11 @@ local function wallPillars(blocks, solids, exclude, groundAt, parent, colors, ca
 				local slope = math.abs(curve(cursor + 9, seed) - curve(cursor - 1, seed))
 				local w, d, kind
 				if hHere > 0.72 and slope < 0.08 then
-					w, d, kind = 13 + r * 8, 7 + r * 2.5, 3 -- 큰 바위(마루)
+					w, d, kind = 20 + r * 10, 7.5 + r * 2.5, 3 -- 큰 바위(마루) — 2026-10-04 점(블록) 덜 촘촘하게: 폭 약 1.5배
 				elseif hHere > 0.5 then
-					w, d, kind = 7 + r * 4, 4.5 + r * 2, 2 -- 중간
+					w, d, kind = 11 + r * 6, 5 + r * 2, 2 -- 중간
 				else
-					w, d, kind = 3.5 + r * 3, 3 + r * 1.5, 1 -- 작은 돌
+					w, d, kind = 6 + r * 4, 3.5 + r * 1.5, 1 -- 작은 돌
 				end
 				w = math.min(w, a1 - cursor + 1)
 				local s0, s1 = cursor, cursor + w
@@ -155,7 +155,7 @@ local function wallPillars(blocks, solids, exclude, groundAt, parent, colors, ca
 				if not skip then
 					place(string.format("Rock%d_%d_%d", bi, f, k), s0, s1, d, curve(mid, seed), gy, visible, kind)
 					-- 중간·작은 돌 앞에 가끔 더 작은 돌(사이를 메움)
-					if kind < 3 and hash1(k * 11 + 7, seed) < 0.35 then
+					if kind < 3 and hash1(k * 11 + 7, seed) < 0.2 then
 						local fw = w * 0.55
 						local fs = s0 + (w - fw) * hash1(k * 3 + 2, seed)
 						place(string.format("Rock%d_%d_%d_앞", bi, f, k), fs, fs + fw, d + 2.5, curve(mid, seed) * 0.32, gy, visible, kind + 1)

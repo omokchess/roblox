@@ -60,11 +60,11 @@ def blocks_along(a0, a1, seed, dens=1.0):
         h_here = frac(cur + 4, seed)
         slope = abs(frac(cur + 9, seed) - frac(cur - 1, seed))
         if h_here > 0.72 and slope < 0.08:
-            w, d, kind = 13 + r * 8, 7 + r * 2.5, "큰"
+            w, d, kind = 20 + r * 10, 7.5 + r * 2.5, "큰"
         elif h_here > 0.5:
-            w, d, kind = 7 + r * 4, 4.5 + r * 2, "중"
+            w, d, kind = 11 + r * 6, 5 + r * 2, "중"
         else:
-            w, d, kind = 3.5 + r * 3, 3 + r * 1.5, "작"
+            w, d, kind = 6 + r * 4, 3.5 + r * 1.5, "작"
         w = min(w, a1 - cur + 1)
         hf = frac(cur + w / 2, seed)
         skip = kind == "작" and hash1(n * 5 + 1, seed) < (1 - dens) * 0.9
