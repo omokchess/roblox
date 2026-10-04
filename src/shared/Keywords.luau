@@ -565,7 +565,9 @@ local LIST: { Keyword } = {
 		Id = "EmptyBottle",
 		Name = "빈 병",
 		Kind = "Resource",
-		Description = "최대 8스택.",
+		Description = "- 최대 8스택.\n"
+			.. "- 전투 시작 시 5 얻고, 이후 2턴마다 1 얻음.\n"
+			.. "- `섞기` 스킬에서 [원액]과 같은 수만큼 소모해 [꽉 찬 병]을 만듦.",
 		Scalable = true,
 		Unit = "",
 		Color = "#9fb6c4",
