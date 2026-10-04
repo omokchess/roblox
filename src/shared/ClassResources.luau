@@ -47,6 +47,7 @@ ClassResources.RUIN = "Ruin" -- 허물 벽
 ClassResources.HERB = "Herb" -- 약재
 ClassResources.EXTRACT = "Extract" -- 원액
 ClassResources.EMPTY_BOTTLE = "EmptyBottle" -- 빈 병
+ClassResources.BROKEN_BOTTLE = "BrokenBottle" -- 깨진 병(2026-10-04 리워크 패시브)
 ClassResources.POISON_BOTTLE = "PoisonBottle" -- 독 병
 ClassResources.FIRE_BOTTLE = "FireBottle" -- 화염병
 ClassResources.OIL_BOTTLE = "OilBottle" -- 기름 병
@@ -79,6 +80,7 @@ local CAPS: { [string]: number } = {
 	[ClassResources.HERB] = 6,
 	[ClassResources.EXTRACT] = 4,
 	[ClassResources.EMPTY_BOTTLE] = 8,
+	[ClassResources.BROKEN_BOTTLE] = 8,
 	[ClassResources.POISON_BOTTLE] = 4,
 	[ClassResources.FIRE_BOTTLE] = 4,
 	[ClassResources.OIL_BOTTLE] = 4,
@@ -133,6 +135,7 @@ local LABELS: { [string]: string } = {
 	[ClassResources.HERB] = "약재",
 	[ClassResources.EXTRACT] = "원액",
 	[ClassResources.EMPTY_BOTTLE] = "빈 병",
+	[ClassResources.BROKEN_BOTTLE] = "깨진 병",
 	[ClassResources.POISON_BOTTLE] = "독 병",
 	[ClassResources.FIRE_BOTTLE] = "화염병",
 	[ClassResources.OIL_BOTTLE] = "기름 병",
@@ -157,6 +160,7 @@ local BY_CLASS: { [string]: { string } } = {
 		ClassResources.HERB,
 		ClassResources.EXTRACT,
 		ClassResources.EMPTY_BOTTLE,
+		ClassResources.BROKEN_BOTTLE,
 		ClassResources.POISON_BOTTLE,
 		ClassResources.FIRE_BOTTLE,
 		ClassResources.OIL_BOTTLE,

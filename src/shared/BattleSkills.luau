@@ -61,8 +61,6 @@ export type Skill = {
 	]]
 	Description: string?,
 	Damage: number,
-	-- 피해 배율(2026-10-04 역할별 밸런스 — 서브딜러 18만·딜러 15만 선에 맞춤). 없으면 1
-	DamageScale: number?,
 	Range: SkillRange,
 	Shape: BattleGrid.Shape,
 	--[[
@@ -404,9 +402,8 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "Veloce",
 			Name = "벨로체",
-			Description = "- [음표] 1개당 [가하는 피해량] +2.5%.\n- 사용 후 4분음표 2개 획득.\n- 사용 후 자신과 무작위 아군에게 [보호막] 2 부여.\n- 이 스킬의 피해량 +160%.",
+			Description = "- [음표] 1개당 [가하는 피해량] +2.5%.\n- 사용 후 4분음표 2개 획득.\n- 사용 후 자신과 무작위 아군에게 [보호막] 2 부여.",
 			Damage = 18,
-			DamageScale = 2.6, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Ranged",
 			Shape = { Kind = "Line", Radius = 3 , Cells = { { X = -1, Y = -1 }, { X = -2, Y = -1 }, { X = -3, Y = -1 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } },
 		},
@@ -421,9 +418,8 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "Crescendo", Cooldown = 6,
 			Name = "크레셴도",
-			Description = "- [음표] 1개당 [가하는 피해량] +3%.\n- 사용 후 16분음표 1개 획득.\n- [음표]가 최대치라면 대신 아래로 동작함.\n  - 보유 [음표]를 전부 초기화.\n  - 음표 1개당 [가하는 피해량]이 +4%가 됨.\n  - 사용 후 [박자표] 값이 1 증가.\n- 이 스킬의 피해량 +140%.",
+			Description = "- [음표] 1개당 [가하는 피해량] +3%.\n- 사용 후 16분음표 1개 획득.\n- [음표]가 최대치라면 대신 아래로 동작함.\n  - 보유 [음표]를 전부 초기화.\n  - 음표 1개당 [가하는 피해량]이 +4%가 됨.\n  - 사용 후 [박자표] 값이 1 증가.",
 			Damage = 26,
-			DamageScale = 2.4, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Ranged",
 			Shape = { Kind = "Cross", Radius = 1 , Cells = { { X = 0, Y = -1 }, { X = 0, Y = 0 }, { X = 0, Y = 1 }, { X = 1, Y = 0 } } },
 		},
@@ -450,18 +446,16 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "FrontBackPierce",
 			Name = "앞뒤관통",
-			Description = "- 사용 후 2턴 간 아군의 [회피 시간] +(2×[집중])%.\n- 사용 후 2턴 간 자신의 [받는 피해량] −10%.\n- 이 스킬의 피해량 +30%.",
+			Description = "- 사용 후 2턴 간 아군의 [회피 시간] +(2×[집중])%.\n- 사용 후 2턴 간 자신의 [받는 피해량] −10%.",
 			Damage = 9,
-			DamageScale = 1.3, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Melee",
 			Shape = { Kind = "Single" , Cells = { { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, Motions = { { Kind = "Single", Cells = { { X = -6, Y = 0 }, { X = -3, Y = 0 }, { X = -2, Y = 0 }, { X = -1, Y = 0 }, { X = 0, Y = 0 } } } } },
 		{
 			Id = "TripleThrust", Cooldown = 4,
 			Name = "찔러찔러또찔러",
-			Description = "- 대상에게 [출혈] 3 부여.\n- 사용 후 3턴 간 [회피 시간] +(2.5×[집중])%.\n- [집중] 1 획득.\n- 피해량: 22를 3연타로 나눔(합은 한 방의 1.2배).\n- 이 스킬의 피해량 +24%.",
+			Description = "- 대상에게 [출혈] 3 부여.\n- 사용 후 3턴 간 [회피 시간] +(2.5×[집중])%.\n- [집중] 1 획득.\n- 피해량: 22를 3연타로 나눔(합은 한 방의 1.2배).",
 			-- 2026-10-04 연타 규칙(GridBattle MULTI_HIT_BONUS): 한 방 22 를 세 번에 나눠 × 1.2
 			Damage = 22,
-			DamageScale = 1.24, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Melee",
 			Shape = { Kind = "Line", Radius = 3 , Cells = { { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, Motions = { { Kind = "Single", Cells = { { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, { Kind = "Single", Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } } } },
 		{
@@ -569,9 +563,8 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "BreakBackWall", Cooldown = 1,
 			Name = "뒷벽 허물기",
-			Description = "- 보유한 [벽] 수치 1당 [가하는 피해량] +3%.\n- 이 스킬의 피해량 −56%.",
+			Description = "- 보유한 [벽] 수치 1당 [가하는 피해량] +3%.",
 			Damage = 16,
-			DamageScale = 0.44, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Ranged",
 			Shape = { Kind = "Line", Radius = 3 , Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } },
 		},
@@ -588,18 +581,16 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "Cleave",
 			Name = "쪼개기",
-			Description = "- 보유중인 [허물 벽] 수치 1당 [가하는 피해량] +5%.\n- 이 스킬의 피해량 +9%.",
+			Description = "- 보유중인 [허물 벽] 수치 1당 [가하는 피해량] +5%.",
 			Damage = 22,
-			DamageScale = 1.09, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Melee",
 			Shape = { Kind = "Line", Radius = 1 , Cells = { { X = 1, Y = 0 }, { X = 0, Y = 0 } } },
 		},
 		{
 			Id = "BringDown", Cooldown = 2,
 			Name = "무너뜨리기",
-			Description = "- 보유중인 [허물 벽] 수치 1당 [가하는 피해량] +5%.\n- 이 스킬의 피해량 +9%.",
+			Description = "- 보유중인 [허물 벽] 수치 1당 [가하는 피해량] +5%.",
 			Damage = 18,
-			DamageScale = 1.09, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Melee",
 			Shape = { Kind = "Row" , Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 }, { X = -1, Y = 0 }, { X = -2, Y = 0 }, { X = -3, Y = 0 }, { X = -4, Y = 0 }, { X = -5, Y = 0 } } },
 		},
@@ -632,9 +623,8 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "Throw", Cooldown = 5,
 			Name = "던지기",
-			Description = "- 보유한 [꽉 찬 병] 중 하나를 소모함.\n  - [회복 병]은 사용하지 않음.\n- 소모한 [꽉 찬 병]에 따라 부여하는 상태이상이 달라짐.\n- 이 스킬의 피해량 +180%.",
+			Description = "- 보유한 [꽉 찬 병] 중 하나를 소모함.\n  - [회복 병]은 사용하지 않음.\n- 소모한 [꽉 찬 병]에 따라 부여하는 상태이상이 달라짐.",
 			Damage = 40,
-			DamageScale = 2.8, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Ranged",
 			Shape = { Kind = "Line", Radius = 1 },
 		},
@@ -647,9 +637,8 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "BloodCrash",
 			Name = "분쇄",
-			Description = "- 이 스킬은 [분노]를 소모하지 않음.\n- 보유한 [분노] 수치 1당 3턴간 대상의 [받는 피해량] 10% 증가.\n- 적중 시 [출혈] 1 부여\n- 적중 시 체력 3 감소.\n  - 위 효과로 사망하지 않음.\n- 적중 시 [분노] 1 얻음.\n- 보유 [분노] 4 이상이면 범위가 대상 둘레 3×3으로 넓어짐.\n- 이 스킬의 피해량 +38%.",
+			Description = "- 이 스킬은 [분노]를 소모하지 않음.\n- 보유한 [분노] 수치 1당 3턴간 대상의 [받는 피해량] 10% 증가.\n- 적중 시 [출혈] 1 부여\n- 적중 시 체력 3 감소.\n  - 위 효과로 사망하지 않음.\n- 적중 시 [분노] 1 얻음.\n- 보유 [분노] 4 이상이면 범위가 대상 둘레 3×3으로 넓어짐.",
 			Damage = 23,
-			DamageScale = 1.38, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Melee",
 			-- 2026-10-03: 단계 범위(Stages)는 편집기에 있었는데 켤 자원이 비어 있어 한 번도 안 켜졌다 → 분노 4마다 한 단계
 			GrowResource = ClassResources.RAGE,
@@ -667,9 +656,8 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "Burst", Cooldown = 8,
 			Name = "종베기",
-			Description = "- 보유 [분노] 전체 소모\n- 소모한 [분노]당 [가하는 피해량] 40% 증가.\n- 적중 시 [출혈] 3 부여.\n- (적중한 적 / 2)만큼 [분노]를 돌려받음.\n- 적중한 적 1기당 체력 5 감소.\n- (이 스킬의 최종 피해량/5) 만큼 체력 감소.\n  - 위 효과로 사망하지 않음.\n- 이 스킬의 피해량 +29%.",
+			Description = "- 보유 [분노] 전체 소모\n- 소모한 [분노]당 [가하는 피해량] 40% 증가.\n- 적중 시 [출혈] 3 부여.\n- (적중한 적 / 2)만큼 [분노]를 돌려받음.\n- 적중한 적 1기당 체력 5 감소.\n- (이 스킬의 최종 피해량/5) 만큼 체력 감소.\n  - 위 효과로 사망하지 않음.",
 			Damage = 50,
-			DamageScale = 1.29, -- 2026-10-04 역할별 맞춤(치명 기준 한 대상)
 			Range = "Melee",
 			Shape = { Kind = "Square", Radius = 1 , Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } },
 		},
@@ -705,8 +693,8 @@ local upgradeSkills: { Skill } = {
 	{
 		Id = "CrescendoAlForte",
 		Name = "Cresc. al forte",
-		Description = "- 조건: 보유 [음표] 16개 이상.\n- 모든 [음표]를 소모하며, 소모한 [음표] 1개당 [가하는 피해량] +7%.\n- 16분음표 3개당 범위가 앞·위·아래로 1칸씩 증가.\n- 사용 후 보유한 [음표] 수에서 4를 뺀 만큼의 버프를 2턴 간 획득.\n  - 4 이하인 경우 1로 보정.",
-		Damage = 34,
+		Description = "- 조건: 보유 [음표] 16개 이상.\n- 모든 [음표]를 소모하며, 소모한 [음표] 1개당 [가하는 피해량] +13%.\n- 16분음표 3개당 범위가 앞·위·아래로 1칸씩 증가.\n- 사용 후 보유한 [음표] 수에서 4를 뺀 만큼의 버프를 2턴 간 획득.\n  - 4 이하인 경우 1로 보정.",
+		Damage = 37, -- 2026-10-04 리워크 34 → 37
 		Range = "Ranged",
 		Shape = {
 			Kind = "Cross",

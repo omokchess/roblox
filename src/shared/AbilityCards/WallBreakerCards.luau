@@ -39,8 +39,10 @@ local cards: { Card } = {
 		Id = "WallBreaker_E_BrokenRampart",
 		Art = "WallBreaker_E_BrokenRampart",
 		Name = "무너진 성벽",
-		Description = "[허물 벽] 상한이 {5} 증가하는 대신, 스택당 받는 피해량 증가가 {5}%로 증가한다.",
-		Levels = { { 5, 8 }, { 5, 7 } },
+		-- 2026-10-04 리워크: 스택당 주는 피해 +2%(1레벨)·+3%(2레벨) 더
+		Description = "[허물 벽] 상한이 {5} 증가하는 대신, 스택당 받는 피해량 증가가 {5}%로 증가한다.\n"
+			.. "[허물 벽] 수치당 [가하는 피해량]이 {2}% 더 증가한다.",
+		Levels = { { 5, 8 }, { 5, 7 }, { 2, 3 } },
 		Excludes = { "WallBreaker_E_SelfHarm" },
 		Grade = "Essential",
 		ClassId = CLASS_ID,

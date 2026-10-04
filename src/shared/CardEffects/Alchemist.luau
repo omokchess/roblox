@@ -76,8 +76,35 @@ local function refreshHerb(c: Card)
 	end
 end
 
+--[[
+	2026-10-04 리워크 패시브 둘(키트가 늘 켠다):
+	  맹독성 물질 — 적의 도트·속성 경감률을 30% 합연산으로 무시(GridBattle damageUnit 의 ResistIgnore)
+	  깨진 병     — 던지기마다 [깨진 병] 1(최대 8), 수치 1당 주는 피해 +3%
+]]
+local function refreshBroken(c: Card)
+	local status = H.Status(c)
+	BattleStatus.RemoveBySource(status, "깨진 병")
+	local n = H.Stack(c, R.BROKEN_BOTTLE)
+	if n > 0 then
+		BattleStatus.AddModifier(status, "DamageDealt", 0.03 * n, -1, "깨진 병")
+	end
+end
+
 M.Alchemist_Kit = {
+	Rules = {
+		ResistIgnore = function(_c: Card, value: number): number
+			return value + 0.3
+		end,
+	},
 	BattleStart = refreshHerb,
+	AfterSkill = function(c: Card, info: any)
+		if isSkill(info, "Throw") then
+			H.Gain(c, R.BROKEN_BOTTLE, 1)
+			refreshBroken(c)
+			return true
+		end
+		return false
+	end,
 	Gain = function(c: Card, id: string)
 		if id == R.HERB then
 			refreshHerb(c)

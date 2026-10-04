@@ -49,6 +49,8 @@ local TowerDefinitions = require(script.Parent.TowerDefinitions)
 export type Outcome = "Ongoing" | "Victory" | "Defeat"
 
 export type Unit = {
+	-- 속성 저항(0~1, 예: 디버그 { Fire = 0.9 }). damageUnit 이 본다
+	Resist: { [string]: number }?,
 	Id: string,
 	Name: string,
 	Side: BattleGrid.Side,
@@ -410,7 +412,10 @@ GridBattle.DELETE_PRESETS = DELETE_PRESETS
 -- 회복 칸: 턴 끝에 최대 체력의 15%
 local HEAL_RATIO = 0.15
 -- 보스 도트 경감 99%
-local BOSS_DOT_CUT = 0.99
+-- 2026-10-04 리워크: 디버그 도트 경감 99% → 0(대신 화염 저항 90% — EnemyDefinitions Resist)
+local BOSS_DOT_CUT = 0
+-- 화염 피해는 한 번에 이만큼까지만(2026-10-04 리워크)
+local FIRE_DAMAGE_CAP = 90000
 -- 검수 준비중: 그 칸에서 쓰는 스킬 주는 피해 +400%
 local PENDING_OUT = 4.0
 -- 검수중: 받는 피해 +200%, 턴 끝 최대 체력 9% 고정 피해(이 효과로는 죽지 않음), 2턴 뒤 스테미나 20
@@ -589,6 +594,7 @@ local function spawnBoss(state: State, def: EnemyDefinitions.EnemyDefinition, he
 			Cooldowns = {},
 			Part = part.Key,
 			Block = part.Cells,
+			Resist = def.Resist,
 		}
 		BattleGrid.PlaceBlock(state.Grid, id, "Enemy", part.Cells)
 		boss.Parts[part.Key] = id
@@ -1744,6 +1750,21 @@ local function damageUnit(
 		amount *= BOSS_OVERHEAT_TAKEN
 	end
 	local scaled = BattleStatus.IncomingDamage(unit.Status, amount, kind)
+	--[[
+		속성 저항(2026-10-04 리워크): 유닛 Resist[속성] 만큼 덜 받는다(디버그 화염 90%).
+		적이 받을 때는 아군 쪽 저항 무시(연금술사 맹독성 물질 — ResistIgnore)를 합연산으로 뺀다.
+		화염 피해는 한 번에 FIRE_DAMAGE_CAP 까지만.
+	]]
+	local resist = (unit.Resist and unit.Resist[kind]) or 0
+	if resist > 0 then
+		if unit.Side == "Enemy" then
+			resist = math.max(0, resist - query(state, "ResistIgnore", 0))
+		end
+		scaled *= 1 - resist
+	end
+	if kind == "Fire" then
+		scaled = math.min(scaled, FIRE_DAMAGE_CAP)
+	end
 	-- 충전 끊기: 충전한 부위가 받은 피해를 쌓는다(코어가 잠겨 체력이 안 깎여도 센다)
 	if bossNow and bossNow.Charge and not bossNow.Charge.Broken and bossNow.Charge.Part == unit.Part and scaled > 0 then
 		bossNow.Charge.Dealt += scaled
@@ -2159,8 +2180,6 @@ function GridBattle.ResolveSkill(
 	if effect and effect.Before then
 		skillBonus = effect.Before(context)
 	end
-	-- 스킬마다 피해 배율(BattleSkills DamageScale)
-	skillBonus *= skill.DamageScale or 1
 
 	--[[
 		2) 피해. 주는 피해 보정(태세·허물 벽·다지기…)을 함께 먹인다.
@@ -2757,9 +2776,9 @@ function GridBattle.EndTurn(state: State)
 				지속 피해. `TickDots`는 피해량만 돌려주고 감소까지 처리한다.
 				죽지 않아야 하므로 canKill=false로 넣는다.
 			]]
-			local tick = BattleStatus.TickDots(unit.Status, unit.MaxHealth)
+			local tick = BattleStatus.TickDots(unit.Status, unit.MaxHealth, unit.Health)
 			-- 보스 부위는 도트를 BOSS_DOT_CUT(99%) 덜 받는다
-			if unit.Part then
+			if unit.Part and BOSS_DOT_CUT > 0 then
 				local keep = 1 - BOSS_DOT_CUT
 				tick.Physical *= keep
 				tick.Fire *= keep
@@ -2771,7 +2790,7 @@ function GridBattle.EndTurn(state: State)
 			total += damageUnit(state, unit, tick.True, "True", false)
 			if #tick.Notes > 0 then
 				-- 보스 부위는 깎인 실제 피해를 적는다(원래 줄은 경감 전 수치)
-				local note = if unit.Part
+				local note = if unit.Part and BOSS_DOT_CUT > 0
 					then string.format("지속 피해 %d (도트 %d%% 경감)", total, math.floor(BOSS_DOT_CUT * 100 + 0.5))
 					else table.concat(tick.Notes, " · ")
 				pushLog(state, string.format("%s — %s", unit.Name, note))

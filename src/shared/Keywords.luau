@@ -198,7 +198,7 @@ local LIST: { Keyword } = {
 		Id = "Bleed",
 		Name = "출혈",
 		Kind = "Debuff",
-		Description = "매 턴 최대 체력의 5%만큼 물리 피해.\n"
+		Description = "매 턴 현재 체력의 5%만큼 물리 피해.\n"
 			.. "턴 종료 시 1 감소.\n"
 			.. "해당 효과로 사망할 수 없음.\n"
 			.. "해당 상태이상은 대미지가 0 미만으로 떨어져선 안 됨.\n"
@@ -511,6 +511,17 @@ local LIST: { Keyword } = {
 		Scalable = true,
 		Unit = "",
 		Color = "#5ec8a8",
+	},
+	{
+		Id = "BrokenBottle",
+		Name = "깨진 병",
+		Kind = "Resource",
+		Description = "- 최대 8스택.\n"
+			.. "- `던지기` 스킬을 쓸 때마다 1 얻음.\n"
+			.. "- 수치 1당 [가하는 피해량] +3%.",
+		Scalable = true,
+		Unit = "",
+		Color = "#c9a46a",
 	},
 	{
 		Id = "EmptyBottle",

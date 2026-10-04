@@ -278,13 +278,14 @@ do
 	GridBattle.DebugSetHealth(s, "boss_Head", before) -- 그대로
 	check(Units.boss_Head.Health == before, "머리 체력 그대로")
 
-	-- 도트 99% 경감: 출혈을 크게 걸고 턴을 넘겨도 거의 안 깎인다
+	-- 2026-10-04 리워크: 도트 경감 0, 출혈은 지금 체력의 5%
 	local s2 = newBoss()
 	local core = s2.Units.boss_Core
 	core.Status.Bleed = 50
 	local h0 = core.Health
 	GridBattle.EndTurn(s2)
-	check(h0 - core.Health <= math.ceil(h0 * 0.01) + 1, string.format("도트 경감 %d → %d", h0, core.Health))
+	check(h0 - core.Health == math.floor(h0 * 0.05), string.format("출혈 지금 체력 5%%: %d → %d", h0, core.Health))
+	check(core.Resist and core.Resist.Fire == 0.9, "디버그 화염 저항 90%")
 
 	-- 회피만(광선): 막음은 실패로 / 회피·가드 불가(코어 덤프): 성공해도 맞는다
 	local s3 = newBoss()

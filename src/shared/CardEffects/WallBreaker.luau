@@ -140,6 +140,9 @@ M.WallBreaker_E_BrokenRampart = {
 		RuinTakenPer = function(c: Card, value: number): number
 			return value - 0.03 + c.P(2)
 		end,
+		RuinDealtPer = function(c: Card, value: number): number
+			return value + c.P(3)
+		end,
 	},
 }
 

@@ -216,7 +216,7 @@ local musicianEffects: { [string]: Effect } = {
 		Before = function(ctx)
 			local spent = spendAllNotes(ctx.Status)
 			ctx.Log(string.format("크레셴도 알 포르테 — 음표 %d 소모 (개당 +7%%)", spent))
-			return 1 + spent * 0.07
+			return 1 + spent * 0.13 -- 2026-10-04 리워크: 음표 1개당 7% → 13%
 		end,
 		After = function(ctx)
 			--[[
@@ -779,7 +779,7 @@ function BattleSkillEffects.RefreshRuin(status: BattleStatus.State, query: (stri
 	BattleStatus.RemoveBySource(status, "허물 벽")
 	local stacks = BattleStatus.Stack(status, R.RUIN)
 	if stacks > 0 then
-		BattleStatus.AddModifier(status, "DamageDealt", 0.05 * stacks, -1, "허물 벽")
+		BattleStatus.AddModifier(status, "DamageDealt", query("RuinDealtPer", 0.05) * stacks, -1, "허물 벽")
 		BattleStatus.AddModifier(status, "DamageTaken", math.max(0, query("RuinTakenPer", 0.03)) * stacks, -1, "허물 벽")
 	end
 end

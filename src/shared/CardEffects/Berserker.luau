@@ -192,7 +192,9 @@ M.Berserker_E_Undying = {
 	TurnStart = function(c: Card, turn: number)
 		if c.Mem.armed and turn > c.Mem.armed and not c.Mem.on then
 			c.Mem.on = true
-			H.Mod(c, "DamageDealt", c.P(3), -1)
+			-- 2레벨: 최대 체력 10당 3%(2026-10-04 리워크)
+			local bonus = if c.Level >= 2 then math.floor(H.Ally(c).MaxHealth / 10) * c.P(3) else c.P(3)
+			H.Mod(c, "DamageDealt", bonus, -1)
 		end
 	end,
 }

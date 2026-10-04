@@ -33,6 +33,8 @@ export type EnemyDefinition = {
 	Rules: { string }?,
 	-- 정보 창 [패시브]·[기믹] 칸: { 이름, 설명 } (2026-10-03 사용자: 액티브 / 패시브 / 기믹으로 나눠 읽기 편하게)
 	Passives: { { Name: string, Description: string, Part: string? } }?, -- Part = 부위 키(없으면 보스 전체)
+	-- 속성 저항(0~1). 부위 유닛에 그대로 붙는다
+	Resist: { [string]: number }?,
 	Gimmicks: { { Name: string, Description: string, Part: string? } }?,
 }
 
@@ -76,10 +78,12 @@ local definitions: { [string]: EnemyDefinition } = {
 		Color = Color3.fromRGB(190, 60, 255),
 		MotionId = "Debug",
 		Behavior = "Boss",
+		-- 2026-10-04 리워크: 화염 저항 90%(도트 경감 99% 대신)
+		Resist = { Fire = 0.9 },
 		Passives = {
 			-- 2026-10-03 사용자: 부위마다 액티브·패시브·기믹을 따로 보이게 → Part = 그 부위 키(없으면 보스 전체 탭)
 			{ Name = "코어 보호", Part = "Core", Description = "- [디버그 코어]는 다른 부위를 모두 부수기 전까지 쓰러지지 않음.\n  - 체력 1에서 버팀.\n- 코어가 쓰러지면 남은 부위도 함께 무너짐." },
-			{ Name = "도트 차단", Description = "- 지속 피해([출혈]·[독]·[화상]) −99%." },
+			{ Name = "화염 저항", Description = "- 화염 속성 피해 −90%.\n- 지속 피해는 경감 없음." },
 			{ Name = "4페이즈", Description = "- 보스 체력 합 75% · 50% · 25% 아래로 내려갈 때마다 다음 페이즈.\n- 페이즈마다 부위 넷 모두 스킬 하나씩 해금.\n- 1페이즈는 정해진 박자, 2페이즈부터 부위마다 쓸 수 있는 스킬 중에 고름.\n  - 같은 부위가 같은 스킬을 두 번 잇달아 쓰지 않음." },
 			{ Name = "최적화 (2페이즈)", Description = "- 보스 최대 스테미나 +20 · 스테미나 가득." },
 			{ Name = "멀티스레드 (3페이즈)", Description = "- 한 턴에 부위마다 두 번 행동." },

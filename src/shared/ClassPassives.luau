@@ -226,6 +226,7 @@ local KITS: { [string]: ClassKit } = {
 			"Herb",
 			"Extract",
 			"EmptyBottle",
+			"BrokenBottle",
 			"FullBottle",
 			"HealBottle",
 			"PoisonBottle",
@@ -234,6 +235,17 @@ local KITS: { [string]: ClassKit } = {
 			"Overheal",
 		},
 		Passives = {
+			{
+				Id = "Alchemist_Toxic",
+				Name = "맹독성 물질",
+				Description = "- 대상의 도트·속성 경감률을 30%만큼 무시함(합연산).",
+			},
+			{
+				Id = "Alchemist_BrokenBottle",
+				Name = "깨진 병",
+				Description = "- `던지기` 스킬을 쓸 때마다 [깨진 병] 1 얻음(최대 8).\n"
+					.. "  - 수치 1당 [가하는 피해량] +3%.",
+			},
 			{
 				Id = "Alchemist_Insurance",
 				Name = "보험",
