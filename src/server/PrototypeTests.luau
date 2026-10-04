@@ -985,10 +985,12 @@ function PrototypeTests.RunSystems()
 	local seenCardIds: { [string]: boolean } = {}
 	for _, module in AbilityCards.Modules do
 		local classId = module.ClassId
-		expect(#module.Cards == 34, classId .. " must define 34 cards (4 + 10 + 20)")
-		expect(#AbilityCardDefinitions.GetPool(classId, "Essential") == 4, classId .. " needs 4 essential cards")
-		expect(#AbilityCardDefinitions.GetPool(classId, "Rare") == 10, classId .. " needs 10 rare cards")
-		expect(#AbilityCardDefinitions.GetPool(classId, "Common") == 20, classId .. " needs 20 common cards")
+		-- 사양 4 + 10 + 20 (직업별로 더 둔 카드는 AbilityCardDefinitions.EXTRA_CARDS)
+		local want = { Essential = AbilityCardDefinitions.ExpectedCount(classId, "Essential"), Rare = AbilityCardDefinitions.ExpectedCount(classId, "Rare"), Common = AbilityCardDefinitions.ExpectedCount(classId, "Common") }
+		expect(#module.Cards == want.Essential + want.Rare + want.Common, classId .. " card count must match spec (+ extra)")
+		expect(#AbilityCardDefinitions.GetPool(classId, "Essential") == want.Essential, classId .. " essential count")
+		expect(#AbilityCardDefinitions.GetPool(classId, "Rare") == want.Rare, classId .. " rare count")
+		expect(#AbilityCardDefinitions.GetPool(classId, "Common") == want.Common, classId .. " common count")
 
 		for _, card in module.Cards do
 			-- Id는 직업을 넘어 전역으로 유일해야 한다. 뽑기·업그레이드가 Id로 추적하기 때문이다.
@@ -2356,7 +2358,14 @@ function PrototypeTests.RunSystems()
 			end
 		end
 	end
-	expect(artChecked == 306, "every one of the 306 cards must have art")
+	-- 카드 수는 직업마다 더 둔 카드(EXTRA_CARDS) 만큼 늘 수 있다 — 등록된 카드 전부를 센다
+	do -- (함수의 지역 변수 한도 200 — 블록 안에 둔다)
+		local totalCards = 0
+		for _, module in require(ReplicatedStorage.Shared.AbilityCards).Modules do
+			totalCards += #module.Cards
+		end
+		expect(artChecked == totalCards, string.format("every one of the %d cards must have art (%d)", totalCards, artChecked))
+	end
 
 	--[[
 		**태그마다 그림이 달라야 한다** (요청: "다 나누고").

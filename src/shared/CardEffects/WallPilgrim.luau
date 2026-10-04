@@ -219,25 +219,75 @@ M.WallPilgrim_E_Fanatic = {
 }
 
 -- 성흔: 광신이 디버프 대신 지속 피해 — 중첩 {1}당 턴마다 {2} 피해(죽이지 않는다)
+-- 성흔(2026-10-04 리워크): 턴당 {1}회, 스킬로 공격하면 맞은 적마다 그 적의 [광신] 수치만큼 [파상풍]
 M.WallPilgrim_E_Stigmata = {
-	Rules = {
-		ZealDot = function(_c: Card, _value: number): number
-			return 1
-		end,
-	},
-	TurnEnd = function(c: Card)
-		local total = 0
-		for _, enemy in H.Enemies(c) do
-			local stacks = zealOf(enemy)
-			if stacks > 0 then
-				total += c.Rt.Env.Damage(enemy, math.floor(stacks / c.V(1)) * c.V(2), "True", false)
+	AfterSkill = function(c: Card, info: any)
+		if not info.Hits or not H.PerTurn(c, "stigmata", c.V(1)) then
+			return false
+		end
+		local seen, any = {}, false
+		for _, list in info.Hits do
+			for _, enemy in list do
+				if not seen[enemy] and enemy.Alive then
+					seen[enemy] = true
+					local z = zealOf(enemy)
+					if z > 0 then
+						BattleSkillEffects.TetanusHit(enemy, z, function(key, base)
+							return Q(c.Rt, key, base)
+						end, function(unit, amount)
+							return c.Rt.Env.Damage(unit, amount, "True", true)
+						end, function()
+							return H.Enemies(c)
+						end, function(text)
+							H.Log(c, text)
+						end)
+						any = true
+					end
+				end
 			end
 		end
-		if total > 0 then
-			H.Log(c, string.format("성흔 — 지속 피해 %d", total))
+		if any then
+			H.Log(c, "성흔 — 광신만큼 파상풍")
 		end
-		return total > 0
+		return any
 	end,
+}
+
+-- 파상풍 카드(2026-10-04): 질의만 바꾼다(BattleSkillEffects.TetanusHit · GridBattle 스킬 실패)
+M.WallPilgrim_C_RustSpread = {
+	Rules = {
+		TetanusBonus = function(c: Card, value: number): number
+			return value + c.V(1)
+		end,
+	},
+}
+M.WallPilgrim_C_RottenNail = {
+	Rules = {
+		NailingTetanus = function(c: Card, value: number): number
+			return value + c.V(1)
+		end,
+	},
+}
+M.WallPilgrim_C_Debility = {
+	Rules = {
+		TetanusFail = function(c: Card, value: number): number
+			return math.max(value, c.P(1))
+		end,
+	},
+}
+M.WallPilgrim_R_LockjawFit = {
+	Rules = {
+		TetanusBurstRatio = function(c: Card, value: number): number
+			return math.max(value, c.P(1))
+		end,
+	},
+}
+M.WallPilgrim_R_Rigor = {
+	Rules = {
+		TetanusSpread = function(c: Card, value: number): number
+			return value + c.V(1)
+		end,
+	},
 }
 
 -- 전도: 합창이 적 전체(중첩 절반), 재사용 대기 {1}턴

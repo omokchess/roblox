@@ -365,7 +365,7 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 		elseif boss.Standing == "Debuff" then
 			add("DebuffCell", "버그 칸", "▼", Color3.fromRGB(200, 110, 240), nil, "이 칸에 서 있는 동안 주는 피해 −30% · 받는 피해 +40%.")
 		elseif boss.Standing == "Heal" then
-			add("HealCell", "회복 칸", "✚", Color3.fromRGB(110, 240, 130), nil, "턴 끝에 이 칸에 서 있으면 최대 체력 15% 회복.")
+			add("HealCell", "회복 칸", "✚", Color3.fromRGB(110, 240, 130), nil, "턴 끝에 이 칸에 서 있으면 최대 체력 30% 회복(회복 불가 중에도 15%).")
 		end
 	end
 	if status.Shield > 0 then
@@ -386,26 +386,34 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 
 	--[[
 		직업 자원. 순서를 고정해야 매 턴 자리가 흔들리지 않는다(해시 순회는 실행마다 순서가 달라진다).
-		음표는 한 아이콘으로 묶고 설명에 4·8·16분을 따로 적는다.
+		음표는 4·8·16분음표를 아이콘 셋으로 따로(2026-10-04 사용자: 하나로 묶으니 분음표마다 다른 개수가 안 보인다).
 	]]
 	local ids = {}
 	for id in status.Stacks do
 		table.insert(ids, id)
 	end
 	table.sort(ids)
-	local notes, noteTotal = {}, 0
+	local noteTotal = 0
 	for _, id in ids do
 		local count = status.Stacks[id]
 		local label = ClassResources.Label(id)
 		if NOTE_IDS[id] then
 			noteTotal += count
-			table.insert(notes, string.format("%s %d", label, count))
 		elseif count > 0 then
 			add(id, label, utf8.char(utf8.codepoint(label, 1)), Color3.fromRGB(255, 205, 90), count, keywordLine(label) or (label .. " — 직업 자원."))
 		end
 	end
-	if noteTotal > 0 then
-		add("Notes", "음표", "♪", Color3.fromRGB(255, 170, 220), noteTotal, table.concat(notes, " · "))
+	-- 음악가면(또는 음표가 하나라도 있으면) 4·8·16분음표를 0 이어도 늘 셋 다 보인다 — 개수를 나란히 견주게
+	if noteTotal > 0 or snapshot.AllyClassId == "Musician" then
+		for _, n in {
+			{ ClassResources.QUARTER, "♩", Color3.fromRGB(255, 196, 230) },
+			{ ClassResources.EIGHTH, "♪", Color3.fromRGB(255, 150, 210) },
+			{ ClassResources.SIXTEENTH, "♬", Color3.fromRGB(235, 100, 190) },
+		} do
+			local label = ClassResources.Label(n[1])
+			local count = status.Stacks[n[1]] or 0
+			add(n[1], label, n[2], n[3], count, string.format("%s %d개. 음표 합 %d.", label, count, noteTotal))
+		end
 	end
 
 	self.hud:SetEffects(list)
@@ -566,6 +574,11 @@ function BattleClient:_onGridState(snapshot: any)
 	end
 
 	self:_bossBoard(snapshot)
+	-- 디버그전: 플레이어 차례(막을 공격이 없고 기다리는 위협도 없음)면 서브코어가 한 바퀴 돌고 제 칸 위에 멈춘다, 디버그 차례면 다시 천천히 공전
+	if self.director and snapshot.Boss then
+		local playerTurn = not self.threatWaiting and not self.pendingThreat and #(snapshot.Threats or {}) == 0
+		self.director:SetBossLock(playerTurn)
+	end
 	-- 보스 체력바(부위별 체력·페이즈·스테미나·버프·이번 턴 예고). 체력은 맞는 순간마다 줄어드는 보이는 값(_hpView)
 	self.hud:SetBoss(self:_hpView(snapshot))
 	self:_bossAlerts(snapshot)
@@ -1264,7 +1277,7 @@ function BattleClient:_paintTiles()
 			local damaging = planSkill ~= nil and ((planSkill.Damage or 0) > 0 or planSkill.HpRatio ~= nil) and not plan.Canceled
 			if damaging and unit.Part then
 				local group = unit.Part .. ":" .. planSeen[enemyId]
-				local label = (planSkill :: any).Name .. (if planSkill and planSkill.Unavoidable then " · 회피 불가" elseif planSkill and planSkill.DodgeOnly then " · 회피만" else "")
+				local label = (planSkill :: any).Name .. (if planSkill and planSkill.Unavoidable then " · 회피 불가" elseif planSkill and planSkill.GuardOnly then " · 막기만" elseif planSkill and planSkill.DodgeOnly then " · 회피만" else "")
 				for _, c in plan.Cells do
 					local key = c[1] .. "," .. c[2]
 					partRanges[key] = partRanges[key] or {}
@@ -1729,7 +1742,9 @@ function BattleClient:_startQte(role: QteDefinitions.Role)
 	local title = if role == "Skill"
 		then (chosen and chosen.Name or "공격")
 		else (self.pendingThreat and self.pendingThreat.SkillName or "적의 공격")
-	local flag = if role == "Dodge" and self.pendingThreat and self.pendingThreat.DodgeOnly then "가드 불가" else nil
+	local flag = if role == "Dodge" and self.pendingThreat and self.pendingThreat.DodgeOnly then "가드 불가"
+		elseif role == "Dodge" and self.pendingThreat and self.pendingThreat.GuardOnly then "회피 불가 · 막기만"
+		else nil
 	self.hud:QteOpen(self.qte, role, title, self.qteWord, flag)
 end
 

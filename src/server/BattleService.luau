@@ -764,6 +764,7 @@ function BattleService:_queueThreats(player: Player)
 			SkillName = foeSkill.Name,
 			-- 보스 스킬 방어 규칙(회피만 / 회피·가드 불가). 판정은 서버가 강제하고, 클라이언트는 QTE 표시만 바꾼다
 			DodgeOnly = foeSkill.DodgeOnly == true,
+			GuardOnly = foeSkill.GuardOnly == true,
 			Unavoidable = GridBattle.IsUnavoidable(battle, foeSkill),
 		})
 	end

@@ -683,7 +683,8 @@ do
 	GridBattle.MoveAlly(g, 1, 2)
 	local before = g.Units.player.Health
 	GridBattle.EndTurn(g)
-	check(g.Units.player.Health <= before, "회복 불가 동안 회복 칸이 안 듣는다")
+	-- 2026-10-04: 회복 불가 중에도 회복 칸은 반(최대 체력 15%)만큼
+	check(g.Units.player.Health > before, "회복 불가 동안에도 회복 칸은 반만큼 듣는다")
 	check(g.Boss.NoHeal == 2, "회복 불가가 한 턴 흐른다")
 
 	-- 보스 버프: 감시식이 걸리면 보스 공격 피해가 오른다

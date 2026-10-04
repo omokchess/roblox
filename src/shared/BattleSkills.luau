@@ -105,6 +105,8 @@ export type Skill = {
 	-- 적(보스) 스킬 방어 규칙. DodgeOnly = 회피만 된다(막음은 실패로). Unavoidable = 회피·가드 모두 안 된다(QTE 없음)
 	DodgeOnly: boolean?,
 	Unavoidable: boolean?,
+	-- 가드만 된다(회피는 막기로 친다). 2026-10-04 사용자: 디버그 평타 말고 다른 공격은 가드만이거나 가드조차 못 하게
+	GuardOnly: boolean?,
 	--[[
 		보스(디버그) 스킬 정보(2026-10-03 사용자: 4페이즈·부위마다 페이즈 해금·보스 스테미나·버프·차징·궁극기).
 		  BossKind   "Attack" 공격 · "Buff" 보스 버프 · "Charge" 한 턴 충전 뒤 터짐(부위를 때려 끊는다) · "Ultimate" · "Gimmick" 판 기믹
@@ -220,7 +222,8 @@ local bossSkills: { Skill } = {
 	{
 		Id = "StackTrace",
 		Name = "스택 추적",
-		Description = "- 아군이 선 열(앞뒤 칸 셋)을 거슬러 올라가며 꿰뚫음.\n- 회피·막기 가능.",
+		Description = "- 아군이 선 열(앞뒤 칸 셋)을 거슬러 올라가며 꿰뚫음.\n- 회피 불가 — 막기만 됨.",
+		GuardOnly = true,
 		Damage = 14,
 		Range = "Ranged",
 		Shape = { Kind = "Column" },
@@ -257,7 +260,8 @@ local bossSkills: { Skill } = {
 	{
 		Id = "ForceQuit",
 		Name = "강제 종료",
-		Description = "- 아군이 선 칸과 둘레 3×3을 지움.\n- 회피·막기 가능.",
+		Description = "- 아군이 선 칸과 둘레 3×3을 지움.\n- 회피 불가 — 막기만 됨.",
+		GuardOnly = true,
 		Damage = 15,
 		Range = "Melee",
 		Shape = { Kind = "Square", Radius = 1 },
@@ -306,7 +310,8 @@ local bossSkills: { Skill } = {
 	{
 		Id = "BugPlant",
 		Name = "버그 심기",
-		Description = "- 아군이 선 칸 + 무작위 칸 3개를 침.\n- 맞은 칸은 [버그 칸]이 됨.\n- 회피·막기 가능.",
+		Description = "- 아군이 선 칸 + 무작위 칸 3개를 침.\n- 맞은 칸은 [버그 칸]이 됨.\n- 회피 불가 — 막기만 됨.",
+		GuardOnly = true,
 		Damage = 12,
 		Range = "Ranged",
 		Shape = { Kind = "Single" },
@@ -367,11 +372,11 @@ local bossSkills: { Skill } = {
 	{
 		Id = "InfiniteRecursion",
 		Name = "무한 재귀",
-		Description = "- 아군이 선 라인과 열을 동시에(십자) 침.\n- 막기 불가 — 회피만 됨.",
+		Description = "- 아군이 선 라인과 열을 동시에(십자) 침.\n- 회피·막기 불가.",
 		Damage = 16,
 		Range = "Ranged",
 		Shape = { Kind = "Cross", Radius = 6 },
-		DodgeOnly = true,
+		Unavoidable = true, -- 2026-10-04 회피만 → 회피·막기 불가
 		BossKind = "Attack",
 		Phase = 4,
 		StaminaCost = 30,

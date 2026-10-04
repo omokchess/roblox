@@ -1724,6 +1724,7 @@ function BattleHud:_bossMove(parent: Instance, move: any, order: number, planned
 			table.insert(stats, statPart("재사용", skill.BossCooldown .. "턴"))
 		end
 		table.insert(stats, if skill.Unavoidable then statPart("방어", "회피·막기 불가", RED)
+			elseif skill.GuardOnly then statPart("방어", "막기만", GOLD)
 			elseif skill.DodgeOnly then statPart("방어", "회피만", GOLD)
 			else statPart("방어", "회피·막기"))
 		make("TextLabel", {

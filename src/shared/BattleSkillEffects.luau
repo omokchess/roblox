@@ -660,12 +660,40 @@ function BattleSkillEffects.ApplyTetanus(status: BattleStatus.State, stacks: num
 	return false
 end
 
--- 스킬에서 파상풍을 걸고, 터지면 최대 체력 10% 피해
-local function tetanus(ctx: Context, target: any, stacks: number)
-	if target.Alive and BattleSkillEffects.ApplyTetanus(ctx.StatusOf(target), stacks) then
-		ctx.Damage(target, target.MaxHealth * 0.1, "True", true)
-		ctx.Log(target.Name .. " — 파상풍 발작(최대 체력 10%)")
+--[[
+	파상풍을 걸고(스킬·카드 공용), 10 을 채워 터지면 발작 피해. 카드가 질의로 바꾸는 것(2026-10-04 파상풍 카드):
+	  TetanusBonus(녹 번짐: 걸 때마다 +) · TetanusBurstRatio(파상풍 발작: 최대 체력 비, 기본 0.10) ·
+	  TetanusSpread(경직: 터지면 다른 적 모두에게 +)
+	damage(unit, amount) · enemies() · log(text) 는 부르는 쪽(스킬 ctx / 카드 환경)이 넘긴다.
+]]
+type TQuery = (key: string, base: number) -> number
+function BattleSkillEffects.TetanusHit(target: any, stacks: number, query: TQuery, damage: (any, number) -> any, enemies: (() -> { any })?, log: ((string) -> ())?)
+	if not target.Alive or stacks <= 0 then
+		return
 	end
+	stacks += math.floor(query("TetanusBonus", 0))
+	if BattleSkillEffects.ApplyTetanus(target.Status, stacks) then
+		local ratio = query("TetanusBurstRatio", 0.1)
+		damage(target, target.MaxHealth * ratio)
+		if log then
+			log(string.format("%s — 파상풍 발작(최대 체력 %d%%)", target.Name, math.floor(ratio * 100 + 0.5)))
+		end
+		local spread = math.floor(query("TetanusSpread", 0))
+		if spread > 0 and enemies then
+			for _, other in enemies() do
+				if other ~= target and other.Alive then
+					BattleSkillEffects.ApplyTetanus(other.Status, spread)
+				end
+			end
+		end
+	end
+end
+
+-- 스킬에서 파상풍을 건다(위 공용 셈)
+local function tetanus(ctx: Context, target: any, stacks: number)
+	BattleSkillEffects.TetanusHit(target, stacks, ctx.Query, function(unit, amount)
+		return ctx.Damage(unit, amount, "True", true)
+	end, ctx.Enemies, ctx.Log)
 end
 
 local function brandBonus(ctx: Context, target: any, cap: number?): number
@@ -695,7 +723,7 @@ local wallPilgrimEffects: { [string]: Effect } = {
 			local stacks = 3 + math.floor(ctx.Query("NailingZeal", 0))
 			local turns = math.floor(ctx.Query("BrandTurns", 3))
 			for _, target in ctx.Targets do
-				tetanus(ctx, target, 1)
+				tetanus(ctx, target, 1 + math.floor(ctx.Query("NailingTetanus", 0)))
 				applyZeal(ctx, target, stacks)
 				if target.Alive then
 					BattleSkillEffects.ApplyBrand(ctx.StatusOf(target), 1, turns)

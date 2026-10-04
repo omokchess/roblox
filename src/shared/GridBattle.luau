@@ -410,7 +410,7 @@ local DELETE_PRESETS: { { Name: string, Keep: { { number } } } } = {
 }
 GridBattle.DELETE_PRESETS = DELETE_PRESETS
 -- 회복 칸: 턴 끝에 최대 체력의 15%
-local HEAL_RATIO = 0.15
+local HEAL_RATIO = 0.3 -- 2026-10-04 사용자: 힐장판 더 세게(15% → 30%, 회복 불가 중에도 반은 들어감 — 아래)
 -- 보스 도트 경감 99%
 -- 2026-10-04 리워크: 디버그 도트 경감 99% → 0(대신 화염 저항 90% — EnemyDefinitions Resist)
 local BOSS_DOT_CUT = 0
@@ -422,7 +422,7 @@ local PENDING_OUT = 4.0
 --   (2026-10-02 사용자 너프: 20% → 9%, 죽지 않게)
 local CHECKING_IN, CHECKING_COST, CHECKING_STAMINA, CHECKING_STAMINA_TURNS = 3.0, 0.09, 20, 2
 -- 테스터: 주는 피해 +3500%, 치명 +100%, 받는 피해 −80%, 방어막 80(1턴) (2026-10-02 사용자: +3000% → +3500%, 2026-10-03: 방어막 200 → 80)
-local TESTER_OUT, TESTER_CRIT, TESTER_IN, TESTER_SHIELD = 35.0, 1.0, 0.2, 80
+local TESTER_OUT, TESTER_CRIT, TESTER_IN, TESTER_SHIELD = 35.0, 1.0, 0.2, 30 -- 2026-10-04 방어막 80 → 30
 -- 묶임 면역(2026-10-03 사용자: 묶임을 한 번 당한 뒤 2턴은 다시 묶이지 않게). 묶이는 순간 3 — 묶인 그 턴 끝과 다음 두 턴 끝에는 안 묶인다
 -- (묶인 턴엔 칸을 못 옮겨 예고 칸 위에서 또 끝나기 쉽다 — 예전엔 내내 묶였다)
 local LOCK_IMMUNE_TURNS = 3
@@ -2513,7 +2513,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		pushLog(state, enemy.Name .. " — 경련(최대 체력 3%, 그로기 10%)")
 	end
 	local tetanus = BattleStatus.Stack(enemy.Status, ClassResources.TETANUS)
-	if tetanus > 0 and nextRandom(state) < tetanus * 0.05 then
+	if tetanus > 0 and nextRandom(state) < tetanus * query(state, "TetanusFail", 0.05) then -- 쇠약 카드가 올린다
 		pushLog(state, string.format("%s — 파상풍으로 %s 실패", enemy.Name, skill.Name))
 		return true, nil
 	end
@@ -2563,6 +2563,11 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		end
 		-- 회피만 가능(가드 불가): 막음(Partial)은 실패로 친다. 보스 [루트 권한] 동안은 모든 보스 공격이 그렇다
 		local noGuard = enemy.Part ~= nil and state.Boss ~= nil and bossBuffTotal(state.Boss, "NoGuard") > 0
+		-- 가드만(회피 불가): 회피(성공)는 막기(부분)로 친다
+		if skill.GuardOnly and grade == "Success" then
+			grade = "Partial"
+			pushLog(state, skill.Name .. " — 피할 수 없는 공격(막기만)")
+		end
 		if (skill.DodgeOnly or skill.Unavoidable or noGuard) and grade == "Partial" then
 			grade = "Fail"
 			pushLog(state, skill.Name .. " — 막을 수 없는 공격")
@@ -2778,7 +2783,13 @@ function GridBattle.EndTurn(state: State)
 	if state.Boss and standingMod(state) == "Heal" then
 		local ally = GridBattle.Ally(state)
 		if ally.Alive then
-			local gained = heal(state, ally, ally.MaxHealth * HEAL_RATIO)
+			-- 회복 불가(블루스크린) 중에도 회복 칸은 반만큼 들어간다(2026-10-04 힐장판 강화)
+			local gained
+			if state.Boss.NoHeal > 0 then
+				gained = healUnit(ally, ally.MaxHealth * HEAL_RATIO * 0.5)
+			else
+				gained = heal(state, ally, ally.MaxHealth * HEAL_RATIO)
+			end
 			if gained > 0 then
 				pushLog(state, string.format("회복 칸 — 체력 %d 회복", gained))
 			end

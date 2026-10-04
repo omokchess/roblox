@@ -335,6 +335,16 @@ end
 	직업 카드 등록. 서버 초기화 시 직업별로 한 번씩 호출한다.
 	사양의 종류 수(필수 4 / 희귀 10 / 일반 20)와 다르면 경고를 남긴다.
 ]]
+-- 사양 위로 더 둔 카드(직업 → 등급 → 더 둔 수). 2026-10-04 사용자: 월 필그림 파상풍 카드 "추가"(희귀 2 · 일반 3)
+AbilityCardDefinitions.EXTRA_CARDS = {
+	WallPilgrim = { Rare = 2, Common = 3 },
+} :: { [string]: { [string]: number } }
+
+function AbilityCardDefinitions.ExpectedCount(classId: string, grade: string): number
+	local extra = AbilityCardDefinitions.EXTRA_CARDS[classId]
+	return RULES[grade].PoolSizePerClass + ((extra and extra[grade]) or 0)
+end
+
 function AbilityCardDefinitions.RegisterClassCards(classId: string, cards: { AbilityCard }): ()
 	local byGrade: { [CardGrade]: { AbilityCard } } = {
 		Essential = {},
@@ -348,14 +358,14 @@ function AbilityCardDefinitions.RegisterClassCards(classId: string, cards: { Abi
 
 	for grade, rule in RULES do
 		local count = #byGrade[grade]
-		if count ~= rule.PoolSizePerClass then
+		if count ~= AbilityCardDefinitions.ExpectedCount(classId, grade) then
 			warn(
 				string.format(
 					"[AbilityCard] %s 직업의 %s 카드가 %d종입니다. 사양은 %d종입니다.",
 					classId,
 					grade,
 					count,
-					rule.PoolSizePerClass
+					AbilityCardDefinitions.ExpectedCount(classId, grade)
 				)
 			)
 		end

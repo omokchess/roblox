@@ -230,6 +230,27 @@ end
 -- 보스 부위의 공중 자리(매 프레임): 코어는 칸 위 Lift, 위성은 코어 둘레 궤도(코어 뒤로도 돈다).
 -- 2026-10-03 사용자: "공전이 끊겨 보이지 않게, 불규칙한 방향으로" — 셋이 한 바퀴(BossOrbit)를 함께 돌되(따로 돌면 부딪친다)
 -- 빠르기·방향은 잡음으로 매끈하게 바뀌고, 공격 중에도 멈추지 않는다. 자리 흔들림은 DebugBoss.Orbit 이 더한다
+--[[
+	2026-10-04 사용자: "플레이어 턴이 왔을 땐 서브코어들이 빠르게 한바퀴 돌고 위치를 고정하고, 그 고정된 위치를 보고
+	플레이어가 어떻게 때릴 수 있는지 판단하게. 디버그 턴이 왔을 땐 다시 천천히 돌고."
+	SetBossLock(true): 빠른 한 바퀴(LOCK_SPIN 초) → 제 칸(서버가 정한 부위 칸 = 맞힐 수 있는 라인) 위로 LOCK_SETTLE 초 동안 내려앉아 멈춘다.
+	SetBossLock(false): 멈춘 자리에서 궤도로 UNLOCK 초 동안 돌아가 공전을 이어 가고, 빠르기는 SLOW 배.
+]]
+local LOCK_SPIN, LOCK_SETTLE, UNLOCK, SLOW = 1.0, 0.6, 0.9, 0.5
+function CombatDirector:SetBossLock(locked: boolean)
+	if self.BossLock == locked then
+		return
+	end
+	self.BossLock = locked
+	self.BossLockAt = os.clock()
+	self.BossSpinFrom = self.BossOrbit or 0
+end
+
+local function ease(k: number): number
+	k = math.clamp(k, 0, 1)
+	return k * k * (3 - 2 * k)
+end
+
 function CombatDirector:_bossHomes(dt: number)
 	local core: Actor? = nil
 	for _, a in self.Actors do
@@ -238,7 +259,23 @@ function CombatDirector:_bossHomes(dt: number)
 		end
 	end
 	local now = os.clock()
-	self.BossOrbit = (self.BossOrbit or 0) + DebugBoss.OrbitRate(now) * dt
+	local since = now - (self.BossLockAt or -100)
+	-- 잠금 쪽 섞임(0 = 궤도, 1 = 제 칸 위에 고정)
+	local lockMix = 0
+	if self.BossLock then
+		if since < LOCK_SPIN then
+			-- 빠른 한 바퀴(부드럽게 가속·감속)
+			self.BossOrbit = (self.BossSpinFrom or 0) + 2 * math.pi * ease(since / LOCK_SPIN)
+		else
+			lockMix = ease((since - LOCK_SPIN) / LOCK_SETTLE)
+		end
+	else
+		self.BossOrbit = (self.BossOrbit or 0) + DebugBoss.OrbitRate(now) * SLOW * dt
+		lockMix = 1 - ease(since / UNLOCK)
+		if self.BossLockAt == nil then
+			lockMix = 0
+		end
+	end
 	for _, a in self.Actors do
 		local key, tile = a.BossKey, a.TileHome
 		if not key or not tile or a.Dying then
@@ -250,7 +287,14 @@ function CombatDirector:_bossHomes(dt: number)
 		elseif core and core.TileHome then
 			local theta = (DebugBoss.OrbitPhase[key] or 0) + self.BossOrbit
 			local center = core.TileHome + Vector3.new(0, DebugBoss.Lift, 0)
-			a.Home = CFrame.new(center * DebugBoss.Orbit(theta, now, key)) * center.Rotation
+			local orbit = CFrame.new(center * DebugBoss.Orbit(theta, now, key)) * center.Rotation
+			if lockMix > 0 then
+				-- 제 칸 위(맞힐 수 있는 라인)에 고정 — 코어와 같은 높이
+				local fixed = tile + Vector3.new(0, DebugBoss.Lift, 0)
+				a.Home = orbit:Lerp(fixed, lockMix)
+			else
+				a.Home = orbit
+			end
 			ground = core.TileHome.Y - 0.4
 		else
 			a.Home = tile + Vector3.new(0, 7, 0)
