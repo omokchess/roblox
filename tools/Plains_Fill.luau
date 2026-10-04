@@ -28,12 +28,21 @@ local function say(f, ...)
 	lines[#lines + 1] = string.format(f, ...)
 end
 
+
+-- 깜박임 없애기(2026-10-04 사용자: "모든 블록에다가 XYZ좌표를 각각 0.1씩 +-"): 만드는 부품마다 x·y·z 를 ±0.1 —
+-- 차례로 여덟 조합을 돌려 이웃한 부품끼리 같은 면이 겹치지 않게
+local jitterN = 0
+local function jitter(): Vector3
+	jitterN += 1
+	local c = jitterN % 8
+	return Vector3.new(if c % 2 == 0 then 0.1 else -0.1, if (c // 2) % 2 == 0 then 0.1 else -0.1, if (c // 4) % 2 == 0 then 0.1 else -0.1)
+end
 local function part(name, size, cf, color, mat, parent)
 	local p = Instance.new("Part")
 	p.Name = name
 	p.Anchored = true
 	p.Size = size
-	p.CFrame = cf
+	p.CFrame = cf + jitter()
 	p.Color = color
 	p.Material = mat
 	p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
@@ -41,11 +50,83 @@ local function part(name, size, cf, color, mat, parent)
 	return p
 end
 
-local function block(name, x0, x1, z0, z1, top, bottom, parent, rockColor, capColor, capMat)
+local function block(name, x0, x1, z0, z1, top, bottom, parent, rockColor, sideMatOrCap, capColorOrMat, capMatOpt)
+	-- 두 가지로 부른다: (…, 옆색, 윗색?, 윗재질?) 또는 wallPillars 의 (…, 옆색, 옆재질, 윗색, 윗재질)
+	local sideMat, capColor, capMat = M.Slate, sideMatOrCap, capColorOrMat
+	if typeof(sideMatOrCap) == "EnumItem" then
+		sideMat, capColor, capMat = sideMatOrCap, capColorOrMat, capMatOpt
+	end
 	local h = top - bottom
 	local cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
-	part(name, Vector3.new(x1 - x0, h - 1.2, z1 - z0), CFrame.new(cx, bottom + (h - 1.2) / 2, cz), rockColor or ROCK, M.Slate, parent)
+	part(name, Vector3.new(x1 - x0, h - 1.2, z1 - z0), CFrame.new(cx, bottom + (h - 1.2) / 2, cz), rockColor or ROCK, sideMat, parent)
 	part(name .. "_풀", Vector3.new(x1 - x0, 1.2, z1 - z0), CFrame.new(cx, top - 0.6, cz), capColor or GRASS, capMat or M.Grass, parent)
+end
+
+
+--[[
+	벽 밑 바위 기둥(2026-10-04 사용자: "벽면쪽 블록들의 밀도를 각각 다 다르게 … 벽면으로 판단되는 모든 곳에다가").
+	후보 덩어리(축에 맞춘 바위 상자)마다 네 벽을 따라 크기 표(PILLAR_BANK, 손으로 적음)의 두 켜 기둥을 세운다.
+	  - 벽마다 밀도가 다르다: 밀도 표(DENSITY)를 덩어리·벽 번호로 골라, 기둥 뒤 틈 = (1 - 밀도) × 틈 표(GAPS)
+	  - 벽 바로 바깥(높이 땅+3)에 다른 단단한 것이 있으면(벽이 가려짐) 그 자리는 건너뜀 · 빼는 네모(EXCLUDE) 안도 건너뜀
+	  - 보이는 높이(윗면 - 바깥 땅)가 minH 안 되면 건너뜀
+]]
+local DENSITY = { 1.0, 0.55, 0.85, 0.35, 0.7, 0.95, 0.45, 0.8, 0.6, 0.25, 0.9, 0.5 }
+local GAPS = { 0, 7, 3, 12, 5, 0, 9, 4, 15, 2, 6, 10 }
+local function wallPillars(blocks, solids, exclude, groundAt, parent, colors, capColor, capMat, sideMat, minH)
+	local over = OverlapParams.new()
+	over.FilterType = Enum.RaycastFilterType.Include
+	over.FilterDescendantsInstances = solids
+	local function excluded(x, z)
+		for _, e in exclude do
+			if e[1] <= x and x <= e[2] and e[3] <= z and z <= e[4] then
+				return true
+			end
+		end
+		return false
+	end
+	local n = 0
+	for bi, b in blocks do
+		local pos, size = b.Position, b.Size
+		local x0, x1, z0, z1 = pos.X - size.X / 2, pos.X + size.X / 2, pos.Z - size.Z / 2, pos.Z + size.Z / 2
+		local topAbs = pos.Y + size.Y / 2 + 1.2
+		for f, face in { { "x", z0, -1, x0, x1 }, { "x", z1, 1, x0, x1 }, { "z", x0, -1, z0, z1 }, { "z", x1, 1, z0, z1 } } do
+			local axis, at, out, a0, a1 = face[1], face[2], face[3], face[4], face[5]
+			local dens = DENSITY[(bi * 4 + f) % #DENSITY + 1]
+			local k = (bi * 7 + f * 11) % #PILLAR_BANK
+			local cursor = a0 + 1
+			while cursor < a1 - 2 do
+				k = k % #PILLAR_BANK + 1
+				local w, hf, d = PILLAR_BANK[k][1], PILLAR_BANK[k][2], PILLAR_BANK[k][3]
+				w = math.min(w, a1 - cursor + 1)
+				local s0, s1 = cursor, cursor + w
+				local mid = (s0 + s1) / 2
+				local px, pz = if axis == "x" then mid else at + out * 1.5, if axis == "x" then at + out * 1.5 else mid
+				local gy = groundAt(px, pz)
+				local visible = topAbs - gy
+				local hidden = excluded(px, pz) or visible < minH
+				if not hidden then
+					local probe = workspace:GetPartBoundsInBox(CFrame.new(px, gy + 3, pz), Vector3.new(0.6, 0.6, 0.6), over)
+					hidden = #probe > 0
+				end
+				if not hidden then
+					local h = visible * hf
+					for li, L in { { 0.55, 0, 0 }, { 1.0, 1.4, 1.3 } } do
+						local ls0, ls1 = s0 + L[2] / 2, s1 - L[2] / 2
+						local dd = d - L[3]
+						local o0, o1 = at - out * 1, at + out * dd
+						local bx0, bx1 = if axis == "x" then ls0 else math.min(o0, o1), if axis == "x" then ls1 else math.max(o0, o1)
+						local bz0, bz1 = if axis == "x" then math.min(o0, o1) else ls0, if axis == "x" then math.max(o0, o1) else ls1
+						local top = gy + h * L[1]
+						local bottom = if li == 1 then gy - 4 else gy + h * 0.55 - 0.6
+						block(string.format("Pillar%d_%d_%d_%d", bi, f, k, li), bx0, bx1, bz0, bz1, top, bottom, parent, colors[(k + li) % 2 + 1], sideMat, capColor, capMat)
+						n += 1
+					end
+				end
+				cursor += w - 1 + (1 - dens) * GAPS[(k + bi) % #GAPS + 1]
+			end
+		end
+	end
+	return n
 end
 
 local function build()
@@ -439,38 +520,49 @@ local function build()
 			part(string.format("%s_돌%d", f[1], k), Vector3.new(stn[1], stn[2], stn[3]), CFrame.new(f[2] + stn[4], topY + stn[2] / 2 - 0.3, f[3] + stn[5]) * CFrame.Angles(0, math.rad(k * 41 + i * 13), 0), if k % 2 == 0 then ROCK else ROCK2, M.Slate, forms)
 		end
 	end
-	-- 벽 밑 바위 기둥 줄(사막과 같은 방식): 기둥마다 두 켜(아래가 넓고 깊다), 이웃과 1 겹침. 땅 높이는 벽 바로 바깥에서 잰다
+	-- 벽면 기둥(평원 옛 덩어리 모두, 벽마다 밀도 다르게). 빼는 자리: 턱 길·길 쐐기 둘레
 	local pillars = folder("WallPillars")
-	local nPillar = 0
-	for ri, run in WALL_RUNS do
-		local axis, at, out, a0, a1, massTop, k = run[1], run[2], run[3], run[4], run[5], run[6], run[7]
-		local dir = if a1 >= a0 then 1 else -1
-		local mid = (a0 + a1) / 2
-		local ix, iz = if axis == "x" then mid else at - out * 3, if axis == "x" then at - out * 3 else mid
-		local topAbs = TOP + massTop + plateauAt(ix, iz) -- 단 위 덩어리는 단 높이만큼 올라가 있다
-		local cursor = a0
-		while (a1 - cursor) * dir > 2 do
-			k = k % #PILLAR_BANK + 1
-			local w, hf, d = PILLAR_BANK[k][1], PILLAR_BANK[k][2], PILLAR_BANK[k][3]
-			w = math.min(w, math.abs(a1 - cursor) + 1)
-			local s0, s1 = math.min(cursor, cursor + dir * w), math.max(cursor, cursor + dir * w)
-			local fx, fz = if axis == "x" then (s0 + s1) / 2 else at + out * (d + 1), if axis == "x" then at + out * (d + 1) else (s0 + s1) / 2
-			local gy = groundY2(fx, fz)
-			local h = math.max(2, (topAbs - gy) * hf)
-			for li, L in { { 0.55, 0, 0 }, { 1.0, 1.4, 1.3 } } do
-				local ls0, ls1 = s0 + L[2] / 2, s1 - L[2] / 2
-				local dd = d - L[3]
-				local o0, o1 = at - out * 1, at + out * dd
-				local bx0, bx1 = if axis == "x" then ls0 else math.min(o0, o1), if axis == "x" then ls1 else math.max(o0, o1)
-				local bz0, bz1 = if axis == "x" then math.min(o0, o1) else ls0, if axis == "x" then math.max(o0, o1) else ls1
-				local top = gy + h * L[1]
-				local bottom = if li == 1 then gy - 4 else gy + h * 0.55 - 0.6
-				block(string.format("Pillar%d_%d_%d", ri, k, li), bx0, bx1, bz0, bz1, top, bottom, pillars, if (k + li) % 2 == 0 then ROCK2 else ROCK, CAP, M.Slate)
-				nPillar += 1
+	local wallBlocks = {}
+	local solidF = { masses, plateaus }
+	for _, f in surface:GetChildren() do
+		if f.Name:match("^R_평원") and f ~= root then
+			local mf = f:FindFirstChild("Masses")
+			if mf then
+				table.insert(solidF, mf)
+				for _, p in mf:GetChildren() do
+					if p:IsA("BasePart") and not p.Name:match("_풀$") then
+						table.insert(wallBlocks, p)
+					end
+				end
 			end
-			cursor += dir * (w - 1)
+			local cf = f:FindFirstChild("Cliffs")
+			if cf then
+				table.insert(solidF, cf)
+			end
 		end
 	end
+	local exclude = {}
+	for _, l in LEDGES do
+		table.insert(exclude, { l[1] - 3, l[3] + 3, l[2] - 3, l[4] + 3 })
+	end
+	for _, r in ROAD_WEDGES do
+		table.insert(exclude, { r[1] - r[4], r[1] + r[4], math.min(r[2], r[3]) - 6, math.max(r[2], r[3]) + 6 })
+	end
+	local floorRay = RaycastParams.new()
+	floorRay.FilterType = Enum.RaycastFilterType.Include
+	local floors = { plateaus }
+	for _, f in surface:GetChildren() do
+		local lf = f.Name:match("^R_평원") and f:FindFirstChild("Land")
+		if lf then
+			table.insert(floors, lf)
+		end
+	end
+	floorRay.FilterDescendantsInstances = floors
+	local function floorAt(x, z)
+		local hit = workspace:Raycast(Vector3.new(x, 400, z), Vector3.new(0, -500, 0), floorRay)
+		return if hit then hit.Position.Y else TOP
+	end
+	local nPillar = wallPillars(wallBlocks, solidF, exclude, floorAt, pillars, { ROCK, ROCK2 }, CAP, M.Slate, M.Slate, 8)
 	say("벽 밑 바위 기둥 켜 %d", nPillar)
 	say("턱 길 %d · 길 쐐기 %d · 턱 돌 %d · 탑바위 %d", #LEDGES, #ROAD_WEDGES, #LEDGE_STONES, #FORMATIONS)
 	say("채움: 덩어리 %d, 오르막 %d, 못 %d, 텃밭 %d, 키트 %d(없음 %d), 나무 %d, 바위 %d, 길 %d, 랜드마크 %d",
