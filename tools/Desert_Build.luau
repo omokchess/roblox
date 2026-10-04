@@ -125,22 +125,52 @@ local function build()
 	for i, c in CANYON do
 		block("Table" .. i, c[1], c[2], c[3], c[4], TOP + c[5], TOP - 4, canyon, if i % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
 	end
-	-- 오르막(탁상지 위로): WedgePart 는 로컬 +Z 쪽이 높다 → 높은 쪽 방향으로 돌린다(Angles(0,θ,0): 로컬 +Z → (sinθ, 0, cosθ))
+	--[[
+		오르막 = 바위 계단(2026-10-04 사용자: 매끈한 경사길 말고 계단식으로 풍경과 녹이게).
+		표(RAMPS)의 칸을 높은 쪽으로 단마다 높이 ≤ 2 로 나눈 사암 단(옆 = 탁상지와 같은 사암, 윗면 = 붉은 모래)을 쌓는다.
+		단마다 폭·옆 위치를 조금씩 엇갈리게(규칙 반복), 세 단마다 바깥 옆에 돌덩이 — 깎아 만든 길처럼.
+	]]
 	local ramps = folder("Ramps")
-	local YAW = { ["+z"] = 0, ["-z"] = math.pi, ["+x"] = math.pi / 2, ["-x"] = -math.pi / 2 }
+	local SHIFT = { 0, 0.8, -0.6, 0.4, -0.9, 0.5, -0.3 }
 	for i, r in RAMPS do
-		local x0, x1, z0, z1, lo, hi, dir = r[1], r[2], r[3], r[4], TOP + r[5], TOP + r[6], r[7]
-		local base = lo - 2
+		local x0, x1, z0, z1, lo, hi, dir = r[1], r[2], r[3], r[4], r[5], r[6], r[7]
 		local alongX = dir == "+x" or dir == "-x"
-		local run = if alongX then x1 - x0 else z1 - z0
-		local width = if alongX then z1 - z0 else x1 - x0
-		local wp = Instance.new("WedgePart")
-		wp.Name = "Ramp" .. i
-		wp.Anchored = true
-		wp.Size = Vector3.new(width, hi - base, run)
-		wp.CFrame = CFrame.new((x0 + x1) / 2, base + (hi - base) / 2, (z0 + z1) / 2) * CFrame.Angles(0, YAW[dir], 0)
-		wp.Color, wp.Material = SAND, M.Sand
-		wp.Parent = ramps
+		local sign = if dir == "+x" or dir == "+z" then 1 else -1
+		local a0, a1 = if alongX then x0 else z0, if alongX then x1 else z1 -- 오르는 축
+		local b0, b1 = if alongX then z0 else x0, if alongX then z1 else x1 -- 가로 축
+		local n = math.max(1, math.ceil((hi - lo) / 2))
+		local depth = (a1 - a0) / n
+		for k = 1, n do
+			local top = TOP + lo + (hi - lo) * k / n
+			-- 낮은 끝에서 k 번째 단(오르는 방향 sign)
+			local s0 = if sign > 0 then a0 + (k - 1) * depth else a1 - k * depth
+			local s1 = s0 + depth + 0.6 -- 단끼리 살짝 겹쳐 틈 없이
+			local jog = SHIFT[(k % #SHIFT) + 1]
+			local w0, w1 = b0 + jog - (k % 2) * 0.7, b1 + jog + ((k + 1) % 2) * 0.7
+			local bx0, bx1, bz0, bz1 = if alongX then s0 else w0, if alongX then s1 else w1, if alongX then w0 else s0, if alongX then w1 else s1
+			block(string.format("Step%d_%d", i, k), bx0, bx1, bz0, bz1, top, TOP - 4, ramps, if k % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
+			if k % 3 == 0 then
+				-- 바깥 옆 돌덩이(번갈아 양쪽)
+				local side = if (k // 3) % 2 == 0 then w0 - 2.2 else w1 + 2.2
+				local mid = (s0 + s1) / 2
+				local cx, cz = if alongX then mid else side, if alongX then side else mid
+				part(string.format("StepRock%d_%d", i, k), Vector3.new(3.6, 3, 3.2), CFrame.new(cx, top + 0.6, cz) * CFrame.Angles(0, math.rad(k * 23), 0), STONE, M.Sandstone, ramps)
+			end
+		end
+		-- 무너진 비탈: 계단 양옆에 높은 쪽(벽)에서 내려오는 바위 턱 셋 — 계단이 벽에 붙인 판이 아니라 무너진 바위 비탈을 깎은 길로 보이게
+		local TALUS = { { 0.45, 0.75, 4, 10 }, { 0.7, 0.45, 9, 7 }, { 0.9, 0.2, 14, 6 } } -- { 높은 끝에서부터 덮는 길이 비율, 높이 비율, 바깥 거리, 폭 }
+		for t, tl in TALUS do
+			local len = (a1 - a0) * tl[1]
+			local s0 = if sign > 0 then a1 - len else a0
+			local s1 = s0 + len
+			local top = TOP + lo + (hi - lo) * tl[2]
+			for side = -1, 1, 2 do
+				local edge = if side < 0 then b0 - tl[3] + (t - 1) * 1.5 else b1 + tl[3] - (t - 1) * 1.5
+				local c0, c1 = math.min(edge, edge - side * tl[4]), math.max(edge, edge - side * tl[4])
+				local bx0, bx1, bz0, bz1 = if alongX then s0 else c0, if alongX then s1 else c1, if alongX then c0 else s0, if alongX then c1 else s1
+				block(string.format("Talus%d_%d_%d", i, t, side), bx0, bx1, bz0, bz1, top, TOP - 4, ramps, if t % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
+			end
+		end
 	end
 	-- 자연 돌다리(협곡 위, 두께 5)
 	local bridges = folder("Bridges")
