@@ -131,6 +131,36 @@ local function build()
 		local bottom = if w[5] > 0 then TOP + w[5] else TOP - 4
 		block("WallRock" .. i, w[1], w[2], w[3], w[4], TOP + w[6], bottom, walls, if i % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
 	end
+	-- 벽 밑 바위 기둥 줄(사용자 그림): 표(PILLAR_BANK)의 기둥을 벽 줄마다 시작 자리를 달리해 빈틈없이 이어 세운다.
+	-- 기둥마다 두 켜 — 아래 켜가 조금 더 넓고 깊다(아래로 갈수록 뚱뚱). 이웃 기둥과 1 겹친다
+	local pillars = folder("WallPillars")
+	local nPillar = 0
+	for ri, run in WALL_RUNS do
+		local axis, at, out, a0, a1, wallH, k = run[1], run[2], run[3], run[4], run[5], run[6], run[7]
+		local dir = if a1 >= a0 then 1 else -1
+		local cursor = a0
+		while (a1 - cursor) * dir > 2 do
+			k = k % #PILLAR_BANK + 1
+			local w, hf, d = PILLAR_BANK[k][1], PILLAR_BANK[k][2], PILLAR_BANK[k][3]
+			w = math.min(w, math.abs(a1 - cursor) + 1)
+			local s0, s1 = math.min(cursor, cursor + dir * w), math.max(cursor, cursor + dir * w)
+			local h = wallH * hf
+			-- { 켜 높이 비, 폭 줄임, 깊이 줄임 }
+			for li, L in { { 0.55, 0, 0 }, { 1.0, 1.4, 1.3 } } do
+				local ls0, ls1 = s0 + L[2] / 2, s1 - L[2] / 2
+				local dd = d - L[3]
+				local o0, o1 = at - out * 1, at + out * dd
+				local bx0, bx1 = if axis == "x" then ls0 else math.min(o0, o1), if axis == "x" then ls1 else math.max(o0, o1)
+				local bz0, bz1 = if axis == "x" then math.min(o0, o1) else ls0, if axis == "x" then math.max(o0, o1) else ls1
+				local top = TOP + h * L[1]
+				local bottom = if li == 1 then TOP - 4 else TOP + h * 0.55 - 0.6
+				block(string.format("Pillar%d_%d_%d", ri, k, li), bx0, bx1, bz0, bz1, top, bottom, pillars, if (k + li) % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
+				nPillar += 1
+			end
+			cursor += dir * (w - 1)
+		end
+	end
+	say("벽 밑 바위 기둥 켜 %d", nPillar)
 	-- 들판 → 서쪽 벽 위 바위 턱 길(손 배치) + 밑동 모래 둔덕
 	local ledges = folder("Ledges")
 	for i, l in LEDGES do

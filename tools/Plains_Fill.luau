@@ -439,6 +439,39 @@ local function build()
 			part(string.format("%s_돌%d", f[1], k), Vector3.new(stn[1], stn[2], stn[3]), CFrame.new(f[2] + stn[4], topY + stn[2] / 2 - 0.3, f[3] + stn[5]) * CFrame.Angles(0, math.rad(k * 41 + i * 13), 0), if k % 2 == 0 then ROCK else ROCK2, M.Slate, forms)
 		end
 	end
+	-- 벽 밑 바위 기둥 줄(사막과 같은 방식): 기둥마다 두 켜(아래가 넓고 깊다), 이웃과 1 겹침. 땅 높이는 벽 바로 바깥에서 잰다
+	local pillars = folder("WallPillars")
+	local nPillar = 0
+	for ri, run in WALL_RUNS do
+		local axis, at, out, a0, a1, massTop, k = run[1], run[2], run[3], run[4], run[5], run[6], run[7]
+		local dir = if a1 >= a0 then 1 else -1
+		local mid = (a0 + a1) / 2
+		local ix, iz = if axis == "x" then mid else at - out * 3, if axis == "x" then at - out * 3 else mid
+		local topAbs = TOP + massTop + plateauAt(ix, iz) -- 단 위 덩어리는 단 높이만큼 올라가 있다
+		local cursor = a0
+		while (a1 - cursor) * dir > 2 do
+			k = k % #PILLAR_BANK + 1
+			local w, hf, d = PILLAR_BANK[k][1], PILLAR_BANK[k][2], PILLAR_BANK[k][3]
+			w = math.min(w, math.abs(a1 - cursor) + 1)
+			local s0, s1 = math.min(cursor, cursor + dir * w), math.max(cursor, cursor + dir * w)
+			local fx, fz = if axis == "x" then (s0 + s1) / 2 else at + out * (d + 1), if axis == "x" then at + out * (d + 1) else (s0 + s1) / 2
+			local gy = groundY2(fx, fz)
+			local h = math.max(2, (topAbs - gy) * hf)
+			for li, L in { { 0.55, 0, 0 }, { 1.0, 1.4, 1.3 } } do
+				local ls0, ls1 = s0 + L[2] / 2, s1 - L[2] / 2
+				local dd = d - L[3]
+				local o0, o1 = at - out * 1, at + out * dd
+				local bx0, bx1 = if axis == "x" then ls0 else math.min(o0, o1), if axis == "x" then ls1 else math.max(o0, o1)
+				local bz0, bz1 = if axis == "x" then math.min(o0, o1) else ls0, if axis == "x" then math.max(o0, o1) else ls1
+				local top = gy + h * L[1]
+				local bottom = if li == 1 then gy - 4 else gy + h * 0.55 - 0.6
+				block(string.format("Pillar%d_%d_%d", ri, k, li), bx0, bx1, bz0, bz1, top, bottom, pillars, if (k + li) % 2 == 0 then ROCK2 else ROCK, CAP, M.Slate)
+				nPillar += 1
+			end
+			cursor += dir * (w - 1)
+		end
+	end
+	say("벽 밑 바위 기둥 켜 %d", nPillar)
 	say("턱 길 %d · 길 쐐기 %d · 턱 돌 %d · 탑바위 %d", #LEDGES, #ROAD_WEDGES, #LEDGE_STONES, #FORMATIONS)
 	say("채움: 덩어리 %d, 오르막 %d, 못 %d, 텃밭 %d, 키트 %d(없음 %d), 나무 %d, 바위 %d, 길 %d, 랜드마크 %d",
 		#MASSES, #RAMPS, #PONDS, #GARDENS, #KITS, missing, #TREES, #ROCKS, #PATHS, #MARKS)
