@@ -240,6 +240,28 @@ local function build()
 		local y = if hit then hit.Position.Y else TOP
 		part("Rock" .. i, Vector3.new(r[3], r[4], r[5]), CFrame.new(r[1], y + r[4] / 2 - 0.6, r[2]) * CFrame.Angles(0, math.rad(r[6]), 0), if i % 2 == 0 then STONE2 else STONE, M.Sandstone, rocks)
 	end
+	-- 턱 길 위 작은 돌 · 탑바위(아래로 갈수록 넓은 상자 켜 + 꼭대기 작은 돌) — 모두 손 배치표 그대로
+	for i, r in LEDGE_STONES do
+		local hit = workspace:Raycast(Vector3.new(r[1], 400, r[2]), Vector3.new(0, -500, 0), ray)
+		local y = if hit then hit.Position.Y else TOP
+		part("LedgeStone" .. i, Vector3.new(r[3], r[4], r[5]), CFrame.new(r[1], y + r[4] / 2 - 0.4, r[2]) * CFrame.Angles(0, math.rad(r[6]), 0), if i % 2 == 0 then STONE2 else STONE, M.Sandstone, rocks)
+	end
+	local forms = folder("Formations")
+	for i, f in FORMATIONS do
+		local hit = workspace:Raycast(Vector3.new(f[2], 400, f[3]), Vector3.new(0, -500, 0), ray)
+		local y = if hit then hit.Position.Y else TOP
+		local bottom = y - 2
+		local topY = y
+		for k, L in f[4] do
+			local cx, cz = f[2] + L[4], f[3] + L[5]
+			topY = (if k == 1 then y else topY) + L[3]
+			block(string.format("%s_%d", f[1], k), cx - L[1] / 2, cx + L[1] / 2, cz - L[2] / 2, cz + L[2] / 2, topY, bottom, forms, if k % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
+			bottom = topY - 0.6
+		end
+		for k, st in f[5] do
+			part(string.format("%s_돌%d", f[1], k), Vector3.new(st[1], st[2], st[3]), CFrame.new(f[2] + st[4], topY + st[2] / 2 - 0.3, f[3] + st[5]) * CFrame.Angles(0, math.rad(k * 41 + i * 13), 0), if k % 2 == 0 then STONE else STONE2, M.Sandstone, forms)
+		end
+	end
 	say("R_사막: 땅 %d, 절벽 %d, 해변 %d, 사구 %d, 높은 바위 %d, 협곡 판 %d, 돌덩이 %d", #LAND, #CLIFFS, #SHORE, #DUNES, #MESAS, #CANYON, #ROCKS)
 end
 

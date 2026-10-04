@@ -150,6 +150,27 @@ WALL_ROCKS = [
     (3166, -1012, 4, 3, 4, 50), (3380, -1052, 5, 3.5, 4, 20), (3374, -1058, 3, 2, 3, 65),
 ]
 
+# 바위 턱 길 위 작은 돌(손 배치): { x, z, 너비, 높이, 깊이, 돌림 } — 땅(턱) 위에 얹는다
+LEDGE_STONES = [
+    (2862, -684, 2.5, 2, 2.2, 20), (2870, -712, 1.8, 1.5, 1.8, 50), (2874, -736, 3, 2.4, 2.6, 10), (2866, -746, 1.6, 1.3, 1.5, 70),
+    (2878, -758, 2.2, 1.8, 2, 35), (2880, -776, 2.6, 2, 2.4, 15), (2884, -784, 1.5, 1.2, 1.4, 60), (2890, -791, 2, 1.6, 1.8, 25),
+    (2852, -705, 4, 3, 4, 30),
+]
+# 탑바위(2026-10-04 사용자: "아래로 갈수록 조금씩 뚱뚱해지는 직육면체 블록들을 배치하고, 그 위에 자그마한 돌덩이"):
+#   { 이름, x, z, 켜들[(너비, 깊이, 높이, 옆 비킴 x, z) 아래 → 위], 꼭대기 돌[(너비, 높이, 깊이, 비킴 x, z)] } — 켜·돌 모두 손으로
+FORMATIONS = [
+    ("탑바위1", 2945, -760, [(36, 28, 6, 0, 0), (28, 22, 7, 2, -1), (20, 15, 6, -1, 2), (12, 9, 5, 1, 0)], [(3, 2.5, 3, 2, 1), (2, 1.5, 2, -3, -2)]),
+    ("탑바위2", 3120, -880, [(30, 30, 5, 0, 0), (23, 24, 6, -2, 1), (15, 16, 7, 1, -2), (8, 9, 5, 0, 1)], [(2.5, 2, 2.5, 1, 0)]),
+    ("탑바위3", 3330, -860, [(28, 22, 6, 0, 0), (20, 16, 8, 1, 2), (12, 10, 6, -1, 0)], [(3, 2, 2.5, -2, 1), (1.8, 1.5, 1.8, 2, -2)]),
+    ("탑바위4", 3115, -1175, [(26, 24, 5, 0, 0), (19, 18, 7, -1, -1), (12, 11, 6, 1, 1), (7, 6, 4, 0, -1)], [(2, 1.6, 2, 0, 0)]),
+    ("탑바위5", 3240, -1050, [(22, 30, 6, 0, 0), (16, 22, 7, 1, -2), (10, 13, 6, 0, 1)], [(2.5, 2, 2, 1, 1), (1.6, 1.4, 1.6, -2, -1)]),
+    ("탑바위6", 3370, -1230, [(30, 24, 5, 0, 0), (22, 17, 6, -2, 1), (14, 11, 6, 1, -1)], [(2.8, 2.2, 2.6, 0, 0)]),
+    ("탑바위7", 2955, -1180, [(28, 24, 5, 0, 0), (20, 18, 6, 1, -1), (13, 11, 6, 0, 1)], [(2.2, 1.8, 2, 1, 0)]),
+    ("들바위1", 2860, -925, [(26, 22, 8, 0, 0), (19, 16, 9, 1, 1), (12, 10, 8, -1, -1), (6, 5, 5, 0, 0)], [(2, 1.6, 2, 0, 1)]),
+    ("들바위2", 2860, -1180, [(24, 20, 7, 0, 0), (17, 14, 8, -1, 0), (10, 8, 7, 1, 1)], [(2.4, 2, 2.2, 0, 0), (1.5, 1.2, 1.5, 2, -2)]),
+    ("들바위3", 2600, -790, [(30, 26, 7, 0, 0), (22, 19, 8, 2, -1), (15, 13, 8, -1, 1), (8, 7, 6, 0, 0)], [(2.6, 2, 2.4, -1, 1)]),
+]
+
 # 자연 돌다리(협곡 위를 건넘): { x0, x1, z0, z1, 윗면 높이 } — 두께 5
 BRIDGES = [
     (2986, 3034, -812, -796, 33),   # T1(30) ↔ T2a(36)
@@ -258,6 +279,21 @@ def check():
         for site, sr in sites:
             if overlap(r, sr, 2):
                 probs.append("돌덩이가 %s: %d" % (site, i))
+    for f in FORMATIONS:
+        w, d = f[3][0][0], f[3][0][1]
+        r = (f[1] - w / 2, f[2] - d / 2, f[1] + w / 2, f[2] + d / 2)
+        if not on_land(r):
+            probs.append("탑바위 땅 밖: %s" % f[0])
+        for br in no_rock:
+            if overlap(r, br, 1):
+                probs.append("탑바위가 바위·턱길·다리에 겹침: %s" % f[0])
+        for site, sr in sites:
+            if overlap(r, sr, 2):
+                probs.append("탑바위가 %s: %s" % (site, f[0]))
+        for i, rk in enumerate(ROCKS):
+            h = max(rk[2], rk[4]) / 2
+            if overlap(r, (rk[0] - h, rk[1] - h, rk[0] + h, rk[1] + h), 0):
+                probs.append("탑바위가 돌덩이 %d 와 겹침: %s" % (i, f[0]))
     for i, a in enumerate(LAND):
         for b in LAND[i + 1:]:
             if overlap((a[0], a[2], a[1], a[3]), (b[0], b[2], b[1], b[3]), -0.01):
@@ -299,6 +335,9 @@ def render(path):
         C.rect(x0, z0, x1, z1, "#d9bc7c")
     for x0, x1, z0, z1, h in LEDGES:
         C.rect(x0, z0, x1, z1, "#ffd27a")
+    for f in FORMATIONS:
+        for w, d, h, dx, dz in f[3]:
+            C.rect(f[1] + dx - w / 2, f[2] + dz - d / 2, f[1] + dx + w / 2, f[2] + dz + d / 2, "#7a3b1e", 0.5)
     for x0, x1, z0, z1, y0, h in WALL_ROCKS:
         C.rect(x0, z0, x1, z1, "#5a2f1a")
     for x0, x1, z0, z1, h in BRIDGES:
@@ -330,7 +369,7 @@ def lua(v):
 def emit(path):
     out = ["-- desert_plan.py 가 만든 데이터(손으로 고치지 말고 표를 고칠 것)", "local TOP = %s" % TOP, "local CANYON_MAIN = %d" % CANYON_MAIN]
     for name, rows in (("LAND", LAND), ("CLIFFS", CLIFFS), ("SHORE", SHORE), ("MESAS", MESAS), ("CANYON", CANYON), ("RAMPS", RAMPS),
-                       ("BRIDGES", BRIDGES), ("LEDGES", LEDGES), ("LEDGE_SAND", LEDGE_SAND), ("WALL_ROCKS", WALL_ROCKS), ("DUNES", DUNES), ("ROCKS", ROCKS), ("TOP_PATCHES", TOP_PATCHES), ("HIDDEN", [HIDDEN_SITE])):
+                       ("BRIDGES", BRIDGES), ("LEDGES", LEDGES), ("LEDGE_SAND", LEDGE_SAND), ("WALL_ROCKS", WALL_ROCKS), ("LEDGE_STONES", LEDGE_STONES), ("FORMATIONS", FORMATIONS), ("DUNES", DUNES), ("ROCKS", ROCKS), ("TOP_PATCHES", TOP_PATCHES), ("HIDDEN", [HIDDEN_SITE])):
         out.append("local %s = {" % name)
         out += ["\t%s," % lua(r) for r in rows]
         out.append("}")

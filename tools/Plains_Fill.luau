@@ -41,11 +41,11 @@ local function part(name, size, cf, color, mat, parent)
 	return p
 end
 
-local function block(name, x0, x1, z0, z1, top, bottom, parent, rockColor)
+local function block(name, x0, x1, z0, z1, top, bottom, parent, rockColor, capColor, capMat)
 	local h = top - bottom
 	local cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
 	part(name, Vector3.new(x1 - x0, h - 1.2, z1 - z0), CFrame.new(cx, bottom + (h - 1.2) / 2, cz), rockColor or ROCK, M.Slate, parent)
-	part(name .. "_풀", Vector3.new(x1 - x0, 1.2, z1 - z0), CFrame.new(cx, top - 0.6, cz), GRASS, M.Grass, parent)
+	part(name .. "_풀", Vector3.new(x1 - x0, 1.2, z1 - z0), CFrame.new(cx, top - 0.6, cz), capColor or GRASS, capMat or M.Grass, parent)
 end
 
 local function build()
@@ -55,6 +55,16 @@ local function build()
 		지난번에 들어 올린 평원 지형 물건을 먼저 내려놓는다(FillLift 속성 = 올린 만큼).
 		나무·바위: 언덕·단 위로(땅 높이 차이만큼). 옛 덩어리·오르막·잔해: 든 단 높이만큼(PLATEAUS — 2026-10-04 땅 판 높낮이).
 	]]
+	-- 평원 옛 오르막(Plains_Build 의 풀 쐐기 · 2026-10-04 자동 턱)을 걷는다 — 손 배치 턱 길(LEDGES)·길 쐐기(ROAD_WEDGES)로 바꿈
+	local removed = 0
+	for _, f in surface:GetChildren() do
+		local rf = f.Name:match("^R_평원") and f.Name ~= "R_평원채움" and f:FindFirstChild("Ramps")
+		for _, c in rf and rf:GetChildren() or {} do
+			c:Destroy()
+			removed += 1
+		end
+	end
+	say("옛 오르막 걷음 %d", removed)
 	local liftables, lifters = {}, {}
 	for _, f in surface:GetChildren() do
 		if f.Name:match("^R_평원") and f.Name ~= "R_평원채움" then
@@ -379,6 +389,57 @@ local function build()
 			at("글", Vector3.new(0.9, 3.6, 0.15), 0, 3.4, -0.9, RGB(170, 50, 40), M.SmoothPlastic)
 		end
 	end
+	-- 오르는 길: 손 배치 턱(바위 옆 + 풀 윗면), 단 위면 단 높이를 얹는다 · 길 쐐기 · 턱 위 작은 돌 · 탑바위
+	local ledgeF = folder("Ledges")
+	for i, l in LEDGES do
+		local off = plateauAt((l[1] + l[3]) / 2, (l[2] + l[4]) / 2)
+		block(string.format("%s_턱%d", l[6], i), l[1], l[3], l[2], l[4], TOP + l[5] + off, TOP - 4, ledgeF, if i % 2 == 0 then ROCK2 else ROCK)
+	end
+	for i, r in ROAD_WEDGES do
+		local x, zl, zh, w, y0, y1 = r[1], r[2], r[3], r[4], TOP + r[5], TOP + r[6]
+		local base = y0 - 2
+		local up = if zh < zl then -1 else 1
+		local len = math.abs(zh - zl) + 3
+		local cz = (zl + zh) / 2 + up * 1.5
+		local wp = Instance.new("WedgePart")
+		wp.Name = "RoadRamp" .. i
+		wp.Anchored = true
+		wp.Size = Vector3.new(w, y1 - base, len)
+		wp.CFrame = CFrame.new(x, base + (y1 - base) / 2, cz) * CFrame.Angles(0, if up < 0 then math.pi else 0, 0)
+		wp.Color, wp.Material = GRASS, M.Grass
+		wp.Parent = ledgeF
+	end
+	local hit2 = { ledgeF }
+	for _, h in hit do
+		table.insert(hit2, h)
+	end
+	local ray2 = RaycastParams.new()
+	ray2.FilterType = Enum.RaycastFilterType.Include
+	ray2.FilterDescendantsInstances = hit2
+	local function groundY2(x, z)
+		local r = workspace:Raycast(Vector3.new(x, 300, z), Vector3.new(0, -400, 0), ray2)
+		return if r then r.Position.Y else TOP
+	end
+	for i, st in LEDGE_STONES do
+		local y = groundY2(st[1], st[2])
+		part("턱돌" .. i, Vector3.new(st[3], st[3] * 0.8, st[3] * 0.9), CFrame.new(st[1], y + st[3] * 0.4 - 0.3, st[2]) * CFrame.Angles(0, math.rad(i * 37), 0), if i % 2 == 0 then ROCK else ROCK2, M.Slate, ledgeF)
+	end
+	local forms = folder("Formations")
+	local CAP = RGB(150, 147, 139)
+	for i, f in FORMATIONS do
+		local y = groundY2(f[2], f[3])
+		local bottom, topY = y - 2, y
+		for k, L in f[4] do
+			local cx, cz = f[2] + L[4], f[3] + L[5]
+			topY = (if k == 1 then y else topY) + L[3]
+			block(string.format("%s_%d", f[1], k), cx - L[1] / 2, cx + L[1] / 2, cz - L[2] / 2, cz + L[2] / 2, topY, bottom, forms, if k % 2 == 0 then ROCK2 else ROCK, CAP, M.Slate)
+			bottom = topY - 0.6
+		end
+		for k, stn in f[5] do
+			part(string.format("%s_돌%d", f[1], k), Vector3.new(stn[1], stn[2], stn[3]), CFrame.new(f[2] + stn[4], topY + stn[2] / 2 - 0.3, f[3] + stn[5]) * CFrame.Angles(0, math.rad(k * 41 + i * 13), 0), if k % 2 == 0 then ROCK else ROCK2, M.Slate, forms)
+		end
+	end
+	say("턱 길 %d · 길 쐐기 %d · 턱 돌 %d · 탑바위 %d", #LEDGES, #ROAD_WEDGES, #LEDGE_STONES, #FORMATIONS)
 	say("채움: 덩어리 %d, 오르막 %d, 못 %d, 텃밭 %d, 키트 %d(없음 %d), 나무 %d, 바위 %d, 길 %d, 랜드마크 %d",
 		#MASSES, #RAMPS, #PONDS, #GARDENS, #KITS, missing, #TREES, #ROCKS, #PATHS, #MARKS)
 	assert(missing == 0, "틀이 빠졌다")

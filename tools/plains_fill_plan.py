@@ -97,6 +97,64 @@ PONDS = []
 GARDENS = []
 MARKS = []
 
+# 오르는 길(2026-10-04 사용자: "평원쪽 계단도 사막처럼"): 매끈한 풀 쐐기·자동 턱을 걷고 벽을 따라 나란히 오르는 바위 턱 길.
+#   { 이름, 축("x"·"z"), 낮은 끝, 높은 끝, 벽 줄(그 축에 직각인 좌표), 바깥 쪽(+1/-1), 낮은 높이, 높은 높이(땅 위), 폭, 턱마다 폭 더하기[...] }
+#   턱 수 = 폭 더하기 개수. 턱 높이는 낮은 → 높은 높이를 고르게, 바깥 가장자리는 표의 숫자만큼 들쭉날쭉(손으로 적음).
+LEDGE_PATHS = [
+    ("남산1", "x", 345, 235, -60, 1, 0, 26, 14, [0, 3, -2, 4, 1, -1, 2, -3, 0, 2, 3, -1, 1]),
+    ("남산2", "x", 212, 300, -90, 1, 26, 44, 12, [2, -1, 3, 0, -2, 1, 2, -1, 0]),
+    ("남산3", "x", 335, 245, -112, 1, 44, 58, 11, [1, -2, 2, 0, 3, -1, 1]),
+    ("남산4", "x", 262, 310, -128, 1, 58, 68, 10, [0, 2, -1, 1, 2]),
+    ("서쪽2", "z", 60, 4, -460, 1, 0, 18, 14, [1, -2, 3, 0, 2, -1, 1, 3, 0]),
+    ("동들", "x", 785, 705, 150, 1, 6.4, 20, 14, [0, 2, -2, 3, 1, -1, 2]),
+    ("동남바위", "x", 870, 820, 810, 1, 0, 10, 12, [1, -1, 2, 0, 1]),
+    ("동언덕", "x", 1130, 1050, 480, 1, 0, 14, 14, [2, 0, -1, 3, 1, -2, 2]),
+    ("서언덕", "z", 490, 400, -700, -1, 0, 16, 14, [0, 2, -1, 3, 1, -2, 2, 0]),
+]
+# 동산길 끝(정자 오르는 도성 길)은 길 판이 얹혀 있어 매끈한 쐐기로 둔다: { x, 낮은 z, 높은 z, 너비, 낮은 높이, 높은 높이 }
+ROAD_WEDGES = [(676, 322, 290, 28, 0, 6.4)]
+# 턱 길 위 작은 돌: { 길 이름, 턱 번호, 바깥에서 안쪽으로(0~1), 크기 }
+LEDGE_STONES = [
+    ("남산1", 2, 0.25, 2.2), ("남산1", 5, 0.2, 1.6), ("남산1", 9, 0.3, 2.6), ("남산1", 12, 0.15, 1.8),
+    ("남산2", 3, 0.25, 2.0), ("남산2", 7, 0.2, 1.5), ("남산3", 2, 0.3, 1.8), ("남산3", 5, 0.2, 2.2), ("남산4", 3, 0.25, 1.6),
+    ("서쪽2", 2, 0.2, 2.4), ("서쪽2", 6, 0.3, 1.7), ("동들", 3, 0.25, 2.0), ("동들", 6, 0.2, 1.5),
+    ("동남바위", 2, 0.3, 1.8), ("동언덕", 2, 0.2, 2.3), ("동언덕", 5, 0.3, 1.6), ("서언덕", 3, 0.25, 2.1), ("서언덕", 6, 0.2, 1.7),
+]
+# 탑바위(아래로 갈수록 넓은 바위 상자 켜 + 꼭대기 작은 돌): { 이름, x, z, 켜[(너비, 깊이, 높이, 비킴 x, z)], 꼭대기 돌[(너비, 높이, 깊이, 비킴 x, z)] }
+FORMATIONS = [
+    ("들탑1", -520, 880, [(24, 20, 6, 0, 0), (18, 15, 7, 1, -1), (12, 10, 6, -1, 1), (6, 5, 4, 0, 0)], [(2.2, 1.8, 2, 0, 1)]),
+    ("들탑2", -640, 560, [(22, 24, 5, 0, 0), (16, 18, 6, -1, 1), (10, 11, 6, 1, 0)], [(2, 1.6, 1.8, 1, 0), (1.4, 1.2, 1.4, -2, -1)]),
+    ("들탑3", -275, 95, [(20, 18, 6, 0, 0), (14, 13, 7, 1, 1), (8, 7, 5, 0, -1)], [(1.8, 1.5, 1.8, 0, 0)]),
+    ("들탑4", 455, 140, [(24, 20, 5, 0, 0), (18, 15, 6, -1, 0), (12, 10, 6, 1, 1), (7, 6, 4, 0, -1)], [(2.4, 2, 2.2, 0, 0)]),
+    ("들탑5", 1010, 440, [(22, 22, 6, 0, 0), (16, 16, 7, 1, -1), (10, 9, 6, -1, 1)], [(2, 1.6, 2, 1, 1)]),
+    ("들탑6", 740, 870, [(24, 22, 6, 0, 0), (17, 16, 7, -1, 1), (11, 10, 6, 1, 0), (5, 5, 4, 0, 0)], [(1.8, 1.4, 1.6, 0, 0)]),
+    ("들탑7", -40, 170, [(22, 20, 5, 0, 0), (16, 14, 6, 1, 1), (9, 8, 6, 0, -1)], [(2, 1.6, 1.8, -1, 0)]),
+    ("들탑8", 110, 20, [(20, 20, 6, 0, 0), (14, 15, 7, -1, 0), (8, 9, 5, 1, 1)], [(1.8, 1.5, 1.6, 0, 1)]),
+    ("들탑9", -700, 130, [(24, 22, 6, 0, 0), (17, 16, 7, 1, 0), (11, 10, 6, 0, 1), (6, 5, 4, -1, 0)], [(2.2, 1.8, 2, 0, 0)]),
+    ("들탑10", 1100, 300, [(20, 18, 5, 0, 0), (14, 13, 6, 1, 1), (8, 7, 5, -1, 0)], [(1.8, 1.5, 1.8, 0, 0)]),
+]
+
+
+def ledges_of(path):
+    """턱 길 → 턱 네모들 [(x0, z0, x1, z1, 윗면)] (벽 쪽으로 1 겹쳐 틈 없이)"""
+    name, axis, a_lo, a_hi, wall, out, h0, h1, w, jit = path
+    n = len(jit)
+    step = (a_hi - a_lo) / n
+    out_rects = []
+    for k in range(n):
+        s0 = a_lo + step * k
+        s1 = s0 + step
+        lo, hi = min(s0, s1), max(s0, s1)
+        lo, hi = lo - 0.3, hi + 0.3
+        width = w + jit[k]
+        o0, o1 = wall - out * 1.0, wall + out * width
+        top = h0 + (h1 - h0) * (k + 1) / n
+        if axis == "x":
+            out_rects.append((lo, min(o0, o1), hi, max(o0, o1), top))
+        else:
+            out_rects.append((min(o0, o1), lo, max(o0, o1), hi, top))
+    return out_rects
+
 MARK_SIZE = {"Beacon": (26, 26), "Seonang": (12, 12), "Jangseung": (3, 3)}
 
 
@@ -154,6 +212,12 @@ def new_items():
         items.append(("pond", "Pond#%d" % i, (p[0] - 2, p[1] - 2, p[2] + 2, p[3] + 2)))
     for i, g in enumerate(GARDENS):
         items.append(("garden", "Garden#%d" % i, tuple(g)))
+    for path in LEDGE_PATHS:
+        for j, r in enumerate(ledges_of(path)):
+            items.append(("ledge", "%s#%d" % (path[0], j), r[:4]))
+    for f in FORMATIONS:
+        w, d = f[3][0][0], f[3][0][1]
+        items.append(("form", f[0], (f[1] - w / 2, f[2] - d / 2, f[1] + w / 2, f[2] + d / 2)))
     for i, (k, x, z, yaw) in enumerate(MARKS):
         w, d = MARK_SIZE[k]
         if int(yaw) % 180 == 90:
@@ -272,6 +336,8 @@ def check(occ, land):
             continue
         on_mass = any(m[0] <= r[0] and r[2] <= m[2] and m[1] <= r[1] and r[3] <= m[3] for m in mass_rects)
         for tag, oname, orect, _ in occ:
+            if kind in ("ledge", "form") and ("/Masses" in tag or "/Ramps" in tag or "/Cliffs" in tag or "Pavilion" in tag):
+                continue  # 오르는 덩어리 벽에 붙고(옛 쐐기 자리는 지운다), 탑바위는 언덕 위에도 선다
             # 옛 덩어리 위에 올라앉는 것은 허용(받침), 그 밖은 3 스터드 띄운다
             if "/Masses" in tag and orect[0] <= r[0] and r[2] <= orect[2] and orect[1] <= r[1] and r[3] <= orect[3]:
                 continue
@@ -294,6 +360,8 @@ def check(occ, land):
                 continue
             if kind in ("tree",) and kind2 in ("tree",):
                 continue  # 숲 덩어리는 서로 붙어도 된다
+            if kind == "ledge" and kind2 == "ledge" and name.split("#")[0] == name2.split("#")[0]:
+                continue  # 같은 길의 턱끼리는 이어 붙는다
             if {kind, kind2} == {"kit", "pond"} and (name.split("#")[0] in WATER_KITS or name2.split("#")[0] in WATER_KITS):
                 continue  # 갈대·연잎은 못 안에
             if overlap(r, r2, 2):
@@ -358,9 +426,15 @@ def render(path, occ, land, region=(-800, -280, 1220, 1090), sc=0.5):
         for a, b in zip(pts, pts[1:]):
             C.line(a[0], a[1], b[0], b[1], w, "#e0dccb")
     newcol = {"mass": "#c05a2c", "kit": "#e8b400", "tree": "#0d7a2a", "rock": "#303030", "pond": "#3a9ad9",
-              "garden": "#8a6f4c", "mark": "#ff3d7f"}
+              "garden": "#8a6f4c", "mark": "#ff3d7f", "ledge": "#ffd27a", "form": "#4a4a46"}
     for kind, name, r in new_items():
         C.rect(*r, newcol[kind], 0.9 if kind != "mass" else 0.55)
+    for lp in LEDGE_PATHS:
+        for r in ledges_of(lp):
+            C.rect(r[0], r[1], r[2], r[3], "#ffd27a")
+    for f in FORMATIONS:
+        for w, d, h, dx, dz in f[3]:
+            C.rect(f[1] + dx - w / 2, f[2] + dz - d / 2, f[1] + dx + w / 2, f[2] + dz + d / 2, "#4a4a46", 0.5)
     for x, zl, zh, w, *_ in RAMPS:
         C.rect(x - w / 2, min(zl, zh), x + w / 2, max(zl, zh), "#ffe08a", 0.9)
     C.save(path)
@@ -379,7 +453,22 @@ def lua(v):
 def emit(path):
     kits = [(k, x, z, yaw, rest[0] if rest else 1, KIT_SRC.get(k, "JeolhwaKit")) for k, x, z, yaw, *rest in KITS]
     out = ["-- plains_fill_plan.py 가 만든 데이터(손으로 고치지 말고 표를 고칠 것)"]
-    for name, rows in (("PLATEAUS", PLATEAUS), ("MASSES", MASSES), ("RAMPS", RAMPS), ("KITS", kits), ("TREES", TREES), ("ROCKS", ROCKS),
+    ledges = [r + (lp[0],) for lp in LEDGE_PATHS for r in ledges_of(lp)]
+    stones = []
+    for name, k, inward, size in LEDGE_STONES:
+        lp = next(pp for pp in LEDGE_PATHS if pp[0] == name)
+        r = ledges_of(lp)[k - 1]
+        _, axis, _, _, wall, side, *_ = lp
+        if axis == "x":
+            outer = r[3] if side > 0 else r[1]
+            z = outer - (outer - wall) * inward
+            stones.append(((r[0] + r[2]) / 2, z, size))
+        else:
+            outer = r[2] if side > 0 else r[0]
+            x = outer - (outer - wall) * inward
+            stones.append((x, (r[1] + r[3]) / 2, size))
+    for name, rows in (("LEDGES", ledges), ("LEDGE_STONES", stones), ("ROAD_WEDGES", ROAD_WEDGES), ("FORMATIONS", FORMATIONS),
+                       ("PLATEAUS", PLATEAUS), ("MASSES", MASSES), ("RAMPS", RAMPS), ("KITS", kits), ("TREES", TREES), ("ROCKS", ROCKS),
                        ("PONDS", PONDS), ("GARDENS", GARDENS), ("MARKS", MARKS)):
         out.append("local %s = {" % name)
         out += ["\t%s," % lua(r) for r in rows]
