@@ -102,10 +102,11 @@ local cards: { Card } = {
 	},
 	{
 		Id = "Duelist_R_NoSpend",
+		MaxLevel = 3,
 		Art = "결투사의_레이피어",
 		Name = "불소모",
 		Description = "[집중]이 최대치일 때, 패링에 성공하면 스택을 {3}턴 당 한 번 소모하지 않는다.",
-		Levels = { { 3, 3, 2, 2, 2, 1 } },
+		Levels = { { 3, 2, 1 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,
 		Tags = { "Precision", "Riposte" },

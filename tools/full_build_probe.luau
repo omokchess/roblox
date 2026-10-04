@@ -38,7 +38,7 @@ local function battle()
 end
 
 -- 자원 가득: 상한(거센 빛이면 질량 50), 붕괴 차징 3(과충전)
-local FULL = { Mass = 50, Charge = 3 }
+local FULL = { Mass = 50, Charge = 3, Wall = 20 }
 local function fill(s)
 	local ally = GridBattle.Ally(s)
 	for _, id in ClassResources.ForClass(classId) do

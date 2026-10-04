@@ -316,11 +316,11 @@ local cards: { Card } = {
 	},
 	{
 		Id = "WallBreaker_C_WeakPoint",
-		MaxLevel = 5,
+		MaxLevel = 4,
 		Art = "WallBreaker_C_WeakPoint",
 		Name = "약점 파괴",
 		Description = "[허물 벽] 중첩 {2}당 치명타 확률이 {2}% 증가한다.",
-		Levels = { { 2, 2, 2, 2, 2 }, { 2, 3, 3, 4, 5 } },
+		Levels = { { 2, 2, 2, 2 }, { 2, 3, 4, 5 } },
 		Grade = "Common",
 		ClassId = CLASS_ID,
 		Tags = { "Vanguard", "Brink" },
