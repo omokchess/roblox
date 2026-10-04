@@ -316,10 +316,10 @@ local duelistEffects: { [string]: Effect } = {
 	PointBlank = {
 		Before = function(ctx)
 			BattleStatus.AddModifier(ctx.Status, "CritChance", 0.15, 1, "연계")
-			-- 2026-10-04 사용자: 깡 피해 증가를 없애고 [집중]을 전부 소모, 소모한 1당 [가하는 피해량] +25%
+			-- 2026-10-04 사용자: 깡 피해 증가를 없애고 [집중]을 전부 소모, 소모한 1당 [가하는 피해량] +10%
 			local spent = BattleStatus.SpendAll(ctx.Status, R.FOCUS)
-			ctx.Log(string.format("집중 %d 소모 — 피해 +%d%%", spent, spent * 25))
-			return 1 + spent * 0.25
+			ctx.Log(string.format("집중 %d 소모 — 피해 +%d%%", spent, spent * 10))
+			return 1 + spent * 0.1 -- 2026-10-04 사용자: 25% → 10%
 		end,
 		After = function(ctx)
 			local status = ctx.Status
