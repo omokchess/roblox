@@ -41,7 +41,8 @@ local cards: { Card } = {
 		Description = "[벽] 상한이 {5} 증가하고 스택당 얻는 버프량이 {70}%가 된다.\n"
 			.. "위 효과는 곱연산으로 계산된다.\n"
 			.. "소숫점 버림.",
-		Levels = { { 5, 15 }, { 70, 100 } },
+		-- 2026-10-04: 석공의 손과 겹쳐 벽 20 스택이 너무 셌다 → 상한 증가 +15 → +8(사용자)
+		Levels = { { 5, 8 }, { 70, 100 } },
 		Grade = "Essential",
 		ClassId = CLASS_ID,
 		Tags = { "Plating", "Construct" },

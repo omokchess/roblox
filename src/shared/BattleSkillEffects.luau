@@ -751,8 +751,8 @@ local wallMasonEffects: { [string]: Effect } = {
 	-- 뒷벽 허물기: [벽] 중첩 1당 피해 +6%(후열 조준 +).
 	BreakBackWall = {
 		Before = function(ctx)
-			-- 2026-10-04 사용자 "뒷벽 허물기 기본 피해량 너프": 풀세팅 한 대상 51.6만(다음 스킬의 2.7배) → 이 스킬 피해 −70%
-			return 0.3 * (1 + BattleStatus.Stack(ctx.Status, R.WALL) * ctx.Query("BackWallPerStack", 0.06))
+			-- 2026-10-04: 한 대상 51.6만 → 스킬 배율(−70%)은 빼고 기본 피해 22 → 16, 대성당 벽 상한 +15 → +8 로 잡는다(사용자)
+			return 1 + BattleStatus.Stack(ctx.Status, R.WALL) * ctx.Query("BackWallPerStack", 0.06)
 		end,
 	},
 	-- 축성: 아군 전체에게 벽 3중첩(솔로라 자신뿐). 초석이면 한 아군에게 더 많이(카드가 더한다).
