@@ -506,9 +506,9 @@ function BattleHud:SetEffects(effects: { any })
 			icon.Size = UDim2.fromOffset(46, 46)
 			local SPOT = {
 				-- { 기호 자리(가운데 비율), 숫자 자리·정렬 }
-				BR = { Vector2.new(0.68, 0.52), UDim2.new(1, -2, 1, 0), Vector2.new(1, 1), Enum.TextXAlignment.Right },
-				BL = { Vector2.new(0.36, 0.6), UDim2.new(0, 2, 1, 0), Vector2.new(0, 1), Enum.TextXAlignment.Left },
-				TL = { Vector2.new(0.5, 0.3), UDim2.new(0, 2, 0, 1), Vector2.new(0, 0), Enum.TextXAlignment.Left },
+				BR = { Vector2.new(0.6, 0.6), UDim2.new(1, -2, 1, 0), Vector2.new(1, 1), Enum.TextXAlignment.Right },
+				BL = { Vector2.new(0.42, 0.66), UDim2.new(0, 2, 1, 0), Vector2.new(0, 1), Enum.TextXAlignment.Left },
+				TL = { Vector2.new(0.5, 0.42), UDim2.new(0, 2, 0, 1), Vector2.new(0, 0), Enum.TextXAlignment.Left },
 			}
 			for zi, m in e.Multi do
 				local spot = SPOT[m[3]]
