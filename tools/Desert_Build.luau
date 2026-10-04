@@ -125,10 +125,54 @@ local function build()
 	for i, c in CANYON do
 		block("Table" .. i, c[1], c[2], c[3], c[4], TOP + c[5], TOP - 4, canyon, if i % 2 == 0 then STONE2 else STONE, M.Sandstone, MESA_TOP, M.Sand)
 	end
+	-- 오르막(탁상지 위로): WedgePart 는 로컬 +Z 쪽이 높다 → 높은 쪽 방향으로 돌린다(Angles(0,θ,0): 로컬 +Z → (sinθ, 0, cosθ))
+	local ramps = folder("Ramps")
+	local YAW = { ["+z"] = 0, ["-z"] = math.pi, ["+x"] = math.pi / 2, ["-x"] = -math.pi / 2 }
+	for i, r in RAMPS do
+		local x0, x1, z0, z1, lo, hi, dir = r[1], r[2], r[3], r[4], TOP + r[5], TOP + r[6], r[7]
+		local base = lo - 2
+		local alongX = dir == "+x" or dir == "-x"
+		local run = if alongX then x1 - x0 else z1 - z0
+		local width = if alongX then z1 - z0 else x1 - x0
+		local wp = Instance.new("WedgePart")
+		wp.Name = "Ramp" .. i
+		wp.Anchored = true
+		wp.Size = Vector3.new(width, hi - base, run)
+		wp.CFrame = CFrame.new((x0 + x1) / 2, base + (hi - base) / 2, (z0 + z1) / 2) * CFrame.Angles(0, YAW[dir], 0)
+		wp.Color, wp.Material = SAND, M.Sand
+		wp.Parent = ramps
+	end
+	-- 자연 돌다리(협곡 위, 두께 5)
+	local bridges = folder("Bridges")
+	for i, br in BRIDGES do
+		block("Bridge" .. i, br[1], br[2], br[3], br[4], TOP + br[5], TOP + br[5] - 5, bridges, STONE2, M.Sandstone, MESA_TOP, M.Sand)
+	end
+	-- 히든 분지 표지(나중에 보상·제단을 다는 자리) — 속성만 붙인 빈 부품
+	local hs = HIDDEN[1]
+	local hidden = folder("Hidden")
+	hidden:SetAttribute("Note", "협곡 끝 곶 안 히든 분지(2026-10-04). 거대 뼈·제단은 Desert_Bones 가 이 폴더에 둔다")
+	local marker = part("HiddenArea", Vector3.new(hs[2] - hs[1], 1, hs[4] - hs[3]), CFrame.new((hs[1] + hs[2]) / 2, TOP + 0.5, (hs[3] + hs[4]) / 2), SAND, M.Sand, hidden)
+	marker.Transparency, marker.CanCollide, marker.CanQuery, marker.CanTouch = 1, false, false, true
+
+	-- 탁상지 위 꾸밈 판(모래 더미·바위턱) — 가운데 땅 높이를 재서 그 위에
+	local tops = folder("TopPatches")
+	local tray = RaycastParams.new()
+	tray.FilterType = Enum.RaycastFilterType.Include
+	tray.FilterDescendantsInstances = { canyon }
+	for i, t in TOP_PATCHES do
+		local hit = workspace:Raycast(Vector3.new((t[1] + t[2]) / 2, 400, (t[3] + t[4]) / 2), Vector3.new(0, -500, 0), tray)
+		local y = if hit then hit.Position.Y else TOP
+		if t[6] == "바위" then
+			block("TopRock" .. i, t[1], t[2], t[3], t[4], y + t[5], y - 2, tops, STONE2, M.Sandstone, MESA_TOP, M.Sand)
+		else
+			block("TopSand" .. i, t[1], t[2], t[3], t[4], y + t[5], y - 2, tops, SAND_DARK, M.SmoothPlastic, SAND, M.Sand)
+		end
+	end
+
 	-- 바위
 	local ray = RaycastParams.new()
 	ray.FilterType = Enum.RaycastFilterType.Include
-	ray.FilterDescendantsInstances = { land, dunes, mesas, canyon, cliffs, shore }
+	ray.FilterDescendantsInstances = { land, dunes, mesas, canyon, cliffs, shore, bridges, ramps, tops }
 	local rocks = folder("Rocks")
 	for i, r in ROCKS do
 		local hit = workspace:Raycast(Vector3.new(r[1], 400, r[2]), Vector3.new(0, -500, 0), ray)
