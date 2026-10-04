@@ -146,11 +146,13 @@ M.WallPilgrim_Sigil = {
 			end
 		end
 		while #branded >= limit and #branded > 0 do
-			BattleStatus.RemoveBySource(table.remove(branded, 1).Status, "낙인")
+			local other = table.remove(branded, 1).Status
+			BattleStatus.RemoveBySource(other, "낙인")
+			BattleStatus.SpendAll(other, R.BRAND)
 		end
 		local turns = math.floor(Q(c.Rt, "BrandTurns", 3))
-		BattleStatus.RemoveBySource(info.Target.Status, "낙인")
-		BattleStatus.AddModifier(info.Target.Status, "HealTaken", -0.5, turns, "낙인")
+		-- 2026-10-04: 낙인은 스택(못질이 1씩 쌓는다) — 각인도 1 얹는다
+		BattleSkillEffects.ApplyBrand(info.Target.Status, 1, turns)
 		CardEffects.Fire(c.Rt, "Branded", { Target = info.Target, Turns = turns })
 		H.Log(c, info.Target.Name .. " 에게 낙인")
 		return true

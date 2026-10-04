@@ -96,15 +96,28 @@ function Fx.Halo(ctx: any)
 	Vfx.Sparks(head, { Color = CANDLE, Count = 16, Accel = Vector3.new(0, 6, 0), MinSpeed = 2, Speed = 6, Lifetime = 1 })
 end
 
--- 합창: 대상 줄(아군이 보는 방향의 줄) 위 하늘에서 못이 줄지어 떨어진다(도착 ≈ 0.3초)
+-- 합창: 대상 줄(아군이 보는 방향으로 뻗은 라인) 위 하늘에서 못이 줄지어 떨어진다(도착 ≈ 0.3초)
+-- 2026-10-04 사용자: 범위는 겨눈 라인 전체인데 못이 옆으로(가로줄) 흩어졌다 → 앞쪽(Forward)을 따라 맞은 적들을 덮게
 function Fx.NailRain(ctx: any)
 	local Vfx = ctx.Vfx
 	local side = ctx.Forward:Cross(Vector3.new(0, 1, 0))
-	local center = ctx.Target
+	local origin = ctx.Root.Position
+	-- 맞은 적들의 앞쪽 거리 범위(없으면 앞 6~30)
+	local near, far = math.huge, -math.huge
+	for _, p in ctx.Targets do
+		local d = (p - origin):Dot(ctx.Forward)
+		near, far = math.min(near, d), math.max(far, d)
+	end
+	if near == math.huge then
+		near, far = 6, 30
+	end
+	near, far = near - 3, far + 3
 	local rng = Random.new()
-	for _ = 1, 9 do
-		local offset = side * rng:NextNumber(-7, 7) + ctx.Forward * rng:NextNumber(-1.2, 1.2)
-		local ground = Vector3.new(center.X, ctx.Ground, center.Z) + offset
+	local count = math.clamp(math.floor((far - near) / 2.5), 9, 18)
+	for i = 1, count do
+		local along = near + (far - near) * (i - 0.5) / count + rng:NextNumber(-0.8, 0.8)
+		local offset = ctx.Forward * along + side * rng:NextNumber(-1.4, 1.4)
+		local ground = Vector3.new(origin.X, ctx.Ground, origin.Z) + offset
 		local delay = rng:NextNumber(0, 0.18)
 		task.delay(delay, function()
 			local model = nail(Vfx, CFrame.new(ground + Vector3.new(0, 16, 0)) * CFrame.Angles(math.pi, 0, 0))

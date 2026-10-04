@@ -835,8 +835,24 @@ local function runStatusAndSkillEffects()
 		GridBattle.MoveAlly(pilgrimBattle, 1, pilgrimCell.Y)
 	end
 	GridBattle.ResolveSkill(pilgrimBattle, 1, "Success") -- 못질
-	expect(BattleStatus.Stack(pilgrimFoe.Status, ClassResources.ZEAL) == 2, "nailing must apply 2 zeal")
+	-- 2026-10-04 리워크: 못질 = 파상풍 1 · 광신 3 · 낙인 1, 파상풍 1 이 쇼크 1 을 준다
+	expect(BattleStatus.Stack(pilgrimFoe.Status, ClassResources.ZEAL) == 3, "nailing must apply 3 zeal")
 	expect(BattleStatus.Total(pilgrimFoe.Status, "DamageDealt") < 0, "zeal must weaken the enemy's damage")
+	expect(BattleStatus.Stack(pilgrimFoe.Status, ClassResources.TETANUS) == 1, "nailing must apply 1 tetanus")
+	expect(BattleStatus.Stack(pilgrimFoe.Status, ClassResources.BRAND) == 1, "nailing must apply 1 brand")
+	expect(BattleStatus.Stack(pilgrimFoe.Status, ClassResources.SHOCK) == 1, "tetanus must give 1 shock per stack")
+	-- 파상풍: 주는 피해 ×0.8 / 스택, 10 이 되면 터지고 0 + 면역, 쇼크 3 이면 경련
+	local st = BattleStatus.New()
+	expect(math.abs(BattleStatus.OutgoingDamage(st, 100) - 100) < 1e-9, "no tetanus = full damage")
+	BattleSkillEffects.ApplyTetanus(st, 2)
+	expect(math.abs(BattleStatus.OutgoingDamage(st, 100) - 64) < 1e-6, "tetanus 2 must multiply damage by 0.64")
+	expect(BattleStatus.Stack(st, ClassResources.SPASM) == 0, "shock 2 must not spasm yet")
+	BattleSkillEffects.ApplyShock(st, 1)
+	expect(BattleStatus.Stack(st, ClassResources.SPASM) == 1, "shock 3 must give spasm")
+	expect(math.abs(BattleStatus.Total(st, "DamageTaken") - 0.24) < 1e-9, "shock must give 8% taken per stack")
+	expect(BattleSkillEffects.ApplyTetanus(st, 8) == true, "tetanus 10 must burst")
+	expect(BattleStatus.Stack(st, ClassResources.TETANUS) == 0, "tetanus must reset after burst")
+	expect(BattleSkillEffects.ApplyTetanus(st, 3) == false and BattleStatus.Stack(st, ClassResources.TETANUS) == 0, "tetanus immune after burst")
 end
 
 --[[

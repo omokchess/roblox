@@ -738,14 +738,78 @@ function BattleHud:SetBoss(snapshot: any?)
 	for _, at in bossSnap.PhaseAt or {} do
 		make("Frame", { Position = UDim2.new(at, -1, 0, -3), Size = UDim2.new(0, 2, 1, 6), BackgroundColor3 = GOLD, BorderSizePixel = 0, ZIndex = 2 }, track)
 	end
-	-- 3) 부위 넷
-	local parts = line(3, 30)
+	--[[
+		부위마다 걸린 상태이상(2026-10-04 사용자: "보스에게 걸린 상태이상이 더 잘 보이도록").
+		체력바 밑에 색 칩(키워드 색 바탕 · 이름 · 수치)으로 줄지어 띄운다. 지속 피해 넷 + 스택 상태이상.
+	]]
+	local DOTS = {
+		{ "Bleed", "출혈", Color3.fromRGB(230, 90, 90) },
+		{ "Poison", "독", Color3.fromRGB(150, 220, 120) },
+		{ "Burn", "화상", Color3.fromRGB(255, 150, 70) },
+		{ "Oil", "기름", Color3.fromRGB(200, 180, 120) },
+	}
+	local function statusChips(u: any): { { any } }
+		local out = {}
+		if not u then
+			return out
+		end
+		for _, d in DOTS do
+			if (u[d[1]] or 0) > 0 then
+				table.insert(out, { d[2], u[d[1]], d[3] })
+			end
+		end
+		local ids = {}
+		for id, v in u.Stacks or {} do
+			if v > 0 then
+				table.insert(ids, id)
+			end
+		end
+		table.sort(ids)
+		for _, id in ids do
+			local kw = Keywords.Get(id)
+			local color = if kw and kw.Color then Color3.fromHex(kw.Color) else GOLD
+			table.insert(out, { if kw then kw.Name else id, u.Stacks[id], color })
+		end
+		return out
+	end
+	local CHIP_H = 17
+	local function chipRow(parent: Instance, y: number, list: { { any } })
+		local row = make("Frame", { Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, CHIP_H), BackgroundTransparency = 1, ClipsDescendants = true }, parent)
+		make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, row)
+		for i, chip in list do
+			local col: Color3 = chip[3]
+			local dark = (col.R * 0.3 + col.G * 0.59 + col.B * 0.11) > 0.55
+			local label = make("TextLabel", {
+				Size = UDim2.fromOffset(0, CHIP_H),
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundColor3 = col,
+				BackgroundTransparency = 0.05,
+				BorderSizePixel = 0,
+				LayoutOrder = i,
+				Text = string.format(" %s %s ", chip[1], tostring(chip[2])),
+				TextColor3 = if dark then INK else Color3.new(1, 1, 1),
+				Font = Enum.Font.GothamBlack,
+				TextSize = 12,
+			}, row)
+			make("UICorner", { CornerRadius = UDim.new(0, 4) }, label)
+		end
+	end
+
+	-- 3) 부위 넷(이름·체력 → 체력바 → 상태이상 칩)
+	local anyChips = false
+	for _, part in def.Parts or {} do
+		if #statusChips(units[part.Key]) > 0 then
+			anyChips = true
+		end
+	end
+	local PART_H = if anyChips then 30 + CHIP_H + 3 else 30
+	local parts = line(3, PART_H)
 	local n = #(def.Parts or {})
 	local w = math.floor((BOSS_BAR_W - 24 - (n - 1) * 8) / math.max(n, 1))
 	for i, part in def.Parts or {} do
 		local u = units[part.Key]
 		local alive = u ~= nil and u.Alive == true
-		local box = make("Frame", { Position = UDim2.fromOffset((i - 1) * (w + 8), 0), Size = UDim2.fromOffset(w, 30), BackgroundTransparency = 1 }, parts)
+		local box = make("Frame", { Position = UDim2.fromOffset((i - 1) * (w + 8), 0), Size = UDim2.fromOffset(w, PART_H), BackgroundTransparency = 1 }, parts)
 		local color = part.Color or CRIMSON
 		make("Frame", { Position = UDim2.fromOffset(0, 3), Size = UDim2.fromOffset(8, 8), BackgroundColor3 = if alive then color else MUTED, BorderSizePixel = 0 }, box)
 		local label = make("TextLabel", {
@@ -761,6 +825,9 @@ function BattleHud:SetBoss(snapshot: any?)
 		}, box)
 		local _ = label
 		fill(box, 18, 7, if u and (u.MaxHealth or 0) > 0 then (u.Health or 0) / u.MaxHealth else 0, if alive then color else MUTED)
+		if alive then
+			chipRow(box, 30, statusChips(u))
+		end
 	end
 	-- 4) 보스 스테미나 + 상태
 	local st = line(4, 16)

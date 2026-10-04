@@ -275,11 +275,49 @@ local LIST: { Keyword } = {
 		Id = "Brand",
 		Name = "낙인",
 		Kind = "Debuff",
-		Description = "[받는 회복량] -50%.\n"
-			.. "합연산.",
+		Description = "- 3턴 유지, 최대 20스택.\n"
+			.. "- [받는 회복량] -50%(합연산).\n"
+			.. "- 월 필그림의 `갈라진 신도`·`합창`이 수치 1당 [가하는 피해량] +5%.",
 		Scalable = true,
 		Unit = "%",
 		Color = "#e0609a",
+	},
+	-- 2026-10-04 월 필그림 리워크
+	{
+		Id = "Tetanus",
+		Name = "파상풍",
+		Kind = "Debuff",
+		Description = "- 월 필그림 전용. 최대 10스택.\n"
+			.. "- 수치 1당 [가하는 피해량] -20%(곱연산).\n"
+			.. "- 수치 1당 5% 확률로 스킬 사용 실패.\n"
+			.. "- 부여될 때 수치 1당 [쇼크] 1 얻음.\n"
+			.. "- 매 턴 수치만큼 [출혈]을 얻고 1 줄어듦.\n"
+			.. "- 수치 10 달성 시 최대 체력의 10% 피해를 받고 수치 초기화, 이후 2턴간 면역.",
+		Scalable = true,
+		Unit = "",
+		Color = "#8a6a3a",
+	},
+	{
+		Id = "Shock",
+		Name = "쇼크",
+		Kind = "Debuff",
+		Description = "- 3턴 유지, 최대 10스택.\n"
+			.. "- 수치 1당 [받는 피해량] +8%.\n"
+			.. "- 수치가 3 이상이 되면 [경련] 1 얻음.",
+		Scalable = true,
+		Unit = "",
+		Color = "#e8d84a",
+	},
+	{
+		Id = "Spasm",
+		Name = "경련",
+		Kind = "Debuff",
+		Description = "- 최대 1스택.\n"
+			.. "- 걸린 턴에 스킬을 쓰면 최대 체력의 3% 피해를 받고 그로기 게이지 10% 쌓임.\n"
+			.. "- 턴이 끝나면 사라지고, 이후 3턴간 걸리지 않음.",
+		Scalable = false,
+		Unit = "",
+		Color = "#62d2e6",
 	},
 	{
 		Id = "Groggy",

@@ -154,7 +154,7 @@ local KITS: { [string]: ClassKit } = {
 
 	WallPilgrim = {
 		ClassId = "WallPilgrim",
-		StatusKeywords = { "Zeal", "Brand" },
+		StatusKeywords = { "Zeal", "Brand", "Tetanus", "Shock", "Spasm" },
 		Passives = {
 			{
 				Id = "WallPilgrim_Road",

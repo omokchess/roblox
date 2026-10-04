@@ -86,6 +86,8 @@ export type Context = {
 export type Effect = {
 	-- 피해 계산 전. 배율을 돌려준다(1이면 보정 없음).
 	Before: ((Context) -> number)?,
+	-- 맞는 대상마다 더하는 [가하는 피해량](낙인 스택당 등). GridBattle 이 hitInfo.Bonus 에 더한다
+	TargetBonus: ((Context, any) -> number)?,
 	-- 피해 계산 후.
 	After: ((Context) -> ())?,
 }
@@ -313,10 +315,11 @@ local duelistEffects: { [string]: Effect } = {
 	]]
 	PointBlank = {
 		Before = function(ctx)
-			local focus = BattleStatus.Stack(ctx.Status, R.FOCUS)
 			BattleStatus.AddModifier(ctx.Status, "CritChance", 0.15, 1, "연계")
-			-- 2026-10-03 사용자: 버프 받은 찔러찔러또찔러보다 약하다 → +1000%, 2026-10-04 연타 규칙 뒤 +500%(집중 보너스와 합연산)
-			return 1 + 0.85 + focus * 0.025 -- 2026-10-04 서브딜러 18만 선: +500% → +85%
+			-- 2026-10-04 사용자: 깡 피해 증가를 없애고 [집중]을 전부 소모, 소모한 1당 [가하는 피해량] +25%
+			local spent = BattleStatus.SpendAll(ctx.Status, R.FOCUS)
+			ctx.Log(string.format("집중 %d 소모 — 피해 +%d%%", spent, spent * 25))
+			return 1 + spent * 0.25
 		end,
 		After = function(ctx)
 			local status = ctx.Status
@@ -595,6 +598,80 @@ function BattleSkillEffects.ApplyZeal(
 	return applied
 end
 
+--[[
+	2026-10-04 월 필그림 리워크 — 적에게 거는 스택 디버프. 한 곳에서 건다(스킬·카드 공용).
+	  [낙인]   스택(최대 20) + 받는 회복 −50%(보정값 "낙인", 3턴). 갈라진 신도·합창이 스택당 피해 +5%.
+	  [파상풍] 최대 10. 수치 1당 주는 피해 ×0.8(BattleStatus.OutgoingDamage)·스킬 실패 5%(GridBattle ResolveDodge).
+	           걸릴 때 수치 1당 [쇼크] 1. 10 이 되면 최대 체력 10% 피해 → 0 으로, 2턴 면역. 매 턴 수치만큼 [출혈] 받고 1 줄어듦.
+	  [쇼크]   최대 10. 수치 1당 받는 피해 +8%(보정값 "쇼크", 3턴 — 다시 걸리면 갱신). 수치가 3 이상이면 [경련].
+	  [경련]   최대 1. 걸린 턴에 스킬을 쓰면 최대 체력 3% 피해·그로기 게이지 10%. 턴이 끝나면 사라지고 3턴 면역.
+]]
+local function immune(status: BattleStatus.State, id: string): boolean
+	return status.Immune ~= nil and (status.Immune[id] or 0) > 0
+end
+
+function BattleSkillEffects.SetImmune(status: BattleStatus.State, id: string, turns: number)
+	status.Immune = status.Immune or {}
+	;(status.Immune :: any)[id] = turns
+end
+
+function BattleSkillEffects.ApplyBrand(status: BattleStatus.State, stacks: number, turns: number): number
+	BattleStatus.AddStack(status, R.BRAND, math.floor(stacks), ClassResources.Cap(R.BRAND))
+	BattleStatus.RemoveBySource(status, "낙인")
+	BattleStatus.AddModifier(status, "HealTaken", -0.5, turns, "낙인")
+	return BattleStatus.Stack(status, R.BRAND)
+end
+
+function BattleSkillEffects.ApplySpasm(status: BattleStatus.State): boolean
+	if immune(status, R.SPASM) or BattleStatus.Stack(status, R.SPASM) >= 1 then
+		return false
+	end
+	BattleStatus.AddStack(status, R.SPASM, 1, 1)
+	return true
+end
+
+function BattleSkillEffects.ApplyShock(status: BattleStatus.State, stacks: number): number
+	if stacks <= 0 then
+		return BattleStatus.Stack(status, R.SHOCK)
+	end
+	local now = BattleStatus.AddStack(status, R.SHOCK, math.floor(stacks), ClassResources.Cap(R.SHOCK))
+	BattleStatus.RemoveBySource(status, "쇼크")
+	BattleStatus.AddModifier(status, "DamageTaken", 0.08 * now, 3, "쇼크")
+	if now >= 3 then
+		BattleSkillEffects.ApplySpasm(status)
+	end
+	return now
+end
+
+-- 돌려줌: 이번에 10 을 채워 터졌는지(부르는 쪽이 최대 체력 10% 피해를 넣는다)
+function BattleSkillEffects.ApplyTetanus(status: BattleStatus.State, stacks: number): boolean
+	if stacks <= 0 or immune(status, R.TETANUS) then
+		return false
+	end
+	local before = BattleStatus.Stack(status, R.TETANUS)
+	local now = BattleStatus.AddStack(status, R.TETANUS, math.floor(stacks), ClassResources.Cap(R.TETANUS))
+	BattleSkillEffects.ApplyShock(status, now - before)
+	if now >= 10 then
+		BattleStatus.SpendAll(status, R.TETANUS)
+		BattleSkillEffects.SetImmune(status, R.TETANUS, 2)
+		return true
+	end
+	return false
+end
+
+-- 스킬에서 파상풍을 걸고, 터지면 최대 체력 10% 피해
+local function tetanus(ctx: Context, target: any, stacks: number)
+	if target.Alive and BattleSkillEffects.ApplyTetanus(ctx.StatusOf(target), stacks) then
+		ctx.Damage(target, target.MaxHealth * 0.1, "True", true)
+		ctx.Log(target.Name .. " — 파상풍 발작(최대 체력 10%)")
+	end
+end
+
+local function brandBonus(ctx: Context, target: any, cap: number?): number
+	local bonus = BattleStatus.Stack(ctx.StatusOf(target), R.BRAND) * 0.05
+	return if cap then math.min(bonus, cap) else bonus
+end
+
 local function applyZeal(ctx: Context, target: any, stacks: number): ()
 	if not target.Alive or stacks <= 0 then
 		return
@@ -611,38 +688,66 @@ local function applyZeal(ctx: Context, target: any, stacks: number): ()
 end
 
 local wallPilgrimEffects: { [string]: Effect } = {
-	-- 못질: 광신 2 (깊은 못 +)
+	-- 못질(2026-10-04 리워크): 파상풍 1 · 광신 3(2 + 1) · 낙인 1 (깊은 못 +)
 	Nailing = {
 		After = function(ctx)
-			local stacks = 2 + math.floor(ctx.Query("NailingZeal", 0))
+			local stacks = 3 + math.floor(ctx.Query("NailingZeal", 0))
+			local turns = math.floor(ctx.Query("BrandTurns", 3))
 			for _, target in ctx.Targets do
+				tetanus(ctx, target, 1)
 				applyZeal(ctx, target, stacks)
+				if target.Alive then
+					BattleSkillEffects.ApplyBrand(ctx.StatusOf(target), 1, turns)
+				end
 			end
-			ctx.Log(string.format("광신 %d중첩 — 대상 %d기", stacks, #ctx.Targets))
+			ctx.Log(string.format("파상풍 1 · 광신 %d · 낙인 1 — 대상 %d기", stacks, #ctx.Targets))
 		end,
 	},
-	-- 갈라진 신도: 맞은 적마다 광신 1 (메아리 +)
+	-- 갈라진 신도(리워크): 파상풍 2 · 광신 2(1 + 1) · 쇼크 1, 낙인 스택당 피해 +5%(최대 +100%) (메아리 +)
 	SplitFlock = {
+		TargetBonus = function(ctx, target)
+			return brandBonus(ctx, target, 1)
+		end,
 		After = function(ctx)
-			local stacks = 1 + math.floor(ctx.Query("SplitFlockZeal", 0))
+			local stacks = 2 + math.floor(ctx.Query("SplitFlockZeal", 0))
 			for _, target in ctx.Targets do
+				tetanus(ctx, target, 2)
 				applyZeal(ctx, target, stacks)
+				if target.Alive then
+					BattleSkillEffects.ApplyShock(ctx.StatusOf(target), 1)
+				end
 			end
-			ctx.Log(string.format("광신 %d중첩 — 대상 %d기", stacks, #ctx.Targets))
+			ctx.Log(string.format("파상풍 2 · 광신 %d · 쇼크 1 — 대상 %d기", stacks, #ctx.Targets))
 		end,
 	},
 	--[[
 		합창: 대상에게 4중첩, 나머지에게 2중첩. 맞은 순서의 첫 번째를 "대상"으로 본다(앞열부터).
 		전도면 적 전체가 대상이 되는 대신 중첩이 절반(`ChoraleHalf`) — 줄 밖의 적은 카드가 맞힌다.
 	]]
+	-- 합창(리워크): 파상풍 3 · 광신 4(3 + 1) · 쇼크 1 · 출혈 10, 낙인 스택당 피해 +5%.
+	-- 메인 대상(맞은 첫째)이 광신을 가졌으면 그 수치 % 만큼 자신 체력 회복
 	Chorale = {
+		TargetBonus = function(ctx, target)
+			return brandBonus(ctx, target)
+		end,
 		After = function(ctx)
 			local half = ctx.Query("ChoraleHalf", 0) >= 1
-			for index, target in ctx.Targets do
-				local stacks = if index == 1 then 4 else 2
-				applyZeal(ctx, target, if half then stacks // 2 else stacks)
+			for _, target in ctx.Targets do
+				tetanus(ctx, target, 3)
+				applyZeal(ctx, target, if half then 2 else 4)
+				if target.Alive then
+					local status = ctx.StatusOf(target)
+					BattleSkillEffects.ApplyShock(status, 1)
+					BattleStatus.AddBleed(status, 10)
+				end
 			end
-			ctx.Log(string.format("합창 — 대상 %d기에 광신", #ctx.Targets))
+			local main = ctx.Targets[1]
+			local zeal = if main then BattleStatus.Stack(ctx.StatusOf(main), R.ZEAL) else 0
+			if zeal > 0 then
+				local healed = ctx.Heal(ctx.Ally, ctx.Ally.MaxHealth * zeal / 100)
+				ctx.Log(string.format("합창 — 광신 %d%% 만큼 회복 %d", zeal, healed))
+			end
+			ctx.Log(string.format("합창 — 대상 %d기에 파상풍·광신·쇼크·출혈", #ctx.Targets))
 		end,
 	},
 }

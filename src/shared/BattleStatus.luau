@@ -92,6 +92,8 @@ export type State = {
 	BurnIgnore: number?,
 	Oil: number,
 	Stacks: { [string]: number },
+	-- 다시 걸리지 않는 남은 턴(파상풍 터진 뒤 2턴, 경련 사라진 뒤 3턴). EndTurn 이 줄인다
+	Immune: { [string]: number }?,
 	Modifiers: { Modifier },
 }
 
@@ -309,7 +311,9 @@ end
 	남겨야 해서 여기서 숨기면 안 된다.
 ]]
 function BattleStatus.OutgoingDamage(attacker: State, base: number): number
-	return base * (1 + BattleStatus.Total(attacker, "DamageDealt"))
+	-- [파상풍] 수치 1당 주는 피해 ×0.8(곱연산, 2026-10-04 월 필그림 리워크)
+	local tetanus = attacker.Stacks.Tetanus or 0
+	return base * (1 + BattleStatus.Total(attacker, "DamageDealt")) * (0.8 ^ tetanus)
 end
 
 --[[

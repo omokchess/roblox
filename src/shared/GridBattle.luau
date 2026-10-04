@@ -2251,6 +2251,10 @@ function GridBattle.ResolveSkill(
 					end
 					local hitInfo = { Target = target, Skill = skill, Bonus = 0 }
 					fire(state, "BeforeHit", hitInfo)
+					-- 스킬이 대상마다 더하는 피해(낙인 스택당 등)
+					if effect and effect.TargetBonus then
+						hitInfo.Bonus += effect.TargetBonus(context, target)
+					end
 					local amount = base * math.max(0, 1 + hitInfo.Bonus)
 					local n = hitsOn[target.Id] or 1
 					if n >= 2 then
@@ -2496,6 +2500,23 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 
 	local ally = GridBattle.Ally(state)
 	local skill = GridBattle.EnemySkill(enemy, planIndex)
+	--[[
+		2026-10-04 월 필그림 리워크 — 적이 스킬을 쓸 때:
+		  [경련] 걸린 턴에 쓰면 최대 체력 3% 피해 + 그로기 게이지 10%(공격은 그대로 나간다)
+		  [파상풍] 수치 1당 5% 확률로 스킬 실패(공격이 안 나간다)
+	]]
+	if BattleStatus.Stack(enemy.Status, ClassResources.SPASM) > 0 then
+		damageUnit(state, enemy, enemy.MaxHealth * 0.03, "True", false)
+		if enemy.Groggy then
+			GroggyGauge.Add(enemy.Groggy, GroggyGauge.MAX * 0.1)
+		end
+		pushLog(state, enemy.Name .. " — 경련(최대 체력 3%, 그로기 10%)")
+	end
+	local tetanus = BattleStatus.Stack(enemy.Status, ClassResources.TETANUS)
+	if tetanus > 0 and nextRandom(state) < tetanus * 0.05 then
+		pushLog(state, string.format("%s — 파상풍으로 %s 실패", enemy.Name, skill.Name))
+		return true, nil
+	end
 	local watch = watchBegin(state)
 	--[[
 		카드: 맞기 직전(배율·자동 패링 확률). 자동 패링은 QTE 를 못 막았을 때 확률로 패링으로 바꾼다
@@ -2775,6 +2796,12 @@ function GridBattle.EndTurn(state: State)
 				지속 피해. `TickDots`는 피해량만 돌려주고 감소까지 처리한다.
 				죽지 않아야 하므로 canKill=false로 넣는다.
 			]]
+			-- [파상풍]: 매 턴 수치만큼 [출혈]을 받고 1 줄어든다(이번 턴 출혈에 바로 들어간다)
+			local tet = BattleStatus.Stack(unit.Status, ClassResources.TETANUS)
+			if tet > 0 then
+				BattleStatus.AddBleed(unit.Status, tet)
+				BattleStatus.SpendStack(unit.Status, ClassResources.TETANUS, 1)
+			end
 			local burnIgnore = unit.Status.BurnIgnore -- 다 타면 TickDots 가 지우므로 먼저 받아 둔다
 			local tick = BattleStatus.TickDots(unit.Status, unit.MaxHealth, unit.Health)
 			-- 보스 부위는 도트를 BOSS_DOT_CUT(99%) 덜 받는다
@@ -2797,6 +2824,30 @@ function GridBattle.EndTurn(state: State)
 			end
 
 			BattleStatus.TickModifiers(unit.Status)
+			-- 리워크 디버프 정리: 면역 턴 줄이기 → 경련은 턴이 끝나면 사라지고 3턴 면역 →
+			-- 쇼크·낙인은 지속(보정값)이 끝나면 스택도 비운다
+			local immune = unit.Status.Immune
+			if immune then
+				for id, left in immune do
+					immune[id] = if left > 1 then left - 1 else nil
+				end
+			end
+			if BattleStatus.SpendAll(unit.Status, ClassResources.SPASM) > 0 then
+				BattleSkillEffects.SetImmune(unit.Status, ClassResources.SPASM, 3)
+			end
+			for id, source in { [ClassResources.SHOCK] = "쇼크", [ClassResources.BRAND] = "낙인" } do
+				if BattleStatus.Stack(unit.Status, id) > 0 then
+					local alive = false
+					for _, modifier in unit.Status.Modifiers do
+						if modifier.Source == source then
+							alive = true
+						end
+					end
+					if not alive then
+						BattleStatus.SpendAll(unit.Status, id)
+					end
+				end
+			end
 			GroggyGauge.TickTurn(unit.Groggy)
 			-- 도발은 유지비다. 매 턴 빠지므로 계속 쌓아야 유지된다.
 			unit.Taunt = math.max(0, unit.Taunt - GridBattle.TAUNT_DECAY)
@@ -2942,6 +2993,8 @@ function GridBattle.Snapshot(state: State): any
 			Poison = unit.Status.Poison,
 			Burn = unit.Status.Burn,
 			Oil = unit.Status.Oil,
+			-- 스택 상태이상(광신·낙인·파상풍·쇼크·경련 …) — 2026-10-04 보스 체력바에 부위마다 띄운다
+			Stacks = BattleStatus.Snapshot(unit.Status).Stacks,
 			X = cell and cell.X or nil,
 			Y = cell and cell.Y or nil,
 			-- 보스 부위: 부위 이름·차지한 칸·예고(겨눈 칸)

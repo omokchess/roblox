@@ -42,6 +42,11 @@ ClassResources.RESONATE = "Resonate" -- 공명 (같은 턴 연속 사용)
 ClassResources.ZEAL = "Zeal" -- 광신 (적에게)
 ClassResources.WALL = "Wall" -- 벽
 ClassResources.RUIN = "Ruin" -- 허물 벽
+-- 2026-10-04 월 필그림 리워크: 적에게 거는 스택 디버프(파상풍은 필그림 전용, 쇼크·경련은 공용)
+ClassResources.BRAND = "Brand" -- 낙인(스택)
+ClassResources.TETANUS = "Tetanus" -- 파상풍
+ClassResources.SHOCK = "Shock" -- 쇼크
+ClassResources.SPASM = "Spasm" -- 경련
 
 -- 연금술사
 ClassResources.HERB = "Herb" -- 약재
@@ -77,6 +82,10 @@ local CAPS: { [string]: number } = {
 	[ClassResources.ZEAL] = 10,
 	[ClassResources.WALL] = 5,
 	[ClassResources.RUIN] = 5,
+	[ClassResources.BRAND] = 20,
+	[ClassResources.TETANUS] = 10,
+	[ClassResources.SHOCK] = 10,
+	[ClassResources.SPASM] = 1,
 	[ClassResources.HERB] = 6,
 	[ClassResources.EXTRACT] = 4,
 	[ClassResources.EMPTY_BOTTLE] = 8,
@@ -132,6 +141,10 @@ local LABELS: { [string]: string } = {
 	[ClassResources.ZEAL] = "광신",
 	[ClassResources.WALL] = "벽",
 	[ClassResources.RUIN] = "허물 벽",
+	[ClassResources.BRAND] = "낙인",
+	[ClassResources.TETANUS] = "파상풍",
+	[ClassResources.SHOCK] = "쇼크",
+	[ClassResources.SPASM] = "경련",
 	[ClassResources.HERB] = "약재",
 	[ClassResources.EXTRACT] = "원액",
 	[ClassResources.EMPTY_BOTTLE] = "빈 병",

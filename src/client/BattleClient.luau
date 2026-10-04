@@ -883,6 +883,7 @@ function BattleClient:_teardownBattle()
 		self.plazaUi:SetBattleActive(false)
 	end
 	self:_endQte()
+	self:_restoreOccluders()
 	local camera = workspace.CurrentCamera
 	if camera then
 		camera.CameraType = Enum.CameraType.Custom
@@ -1051,6 +1052,77 @@ function BattleClient:_setBattlePose(enabled: boolean)
 	root.Anchored = enabled
 end
 
+--[[
+	전투 카메라를 가린 구조물(2026-10-04 사용자): 그 전투를 하는 사람에게만(이 클라이언트에서만) 반투명 + 충돌 끔.
+	카메라 → 칸(양쪽 격자 전부) 광선을 쏴서 걸리는 것을 차례로 걷는다. 지형(Terrain)은 못 바꾸므로 거기서 멈춘다.
+	LocalTransparencyModifier·CanCollide 는 클라이언트에서만 바뀐다(다른 플레이어·서버는 그대로). 전투가 끝나면 되돌린다.
+]]
+local OCCLUDE_ALPHA = 0.75
+function BattleClient:_restoreOccluders()
+	for part, saved in self.occluded or {} do
+		if part.Parent then
+			part.LocalTransparencyModifier = saved[1]
+			part.CanCollide = saved[2]
+		end
+	end
+	self.occluded = {}
+end
+
+local function isActor(part: Instance): boolean
+	local model = part:FindFirstAncestorOfClass("Model")
+	while model do
+		if model:FindFirstChildOfClass("Humanoid") or model:FindFirstChildOfClass("AnimationController") then
+			return true
+		end
+		model = model:FindFirstAncestorOfClass("Model")
+	end
+	return false
+end
+
+function BattleClient:_scanOccluders()
+	local camera = workspace.CurrentCamera
+	if not camera or not self.layout then
+		return
+	end
+	self.occluded = self.occluded or {}
+	local skip: { Instance } = { workspace:FindFirstChild("CombatFx") :: Instance }
+	if self.folder then
+		table.insert(skip, self.folder)
+	end
+	for _, p in Players:GetPlayers() do
+		if p.Character then
+			table.insert(skip, p.Character)
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.IgnoreWater = true
+	params.FilterDescendantsInstances = skip
+	local eye = camera.CFrame.Position
+	for _, side in { "Ally", "Enemy" } do
+		for x = 1, GRID_WIDTH do
+			for y = 1, GRID_HEIGHT do
+				local cell = BattleArena.CellWorldCFrame(self.layout, side :: any, x, y, GRID_WIDTH, GRID_HEIGHT, self.rayParams)
+				local goal = cell.Position + Vector3.new(0, 2.5, 0)
+				for _ = 1, 8 do
+					local hit = workspace:Raycast(eye, goal - eye, params)
+					local part = hit and hit.Instance
+					if not part or not part:IsA("BasePart") then
+						break
+					end
+					if not isActor(part) and not self.occluded[part] then
+						self.occluded[part] = { part.LocalTransparencyModifier, part.CanCollide }
+						part.LocalTransparencyModifier = math.max(part.LocalTransparencyModifier, OCCLUDE_ALPHA)
+						part.CanCollide = false
+					end
+					table.insert(skip, part)
+					params.FilterDescendantsInstances = skip
+				end
+			end
+		end
+	end
+end
+
 function BattleClient:_lockCamera()
 	local camera = workspace.CurrentCamera
 	if not camera or not self.layout then
@@ -1072,6 +1144,7 @@ function BattleClient:_lockCamera()
 	-- 디버그전: 같은 구도에서 천천히 살짝 흔들린다(RenderStepped 가 매 프레임 _bossCamera 로 옮긴다)
 	self.bossCamBase = if self.snapshot and self.snapshot.Boss then camera.CFrame else nil
 	self.bossCamStart = if self.bossCamBase then os.clock() else nil
+	self:_scanOccluders()
 end
 
 --[[
@@ -1559,6 +1632,10 @@ function BattleClient:_bindInput()
 			local now = os.clock()
 			local cf = self:_bossCamera(now - self.bossCamStart, now - (self.bossCamLast or now))
 			self.bossCamLast = now
+			if now - (self.occludeScan or 0) > 1 then
+				self.occludeScan = now
+				self:_scanOccluders()
+			end
 			if self.director then
 				self.director:SetCamera(cf)
 			else
