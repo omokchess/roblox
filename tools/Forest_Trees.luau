@@ -3,7 +3,7 @@
 	Forest_Trees.luau — 2026-10-09. 숲 나무 심기(편집 모드, StudioJobs). 자리는 tools/forest_trees.py(덩어리 손 표) → Forest_Trees_data.luau:
 	  RECV=<수신 폴더> python tools/forest_trees.py && sed '/--@@DATA@@/r tools/Forest_Trees_data.luau' tools/Forest_Trees.luau > tools/swamp/_trees_run.luau && bash tools/job.sh tools/swamp/_trees_run.luau
 	틀 = ServerStorage.ForestKit.<틀>(Forest_Kit.luau). Surface.R_숲2.Trees 만 지우고 새로 심는다.
-	나무 하나 = Model(메시 2~3, 투명 Origin 은 안 옮긴다). 밑동은 땅(1.9)보다 0.2 묻는다. 잎 색은 나무마다 조금씩(0.9~1.08배).
+	나무 하나 = Model(메시 2~3, 투명 Origin 은 안 옮긴다). 밑동은 땅(1.9)보다 0.1 묻는다. 잎 색은 나무마다 조금씩(0.9~1.08배).
 	보고: /foresttrees
 ]]
 local HS = game:GetService("HttpService")
@@ -11,15 +11,15 @@ local SS = game:GetService("ServerStorage")
 
 --@@DATA@@
 
-local BASE_Y = 1.7
+local BASE_Y = 1.8 -- 땅(1.9)보다 0.1 묻음(옛 거목 줄기는 원점 아래 3~7 까지 내려간다)
 local lines = {}
 local function say(f, ...)
 	lines[#lines + 1] = string.format(f, ...)
 end
 
 local ok, err = pcall(function()
-	local kit = SS:FindFirstChild("ForestKit")
-	assert(kit, "ServerStorage.ForestKit 없음 — Forest_Kit.luau 먼저")
+	local kits = { SS:FindFirstChild("ForestKit"), SS:FindFirstChild("ForestOldKit") } -- 블렌더 키트(덤불) · 옛 숲 거목(Forest_OldKit.luau)
+	assert(kits[1] and kits[2], "ServerStorage.ForestKit / ForestOldKit 없음 — Forest_Kit·Forest_OldKit 먼저")
 	local root = workspace.Surface:FindFirstChild("R_숲2")
 	assert(root, "Surface.R_숲2 없음 — Forest_Build 먼저")
 	local old = root:FindFirstChild("Trees")
@@ -30,14 +30,16 @@ local ok, err = pcall(function()
 	folder.Name = "Trees"
 	-- 틀마다 조각(Origin 빼고) 미리
 	local pieces = {}
-	for _, m in kit:GetChildren() do
-		local list = {}
-		for _, c in m:GetChildren() do
-			if c:IsA("MeshPart") then
-				list[#list + 1] = c
+	for _, kit in kits do
+		for _, m in kit:GetChildren() do
+			local list = {}
+			for _, c in m:GetChildren() do
+				if c:IsA("BasePart") and c.Name ~= "Origin" then
+					list[#list + 1] = c
+				end
 			end
+			pieces[m.Name] = list
 		end
-		pieces[m.Name] = list
 	end
 	local n, missing = 0, {}
 	for i, t in TREES do
@@ -55,7 +57,7 @@ local ok, err = pcall(function()
 			local p = src:Clone()
 			p.Size = src.Size * sc
 			p.CFrame = base * CFrame.new(src.Position * sc) * src.CFrame.Rotation
-			if p.Name ~= "Wood" then
+			if p.Material ~= Enum.Material.Wood then
 				local c = src.Color
 				p.Color = Color3.new(math.min(1, c.R * tint), math.min(1, c.G * tint), math.min(1, c.B * tint))
 			end

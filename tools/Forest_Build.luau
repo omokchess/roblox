@@ -60,7 +60,9 @@ local ok, err = pcall(function()
 		end
 		return fallbackColor, fallbackMat
 	end
-	local GRASS, GRASS_M = sample({ "R_평원중", "Land", "Land2" }, Color3.fromRGB(98, 140, 68), M.Grass)
+	local _, GRASS_M = sample({ "R_평원중", "Land", "Land2" }, Color3.fromRGB(98, 140, 68), M.Grass)
+	-- 숲 바닥은 평원(117,151,83)보다 어둡게(2026-10-09 사용자: "바닥 색깔 더 어둡게") — 트인 평원과 숲 그늘이 갈린다
+	local GRASS = Color3.fromRGB(78, 104, 56)
 	local ROCK, ROCK_M = Color3.fromRGB(118, 116, 111), M.Slate -- 2026-10-09 처음 읽은 평원 벼랑 색(그 조각은 평원 줄이기로 백업됨)
 	local CAP, CAP_M = GRASS, GRASS_M
 	local SAND, SAND_M = Color3.fromRGB(219, 200, 155), M.Sand
