@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1180" font-family="Malgun Gothic, sans-serif">
+<rect width="960" height="1180" fill="#203040"/>
+<text x="20" y="20" font-size="15" fill="#fff" font-weight="700">설원 지상 — 그림 1px = 3.4 스터드 · 전체 약 3060 × 1900</text>
+<rect x="20.0" y="30.0" width="330.0" height="280.0" fill="#e8eef4" fill-opacity="1" stroke="#111" stroke-width="0"/>
+<rect x="350.0" y="60.0" width="370.0" height="120.0" fill="#e8eef4" fill-opacity="1" stroke="#111" stroke-width="0"/>
+<rect x="20.0" y="310.0" width="720.0" height="280.0" fill="#e8eef4" fill-opacity="1" stroke="#111" stroke-width="0"/>
+<rect x="350.0" y="180.0" width="390.0" height="130.0" fill="#e8eef4" fill-opacity="1" stroke="#111" stroke-width="0"/>
+<defs><pattern id="h" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><line x1="0" y1="0" x2="0" y2="24" stroke="#d24a3c" stroke-width="2" stroke-opacity="0.5"/></pattern></defs>
+<rect x="350.0" y="60.0" width="370.0" height="120.0" fill="url(#h)" fill-opacity="1" stroke="#111" stroke-width="0"/>
+<rect x="20.0" y="310.0" width="720.0" height="280.0" fill="url(#h)" fill-opacity="1" stroke="#111" stroke-width="0"/>
+<rect x="350.0" y="180.0" width="390.0" height="130.0" fill="url(#h)" fill-opacity="1" stroke="#111" stroke-width="0"/>
+<rect x="20.0" y="30.0" width="330.0" height="280.0" fill="#9ab8d8" fill-opacity="0.85" stroke="#111" stroke-width="1.5"/>
+<text x="185.0" y="174.0" font-size="12" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">마을 (슈네라이히)</text>
+<rect x="250.0" y="200.0" width="290.0" height="170.0" fill="#c0a0d0" fill-opacity="0.85" stroke="#111" stroke-width="1.5"/>
+<text x="395.0" y="289.0" font-size="12" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">보스룸</text>
+<rect x="800.0" y="330.0" width="120.0" height="220.0" fill="#d07070" fill-opacity="0.85" stroke="#111" stroke-width="1.5"/>
+<text x="860.0" y="444.0" font-size="12" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">히든 보스 (대태도 청사진)</text>
+<rect x="612.0" y="112.0" width="16.0" height="16.0" fill="#2f5fd0" fill-opacity="1" stroke="#fff" stroke-width="1.5"/>
+<text x="632.0" y="124.0" font-size="11" fill="#111" text-anchor="start" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">(구)설공방 (폐허)</text>
+<rect x="482.0" y="232.0" width="16.0" height="16.0" fill="#2f5fd0" fill-opacity="1" stroke="#fff" stroke-width="1.5"/>
+<text x="502.0" y="244.0" font-size="11" fill="#111" text-anchor="start" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">순례자의 휴식처 2/8</text>
+<rect x="472.0" y="472.0" width="16.0" height="16.0" fill="#2f5fd0" fill-opacity="1" stroke="#fff" stroke-width="1.5"/>
+<text x="492.0" y="484.0" font-size="11" fill="#111" text-anchor="start" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">동굴 입구 1</text>
+<rect x="132.0" y="422.0" width="16.0" height="16.0" fill="#2f5fd0" fill-opacity="1" stroke="#fff" stroke-width="1.5"/>
+<text x="152.0" y="434.0" font-size="11" fill="#111" text-anchor="start" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">동굴 입구 2</text>
+<rect x="752.0" y="492.0" width="16.0" height="16.0" fill="#2f5fd0" fill-opacity="1" stroke="#fff" stroke-width="1.5"/>
+<text x="772.0" y="504.0" font-size="11" fill="#111" text-anchor="start" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">3번 입구 (퀘스트 필요)</text>
+<rect x="40.0" y="570.0" width="294.11764705882354" height="5.0" fill="#000" fill-opacity="1" stroke="#111" stroke-width="1.5"/>
+<text x="187.05882352941177" y="566.0" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">1000 스터드</text>
+<text x="20" y="605" font-size="15" fill="#fff" font-weight="700">지하(굴) — 입구 1·2·3 아래</text>
+<rect x="440.0" y="610.0" width="100.0" height="80.0" fill="#6a5a4a" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="490.0" y="654.0" font-size="11" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">입구1 굴</text>
+<rect x="100.0" y="610.0" width="120.0" height="80.0" fill="#6a5a4a" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="160.0" y="654.0" font-size="11" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">입구2 굴</text>
+<rect x="50.0" y="690.0" width="170.0" height="120.0" fill="#6a5a4a" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="135.0" y="754.0" font-size="11" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">케이브 (서브보스)</text>
+<rect x="220.0" y="690.0" width="440.0" height="60.0" fill="#6a5a4a" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="440.0" y="724.0" font-size="11" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">가운데 굴</text>
+<rect x="400.0" y="750.0" width="260.0" height="60.0" fill="#6a5a4a" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="530.0" y="784.0" font-size="11" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">금이 간 벽 앞 굴</text>
+<rect x="660.0" y="610.0" width="140.0" height="140.0" fill="#6a5a4a" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="730.0" y="684.0" font-size="11" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">비밀벽 굴</text>
+<rect x="774.0" y="648.0" width="12.0" height="24.0" fill="#c8a040" fill-opacity="1" stroke="#111" stroke-width="1.5"/>
+<text x="780.0" y="644.0" font-size="11" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">비밀벽</text>
+<rect x="414.0" y="798.0" width="12.0" height="24.0" fill="#c8a040" fill-opacity="1" stroke="#111" stroke-width="1.5"/>
+<text x="420.0" y="794.0" font-size="11" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">금이 간 벽</text>
+<text x="20" y="852" font-size="15" fill="#fff" font-weight="700">마을 확대(같은 축척) — 약 1120 × 950 스터드</text>
+<rect x="20.0" y="860.0" width="330.0" height="280.0" fill="#dfe8f0" fill-opacity="1" stroke="#111" stroke-width="1.5"/>
+<rect x="260.0" y="860.0" width="60.0" height="230.0" fill="#b08860" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="290.0" y="979.0" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">슈네라이히 공방</text>
+<rect x="20.0" y="930.0" width="40.0" height="70.0" fill="#8a7a6a" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="40.0" y="969.0" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">공장</text>
+<polygon points="215.81337428812077,993.54758878008 186.04758878007993,1023.3133742881207 143.95241121992007,1023.3133742881207 114.18662571187923,993.54758878008 114.18662571187923,951.4524112199201 143.95241121992007,921.6866257118792 186.04758878007996,921.6866257118793 215.81337428812077,951.4524112199201" fill="#d8d0b8" stroke="#111"/>
+<circle cx="165.0" cy="972.5" r="14" fill="#a08850" stroke="#111"/>
+<text x="165.0" y="976.5" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">광장(시계)</text>
+<rect x="140.0" y="900.0" width="55.0" height="15.0" fill="#5a7ad0" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="167.5" y="911.5" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">잡화상점</text>
+<rect x="195.0" y="882.0" width="30.0" height="16.0" fill="#d0b030" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="210.0" y="894.0" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">장비상점</text>
+<rect x="65.0" y="905.0" width="35.0" height="50.0" fill="#40b0a0" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="82.5" y="934.0" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">물약상점</text>
+<rect x="225.0" y="975.0" width="17.0" height="55.0" fill="#d0b030" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="233.5" y="1006.5" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">강화소</text>
+<rect x="270.0" y="930.0" width="50.0" height="155.0" fill="#a05050" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="295.0" y="1011.5" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">카지노+경매장</text>
+<rect x="105.0" y="1050.0" width="30.0" height="30.0" fill="#8050c0" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="120.0" y="1069.0" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">여관</text>
+<rect x="150.0" y="1070.0" width="40.0" height="20.0" fill="#d04040" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="170.0" y="1084.0" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">티켓 판매점</text>
+<rect x="200.0" y="1045.0" width="25.0" height="45.0" fill="#404040" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="212.5" y="1071.5" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">지하 입구</text>
+<circle cx="80.0" cy="1110.0" r="40.0" fill="#304878" stroke="#111"/>
+<text x="80.0" y="1114.0" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">천문대 (조율과 전직)</text>
+<rect x="250.0" y="1090.0" width="90.0" height="30.0" fill="#606060" fill-opacity="0.9" stroke="#111" stroke-width="1.5"/>
+<text x="295.0" y="1109.0" font-size="10" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="2.5" paint-order="stroke">체스판 건물</text>
+</svg>
