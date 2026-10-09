@@ -61,9 +61,9 @@ local ok, err = pcall(function()
 		return fallbackColor, fallbackMat
 	end
 	local GRASS, GRASS_M = sample({ "R_평원중", "Land", "Land2" }, Color3.fromRGB(98, 140, 68), M.Grass)
-	local ROCK, ROCK_M = sample({ "R_평원북", "Cliffs", "Cliff4" }, Color3.fromRGB(120, 120, 120), M.Slate)
-	local CAP, CAP_M = sample({ "R_평원북", "Cliffs", "Cliff1_풀" }, GRASS, GRASS_M)
-	local SAND, SAND_M = sample({ "R_평원북", "Sand", "Sand1" }, Color3.fromRGB(226, 203, 150), M.Sand)
+	local ROCK, ROCK_M = Color3.fromRGB(118, 116, 111), M.Slate -- 2026-10-09 처음 읽은 평원 벼랑 색(그 조각은 평원 줄이기로 백업됨)
+	local CAP, CAP_M = GRASS, GRASS_M
+	local SAND, SAND_M = Color3.fromRGB(219, 200, 155), M.Sand
 	local ROCK2 = ROCK:Lerp(Color3.new(0, 0, 0), 0.08)
 	say("색: 풀 %s / 바위 %s / 모래 %s", tostring(GRASS), tostring(ROCK), tostring(SAND))
 
