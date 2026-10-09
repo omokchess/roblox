@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1132" height="850" font-family="Malgun Gothic, sans-serif">
+<rect width="1132" height="850" fill="#1b2a1e"/>
+<polygon points="87.5,60.5 447.5,60.5 447.5,785.0 222.5,785.0 222.5,668.0 65.0,668.0 65.0,128.0 87.5,128.0" fill="#2f4f32" stroke="#8fb8e8" stroke-width="2"/>
+<rect x="445.5" y="246.0" width="40" height="16" fill="#b08850"/>
+<rect x="445.5" y="696.0" width="40" height="16" fill="#b08850"/>
+<line x1="254.0" y1="411.5" x2="168.5" y2="173.0" stroke="#c8a060" stroke-width="3" stroke-dasharray=""/>
+<line x1="254.0" y1="411.5" x2="362.0" y2="200.0" stroke="#c8a060" stroke-width="3" stroke-dasharray=""/>
+<line x1="254.0" y1="411.5" x2="150.5" y2="605.0" stroke="#c8a060" stroke-width="3" stroke-dasharray=""/>
+<line x1="254.0" y1="411.5" x2="344.0" y2="672.5" stroke="#c8a060" stroke-width="3" stroke-dasharray=""/>
+<line x1="254.0" y1="411.5" x2="168.5" y2="173.0" stroke="#c8a060" stroke-width="2" stroke-dasharray="6 3"/>
+<line x1="254.0" y1="411.5" x2="362.0" y2="200.0" stroke="#c8a060" stroke-width="2" stroke-dasharray="6 3"/>
+<line x1="254.0" y1="411.5" x2="150.5" y2="605.0" stroke="#c8a060" stroke-width="2" stroke-dasharray="6 3"/>
+<line x1="254.0" y1="411.5" x2="344.0" y2="672.5" stroke="#c8a060" stroke-width="2" stroke-dasharray="6 3"/>
+<line x1="254.0" y1="411.5" x2="150.5" y2="605.0" stroke="#c8a060" stroke-width="2" stroke-dasharray="6 3"/>
+<line x1="254.0" y1="411.5" x2="168.5" y2="173.0" stroke="#c8a060" stroke-width="2" stroke-dasharray="6 3"/>
+<rect x="146.0" y="303.5" width="216.0" height="216.0" fill="#9a7a50" fill-opacity="0.7" stroke="#e8d0a0"/>
+<rect x="195.5" y="353.0" width="117.0" height="117.0" fill="#4a3320"/>
+<text x="254.0" y="415.5" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">어머니 나무</text>
+<text x="254.0" y="428.5" font-size="9" fill="#e8d0a0" text-anchor="middle">높이 2000</text>
+<rect x="92.0" y="96.5" width="153.0" height="153.0" fill="#9a7a50" fill-opacity="0.7" stroke="#e8d0a0"/>
+<rect x="128.0" y="132.5" width="81.0" height="81.0" fill="#4a3320"/>
+<text x="168.5" y="177.0" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">북서 나무</text>
+<text x="168.5" y="190.0" font-size="9" fill="#e8d0a0" text-anchor="middle">높이 1300</text>
+<rect x="294.5" y="132.5" width="135.0" height="135.0" fill="#9a7a50" fill-opacity="0.7" stroke="#e8d0a0"/>
+<rect x="326.0" y="164.0" width="72.0" height="72.0" fill="#4a3320"/>
+<text x="362.0" y="204.0" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">북동 나무</text>
+<text x="362.0" y="217.0" font-size="9" fill="#e8d0a0" text-anchor="middle">높이 1150</text>
+<rect x="65.0" y="519.5" width="171.0" height="171.0" fill="#9a7a50" fill-opacity="0.7" stroke="#e8d0a0"/>
+<rect x="105.5" y="560.0" width="90.0" height="90.0" fill="#4a3320"/>
+<text x="150.5" y="609.0" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">남서 나무</text>
+<text x="150.5" y="622.0" font-size="9" fill="#e8d0a0" text-anchor="middle">높이 1500</text>
+<rect x="274.25" y="602.75" width="139.5" height="139.5" fill="#9a7a50" fill-opacity="0.7" stroke="#e8d0a0"/>
+<rect x="305.75" y="634.25" width="76.5" height="76.5" fill="#4a3320"/>
+<text x="344.0" y="676.5" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">남동 나무</text>
+<text x="344.0" y="689.5" font-size="9" fill="#e8d0a0" text-anchor="middle">높이 1200</text>
+<text x="24" y="844.0" font-size="11" fill="#cde">위에서 본 하이우드 · 갈색 네모 = 판(가장 넓은 고리) · 선 = 다리(점선 = 위층) · 주황 = 숲길 끝</text>
+<line x1="512.5" y1="830.0" x2="1112.5" y2="830.0" stroke="#6a8a5a" stroke-width="2"/>
+<rect x="570.8255813953489" y="264.8837209302326" width="75.34883720930232" height="565.1162790697674" fill="#4a3320"/>
+<rect x="518.9" y="264.8837209302326" width="179.20000000000002" height="150.69767441860463" fill="#2f6a34" fill-opacity="0.85"/>
+<rect x="536.9186046511628" y="775.2558139534884" width="143.1627906976744" height="3" fill="#e8d0a0"/>
+<rect x="540.6860465116279" y="684.8372093023256" width="135.62790697674419" height="3" fill="#e8d0a0"/>
+<rect x="544.453488372093" y="586.8837209302326" width="128.09302325581396" height="3" fill="#e8d0a0"/>
+<text x="608.5" y="844.0" font-size="9" fill="#cde" text-anchor="middle">남서 나무</text>
+<rect x="686.5930232558139" y="340.2325581395349" width="67.81395348837209" height="489.7674418604651" fill="#4a3320"/>
+<rect x="632.3418604651163" y="340.2325581395349" width="176.31627906976746" height="131.86046511627907" fill="#2f6a34" fill-opacity="0.85"/>
+<rect x="656.453488372093" y="767.7209302325582" width="128.09302325581396" height="3" fill="#e8d0a0"/>
+<rect x="660.2209302325582" y="684.8372093023256" width="120.55813953488371" height="3" fill="#e8d0a0"/>
+<rect x="663.9883720930233" y="586.8837209302326" width="113.02325581395348" height="3" fill="#e8d0a0"/>
+<text x="720.5" y="844.0" font-size="9" fill="#cde" text-anchor="middle">북서 나무</text>
+<rect x="783.5232558139535" y="76.51162790697674" width="97.95348837209302" height="753.4883720930233" fill="#4a3320"/>
+<rect x="742.9" y="76.51162790697674" width="179.20000000000002" height="207.20930232558138" fill="#2f6a34" fill-opacity="0.85"/>
+<rect x="742.0813953488372" y="775.2558139534884" width="180.83720930232556" height="3" fill="#e8d0a0"/>
+<rect x="753.3837209302326" y="684.8372093023256" width="158.2325581395349" height="3" fill="#e8d0a0"/>
+<rect x="753.3837209302326" y="586.8837209302326" width="158.2325581395349" height="3" fill="#e8d0a0"/>
+<rect x="745.8488372093024" y="488.93023255813955" width="173.30232558139534" height="3" fill="#e8d0a0"/>
+<rect x="757.1511627906976" y="375.90697674418607" width="150.69767441860463" height="3" fill="#e8d0a0"/>
+<text x="832.5" y="844.0" font-size="9" fill="#cde" text-anchor="middle">어머니 나무</text>
+<rect x="912.4767441860465" y="377.90697674418607" width="64.04651162790698" height="452.09302325581393" fill="#4a3320"/>
+<rect x="861.2395348837209" y="377.90697674418607" width="166.52093023255816" height="120.55813953488371" fill="#2f6a34" fill-opacity="0.85"/>
+<rect x="886.1046511627907" y="775.2558139534884" width="116.7906976744186" height="3" fill="#e8d0a0"/>
+<rect x="889.8720930232558" y="684.8372093023256" width="109.25581395348837" height="3" fill="#e8d0a0"/>
+<text x="944.5" y="844.0" font-size="9" fill="#cde" text-anchor="middle">남동 나무</text>
+<rect x="1026.360465116279" y="396.74418604651163" width="60.279069767441854" height="433.25581395348837" fill="#4a3320"/>
+<rect x="978.1372093023256" y="396.74418604651163" width="156.72558139534883" height="113.02325581395348" fill="#2f6a34" fill-opacity="0.85"/>
+<rect x="999.9883720930233" y="775.2558139534884" width="113.02325581395348" height="3" fill="#e8d0a0"/>
+<rect x="999.9883720930233" y="684.8372093023256" width="113.02325581395348" height="3" fill="#e8d0a0"/>
+<text x="1056.5" y="844.0" font-size="9" fill="#cde" text-anchor="middle">북동 나무</text>
+<text x="512.5" y="795.3255813953489" font-size="8" fill="#8a9">100</text>
+<text x="512.5" y="644.6279069767442" font-size="8" fill="#8a9">500</text>
+<text x="512.5" y="456.25581395348837" font-size="8" fill="#8a9">1000</text>
+<text x="512.5" y="267.8837209302326" font-size="8" fill="#8a9">1500</text>
+<text x="512.5" y="79.51162790697674" font-size="8" fill="#8a9">2000</text>
+<rect x="1092.5" y="796.0930232558139" width="4" height="33.906976744186046" fill="#9c6"/>
+<text x="1094.5" y="792.0930232558139" font-size="8" fill="#9c6" text-anchor="middle">숲 거목 90</text>
+<text x="512.5" y="844.0" font-size="11" fill="#cde">옆에서 본 높이(동서 순) · 노란 줄 = 판 · 초록 = 잎 덩어리</text>
+</svg>
