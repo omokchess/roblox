@@ -108,8 +108,25 @@ local ok, err = pcall(function()
 		-- 끝 단(높은 땅 높이로 평평하게 10) — 벽 옆에서 내려설 자리
 		part(name .. "_끝", Vector3.new(w, 2, 12), CFrame.lookAt(Vector3.new(ex, h1 - 1, ez), Vector3.new(ex, h1 - 1, ez) + dir.Unit) * CFrame.new(0, 0, -6), SNOW, M.Snow, ramps)
 	end
+	-- 계단 단(2026-10-09 사용자: 높낮이 차를 천천히 — "경사가 아니라 네모난 블록들을 차근차근"): 켜마다 직사각형 블록.
+	-- 윗면은 손 표 높이 - 0.2(눈 윗판 규칙), 겹친 켜끼리 같은 높이가 되지 않게 번호마다 0~0.08 낮춘다. 켜 색은 두 가지 눈을 번갈아
+	local SNOW2 = RGB(222, 230, 240)
+	local steps = Instance.new("Folder")
+	steps.Name = "Steps"
+	steps.Parent = root
+	for i, st in STEPS do
+		local x0, x1, z0, z1, lo, tp, c = st[1], st[2], st[3], st[4], st[5], st[6] - 0.2 - (i % 3) * 0.04, st[7]
+		local p = Instance.new("Part")
+		p.Name = "단" .. i
+		p.Anchored = true
+		p.Size = Vector3.new(x1 - x0, tp - lo, z1 - z0)
+		p.CFrame = CFrame.new((x0 + x1) / 2, (lo + tp) / 2, (z0 + z1) / 2)
+		p.Color, p.Material = if c == 1 then SNOW else SNOW2, M.Snow
+		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+		p.Parent = steps
+	end
 	root.Parent = S
-	say("새 설원 R_설원3: 땅 %d · 벼랑 %d · 오르막 %d", #TILES, #CLIFFS, #RAMPS)
+	say("새 설원 R_설원3: 땅 %d · 벼랑 %d · 계단 켜 %d", #TILES, #CLIFFS, #STEPS)
 end)
 if not ok then
 	say("오류 %s", tostring(err))
