@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="988" height="1188" viewBox="-3500 -2250 5200 6250" font-family="Malgun Gothic, sans-serif">
+<defs><pattern id="h" width="160" height="160" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><line x1="0" y1="0" x2="0" y2="160" stroke="#d24a3c" stroke-width="10" stroke-opacity="0.55"/></pattern></defs>
+<rect x="-3500" y="-2250" width="5200" height="6250" fill="#1f6f9a"/>
+<rect x="-287" y="-2145" width="1365" height="1376" fill="#b8b8c8" fill-opacity="0.85"/>
+<text x="395.5" y="-1457.0" font-size="80" fill="#333" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="9" paint-order="stroke">탑의 성역</text>
+<rect x="1660" y="-1330" width="1940" height="1030" fill="#e8cf9a" fill-opacity="0.85"/>
+<text x="2630.0" y="-815.0" font-size="80" fill="#333" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="9" paint-order="stroke">사막</text>
+<rect x="1395" y="469" width="1900" height="1213" fill="#8fae8a" fill-opacity="0.85"/>
+<text x="2345.0" y="1075.5" font-size="80" fill="#333" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="9" paint-order="stroke">늪(다음 차례)</text>
+<polygon points="-3190,-342 -2792,-342 -2792,-692 -1450,-692 -1450,-790 -350,-790 -350,-692 706,-692 706,-417 1330,-417 1330,3418 -222,3418 -222,3815 -1255,3815 -1255,2967 -2633,2967 -2633,2543 -3269,2543 -3269,914 -3190,914" fill="#2f6b34" stroke="#183d1b" stroke-width="18"/>
+<polygon points="-3190,-342 -2792,-342 -2792,-692 -1450,-692 -1450,-790 -350,-790 -350,-692 706,-692 706,-417 1330,-417 1330,3418 -222,3418 -222,3815 -1255,3815 -1255,2967 -2633,2967 -2633,2543 -3269,2543 -3269,914 -3190,914" fill="url(#h)"/>
+<rect x="-1020" y="-330" width="2270" height="1610" fill="#123a16" fill-opacity="1"/>
+<text x="115.0" y="1240" font-size="60" fill="#cfe8c8" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="7" paint-order="stroke">나무 빽빽</text>
+<rect x="-756" y="-242" width="1938" height="1301" fill="#8fbf5a" fill-opacity="1"/>
+<rect x="-756" y="-242" width="1938" height="1301" fill="url(#h)"/>
+<rect x="-305" y="199" width="1010" height="758" fill="#d8d0c0" fill-opacity="1" stroke="#333" stroke-width="10"/>
+<text x="200.0" y="608.0" font-size="80" fill="#111" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="9" paint-order="stroke">절화 (그대로)</text>
+<text x="213.0" y="-132" font-size="75" fill="#111" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="8" paint-order="stroke">평원 (지금 섬 그대로)</text>
+<rect x="-2960" y="1200" width="1000" height="1000" fill="#5aa0e6" fill-opacity="0.9" stroke="#222" stroke-width="10"/>
+<text x="-2460.0" y="1725.0" font-size="75" fill="#111" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="8" paint-order="stroke">하이우드 (마을 1000×1000)</text>
+<rect x="-1450" y="-790" width="1100" height="340" fill="#f0b48c" fill-opacity="0.9" stroke="#222" stroke-width="10"/>
+<text x="-900.0" y="-595.0" font-size="75" fill="#111" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="8" paint-order="stroke">맥동 (지하 보스룸)</text>
+<rect x="-1255" y="2967" width="1033" height="848" fill="#e6d24a" fill-opacity="0.9" stroke="#222" stroke-width="10"/>
+<text x="-738.5" y="3416.0" font-size="75" fill="#111" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="8" paint-order="stroke">솔리테의 기억</text>
+<polyline points="-1960,2384 -1157,2384 -1157,2967" fill="none" stroke="#3aa0ff" stroke-width="40"/>
+<text x="-1157" y="2334" font-size="55" fill="#0b3d78" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="6" paint-order="stroke">하이우드 → 솔리테</text>
+<rect x="-2678" y="-637" width="90" height="90" fill="#2f5fd0" fill-opacity="1" stroke="#fff" stroke-width="10"/>
+<text x="-2563" y="-572" font-size="58" fill="#0b2a6b" text-anchor="start" font-weight="700" stroke="#ffffff" stroke-width="6" paint-order="stroke">순례자의 휴식처 1/8</text>
+<rect x="-750" y="741" width="90" height="90" fill="#2f5fd0" fill-opacity="1" stroke="#fff" stroke-width="10"/>
+<text x="-635" y="806" font-size="58" fill="#0b2a6b" text-anchor="start" font-weight="700" stroke="#ffffff" stroke-width="6" paint-order="stroke">순례자의 휴식처 3/8</text>
+<circle cx="-1610" cy="523" r="900" fill="none" stroke="#ffffff" stroke-width="14" stroke-dasharray="40 30"/>
+<text x="-900" y="1000" font-size="110" fill="#7a1d14" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="12" paint-order="stroke">필드 (숲)</text>
+<text x="-1610" y="1513" font-size="55" fill="#fff" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="6" paint-order="stroke">지금 둥근 숲 섬 + 가운데 돌산 → 갈아엎음</text>
+<rect x="-3300" y="3700" width="1000" height="40" fill="#fff" fill-opacity="1"/>
+<text x="-2800" y="3690" font-size="60" fill="#fff" text-anchor="middle" font-weight="700" stroke="#ffffff" stroke-width="7" paint-order="stroke">1000 스터드</text>
+<text x="1500" y="-2100" font-size="80" fill="#fff" text-anchor="end" font-weight="700" stroke="#ffffff" stroke-width="9" paint-order="stroke">북 ↑</text>
+</svg>
