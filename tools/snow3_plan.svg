@@ -12,8 +12,6 @@
 <text x="723.3846153846154" y="1178.0" font-size="13" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">북동 들 · 높이 44</text>
 <polygon points="160,1160 390,1170 400,1312 595,1312 628,1270 690,1452 500,1492 490,1472 145,1472 155,1325 132,1322 132,1262" fill="#60a060" fill-opacity="0.25" stroke="#60a060" stroke-width="3"/>
 <text x="368.0833333333333" y="1335.0833333333333" font-size="13" fill="#111" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">남서 필드 · 높이 20</text>
-<rect x="915" y="960" width="205" height="150" fill="#802020" fill-opacity="0.15" stroke="#802020" stroke-width="3" stroke-dasharray="8 4"/>
-<text x="1017.5" y="1126" font-size="12" fill="#801010" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">히든 보스 (대태도 청사진) — 지하 깊이 -180</text>
 <rect x="286" y="1400" width="14" height="14" fill="#2f5fd0" stroke="#fff" stroke-width="2"/>
 <text x="293" y="1396" font-size="11" fill="#0b2a6b" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">동굴 입구 2</text>
 <rect x="690" y="1311" width="14" height="14" fill="#2f5fd0" stroke="#fff" stroke-width="2"/>
@@ -34,12 +32,12 @@
 <text x="513.0" y="1581.0" font-size="10" fill="#5a2a10" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">윗굴(입구2 → 동)</text>
 <rect x="625" y="1548" width="312" height="60" fill="#8a5a30" fill-opacity="0.22" stroke="#8a5a30" stroke-width="2.5"/>
 <text x="781.0" y="1582.0" font-size="10" fill="#5a2a10" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">윗굴 동쪽</text>
-<rect x="930" y="1505" width="20" height="55" fill="#8a5a30" fill-opacity="0.22" stroke="#8a5a30" stroke-width="2.5"/>
-<text x="940.0" y="1536.5" font-size="10" fill="#5a2a10" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">비밀벽</text>
 <rect x="942" y="1402" width="68" height="224" fill="#8a5a30" fill-opacity="0.22" stroke="#8a5a30" stroke-width="2.5"/>
 <text x="976.0" y="1518.0" font-size="10" fill="#5a2a10" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">입구1 굴(3번 입구·동굴 입구1 → 아래)</text>
-<rect x="1010" y="1444" width="135" height="104" fill="#8a5a30" fill-opacity="0.22" stroke="#8a5a30" stroke-width="2.5"/>
-<text x="1077.5" y="1500.0" font-size="10" fill="#5a2a10" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">동쪽 굴(→ 히든 보스)</text>
+<rect x="1006" y="1470" width="10" height="55" fill="#8a5a30" fill-opacity="0.22" stroke="#8a5a30" stroke-width="2.5"/>
+<text x="1011.0" y="1501.5" font-size="10" fill="#5a2a10" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">비밀벽</text>
+<rect x="1016" y="1444" width="129" height="104" fill="#8a5a30" fill-opacity="0.22" stroke="#8a5a30" stroke-width="2.5"/>
+<text x="1080.5" y="1500.0" font-size="10" fill="#5a2a10" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">히든 보스 방 (대태도 청사진)</text>
 <rect x="240" y="1600" width="140" height="151" fill="#8a5a30" fill-opacity="0.22" stroke="#8a5a30" stroke-width="2.5"/>
 <text x="310.0" y="1679.5" font-size="10" fill="#5a2a10" text-anchor="middle" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke">케이브 (서브보스)</text>
 <rect x="380" y="1652" width="260" height="62" fill="#8a5a30" fill-opacity="0.22" stroke="#8a5a30" stroke-width="2.5"/>
