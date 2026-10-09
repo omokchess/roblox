@@ -19,6 +19,12 @@ sys.path.insert(0, HERE)
 from snow3_plan import FIELD, SCALE, SPOTS, ZONES, world  # noqa: E402
 
 CELL = 10  # 그림 px
+# 지하 입구 구멍(그림 좌표 칸 범위 X0,X1,Y0,Y1 — 10px 칸에 맞춤): 땅 판을 비워 굴로 내려가는 구멍. 바닷가·바위 무리 계산에서는 땅으로 친다
+HOLES = {
+    "동굴 입구 2": (280, 300, 1400, 1420),
+    "동굴 입구 1": (690, 710, 1310, 1330),
+    "3번 입구": (830, 850, 1310, 1330),
+}
 X0, X1, Y0, Y1 = 120, 880, 930, 1500
 # 바닷가 벼랑 손 표: (땅 위 높이, 깊이 스터드) — 바깥 토막마다 차례로
 CLIFF_STYLE = [(10, 26), (18, 30), (6, 24), (14, 28), (22, 32), (8, 24), (16, 28), (4, 22), (12, 26), (20, 30)]
@@ -109,19 +115,24 @@ def seg_d(p, a, b):
     return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
 
 
+def in_hole(i, j):
+    X, Y = X0 + (i + 0.5) * CELL, Y0 + (j + 0.5) * CELL
+    return any(a <= X <= b and c <= Y <= d for a, b, c, d in HOLES.values())
+
+
 def rects(g, nx, ny):
     used = [[False] * ny for _ in range(nx)]
     out = []
     for i in range(nx):
         for j in range(ny):
             k = g[i][j]
-            if k is None or used[i][j]:
+            if k is None or used[i][j] or in_hole(i, j):
                 continue
             j2 = j
-            while j2 + 1 < ny and g[i][j2 + 1] == k and not used[i][j2 + 1]:
+            while j2 + 1 < ny and g[i][j2 + 1] == k and not used[i][j2 + 1] and not in_hole(i, j2 + 1):
                 j2 += 1
             i2 = i
-            while i2 + 1 < nx and all(g[i2 + 1][t] == k and not used[i2 + 1][t] for t in range(j, j2 + 1)):
+            while i2 + 1 < nx and all(g[i2 + 1][t] == k and not used[i2 + 1][t] and not in_hole(i2 + 1, t) for t in range(j, j2 + 1)):
                 i2 += 1
             for a in range(i, i2 + 1):
                 for b in range(j, j2 + 1):
