@@ -101,14 +101,14 @@ KIT_SIZE = {  # ServerStorage.SnowKit 잰 값 (X, Y, Z, 피벗 기준 가운데 
     "Steam_Factory": (46.5, 69.7, 54.8, 3.6, 0.0), "Steam_House_A": (18.9, 34.3, 15.5, -0.8, -0.5),
     "Steam_House_B": (27.1, 26.8, 17.3, -2.6, -0.6), "Steam_House_C": (18.3, 38.8, 16.2, 0.1, -1.1),
     "Ticket_Booth": (11.8, 14.3, 9.7, -0.6, -0.5), "Under_Gate": (15.0, 13.2, 12.8, 0.0, -0.9),
-    "Zapfen_Werk": (86.7, 59.7, 39.0, -3.4, -1.5), "City_Gate": (26.0, 24.3, 6.0, 0.0, 0.0), "Gas_Lamp": (1.9, 12.6, 3.2, 0.0, -0.9),
+    "Zapfen_Werk": (86.7, 59.7, 39.0, -3.4, -1.5), "Frostig_Werk": (35.9, 32.3, 24.5, 2.5, -2.0), "Sel_Werk_Ruin": (27.8, 23.1, 20.5, -1.3, 0.3), "City_Gate": (26.0, 24.3, 6.0, 0.0, 0.0), "Gas_Lamp": (1.9, 12.6, 3.2, 0.0, -0.9),
 }
 PLAZA_R = 90  # 광장 반지름(스터드)
 PLACE = [
     ("Clock_Tower", 348, 567, 1.8, "S", "광장 시계탑"),
     ("Zapfen_Werk", 442, 410, 2.0, "S", "슈네라이히 공방"),
     ("Shop_Blue", 326, 498, 1.4, "plaza", "잡화상점"),
-    ("Shop_Gold", 385, 503, 1.4, "plaza", "장비상점"),
+    ("Frostig_Werk", 385, 503, 1.3, "plaza", "장비상점"),  # 옛 프로스티히 공방(무기 공방, 안쪽 방 있음)을 장비상점으로
     ("Shop_Teal", 280, 536, 1.4, "plaza", "물약상점"),
     ("Shop_Red", 410, 618, 1.4, "plaza", "강화소"),
     ("Inn_House", 296, 636, 1.4, "plaza", "여관"),
@@ -134,6 +134,12 @@ PLACE = [
     # 마을 문(아래 바위 무리로 올라오는 쪽)
     ("City_Gate", 330, 726, 1.4, "S", "남문"), ("City_Gate", 533, 590, 1.4, "E", "동문"),
 ]
+# 마을 밖 건물 { 틀, 지상 그림 X, Y(snow3), 배율, yaw(도), 이름, 바닥 높이 }
+OUTSIDE = [("Sel_Werk_Ruin", 766, 1065, 1.6, 200.0, "(구)설공방 폐허", 43.8)]
+# 안쪽 방 문 { 건물 이름: (방 id, 문 dx, dz(틀 피벗 기준, 배율 전), 문 폭) } — Snow_City.luau DOORS 와 같은 값
+DOORS = {"슈네라이히 공방": ("Zapfen", 0.0, -17.0, 12.0), "체스판 건물": ("Figuren", 0.0, -16.0, 5.0),
+         "장비상점": ("Frostig", 6.0, -9.0, 3.4), "(구)설공방 폐허": ("Sel", 6.0, -9.0, 3.4)}
+
 # 길(돌 판) — 확대 그림 px 꺾은선, 폭 스터드
 TOWN_ROADS = [
     ("서쪽 길", [(300, 572), (238, 572)], 22),
@@ -196,6 +202,13 @@ def town_data():
     out, bad, pc = place_world()
     lines = ["-- snow_town_plan.py 가 만든 자료(손으로 고치지 말 것)", "local GROUND_Y = 59.8", f"local PLAZA = {{ {pc[0]:.1f}, {pc[1]:.1f}, {PLAZA_R} }}", "local PLACE = {"]
     lines += [f'\t{{ "{k}", {x:.1f}, {z:.1f}, {sc}, {yaw:.1f}, "{n}" }},' for k, x, z, sc, yaw, n in out]
+    lines += ["}", "local OUTSIDE = {"]
+    for k, X, Y, sc, yaw, n, gy in OUTSIDE:
+        wx, wz = world(X, Y)
+        lines.append(f'	{{ "{k}", {wx:.1f}, {wz:.1f}, {sc}, {yaw}, "{n}", {gy} }},')
+    lines += ["}", "local DOORS = {"]
+    for n, (rid, dx, dz, w) in DOORS.items():
+        lines.append(f'	["{n}"] = {{ "{rid}", {dx}, {dz}, {w} }},')
     lines += ["}", "local ROADS = {"]
     for n, pts, w in TOWN_ROADS:
         ws = ", ".join(f"{{ {to_world(a, b)[0]:.1f}, {to_world(a, b)[1]:.1f} }}" for a, b in pts)

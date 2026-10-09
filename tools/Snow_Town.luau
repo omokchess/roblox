@@ -64,6 +64,68 @@ local ok, err = pcall(function()
 		m.Parent = bfolder
 		n += 1
 	end
+	-- 마을 밖 건물(옛 설공방 폐허 — 북동 들)
+	local placed = {}
+	for _, m in bfolder:GetChildren() do
+		placed[m.Name] = { m, nil }
+	end
+	for _, p in OUTSIDE do
+		local kind, x, z, sc, yaw, name, gy = p[1], p[2], p[3], p[4], p[5], p[6], p[7]
+		local src = kit:FindFirstChild(kind)
+		if src then
+			local m = src:Clone()
+			m.Name = name
+			m:SetAttribute("Kit", kind)
+			m:ScaleTo(sc)
+			m:PivotTo(CFrame.new(x, gy, z) * CFrame.Angles(0, math.rad(yaw), 0))
+			m.Parent = bfolder
+			placed[name] = { m, gy }
+			n += 1
+		end
+	end
+	-- 안쪽 방 문(SnowInteriors 가 태그 SnowDoor · 속성 InteriorId/ReturnPos/ReturnLook 으로 짝을 찾는다 — Snow_City.luau 와 같은 꼴)
+	local CS = game:GetService("CollectionService")
+	local TITLES = { Frostig = "장비상점 (프로스티히 공방)", Zapfen = "슈네라이히 공방", Sel = "설 공방 (폐허)", Figuren = "체스판 건물 (기물군 본부)" }
+	local doors = Instance.new("Folder")
+	doors.Name = "문"
+	doors.Parent = town
+	local nd = 0
+	for bname, d in DOORS do
+		local e = placed[bname]
+		if not e then
+			say("문 달 건물 없음 %s", bname)
+			continue
+		end
+		local m, gy = e[1], e[2] or GROUND_Y
+		local sc = m:GetScale()
+		local id, dx, dz, dw = d[1], d[2], d[3], d[4]
+		local pv = m:GetPivot()
+		local front = pv.LookVector
+		local base = pv:PointToWorldSpace(Vector3.new(dx * sc, 0, dz * sc))
+		local door = Instance.new("Part")
+		door.Name = "Door_" .. id
+		door.Anchored = true
+		door.Size = Vector3.new(dw * sc, 8 * sc, 1)
+		door.CFrame = CFrame.lookAt(base + front * 0.9 * sc + Vector3.new(0, 4.5 * sc, 0), base + front * 2 * sc + Vector3.new(0, 4.5 * sc, 0))
+		door.Transparency = 1
+		door.CanCollide = false
+		door:SetAttribute("InteriorId", id)
+		local ret = base + front * 9 * sc
+		door:SetAttribute("ReturnPos", Vector3.new(ret.X, gy + 3.2, ret.Z))
+		door:SetAttribute("ReturnLook", front)
+		local pr = Instance.new("ProximityPrompt")
+		pr.ActionText = "들어가기"
+		pr.ObjectText = TITLES[id]
+		pr.HoldDuration = 0.25
+		pr.MaxActivationDistance = 12
+		pr.RequiresLineOfSight = false
+		pr.Parent = door
+		door.Parent = doors
+		CS:AddTag(door, "SnowDoor")
+		nd += 1
+	end
+	local sss = game:GetService("ServerScriptService"):FindFirstChild("SnowInteriors")
+	say("문 %d · SnowInteriors %s · 안쪽방 %s", nd, tostring(sss ~= nil), tostring(city:FindFirstChild("안쪽방") ~= nil))
 	-- 광장: 팔각(네모 둘을 45° 엇갈려) 돌판, 가운데 띠 + 둘레 가스등
 	local plaza = Instance.new("Folder")
 	plaza.Name = "광장"
