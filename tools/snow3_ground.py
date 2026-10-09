@@ -318,6 +318,67 @@ def slopes(g, nx, ny, bad):
     return out, corners
 
 
+def fill_exposed(boxes, g, nx, ny):
+    """바위 상자 옆면이 평평한 땅 위로 8 넘게 드러난 곳(무리 끝·단 만나는 모서리 — 2026-10-09 사용자 스크린샷: 마을 남동 모서리)
+    앞에 같은 폭으로 내려가는 바위 단을 겹쳐 놓는다(높은 것이 좁다). → 더할 상자 목록"""
+    def tile_top(x, z):
+        X = (x - world(0, 0)[0]) / SCALE
+        Y = (z - world(0, 0)[1]) / SCALE
+        i, j = int((X - X0) // CELL), int((Y - Y0) // CELL)
+        if 0 <= i < nx and 0 <= j < ny and g[i][j] is not None:
+            return ZONES[g[i][j]][2]
+        return None
+
+    def height(x, z):
+        t = tile_top(x, z)
+        if t is None:
+            return None
+        best = t
+        for b in boxes:
+            x0, x1, z0, z1 = b[1]
+            if x0 <= x <= x1 and z0 <= z <= z1 and b[3] > best:
+                best = b[3]
+        return best
+
+    add = []
+    for b in boxes:
+        x0, x1, z0, z1 = b[1]
+        tp = b[3]
+        for nxd, nzd in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            L = (z1 - z0) if nxd else (x1 - x0)
+            if L < 30:
+                continue
+            fx = x0 if nxd < 0 else x1
+            fz = z0 if nzd < 0 else z1
+            low, cnt, g0 = 0, 0, None
+            for t in range(1, 8):
+                u = t / 8
+                px, pz = (fx + nxd * 2, z0 + (z1 - z0) * u) if nxd else (x0 + (x1 - x0) * u, fz + nzd * 2)
+                h, tt = height(px, pz), tile_top(px, pz)
+                cnt += 1
+                if h is not None and h == tt and tp - h > 8:
+                    low += 1
+                    g0 = tt
+            if low < 5:
+                continue
+            e = tp - g0
+            m = math.ceil(e / 6)
+            for k_ in range(1, m + 1):
+                d = 24 * k_
+                # 바깥 끝 땅이 같은 높이일 때만(다른 단으로 넘어가지 않게)
+                ex = fx + nxd * d if nxd else (x0 + x1) / 2
+                ez = fz + nzd * d if nzd else (z0 + z1) / 2
+                if tile_top(ex, ez) != g0:
+                    break
+                tpk = g0 + e * (1 - k_ / (m + 1))
+                if nxd:
+                    box = tuple(sorted((fx - nxd * 0.5, fx + nxd * d))) + (z0 + 1.5 * (k_ % 2), z1 - 1.5 * ((k_ + 1) % 2))
+                else:
+                    box = (x0 + 1.5 * (k_ % 2), x1 - 1.5 * ((k_ + 1) % 2)) + tuple(sorted((fz - nzd * 0.5, fz + nzd * d)))
+                add.append(("R", box, g0 - 2, tpk, k_ % 2))
+    return add
+
+
 def zone_at(X, Y, g):
     i, j = int((X - X0) // CELL), int((Y - Y0) // CELL)
     if 0 <= i < len(g) and 0 <= j < len(g[0]) and g[i][j] is not None:
@@ -337,6 +398,7 @@ def main():
             bad.append(f"{ZONES[k][0]} 판이 2048 넘음")
     cliffs = coast(g, nx, ny)
     wedges, ncorner = slopes(g, nx, ny, bad)
+    wedges += fill_exposed(wedges, g, nx, ny)
     ramps = []
     for name, (sx, sy), (ex, ey), h0, h1, w in RAMPS:
         L = math.hypot(ex - sx, ey - sy) * SCALE
