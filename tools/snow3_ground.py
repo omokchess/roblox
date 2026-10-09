@@ -24,21 +24,31 @@ X0, X1, Y0, Y1 = 120, 880, 930, 1500
 CLIFF_STYLE = [(10, 26), (18, 30), (6, 24), (14, 28), (22, 32), (8, 24), (16, 28), (4, 22), (12, 26), (20, 30)]
 # 오르막 { 이름, 시작(X,Y), 끝(X,Y), 시작 높이, 끝 높이, 폭 스터드 } — 그림 좌표, 높은 단 벽 바로 바깥(낮은 땅 위)
 RAMPS = []  # 2026-10-09 비탈(slopes)로 바꿈
-# 단 사이 바위 덩어리 본보기(손으로 — 사용자 참고 사진: 눈 협곡, 크기 제각각 바위 상자가 엇갈려 쌓이고 턱이 튀어나옴).
-# 상자 { u0, u1 (벽 따라 스터드), v0, v1 (벽에서 낮은 쪽으로 스터드, 높이 차 40 기준), 윗면 높이 비(0 = 낮은 땅, 1 = 높은 단) }.
-# 이웃 상자 높이 비 차는 0.16 아래(높이 차 40 이면 6.4 — 뛰어 오를 수 있게). 1 넘는 것은 벽 위로 솟은 바위 기둥.
+# 단 사이 바위 덩어리 본보기(손으로 — 사용자 참고 사진: 눈 협곡). 2026-10-09 "크게크게 놔서 빈 공간 안 보이고 자연스럽게":
+#   본보기 = 폭이 다른 기둥 줄. 기둥마다 벽에서 낮은 쪽으로 띠(끝 v 스터드, 윗면 높이 비)를 이어 붙여 빈틈이 없다.
+#   기둥끼리 띠 끊는 자리가 달라 엇갈린 바위 단이 된다. 그 위에 큰 바위(BOULDERS: u0,u1,v0,v1,높이 비)를 몇 개 얹는다.
+#   v 는 높이 차 40 기준 스터드(최대 ≈ 250). 낮은 땅이 모자라면 기둥마다 v 를 줄여 띠를 다 넣는다(중간에 잘린 벽이 안 생기게).
 CLUSTERS = [
-    (130, [(0, 60, 0, 45, 0.88), (55, 130, 0, 30, 0.95), (0, 40, 45, 85, 0.66), (35, 95, 30, 75, 0.74), (95, 130, 30, 60, 0.6),
-           (20, 80, 85, 125, 0.44), (80, 130, 60, 110, 0.4), (0, 30, 85, 140, 0.26), (45, 110, 125, 170, 0.12),
-           (100, 125, 110, 135, 0.27), (60, 76, 8, 26, 1.18)]),
-    (110, [(0, 110, 0, 25, 0.92), (0, 50, 25, 70, 0.76), (50, 110, 25, 50, 0.82), (60, 110, 50, 95, 0.6), (0, 45, 70, 110, 0.5),
-           (30, 80, 95, 135, 0.34), (80, 110, 95, 150, 0.2), (0, 30, 110, 160, 0.12)]),
-    (150, [(0, 80, 0, 35, 0.82), (80, 150, 0, 50, 0.9), (10, 60, 35, 80, 0.66), (60, 120, 50, 90, 0.7), (120, 150, 50, 85, 0.5),
-           (0, 45, 80, 120, 0.36), (45, 110, 90, 130, 0.5), (110, 150, 85, 140, 0.3), (20, 90, 130, 175, 0.16),
-           (95, 112, 18, 36, 1.12)]),
-    (95, [(0, 95, 0, 35, 0.86), (0, 40, 35, 75, 0.62), (40, 95, 35, 65, 0.72), (45, 95, 65, 110, 0.48), (0, 50, 75, 120, 0.34),
-          (10, 70, 120, 155, 0.16), (70, 95, 110, 140, 0.22)]),
+    ([(60, [(50, 0.92), (95, 0.74), (150, 0.5), (200, 0.3), (240, 0.12)]),
+      (45, [(70, 0.88), (120, 0.66), (170, 0.42), (230, 0.2)]),
+      (70, [(40, 0.96), (85, 0.8), (140, 0.58), (190, 0.34), (250, 0.14)]),
+      (35, [(60, 0.86), (110, 0.62), (160, 0.38), (210, 0.18)])],
+     [(40, 90, 20, 60, 1.12), (130, 165, 100, 135, 0.7)]),
+    ([(80, [(65, 0.9), (110, 0.7), (180, 0.46), (235, 0.22)]),
+      (50, [(45, 0.94), (100, 0.76), (140, 0.56), (200, 0.3), (250, 0.1)]),
+      (65, [(80, 0.84), (130, 0.6), (170, 0.4), (220, 0.2)])],
+     [(100, 150, 90, 125, 0.82), (20, 45, 140, 170, 0.5)]),
+    ([(40, [(55, 0.9), (120, 0.64), (190, 0.32), (230, 0.14)]),
+      (75, [(35, 0.97), (90, 0.78), (135, 0.55), (185, 0.36), (245, 0.16)]),
+      (55, [(70, 0.86), (110, 0.68), (160, 0.46), (215, 0.24)]),
+      (45, [(50, 0.92), (100, 0.72), (150, 0.5), (205, 0.28), (240, 0.1)])],
+     [(100, 140, 10, 40, 1.15), (160, 200, 130, 170, 0.6)]),
+    ([(90, [(60, 0.93), (115, 0.71), (165, 0.5), (210, 0.26), (245, 0.12)]),
+      (60, [(40, 0.88), (95, 0.68), (150, 0.44), (200, 0.22)])],
+     [(60, 110, 50, 90, 0.85)]),
 ]
+# 볼록 모서리 메움: 모서리에서 낮은 쪽 사분면에 겹친 네모(깊이 비, 높이 비) — 큰 것이 낮다
+CORNER = [(0.32, 0.82), (0.55, 0.6), (0.78, 0.36), (1.0, 0.14)]
 
 
 def inside(pt, poly):
@@ -181,7 +191,7 @@ def coast(g, nx, ny):
 
 
 def slopes(g, nx, ny, bad):
-    """단 사이 벽마다 바위 덩어리 무리(CLUSTERS)를 차례로(거울 번갈아) 놓는다 → [("R", (x0,x1,z0,z1), 아래, 위, 색)]"""
+    """단 사이 벽마다 바위 덩어리 띠(CLUSTERS)를 차례로(거울 번갈아), 볼록 모서리는 CORNER 로 → [("R", (x0,x1,z0,z1), 아래, 위, 색)]"""
     def top(i, j):
         if 0 <= i < nx and 0 <= j < ny and g[i][j] is not None:
             return ZONES[g[i][j]][2]
@@ -199,10 +209,16 @@ def slopes(g, nx, ny, bad):
                     walls.setdefault((name, h, lo), set()).add((i, j))
     out = []
     k = 0
+    cell = CELL * SCALE
+
+    def put(box, lo, topy, c):
+        if topy - lo >= 1.5:
+            out.append(("R", box, lo - 2, topy, c))
+
     for (name, h, lo), cells in sorted(walls.items()):
         di, dj = dirs[name]
         dh = h - lo
-        sv = max(0.35, min(1.0, dh / 40))  # 깊이 배율
+        sv = max(0.5, min(1.0, dh / 40))
         lines = {}
         for (i, j) in cells:
             lines.setdefault(j if dj != 0 else i, []).append(i if dj != 0 else j)
@@ -217,53 +233,89 @@ def slopes(g, nx, ny, bad):
                     cur = [v]
             runs.append(cur)
             for run in runs:
-                # 벽 선(월드): 따라가는 축 시작·끝, 고정 좌표, 바깥 방향
                 if dj != 0:
                     wall = world(0, Y0 + (key + (1 if dj > 0 else 0)) * CELL)[1]
                     a0, a1 = world(X0 + run[0] * CELL, 0)[0], world(X0 + (run[-1] + 1) * CELL, 0)[0]
                 else:
                     wall = world(X0 + (key + (1 if di > 0 else 0)) * CELL, 0)[0]
                     a0, a1 = world(0, Y0 + run[0] * CELL)[1], world(0, Y0 + (run[-1] + 1) * CELL)[1]
-                out_dir = dj if dj != 0 else di
+                od = dj if dj != 0 else di
 
                 def fit_at(u):
-                    """벽 따라 u(월드) 자리에서 낮은 땅이 몇 스터드 이어지나"""
-                    c = int(((u - a0) / (CELL * SCALE)))
-                    c = max(0, min(len(run) - 1, c))
+                    c = max(0, min(len(run) - 1, int((u - a0) / cell)))
                     ci, cj = (run[c], key) if dj != 0 else (key, run[c])
                     f = 0
                     while f < 40 and top(ci + di * (f + 1), cj + dj * (f + 1)) == lo:
                         f += 1
-                    return f * CELL * SCALE
+                    return f * cell
+
+                def rect(u0, u1, d0, d1):
+                    n0, n1 = wall + od * d0, wall + od * d1
+                    if dj != 0:
+                        return (u0, u1, min(n0, n1), max(n0, n1))
+                    return (min(n0, n1), max(n0, n1), u0, u1)
 
                 cur_u = a0
                 while cur_u < a1 - 4:
-                    W, boxes = CLUSTERS[k % len(CLUSTERS)]
+                    cols, boulders = CLUSTERS[k % len(CLUSTERS)]
+                    W = sum(c[0] for c in cols)
                     mirror = (k // len(CLUSTERS)) % 2 == 1
                     k += 1
-                    for (u0, u1, v0, v1, f) in boxes:
+                    order = list(reversed(cols)) if mirror else cols
+                    u = cur_u
+                    for cw, bands in order:
+                        u0, u1 = u, min(u + cw, a1)
+                        u += cw
+                        if u1 - u0 < 3:
+                            continue
+                        fit = min(fit_at(u0 + 0.1), fit_at(u1 - 0.1))
+                        need = bands[-1][0] * sv
+                        sc = sv * min(1.0, fit / need) if need > 0 else sv
+                        v0 = -0.5
+                        for v1, f in bands:
+                            # 이웃 띠·기둥과 1 겹쳐 틈이 안 보이게
+                            put(rect(u0 - 0.5, u1 + 0.5, v0, v1 * sc + 0.5), lo, lo + f * dh, k % 2)
+                            v0 = v1 * sc - 0.5
+                    for (b0, b1, c0, c1, f) in boulders:
                         if mirror:
-                            u0, u1 = W - u1, W - u0
-                        x0, x1 = cur_u + u0, min(cur_u + u1, a1)
+                            b0, b1 = W - b1, W - b0
+                        x0, x1 = cur_u + b0, min(cur_u + b1, a1)
                         if x1 - x0 < 4:
                             continue
                         fit = min(fit_at(x0 + 0.1), fit_at(x1 - 0.1))
-                        d0, d1 = v0 * sv, min(v1 * sv, fit)
-                        if f <= 1 and d1 - d0 < 4:
-                            continue
-                        if f > 1:  # 솟은 바위: 벽에 붙여 높은 단 쪽으로도 조금 들어가게
-                            d0, d1 = -abs(d1 - d0) * 0.5, d1
-                        topy = lo + f * dh
-                        if topy - lo < 1.5:
-                            continue
-                        n0, n1 = wall + out_dir * (d0 - 0.5), wall + out_dir * d1
-                        if dj != 0:
-                            box = (x0, x1, min(n0, n1), max(n0, n1))
-                        else:
-                            box = (min(n0, n1), max(n0, n1), x0, x1)
-                        out.append(("R", box, lo - 2, topy, k % 2))
+                        d0, d1 = c0 * sv, min(c1 * sv, fit)
+                        if f > 1:
+                            d0 = -(d1 - d0) * 0.4
+                        if d1 - d0 >= 4:
+                            put(rect(x0, x1, d0, d1), lo, lo + f * dh, (k + 1) % 2)
                     cur_u += W
-    return out, 0
+    # 볼록 모서리(높은 칸 하나에 남북·동서 벽이 같이 있고 대각 칸이 같은 낮은 땅)
+    corners = 0
+    for i in range(nx):
+        for j in range(ny):
+            h = top(i, j)
+            if h is None:
+                continue
+            for si in (-1, 1):
+                for sj in (-1, 1):
+                    l1, l2, l3 = top(i + si, j), top(i, j + sj), top(i + si, j + sj)
+                    if l1 is None or not (l1 == l2 == l3) or l1 >= h:
+                        continue
+                    dh = h - l1
+                    D = 240 * max(0.5, min(1.0, dh / 40))
+                    # 대각 쪽 낮은 땅이 이어지는 만큼
+                    f = 0
+                    while f < 40 and top(i + si * (f + 1), j + sj * (f + 1)) == l1:
+                        f += 1
+                    D = min(D, f * cell)
+                    vx, vz = world(X0 + (i + (1 if si > 0 else 0)) * CELL, Y0 + (j + (1 if sj > 0 else 0)) * CELL)
+                    for fr, fh in CORNER:
+                        d = D * fr
+                        x0, x1 = sorted((vx - si * 0.5, vx + si * d))
+                        z0, z1 = sorted((vz - sj * 0.5, vz + sj * d))
+                        put((x0, x1, z0, z1), l1, l1 + fh * dh, corners % 2)
+                    corners += 1
+    return out, corners
 
 
 def zone_at(X, Y, g):
@@ -321,4 +373,4 @@ if __name__ == "__main__":
     out += [f"	{{ {bx[0]:.1f}, {bx[1]:.1f}, {bx[2]:.1f}, {bx[3]:.1f}, {lo:.1f}, {tp:.2f}, {c} }}," for _, bx, lo, tp, c in wedges]
     out += ["}"]
     open(os.path.join(HERE, "Snow3_Ground_data.luau"), "w", encoding="utf-8", newline="\n").write("\n".join(out) + "\n")
-    print(f"땅 판 {len(tiles)} · 벼랑 {len(cliffs)} · 바위 상자 {len(wedges)} · 문제 {len(bad)}건")
+    print(f"땅 판 {len(tiles)} · 벼랑 {len(cliffs)} · 바위 상자 {len(wedges)}(모서리 {ncorner}곳) · 문제 {len(bad)}건")
