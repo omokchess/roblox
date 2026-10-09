@@ -137,13 +137,14 @@ def build():
     steps = 0
     # 특별 벽(열리면 지나는 자리)은 계단 계산에서 이웃 굴 중 얕은 바닥으로 친다(비밀벽 뒤 히든 보스 방 -110 으로 내려가는 계단)
     step_floor = [row[:] for row in floor]
-    for i in range(nx):
-        for j in range(ny):
-            if special[i][j]:
-                nb = [floor[a][b] for a, b in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1))
-                      if 0 <= a < nx and 0 <= b < ny and floor[a][b] is not None]
-                if nb:
-                    step_floor[i][j] = max(nb)
+    # 벽이 두 칸 두께일 수 있어 벽 덩어리 전체에 닿는 굴 중 가장 얕은 바닥을 쓴다
+    for n in SPECIAL:
+        cells = [(i, j) for i in range(nx) for j in range(ny) if special[i][j] == n]
+        nb = [floor[a][b] for i, j in cells for a, b in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1))
+              if 0 <= a < nx and 0 <= b < ny and floor[a][b] is not None]
+        for i, j in cells:
+            if nb:
+                step_floor[i][j] = max(nb)
     for i in range(nx):
         for j in range(ny):
             d = step_floor[i][j]
