@@ -51,15 +51,12 @@ local TILE_RANGE = Color3.fromRGB(170, 60, 62)
 -- 범위 안에 적이 선 칸(실제로 맞는 칸)과 적이 선 칸(범위 밖)
 local TILE_RANGE_HIT = Color3.fromRGB(235, 70, 64)
 local TILE_OCCUPIED = Color3.fromRGB(150, 120, 170)
-local TILE_THREAT = Color3.fromRGB(220, 150, 60)
 local TILE_DROP = Color3.fromRGB(90, 190, 120)
 -- 보스 디버그: 버프 칸·버그 칸·검수 준비중 칸(예고)
 local TILE_BUFF = BattleStage.BOARD.Buff
 local TILE_DEBUFF = BattleStage.BOARD.Debuff
 local TILE_HEAL = BattleStage.BOARD.Heal
 local TILE_DELETE = BattleStage.BOARD.Pending
--- 회피·가드 불가 공격이 덮는 칸(코어 덤프). 비켜서는 것만 답이다
-local TILE_UNAVOID = Color3.fromRGB(200, 20, 30)
 
 -- 보스 부위 이름표 높이(부위 바닥 기준)
 -- 먼 라인(1)일수록 화면에서 위로 올라가 보이므로 서브코어-삭제는 낮게, 머리는 높게 달아 겹치지 않게 한다
@@ -107,6 +104,8 @@ function BattleClient.new(remotes: Folder, plazaUi: any?)
 	self.qte = nil :: any
 	self.dragging = false
 	self.dragHover = nil :: any
+	-- 판 층(2026-10-09): 기믹 칸·공격 범위 레이저를 따로 켜고 끈다(HUD 층 버튼)
+	self.layers = { Gimmick = true, Range = true }
 	-- 전투 연출. 전투 중에만 있다(_setupBattle / _teardownBattle).
 	self.director = nil :: any
 	-- 이미 그린 서버 사건 번호(GridBattle Events.Seq)
@@ -179,6 +178,11 @@ function BattleClient:_buildUi()
 		end,
 		Exit = function()
 			self.Remotes.BattleAction:FireServer({ Kind = "End" })
+		end,
+		Layer = function(name: string): boolean
+			self.layers[name] = not self.layers[name]
+			self:_paintTiles()
+			return self.layers[name]
 		end,
 	})
 
@@ -1390,6 +1394,9 @@ function BattleClient:_paintTiles()
 		modAt[m.X .. "," .. m.Y] = m.Kind
 	end
 	local gone = self.goneCells or {}
+	-- 판 층 고르기(2026-10-09 사용자): 기믹(버프·버그·회복·검수 준비중) / 공격 범위(레이저). 지워진 칸·내 자리는 늘 보인다.
+	-- 공격 범위는 판에 칠하지 않는다(같은 날 요청) — 아래 ThreatMarks 레이저 층만
+	local gimmick = self.layers.Gimmick
 
 	for y = 1, GRID_HEIGHT do
 		for x = 1, GRID_WIDTH do
@@ -1401,14 +1408,13 @@ function BattleClient:_paintTiles()
 			-- 검수 칸(검수됨!·검수 준비중)은 칸 글자 대신 덩어리마다 글자 하나 + 칸 위 효과(아래 GroupMarks, 2026-10-02 요청)
 			BattleStage.Tag(
 				ally,
-				if gone[cellKey] or deleting[cellKey] or unavoid[cellKey] then nil
+				if gone[cellKey] or deleting[cellKey] or not gimmick then nil
 					elseif mod == "Buff" then "▲ 버프"
 					elseif mod == "Debuff" then "▼ 버그"
 					elseif mod == "Heal" then "✚ 회복"
 					else nil,
 				if gone[cellKey] then Color3.fromRGB(235, 235, 235)
 					elseif deleting[cellKey] then TILE_DELETE
-					elseif unavoid[cellKey] then TILE_UNAVOID
 					elseif mod == "Buff" then TILE_BUFF
 					elseif mod == "Heal" then TILE_HEAL
 					else TILE_DEBUFF
@@ -1420,13 +1426,9 @@ function BattleClient:_paintTiles()
 				BattleStage.PaintGone(ally)
 			elseif isMe and not self.dragging then
 				BattleStage.Paint(ally, TILE_ME, true)
-			elseif deleting[cellKey] then
+			elseif deleting[cellKey] and gimmick then
 				BattleStage.Paint(ally, TILE_DELETE, true)
-			elseif unavoid[cellKey] then
-				BattleStage.Paint(ally, TILE_UNAVOID, true)
-			elseif threatened[cellKey] then
-				BattleStage.Paint(ally, TILE_THREAT, true)
-			elseif mod then
+			elseif mod and gimmick then
 				BattleStage.Paint(ally, if mod == "Buff" then TILE_BUFF elseif mod == "Heal" then TILE_HEAL else TILE_DEBUFF, true)
 			else
 				BattleStage.Paint(ally, TILE_IDLE, false)
@@ -1445,12 +1447,14 @@ function BattleClient:_paintTiles()
 		end
 	end
 	-- 검수 칸 묶음 표시(덩어리마다 글자 하나 + 칸 위 효과). 같은 묶음이면 다시 짓지 않는다
-	BattleStage.GroupMarks(self.tiles, "Pending", deleting)
+	BattleStage.GroupMarks(self.tiles, "Pending", if gimmick then deleting else {})
 	BattleStage.GroupMarks(self.tiles, "Gone", gone)
-	-- 공격 범위는 따로 한 층(줄무늬 + 굵은 테두리 + 묶음 글자) — 버프·검수 칸 위에서도 묻히지 않게(2026-10-03 요청)
+	-- 공격 범위는 따로 한 층(칸 위에 뜬 레이저 둘레 + 묶음 글자) — 버프·검수 칸 위에서도 묻히지 않게(2026-10-03·10-09 요청)
 	-- 보스전: 부위마다 색이 다른 범위 + 부위에서 쏘는 레이저 / 보통 적: 주황(공격 범위)·빨강(회피 불가)
 	local threatKeys: { [string]: { any } } = {}
-	if snapshot.Boss then
+	if not self.layers.Range then
+		threatKeys = {}
+	elseif snapshot.Boss then
 		threatKeys = partRanges
 	else
 		for key in threatened do

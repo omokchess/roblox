@@ -228,6 +228,8 @@ export type Callbacks = {
 	Attack: () -> (),
 	Stance: () -> (),
 	Exit: () -> (),
+	-- 판 층 켜고 끄기. 바뀐 뒤 켜졌는지 돌려준다
+	Layer: (name: string) -> boolean,
 }
 
 function BattleHud.new(gui: ScreenGui, callbacks: Callbacks)
@@ -654,6 +656,42 @@ function BattleHud:_buildTop()
 	self.exit.Activated:Connect(function()
 		self.callbacks.Exit()
 	end)
+
+	-- 판 층 고르기(2026-10-09 사용자: 기믹 레이어·공격범위 레이어를 골라 보기). 나가기 아래 버튼 둘, 누를 때마다 켜고 끈다
+	self.layerBar = make("Frame", {
+		Name = "BoardLayers",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -16, 0, 208),
+		Size = UDim2.fromOffset(150, 30),
+		BackgroundTransparency = 1,
+		Visible = false,
+	}, self.gui)
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, self.layerBar)
+	for order, spec in { { "Gimmick", "기믹", GOLD }, { "Range", "공격 범위", Color3.fromRGB(255, 150, 40) } } do
+		local name, label, color = spec[1], spec[2], spec[3]
+		local button = make("TextButton", {
+			Name = name,
+			Size = UDim2.fromOffset(if name == "Range" then 82 else 62, 30),
+			AutoButtonColor = false,
+			BackgroundColor3 = INK,
+			BackgroundTransparency = 0.08,
+			BorderSizePixel = 0,
+			Text = label,
+			Font = Enum.Font.GothamBold,
+			TextSize = 13,
+			LayoutOrder = order,
+		}, self.layerBar)
+		local line = stroke(button, color, 0.2)
+		local function show(on: boolean)
+			button.TextColor3 = if on then color else MUTED
+			button.BackgroundTransparency = if on then 0.08 else 0.45
+			line.Transparency = if on then 0.2 else 0.8
+		end
+		show(true)
+		button.Activated:Connect(function()
+			show(self.callbacks.Layer(name))
+		end)
+	end
 end
 
 --[[
@@ -973,6 +1011,7 @@ function BattleHud:SetActive(on: boolean)
 	end
 	self.dock.Visible = on
 	self.exit.Visible = on
+	self.layerBar.Visible = on
 	self.stance.Visible = on and self.stanceShown
 	if not on then
 		self.log.Visible = false

@@ -464,10 +464,9 @@ local function runCardEffects()
 			GridBattle.ResolveDodge(state, GridBattle.AliveEnemies(state)[1].Id, "Fail")
 		end
 	end
-	expect(GroggyGauge.IsStunned(GridBattle.Ally(groggy).Groggy), "four missed dodges must stun the ally")
-	GridBattle.EndTurn(groggy)
-	expect(GroggyGauge.IsStunned(GridBattle.Ally(groggy).Groggy), "the stun must last through the ally's next turn")
-	expect(not GroggyGauge.IsStunned(GridBattle.Ally(numb).Groggy), "무감각 must stop groggy")
+	-- 2026-10-09: 아군 그로기 삭제 — 몇 번을 맞아도 기절하지 않는다
+	expect(not GroggyGauge.IsStunned(GridBattle.Ally(groggy).Groggy), "the ally must never be stunned by groggy")
+	expect(not GroggyGauge.IsStunned(GridBattle.Ally(numb).Groggy), "the ally must never be stunned by groggy (numb)")
 
 	--=== 직업 키트 ===--
 
@@ -893,31 +892,33 @@ function PrototypeTests.RunSystems()
 	expect(ProgressionDefinitions.TotalStatPoints(43) == 126, "each level must give 3 stat points")
 
 	--=== 아이템 등급 · 착용 제한 ===--
-	expect(#ItemDefinitions.AllRarities() == 8, "there must be 8 item rarities")
-	expect(ItemDefinitions.IsTowerObtainable("Epic"), "tower must drop up to epic")
-	expect(not ItemDefinitions.IsTowerObtainable("Unique"), "unique and above must be field-only")
-	expect(ItemDefinitions.IsCraftable("Supreme", false), "forge must craft up to supreme")
-	expect(not ItemDefinitions.IsCraftable("Legendary", false), "legendary needs the material quest")
-	expect(ItemDefinitions.IsCraftable("Legendary", true), "material quest must unlock legendary craft")
-	expect(not ItemDefinitions.IsCraftable("Abyss", true), "abyss must never be craftable")
-	expect(ItemDefinitions.ClampRequirement("Abyss", 250) == 100, "stat requirement must cap at 100")
+	do
+		expect(#ItemDefinitions.AllRarities() == 8, "there must be 8 item rarities")
+		expect(ItemDefinitions.IsTowerObtainable("Epic"), "tower must drop up to epic")
+		expect(not ItemDefinitions.IsTowerObtainable("Unique"), "unique and above must be field-only")
+		expect(ItemDefinitions.IsCraftable("Supreme", false), "forge must craft up to supreme")
+		expect(not ItemDefinitions.IsCraftable("Legendary", false), "legendary needs the material quest")
+		expect(ItemDefinitions.IsCraftable("Legendary", true), "material quest must unlock legendary craft")
+		expect(not ItemDefinitions.IsCraftable("Abyss", true), "abyss must never be craftable")
+		expect(ItemDefinitions.ClampRequirement("Abyss", 250) == 100, "stat requirement must cap at 100")
 
-	local greatsword = {
-		Id = "TestGreatsword",
-		Name = "시험용 대검",
-		Rarity = "Rare" :: any,
-		PrimaryStat = "Strength" :: any,
-		StatRequirement = 40,
-		BaseDamage = 100,
-	}
-	-- 메인 49 >= 40 이므로 제한 충족
-	expect(ItemDefinitions.EffectiveDamage(greatsword, block) == 100, "meeting requirement must give full damage")
+		local greatsword = {
+			Id = "TestGreatsword",
+			Name = "시험용 대검",
+			Rarity = "Rare" :: any,
+			PrimaryStat = "Strength" :: any,
+			StatRequirement = 40,
+			BaseDamage = 100,
+		}
+		-- 메인 49 >= 40 이므로 제한 충족
+		expect(ItemDefinitions.EffectiveDamage(greatsword, block) == 100, "meeting requirement must give full damage")
 
-	-- 서브스탯으로는 제한을 뚫을 수 없어야 한다
-	local subOnly = StatDefinitions.NewBlock()
-	subOnly.Sub.Strength = 80
-	expect(not ItemDefinitions.MeetsRequirement(greatsword, subOnly), "sub stats must not satisfy requirements")
-	expect(ItemDefinitions.EffectiveDamage(greatsword, subOnly) == 50, "under requirement must halve damage")
+		-- 서브스탯으로는 제한을 뚫을 수 없어야 한다
+		local subOnly = StatDefinitions.NewBlock()
+		subOnly.Sub.Strength = 80
+		expect(not ItemDefinitions.MeetsRequirement(greatsword, subOnly), "sub stats must not satisfy requirements")
+		expect(ItemDefinitions.EffectiveDamage(greatsword, subOnly) == 50, "under requirement must halve damage")
+	end
 
 	--=== 명예 · 거래 ===--
 	expect(HonorDefinitions.DEFAULT_HONOR == 150, "default honor must be 150")
@@ -1563,44 +1564,48 @@ function PrototypeTests.RunSystems()
 	expect(QteDefinitions.GroggyGain(forgeQte, "Success") == 0, "only parries feed the groggy gauge")
 
 	--=== 룬 · 수식어 ===--
-	local canInscribe = RuneDefinitions.CanInscribe(nil)
-	expect(canInscribe, "a blank item must accept a rune")
-	local blocked = RuneDefinitions.CanInscribe("Keen")
-	expect(not blocked, "affixes must never stack on one item")
-	local fixedRune = { Id = "R1", Name = "예리한 룬", Kind = "Fixed" :: any, AffixId = "Keen" }
-	local okFixed, affix = RuneDefinitions.Inscribe(nil, fixedRune, 1)
-	expect(okFixed and affix ~= nil and affix.Id == "Keen", "fixed rune must apply its own affix")
-	local randomRune = { Id = "R2", Name = "무작위 룬", Kind = "Random" :: any }
-	local okRandom, randomAffix = RuneDefinitions.Inscribe(nil, randomRune, 7)
-	expect(okRandom and randomAffix ~= nil, "random rune must resolve to some affix")
+	do
+		local canInscribe = RuneDefinitions.CanInscribe(nil)
+		expect(canInscribe, "a blank item must accept a rune")
+		local blocked = RuneDefinitions.CanInscribe("Keen")
+		expect(not blocked, "affixes must never stack on one item")
+		local fixedRune = { Id = "R1", Name = "예리한 룬", Kind = "Fixed" :: any, AffixId = "Keen" }
+		local okFixed, affix = RuneDefinitions.Inscribe(nil, fixedRune, 1)
+		expect(okFixed and affix ~= nil and affix.Id == "Keen", "fixed rune must apply its own affix")
+		local randomRune = { Id = "R2", Name = "무작위 룬", Kind = "Random" :: any }
+		local okRandom, randomAffix = RuneDefinitions.Inscribe(nil, randomRune, 7)
+		expect(okRandom and randomAffix ~= nil, "random rune must resolve to some affix")
+	end
 
 	--=== 기도 ===--
-	local frost = {
-		Id = "Frost",
-		Name = "서리의 기도",
-		Verse = "차가운 숨이여, 내 앞의 물을 붙들라",
-		ChantTurns = 2,
-		BaseDamage = 80,
-		RequiredMedium = { "Water" },
-		Penalty = "Exhaustion" :: any,
-		IsOffensive = true,
-	}
-	-- 규칙 2: 어구를 줄이면 성립하지 않는다
-	local shortened = PrayerDefinitions.CanInvoke(frost, "차가운 숨이여", { Water = true }, false)
-	expect(not shortened, "shortened verses must fail")
-	-- 규칙 3: 매질이 없으면 성립하지 않는다
-	local noMedium = PrayerDefinitions.CanInvoke(frost, frost.Verse, {}, false)
-	expect(not noMedium, "prayers cannot create something from nothing")
-	-- 규칙 6: 기계는 기도할 수 없다
-	local machine = PrayerDefinitions.CanInvoke(frost, frost.Verse, { Water = true }, true)
-	expect(not machine, "machines can never pray")
-	local valid = PrayerDefinitions.CanInvoke(frost, frost.Verse, { Water = true }, false)
-	expect(valid, "a complete verse with its medium must succeed")
-	-- 규칙 5: 사람을 겨눈 공격 기도는 금기
-	expect(PrayerDefinitions.IsTaboo(frost, true), "offensive prayers on people are taboo")
-	expect(not PrayerDefinitions.IsTaboo(frost, false), "beasts are not covered by the taboo")
-	-- 대가는 반드시 남는다
-	expect(PrayerDefinitions.PenaltyScale(-10) > 0, "a prayer must always cost something")
+	do
+		local frost = {
+			Id = "Frost",
+			Name = "서리의 기도",
+			Verse = "차가운 숨이여, 내 앞의 물을 붙들라",
+			ChantTurns = 2,
+			BaseDamage = 80,
+			RequiredMedium = { "Water" },
+			Penalty = "Exhaustion" :: any,
+			IsOffensive = true,
+		}
+		-- 규칙 2: 어구를 줄이면 성립하지 않는다
+		local shortened = PrayerDefinitions.CanInvoke(frost, "차가운 숨이여", { Water = true }, false)
+		expect(not shortened, "shortened verses must fail")
+		-- 규칙 3: 매질이 없으면 성립하지 않는다
+		local noMedium = PrayerDefinitions.CanInvoke(frost, frost.Verse, {}, false)
+		expect(not noMedium, "prayers cannot create something from nothing")
+		-- 규칙 6: 기계는 기도할 수 없다
+		local machine = PrayerDefinitions.CanInvoke(frost, frost.Verse, { Water = true }, true)
+		expect(not machine, "machines can never pray")
+		local valid = PrayerDefinitions.CanInvoke(frost, frost.Verse, { Water = true }, false)
+		expect(valid, "a complete verse with its medium must succeed")
+		-- 규칙 5: 사람을 겨눈 공격 기도는 금기
+		expect(PrayerDefinitions.IsTaboo(frost, true), "offensive prayers on people are taboo")
+		expect(not PrayerDefinitions.IsTaboo(frost, false), "beasts are not covered by the taboo")
+		-- 대가는 반드시 남는다
+		expect(PrayerDefinitions.PenaltyScale(-10) > 0, "a prayer must always cost something")
+	end
 
 	--=== 저장 프로필 ===--
 	local fresh = PlayerProfile.New()
@@ -1672,125 +1677,127 @@ function PrototypeTests.RunSystems()
 	expect(blockedPrice == 100, "the 4th preset must cost 100 robux")
 
 	--=== 탑 등반 생명주기 (추가&수정.md `#### 탑 시스템`) ===--
+	do
 
-	local towerProfile = PlayerProfile.New()
-	local towerSlot = PlayerProfile.ActiveSlot(towerProfile)
-	towerSlot.Level = 12
-	towerSlot.UnspentPoints = 7
-	towerSlot.Stats.Main.Strength = 5
-	towerSlot.Items = {
-		{
-			Id = "OwnedSword",
-			Name = "가져온 검",
-			Rarity = "Rare" :: any,
-			PrimaryStat = "Strength" :: any,
-			StatRequirement = 4,
-			BaseDamage = 40,
-		},
-		{
-			Id = "OwnedArmor",
-			Name = "가져온 갑옷",
-			Rarity = "Epic" :: any,
-			PrimaryStat = "Vitality" :: any,
-			StatRequirement = 6,
-			BaseDamage = 0,
-		},
-	}
+		local towerProfile = PlayerProfile.New()
+		local towerSlot = PlayerProfile.ActiveSlot(towerProfile)
+		towerSlot.Level = 12
+		towerSlot.UnspentPoints = 7
+		towerSlot.Stats.Main.Strength = 5
+		towerSlot.Items = {
+			{
+				Id = "OwnedSword",
+				Name = "가져온 검",
+				Rarity = "Rare" :: any,
+				PrimaryStat = "Strength" :: any,
+				StatRequirement = 4,
+				BaseDamage = 40,
+			},
+			{
+				Id = "OwnedArmor",
+				Name = "가져온 갑옷",
+				Rarity = "Epic" :: any,
+				PrimaryStat = "Vitality" :: any,
+				StatRequirement = 6,
+				BaseDamage = 0,
+			},
+		}
 
-	local started, startReason = TowerRun.Start(towerProfile)
-	expect(started and startReason == nil, "starting a tower run must succeed on a fresh profile")
-	expect(towerProfile.TowerRun ~= nil, "starting a run must open the run state")
+		local started, startReason = TowerRun.Start(towerProfile)
+		expect(started and startReason == nil, "starting a tower run must succeed on a fresh profile")
+		expect(towerProfile.TowerRun ~= nil, "starting a run must open the run state")
 
-	-- 사양: 방어구는 모두 벗고, 직업 기본 무기만 자동 장착된다.
-	expect(#towerSlot.Items == 1, "entering the tower must strip gear down to the class weapon")
-	expect(
-		towerSlot.Items[1].BaseDamage == CharacterDefinitions.Get(towerSlot.ClassId).BasicPower,
-		"the auto-equipped weapon must use the class basic power"
-	)
-	expect(
-		towerProfile.TowerRun ~= nil and #towerProfile.TowerRun.StoredItems == 2,
-		"stripped gear must be stored for return"
-	)
+		-- 사양: 방어구는 모두 벗고, 직업 기본 무기만 자동 장착된다.
+		expect(#towerSlot.Items == 1, "entering the tower must strip gear down to the class weapon")
+		expect(
+			towerSlot.Items[1].BaseDamage == CharacterDefinitions.Get(towerSlot.ClassId).BasicPower,
+			"the auto-equipped weapon must use the class basic power"
+		)
+		expect(
+			towerProfile.TowerRun ~= nil and #towerProfile.TowerRun.StoredItems == 2,
+			"stripped gear must be stored for return"
+		)
 
-	-- 사양: 스탯은 직업 베이스만 남기고 초기화된다.
-	expect(towerSlot.Level == 1, "entering the tower must reset the slot level")
-	expect(towerSlot.UnspentPoints == 0, "entering the tower must clear unspent points")
-	expect(towerSlot.Stats.Main.Strength == 0, "entering the tower must reset spent stats")
+		-- 사양: 스탯은 직업 베이스만 남기고 초기화된다.
+		expect(towerSlot.Level == 1, "entering the tower must reset the slot level")
+		expect(towerSlot.UnspentPoints == 0, "entering the tower must clear unspent points")
+		expect(towerSlot.Stats.Main.Strength == 0, "entering the tower must reset spent stats")
 
-	-- 두 번 시작할 수 없다.
-	local restarted = TowerRun.Start(towerProfile)
-	expect(not restarted, "a second run must not start while one is active")
+		-- 두 번 시작할 수 없다.
+		local restarted = TowerRun.Start(towerProfile)
+		expect(not restarted, "a second run must not start while one is active")
 
-	-- 1층 클리어: 코스트 30, 리롤 가격 초기화, 카드 제시
-	local firstDraft = TowerRun.ClearFloor(towerProfile, 1234)
-	expect(firstDraft.Ok, "clearing a floor must produce a draft")
-	expect(firstDraft.Cost == TowerRewardDefinitions.COST_PER_FLOOR, "each cleared floor must grant 30 cost")
-	expect(
-		firstDraft.NextRerollCost == TowerRewardDefinitions.REROLL_BASE_COST,
-		"reroll price must reset when entering a floor"
-	)
-	expect(#firstDraft.Cards > 0, "a floor draft must offer cards")
+		-- 1층 클리어: 코스트 30, 리롤 가격 초기화, 카드 제시
+		local firstDraft = TowerRun.ClearFloor(towerProfile, 1234)
+		expect(firstDraft.Ok, "clearing a floor must produce a draft")
+		expect(firstDraft.Cost == TowerRewardDefinitions.COST_PER_FLOOR, "each cleared floor must grant 30 cost")
+		expect(
+			firstDraft.NextRerollCost == TowerRewardDefinitions.REROLL_BASE_COST,
+			"reroll price must reset when entering a floor"
+		)
+		expect(#firstDraft.Cards > 0, "a floor draft must offer cards")
 
-	-- 리롤 가격이 10 → 15로 오른다(사양: 50%씩 증가, 반올림).
-	local rerolled = TowerRun.Reroll(towerProfile, 1234)
-	expect(rerolled.Ok, "a reroll must succeed while cost remains")
-	expect(rerolled.Cost == TowerRewardDefinitions.COST_PER_FLOOR - 10, "the first reroll must cost 10")
-	expect(rerolled.NextRerollCost == 15, "the second reroll must cost 15")
+		-- 리롤 가격이 10 → 15로 오른다(사양: 50%씩 증가, 반올림).
+		local rerolled = TowerRun.Reroll(towerProfile, 1234)
+		expect(rerolled.Ok, "a reroll must succeed while cost remains")
+		expect(rerolled.Cost == TowerRewardDefinitions.COST_PER_FLOOR - 10, "the first reroll must cost 10")
+		expect(rerolled.NextRerollCost == 15, "the second reroll must cost 15")
 
-	-- 1층은 카드 1장만 고를 수 있다.
-	local towerState = towerProfile.TowerRun :: PlayerProfile.TowerRun
-	expect(
-		TowerRun.RemainingPicks(towerState) == AbilityCardDefinitions.AcquireSlotsForFloor(1),
-		"remaining picks must start at the floor's slot count"
-	)
-	local pickedOk = TowerRun.Acquire(towerProfile, rerolled.Cards[1])
-	expect(pickedOk, "picking an offered card must succeed")
-	local overPick = TowerRun.Acquire(towerProfile, rerolled.Cards[1])
-	expect(not overPick, "picking more cards than the floor allows must fail")
+		-- 1층은 카드 1장만 고를 수 있다.
+		local towerState = towerProfile.TowerRun :: PlayerProfile.TowerRun
+		expect(
+			TowerRun.RemainingPicks(towerState) == AbilityCardDefinitions.AcquireSlotsForFloor(1),
+			"remaining picks must start at the floor's slot count"
+		)
+		local pickedOk = TowerRun.Acquire(towerProfile, rerolled.Cards[1])
+		expect(pickedOk, "picking an offered card must succeed")
+		local overPick = TowerRun.Acquire(towerProfile, rerolled.Cards[1])
+		expect(not overPick, "picking more cards than the floor allows must fail")
 
-	-- 같은 카드를 또 얻으면 강화된다(획득 = 강화).
-	local sameCard = rerolled.Cards[1]
-	local cardLevelBefore = CardDraft.CardLevel(towerState, sameCard.Id)
-	TowerRun.ClearFloor(towerProfile, 555)
-	local upgraded = TowerRun.Acquire(towerProfile, sameCard)
-	expect(upgraded, "re-picking a card on a later floor must succeed")
-	expect(
-		CardDraft.CardLevel(towerState, sameCard.Id) == cardLevelBefore + 1,
-		"re-acquiring the same card must raise its level"
-	)
+		-- 같은 카드를 또 얻으면 강화된다(획득 = 강화).
+		local sameCard = rerolled.Cards[1]
+		local cardLevelBefore = CardDraft.CardLevel(towerState, sameCard.Id)
+		TowerRun.ClearFloor(towerProfile, 555)
+		local upgraded = TowerRun.Acquire(towerProfile, sameCard)
+		expect(upgraded, "re-picking a card on a later floor must succeed")
+		expect(
+			CardDraft.CardLevel(towerState, sameCard.Id) == cardLevelBefore + 1,
+			"re-acquiring the same card must raise its level"
+		)
 
-	-- 도중 이탈: 장비는 돌려받지만 레벨은 확정되지 않는다(사양).
-	local pendingBefore = towerState.PendingLevel
-	expect(pendingBefore > 0, "clearing floors must bank pending levels")
-	local exitSummary = TowerRun.Exit(towerProfile)
-	expect(exitSummary.ReturnedItems == 2, "leaving the tower must return every stored item")
-	expect(exitSummary.GainedLevels == 0, "leaving early must not confirm banked levels")
-	expect(towerSlot.Level == 1, "leaving early must leave the slot level untouched")
-	expect(towerProfile.TowerRun == nil, "leaving must close the run")
-	expect(towerProfile.Account.HighestFloor == 2, "the highest reached floor must persist on the account")
+		-- 도중 이탈: 장비는 돌려받지만 레벨은 확정되지 않는다(사양).
+		local pendingBefore = towerState.PendingLevel
+		expect(pendingBefore > 0, "clearing floors must bank pending levels")
+		local exitSummary = TowerRun.Exit(towerProfile)
+		expect(exitSummary.ReturnedItems == 2, "leaving the tower must return every stored item")
+		expect(exitSummary.GainedLevels == 0, "leaving early must not confirm banked levels")
+		expect(towerSlot.Level == 1, "leaving early must leave the slot level untouched")
+		expect(towerProfile.TowerRun == nil, "leaving must close the run")
+		expect(towerProfile.Account.HighestFloor == 2, "the highest reached floor must persist on the account")
 
-	-- 완주: 30층까지 오르면 레벨이 확정된다.
-	local clearProfile = PlayerProfile.New()
-	local clearSlot = PlayerProfile.ActiveSlot(clearProfile)
-	expect(TowerRun.Start(clearProfile), "a second profile must be able to start a run")
-	for _ = 1, TowerRewardDefinitions.MAX_FLOOR do
-		TowerRun.ClearFloor(clearProfile, 42)
+		-- 완주: 30층까지 오르면 레벨이 확정된다.
+		local clearProfile = PlayerProfile.New()
+		local clearSlot = PlayerProfile.ActiveSlot(clearProfile)
+		expect(TowerRun.Start(clearProfile), "a second profile must be able to start a run")
+		for _ = 1, TowerRewardDefinitions.MAX_FLOOR do
+			TowerRun.ClearFloor(clearProfile, 42)
+		end
+		local clearState = clearProfile.TowerRun :: PlayerProfile.TowerRun
+		expect(clearState.Floor == TowerRewardDefinitions.MAX_FLOOR, "thirty clears must reach the final floor")
+		expect(TowerRun.IsCleared(clearState), "reaching floor 30 must count as cleared")
+		local bankedLevels = clearState.PendingLevel
+		local completedOk, completeSummary = TowerRun.Complete(clearProfile)
+		expect(completedOk and completeSummary ~= nil, "completing at the final floor must succeed")
+		expect(
+			completeSummary ~= nil and completeSummary.GainedLevels == bankedLevels,
+			"completing must confirm every banked level"
+		)
+		expect(clearSlot.Level == 1 + bankedLevels, "completing must apply banked levels to the slot")
+		expect(
+			clearSlot.UnspentPoints == bankedLevels * StatDefinitions.POINTS_PER_LEVEL,
+			"completing must grant 3 stat points per level"
+		)
 	end
-	local clearState = clearProfile.TowerRun :: PlayerProfile.TowerRun
-	expect(clearState.Floor == TowerRewardDefinitions.MAX_FLOOR, "thirty clears must reach the final floor")
-	expect(TowerRun.IsCleared(clearState), "reaching floor 30 must count as cleared")
-	local bankedLevels = clearState.PendingLevel
-	local completedOk, completeSummary = TowerRun.Complete(clearProfile)
-	expect(completedOk and completeSummary ~= nil, "completing at the final floor must succeed")
-	expect(
-		completeSummary ~= nil and completeSummary.GainedLevels == bankedLevels,
-		"completing must confirm every banked level"
-	)
-	expect(clearSlot.Level == 1 + bankedLevels, "completing must apply banked levels to the slot")
-	expect(
-		clearSlot.UnspentPoints == bankedLevels * StatDefinitions.POINTS_PER_LEVEL,
-		"completing must grant 3 stat points per level"
-	)
 
 	--=== 격자 전투 (추가&수정.md `#### 전투 시스템`) ===--
 
@@ -1943,642 +1950,656 @@ function PrototypeTests.RunSystems()
 	expect(snapshot.Units[GridBattle.ALLY_ID] ~= nil, "a snapshot must include the ally")
 
 	--=== 회피/그로기 경로 (사양: 라인 규칙 · 패리 시 그로기) ===--
-
-	--[[
-		적이 아군과 **같은 라인**에 있어야 위협이 잡힌다. 이 경로는 실기로 상황을
-		만들기 어려워(적이 매 턴 무작위로 옮긴다) 순수 로직으로 직접 세워 확인한다.
-	]]
-	local dodgeState = GridBattle.New(1, "테스터", 100, 10)
-	local foe = GridBattle.AliveEnemies(dodgeState)[1]
-	local foeCell = GridBattle.CellOf(dodgeState, foe.Id)
-
-	-- 같은 라인 + 전열이면 노려진다.
-	GridBattle.MoveAlly(dodgeState, 1, foeCell.Y)
-	foe.SkillIndex = 1
-	expect(GridBattle.EnemyThreatensAlly(dodgeState, foe), "an enemy sharing the ally lane must threaten")
-
-	-- 라인을 옮기면 위협이 사라진다(사양의 핵심 회피 수단).
-	local dodgeOtherLane = (foeCell.Y % dodgeState.Grid.Height) + 1
-	GridBattle.MoveAlly(dodgeState, 1, dodgeOtherLane)
-	expect(not GridBattle.EnemyThreatensAlly(dodgeState, foe), "changing lanes must break the threat")
-
-	-- 라인 관통(Row)은 x를 쓰지 않으므로 라인만 맞으면 뒤에 있어도 노려진다.
-	GridBattle.MoveAlly(dodgeState, 6, foeCell.Y)
-	for index, skill in BattleSkills.All() do
-		if skill.Shape.Kind == "Row" then
-			foe.SkillIndex = index
-		end
-	end
-	expect(GridBattle.EnemyThreatensAlly(dodgeState, foe), "a full-lane skill must reach the back row")
-
-	-- 패리(결투사의 회피 Success)는 피해 0 + 상대 그로기 상승.
-	local parryState = GridBattle.New(1, "테스터", 100, 10, "Duelist")
-	local parryFoe = GridBattle.AliveEnemies(parryState)[1]
-	local hpBefore = GridBattle.Ally(parryState).Health
-	GridBattle.ResolveDodge(parryState, parryFoe.Id, "Success")
-	expect(hpBefore - GridBattle.Ally(parryState).Health > 0 and parryFoe.Health < parryFoe.MaxHealth, "a parry takes 10% and reflects 90%")
-	expect(parryFoe.Groggy.Value == QteDefinitions.PARRY_GROGGY_GAIN, "a parry must add groggy")
-
-	-- 보통(Partial)은 절반, 실패는 전부 맞는다.
-	local halfState = GridBattle.New(1, "테스터", 100, 10)
-	local halfFoe = GridBattle.AliveEnemies(halfState)[1]
-	GridBattle.ResolveDodge(halfState, halfFoe.Id, "Partial")
-	local halfTaken = 100 - GridBattle.Ally(halfState).Health
-	local fullState = GridBattle.New(1, "테스터", 100, 10)
-	local fullFoe = GridBattle.AliveEnemies(fullState)[1]
-	GridBattle.ResolveDodge(fullState, fullFoe.Id, "Fail")
-	local fullTaken = 100 - GridBattle.Ally(fullState).Health
-	expect(halfTaken > 0 and fullTaken > halfTaken, "a partial dodge must hurt less than a failed one")
-
-	-- 그로기가 가득 차면 스턴 → 그 적은 적 턴에 행동하지 못한다.
-	local stunState = GridBattle.New(1, "테스터", 100, 10)
-	local stunFoe = GridBattle.AliveEnemies(stunState)[1]
-	for _ = 1, 20 do
-		if GroggyGauge.IsStunned(stunFoe.Groggy) then
-			break
-		end
-		GroggyGauge.Add(stunFoe.Groggy, QteDefinitions.PARRY_GROGGY_GAIN)
-	end
-	expect(GroggyGauge.IsStunned(stunFoe.Groggy), "filling the gauge must stun")
-	local actedWhileStunned = false
-	for _, acted in
-		GridBattle.EnemyPlan(stunState, function()
-			return 0.5
-		end)
 	do
-		if acted.Id == stunFoe.Id then
-			actedWhileStunned = true
-		end
-	end
-	expect(not actedWhileStunned, "a stunned enemy must not act")
 
-	-- 스턴은 STUN_TURNS만큼만 간다. 턴을 넘기면 풀린다.
-	for _ = 1, GroggyGauge.STUN_TURNS + 1 do
-		GridBattle.EndTurn(stunState)
+		--[[
+			적이 아군과 **같은 라인**에 있어야 위협이 잡힌다. 이 경로는 실기로 상황을
+			만들기 어려워(적이 매 턴 무작위로 옮긴다) 순수 로직으로 직접 세워 확인한다.
+		]]
+		local dodgeState = GridBattle.New(1, "테스터", 100, 10)
+		local foe = GridBattle.AliveEnemies(dodgeState)[1]
+		local foeCell = GridBattle.CellOf(dodgeState, foe.Id)
+
+		-- 같은 라인 + 전열이면 노려진다.
+		GridBattle.MoveAlly(dodgeState, 1, foeCell.Y)
+		foe.SkillIndex = 1
+		expect(GridBattle.EnemyThreatensAlly(dodgeState, foe), "an enemy sharing the ally lane must threaten")
+
+		-- 라인을 옮기면 위협이 사라진다(사양의 핵심 회피 수단).
+		local dodgeOtherLane = (foeCell.Y % dodgeState.Grid.Height) + 1
+		GridBattle.MoveAlly(dodgeState, 1, dodgeOtherLane)
+		expect(not GridBattle.EnemyThreatensAlly(dodgeState, foe), "changing lanes must break the threat")
+
+		-- 라인 관통(Row)은 x를 쓰지 않으므로 라인만 맞으면 뒤에 있어도 노려진다.
+		GridBattle.MoveAlly(dodgeState, 6, foeCell.Y)
+		for index, skill in BattleSkills.All() do
+			if skill.Shape.Kind == "Row" then
+				foe.SkillIndex = index
+			end
+		end
+		expect(GridBattle.EnemyThreatensAlly(dodgeState, foe), "a full-lane skill must reach the back row")
+
+		-- 패리(결투사의 회피 Success)는 피해 0 + 상대 그로기 상승.
+		local parryState = GridBattle.New(1, "테스터", 100, 10, "Duelist")
+		local parryFoe = GridBattle.AliveEnemies(parryState)[1]
+		local hpBefore = GridBattle.Ally(parryState).Health
+		GridBattle.ResolveDodge(parryState, parryFoe.Id, "Success")
+		expect(hpBefore - GridBattle.Ally(parryState).Health > 0 and parryFoe.Health < parryFoe.MaxHealth, "a parry takes 10% and reflects 90%")
+		expect(parryFoe.Groggy.Value == QteDefinitions.PARRY_GROGGY_GAIN, "a parry must add groggy")
+
+		-- 보통(Partial)은 절반, 실패는 전부 맞는다.
+		local halfState = GridBattle.New(1, "테스터", 100, 10)
+		local halfFoe = GridBattle.AliveEnemies(halfState)[1]
+		GridBattle.ResolveDodge(halfState, halfFoe.Id, "Partial")
+		local halfTaken = 100 - GridBattle.Ally(halfState).Health
+		local fullState = GridBattle.New(1, "테스터", 100, 10)
+		local fullFoe = GridBattle.AliveEnemies(fullState)[1]
+		GridBattle.ResolveDodge(fullState, fullFoe.Id, "Fail")
+		local fullTaken = 100 - GridBattle.Ally(fullState).Health
+		expect(halfTaken > 0 and fullTaken > halfTaken, "a partial dodge must hurt less than a failed one")
+
+		-- 그로기가 가득 차면 스턴 → 그 적은 적 턴에 행동하지 못한다.
+		local stunState = GridBattle.New(1, "테스터", 100, 10)
+		local stunFoe = GridBattle.AliveEnemies(stunState)[1]
+		for _ = 1, 20 do
+			if GroggyGauge.IsStunned(stunFoe.Groggy) then
+				break
+			end
+			GroggyGauge.Add(stunFoe.Groggy, QteDefinitions.PARRY_GROGGY_GAIN)
+		end
+		expect(GroggyGauge.IsStunned(stunFoe.Groggy), "filling the gauge must stun")
+		local actedWhileStunned = false
+		for _, acted in
+			GridBattle.EnemyPlan(stunState, function()
+				return 0.5
+			end)
+		do
+			if acted.Id == stunFoe.Id then
+				actedWhileStunned = true
+			end
+		end
+		expect(not actedWhileStunned, "a stunned enemy must not act")
+
+		-- 스턴은 STUN_TURNS만큼만 간다. 턴을 넘기면 풀린다.
+		for _ = 1, GroggyGauge.STUN_TURNS + 1 do
+			GridBattle.EndTurn(stunState)
+		end
+		expect(not GroggyGauge.IsStunned(stunFoe.Groggy), "a stun must wear off after its duration")
+		expect(stunFoe.Groggy.Value == 0, "the gauge must reset once the stun ends")
 	end
-	expect(not GroggyGauge.IsStunned(stunFoe.Groggy), "a stun must wear off after its duration")
-	expect(stunFoe.Groggy.Value == 0, "the gauge must reset once the stun ends")
 
 	--=== 적 공격 예고 (한 템포 앞서 보여야 한다) ===--
+	do
 
-	--[[
-		적은 **예고한 다음 턴에** 때린다.
+		--[[
+			적은 **예고한 다음 턴에** 때린다.
 
-		예전에는 플레이어가 스킬을 쓴 직후 적이 움직이고 그대로 때렸다. 그래서
-		"예고된 라인을 보고 비켜선다"는 선택이 성립하지 않았고, 회피가 QTE 하나로만
-		갈렸다("적 공격이 한 템포 빠르다"). 여기서 그 순서를 못 박는다.
-	]]
-	local planState = GridBattle.New(1, "예고", 300, 10, "Berserker")
-	expect(#planState.Planned == 0, "no attack must be telegraphed before the enemy plans")
+			예전에는 플레이어가 스킬을 쓴 직후 적이 움직이고 그대로 때렸다. 그래서
+			"예고된 라인을 보고 비켜선다"는 선택이 성립하지 않았고, 회피가 QTE 하나로만
+			갈렸다("적 공격이 한 템포 빠르다"). 여기서 그 순서를 못 박는다.
+		]]
+		local planState = GridBattle.New(1, "예고", 300, 10, "Berserker")
+		expect(#planState.Planned == 0, "no attack must be telegraphed before the enemy plans")
 
-	local planned = GridBattle.EnemyPlan(planState, seeded(7))
-	expect(#planned > 0, "planning must telegraph at least one enemy")
-	expect(#planState.Planned == #planned, "the state must remember who telegraphed")
+		local planned = GridBattle.EnemyPlan(planState, seeded(7))
+		expect(#planned > 0, "planning must telegraph at least one enemy")
+		expect(#planState.Planned == #planned, "the state must remember who telegraphed")
 
-	--[[
-		예고된 라인에 서면 위협이 잡히고, 비켜서면 사라진다.
-		이것이 "위치로 피한다"는 뜻이다.
-	]]
-	local planFoe = planned[1]
-	local planCell = GridBattle.CellOf(planState, planFoe.Id)
-	expect(planCell ~= nil, "a telegraphed enemy must be on the grid")
-	if planCell then
-		GridBattle.MoveAlly(planState, 1, planCell.Y)
-		local onLine = GridBattle.PlannedThreats(planState)
-		local found = false
-		for _, threat in onLine do
-			if threat.Id == planFoe.Id then
-				found = true
-			end
-		end
-		expect(found, "standing on the telegraphed lane must be threatened")
-
-		-- 다른 라인으로 비켜선다. 3칸이라 반드시 다른 라인이 있다.
-		local away = if planCell.Y == 1 then 2 else 1
-		GridBattle.MoveAlly(planState, 1, away)
-		local dodgedByMoving = true
-		for _, threat in GridBattle.PlannedThreats(planState) do
-			if threat.Id == planFoe.Id then
-				-- 그 적의 스킬이 라인 전체를 덮으면 비켜도 닿는다. 그건 정상이다.
-				local foeSkill = BattleSkills.ByIndex(BattleSkills.Enemy(), planFoe.SkillIndex)
-				if foeSkill.Shape.Kind ~= "Row" then
-					dodgedByMoving = false
+		--[[
+			예고된 라인에 서면 위협이 잡히고, 비켜서면 사라진다.
+			이것이 "위치로 피한다"는 뜻이다.
+		]]
+		local planFoe = planned[1]
+		local planCell = GridBattle.CellOf(planState, planFoe.Id)
+		expect(planCell ~= nil, "a telegraphed enemy must be on the grid")
+		if planCell then
+			GridBattle.MoveAlly(planState, 1, planCell.Y)
+			local onLine = GridBattle.PlannedThreats(planState)
+			local found = false
+			for _, threat in onLine do
+				if threat.Id == planFoe.Id then
+					found = true
 				end
 			end
+			expect(found, "standing on the telegraphed lane must be threatened")
+
+			-- 다른 라인으로 비켜선다. 3칸이라 반드시 다른 라인이 있다.
+			local away = if planCell.Y == 1 then 2 else 1
+			GridBattle.MoveAlly(planState, 1, away)
+			local dodgedByMoving = true
+			for _, threat in GridBattle.PlannedThreats(planState) do
+				if threat.Id == planFoe.Id then
+					-- 그 적의 스킬이 라인 전체를 덮으면 비켜도 닿는다. 그건 정상이다.
+					local foeSkill = BattleSkills.ByIndex(BattleSkills.Enemy(), planFoe.SkillIndex)
+					if foeSkill.Shape.Kind ~= "Row" then
+						dodgedByMoving = false
+					end
+				end
+			end
+			expect(dodgedByMoving, "stepping off the telegraphed lane must avoid the attack")
 		end
-		expect(dodgedByMoving, "stepping off the telegraphed lane must avoid the attack")
+
+		-- 턴이 끝나면 예고가 비워진다. 안 그러면 같은 공격이 두 번 나간다.
+		GridBattle.EndTurn(planState)
+		expect(#planState.Planned == 0, "ending the turn must clear the telegraph")
+
+		-- 스냅샷도 예고를 실어 보내야 클라이언트가 위협 칸을 칠할 수 있다.
+		GridBattle.EnemyPlan(planState, seeded(11))
+		local planSnapshot = GridBattle.Snapshot(planState)
+		expect(planSnapshot.Planned ~= nil, "the snapshot must carry the telegraph")
+		expect(#planSnapshot.Planned == #planState.Planned, "the snapshot telegraph must match the state")
+
+		-- 상태이상·스킬 효과 검증은 함수를 갈라 두었다(아래 runStatusAndSkillEffects).
+		runKeywords()
+		runCardEffects()
+		runStatusAndSkillEffects()
 	end
-
-	-- 턴이 끝나면 예고가 비워진다. 안 그러면 같은 공격이 두 번 나간다.
-	GridBattle.EndTurn(planState)
-	expect(#planState.Planned == 0, "ending the turn must clear the telegraph")
-
-	-- 스냅샷도 예고를 실어 보내야 클라이언트가 위협 칸을 칠할 수 있다.
-	GridBattle.EnemyPlan(planState, seeded(11))
-	local planSnapshot = GridBattle.Snapshot(planState)
-	expect(planSnapshot.Planned ~= nil, "the snapshot must carry the telegraph")
-	expect(#planSnapshot.Planned == #planState.Planned, "the snapshot telegraph must match the state")
-
-	-- 상태이상·스킬 효과 검증은 함수를 갈라 두었다(아래 runStatusAndSkillEffects).
-	runKeywords()
-	runCardEffects()
-	runStatusAndSkillEffects()
 
 	--=== 직업별 스킬 ===--
+	do
 
-	--[[
-		직업마다 **자기 스킬**을 가져야 한다.
+		--[[
+			직업마다 **자기 스킬**을 가져야 한다.
 
-		예전에는 `BattleSkills`에 목록이 하나뿐이라 어떤 직업을 골라도 같은 5개를 썼다
-		— 직업 선택이 전투에 아무 영향을 주지 않았다. 화면만 봐서는 "왜 다 광전사
-		스킬이지?" 정도로만 보이므로 여기서 못 박는다.
-	]]
-	local skillClassIds = {
-		"Musician",
-		"Duelist",
-		"Quasar",
-		"Pulsar",
-		"WallPilgrim",
-		"WallMason",
-		"WallBreaker",
-		"Alchemist",
-		"Berserker",
-	}
-	local seenSkillSets: { [string]: string } = {}
-	for _, classId in skillClassIds do
-		local list = BattleSkills.ForClass(classId)
-		expect(#list == 3, "every class must have exactly 3 skills: " .. classId)
+			예전에는 `BattleSkills`에 목록이 하나뿐이라 어떤 직업을 골라도 같은 5개를 썼다
+			— 직업 선택이 전투에 아무 영향을 주지 않았다. 화면만 봐서는 "왜 다 광전사
+			스킬이지?" 정도로만 보이므로 여기서 못 박는다.
+		]]
+		local skillClassIds = {
+			"Musician",
+			"Duelist",
+			"Quasar",
+			"Pulsar",
+			"WallPilgrim",
+			"WallMason",
+			"WallBreaker",
+			"Alchemist",
+			"Berserker",
+		}
+		local seenSkillSets: { [string]: string } = {}
+		for _, classId in skillClassIds do
+			local list = BattleSkills.ForClass(classId)
+			expect(#list == 3, "every class must have exactly 3 skills: " .. classId)
 
-		local names = {}
-		for _, skill in list do
-			table.insert(names, skill.Id)
-			--[[
-				눈금은 0~40(유저 아이디어(직업).md). 단, 재사용 대기가 긴(6턴 이상) 한 방 스킬은 50까지 —
-				2026-09-28 편집기에서 광전사 `종베기`(대기 8턴, 분노 전부 소모·자해)를 50으로 올렸다.
-			]]
-			local cap = if (skill.Cooldown or 0) >= 6 then 50 else 40
-			expect(skill.Damage >= 0 and skill.Damage <= cap, "skill damage must stay on the 0~40 scale (50 for long-cooldown finishers): " .. skill.Id)
+			local names = {}
+			for _, skill in list do
+				table.insert(names, skill.Id)
+				--[[
+					눈금은 0~40(유저 아이디어(직업).md). 단, 재사용 대기가 긴(6턴 이상) 한 방 스킬은 50까지 —
+					2026-09-28 편집기에서 광전사 `종베기`(대기 8턴, 분노 전부 소모·자해)를 50으로 올렸다.
+				]]
+				local cap = if (skill.Cooldown or 0) >= 6 then 50 else 40
+				expect(skill.Damage >= 0 and skill.Damage <= cap, "skill damage must stay on the 0~40 scale (50 for long-cooldown finishers): " .. skill.Id)
+			end
+			local signature = table.concat(names, "/")
+			expect(
+				seenSkillSets[signature] == nil,
+				string.format("%s shares a skill set with %s", classId, seenSkillSets[signature] or "?")
+			)
+			seenSkillSets[signature] = classId
 		end
-		local signature = table.concat(names, "/")
-		expect(
-			seenSkillSets[signature] == nil,
-			string.format("%s shares a skill set with %s", classId, seenSkillSets[signature] or "?")
-		)
-		seenSkillSets[signature] = classId
-	end
 
-	-- 적은 직업이 없으므로 공용 목록을 그대로 쓴다.
-	expect(#BattleSkills.Enemy() == 2, "enemies must keep their own skill list (slime tackle/spit)")
+		-- 적은 직업이 없으므로 공용 목록을 그대로 쓴다.
+		expect(#BattleSkills.Enemy() == 2, "enemies must keep their own skill list (slime tackle/spit)")
 
-	--[[
-		**피해 0인 스킬에는 반드시 효과가 붙어 있어야 한다.**
+		--[[
+			**피해 0인 스킬에는 반드시 효과가 붙어 있어야 한다.**
 
-		피해가 있는 스킬은 효과가 없어도 제 역할을 한다. 문제는 피해 0인 쪽이다 —
-		효과를 빠뜨리면 눌러도 아무 일이 없고, 화면으로는 알아채기 어렵다.
-		(이 검사가 없던 동안 여섯 개가 그 상태로 남아 있었다)
-	]]
-	local SkillEffects = require(ReplicatedStorage.Shared.BattleSkillEffects)
-	local noEffect: { string } = {}
-	for _, classId in skillClassIds do
-		for _, skill in BattleSkills.ForClass(classId) do
-			if skill.Damage == 0 and not SkillEffects.Get(skill.Id) then
-				table.insert(noEffect, string.format("%s/%s", classId, skill.Id))
+			피해가 있는 스킬은 효과가 없어도 제 역할을 한다. 문제는 피해 0인 쪽이다 —
+			효과를 빠뜨리면 눌러도 아무 일이 없고, 화면으로는 알아채기 어렵다.
+			(이 검사가 없던 동안 여섯 개가 그 상태로 남아 있었다)
+		]]
+		local SkillEffects = require(ReplicatedStorage.Shared.BattleSkillEffects)
+		local noEffect: { string } = {}
+		for _, classId in skillClassIds do
+			for _, skill in BattleSkills.ForClass(classId) do
+				if skill.Damage == 0 and not SkillEffects.Get(skill.Id) then
+					table.insert(noEffect, string.format("%s/%s", classId, skill.Id))
+				end
 			end
 		end
-	end
-	expect(#noEffect == 0, "zero-damage skills must have an effect: " .. table.concat(noEffect, ", "))
+		expect(#noEffect == 0, "zero-damage skills must have an effect: " .. table.concat(noEffect, ", "))
 
-	-- 강화 스킬도 효과가 있어야 한다. 조건만 차고 아무 일도 없으면 버그다.
-	for _, upgrade in BattleSkills.Upgrades() do
-		expect(SkillEffects.Get(upgrade.Id) ~= nil, "upgrade skills must have an effect: " .. upgrade.Id)
-	end
+		-- 강화 스킬도 효과가 있어야 한다. 조건만 차고 아무 일도 없으면 버그다.
+		for _, upgrade in BattleSkills.Upgrades() do
+			expect(SkillEffects.Get(upgrade.Id) ~= nil, "upgrade skills must have an effect: " .. upgrade.Id)
+		end
 
-	--[[
-		전투가 실제로 그 직업의 스킬을 쓰는지. `GridBattle.New`에 직업을 넘기지 않으면
-		조용히 기본값으로 떨어지므로 스냅샷에 실린 목록으로 확인한다.
-	]]
-	local skillBattle = GridBattle.New(1, "결투사", 200, 10, "Duelist")
-	local skillSnapshot = GridBattle.Snapshot(skillBattle)
-	expect(skillSnapshot.AllyClassId == "Duelist", "the snapshot must carry the ally class")
-	--[[
-		직업 3개 + 공용 2개(가드·명상). 강화는 조건이 안 찼으므로 아직 없다.
-	]]
-	expect(#skillSnapshot.AllySkills == 5, "the snapshot must carry class skills plus guard and meditate")
-	expect(skillSnapshot.AllySkills[1].Name == "앞뒤관통", "the snapshot must carry the duelist's own skill names")
-	expect(skillSnapshot.AllySkills[1].RangeLabel == "근거리", "the snapshot must carry the melee/ranged label")
-	expect(skillSnapshot.AllySkills[4].Kind == "Common", "guard and meditate must be tagged as common")
+		--[[
+			전투가 실제로 그 직업의 스킬을 쓰는지. `GridBattle.New`에 직업을 넘기지 않으면
+			조용히 기본값으로 떨어지므로 스냅샷에 실린 목록으로 확인한다.
+		]]
+		local skillBattle = GridBattle.New(1, "결투사", 200, 10, "Duelist")
+		local skillSnapshot = GridBattle.Snapshot(skillBattle)
+		expect(skillSnapshot.AllyClassId == "Duelist", "the snapshot must carry the ally class")
+		--[[
+			직업 3개 + 공용 2개(가드·명상). 강화는 조건이 안 찼으므로 아직 없다.
+		]]
+		expect(#skillSnapshot.AllySkills == 5, "the snapshot must carry class skills plus guard and meditate")
+		expect(skillSnapshot.AllySkills[1].Name == "앞뒤관통", "the snapshot must carry the duelist's own skill names")
+		expect(skillSnapshot.AllySkills[1].RangeLabel == "근거리", "the snapshot must carry the melee/ranged label")
+		expect(skillSnapshot.AllySkills[4].Kind == "Common", "guard and meditate must be tagged as common")
+	end
 
 	--=== 등반 직업 선택 ===--
+	do
 
-	--[[
-		고른 직업이 등반 내내 실제로 반영되는지 본다.
+		--[[
+			고른 직업이 등반 내내 실제로 반영되는지 본다.
 
-		`TowerService.Enter`가 하는 일은 `slot.ClassId`를 쓰는 것뿐이고, 그 한 줄이
-		기본 무기와 카드 풀을 동시에 결정한다. 그 연결이 끊기면 결투사를 골라도
-		광전사 카드가 나오는데, 화면만 봐서는 알아채기 어렵다.
-	]]
-	local pickProfile = PlayerProfile.New()
-	local pickSlot = PlayerProfile.ActiveSlot(pickProfile)
-	pickSlot.ClassId = "Duelist"
+			`TowerService.Enter`가 하는 일은 `slot.ClassId`를 쓰는 것뿐이고, 그 한 줄이
+			기본 무기와 카드 풀을 동시에 결정한다. 그 연결이 끊기면 결투사를 골라도
+			광전사 카드가 나오는데, 화면만 봐서는 알아채기 어렵다.
+		]]
+		local pickProfile = PlayerProfile.New()
+		local pickSlot = PlayerProfile.ActiveSlot(pickProfile)
+		pickSlot.ClassId = "Duelist"
 
-	local pickOk = TowerRun.Start(pickProfile)
-	expect(pickOk, "starting a run with a chosen class must succeed")
-	expect(#pickSlot.Items == 1, "a run must start with exactly the class basic weapon")
-	expect(
-		pickSlot.Items[1].Id == "TowerBasic_Duelist",
-		"the basic weapon must come from the chosen class, not the previous one"
-	)
+		local pickOk = TowerRun.Start(pickProfile)
+		expect(pickOk, "starting a run with a chosen class must succeed")
+		expect(#pickSlot.Items == 1, "a run must start with exactly the class basic weapon")
+		expect(
+			pickSlot.Items[1].Id == "TowerBasic_Duelist",
+			"the basic weapon must come from the chosen class, not the previous one"
+		)
 
-	local pickDraft = TowerRun.ClearFloor(pickProfile, 4242)
-	expect(#pickDraft.Cards > 0, "clearing a floor must offer cards")
-	for _, card in pickDraft.Cards do
-		expect(card.ClassId == "Duelist", "offered cards must belong to the chosen class")
-	end
-
-	-- 고른 직업의 능력치로 실제 전투가 서고, 스킬이 통해야 한다.
-	local pickHealth = ProgressionDefinitions.MaxHealthWithStats(pickSlot.Level, pickSlot.Stats)
-	local pickBattle = GridBattle.New(1, "결투사", pickHealth, pickSlot.Items[1].BaseDamage)
-	expect(GridBattle.Ally(pickBattle).MaxHealth == pickHealth, "the battle must use the chosen class's health")
-	expect(#GridBattle.AliveEnemies(pickBattle) > 0, "floor 1 must spawn enemies")
-
-	--[[
-		OP 개발 캐릭터가 실제로 한 방에 정리하는지. 이게 통하지 않으면 시험용으로
-		쓸 수 없다(1층에서 막혀 전투 흐름을 못 본다).
-	]]
-	local opBattle = GridBattle.New(1, "OP 결투사", 9999, 400)
-	GridBattle.MoveAlly(opBattle, 1, 2)
-	for _, opFoe in GridBattle.AliveEnemies(opBattle) do
-		local opFoeCell = GridBattle.CellOf(opBattle, opFoe.Id)
-		if opFoeCell then
-			GridBattle.MoveAlly(opBattle, 1, opFoeCell.Y)
-			GridBattle.ResolveSkill(opBattle, 1, "Success")
+		local pickDraft = TowerRun.ClearFloor(pickProfile, 4242)
+		expect(#pickDraft.Cards > 0, "clearing a floor must offer cards")
+		for _, card in pickDraft.Cards do
+			expect(card.ClassId == "Duelist", "offered cards must belong to the chosen class")
 		end
+
+		-- 고른 직업의 능력치로 실제 전투가 서고, 스킬이 통해야 한다.
+		local pickHealth = ProgressionDefinitions.MaxHealthWithStats(pickSlot.Level, pickSlot.Stats)
+		local pickBattle = GridBattle.New(1, "결투사", pickHealth, pickSlot.Items[1].BaseDamage)
+		expect(GridBattle.Ally(pickBattle).MaxHealth == pickHealth, "the battle must use the chosen class's health")
+		expect(#GridBattle.AliveEnemies(pickBattle) > 0, "floor 1 must spawn enemies")
+
+		--[[
+			OP 개발 캐릭터가 실제로 한 방에 정리하는지. 이게 통하지 않으면 시험용으로
+			쓸 수 없다(1층에서 막혀 전투 흐름을 못 본다).
+		]]
+		local opBattle = GridBattle.New(1, "OP 결투사", 9999, 400)
+		GridBattle.MoveAlly(opBattle, 1, 2)
+		for _, opFoe in GridBattle.AliveEnemies(opBattle) do
+			local opFoeCell = GridBattle.CellOf(opBattle, opFoe.Id)
+			if opFoeCell then
+				GridBattle.MoveAlly(opBattle, 1, opFoeCell.Y)
+				GridBattle.ResolveSkill(opBattle, 1, "Success")
+			end
+		end
+		expect(opBattle.Outcome == "Victory", "the dev OP build must be able to clear floor 1")
 	end
-	expect(opBattle.Outcome == "Victory", "the dev OP build must be able to clear floor 1")
 
 	--=== 도발 ===--
+	do
 
-	local tauntState = GridBattle.New(3, "도발", 120, 10)
-	expect(GridBattle.Ally(tauntState).Taunt == 0, "taunt must start empty")
+		local tauntState = GridBattle.New(3, "도발", 120, 10)
+		expect(GridBattle.Ally(tauntState).Taunt == 0, "taunt must start empty")
 
-	-- 상한을 넘겨 쌓아도 상한에서 멈춰야 한다(규격: 스택은 반드시 상한이 있을 것).
-	GridBattle.AddTaunt(tauntState, GridBattle.ALLY_ID, 999)
-	expect(GridBattle.Ally(tauntState).Taunt == GridBattle.TAUNT_MAX, "taunt must clamp to its cap")
-	expect(GridBattle.TauntChance(tauntState, GridBattle.ALLY_ID) == 1, "a full stack must intercept everything")
+		-- 상한을 넘겨 쌓아도 상한에서 멈춰야 한다(규격: 스택은 반드시 상한이 있을 것).
+		GridBattle.AddTaunt(tauntState, GridBattle.ALLY_ID, 999)
+		expect(GridBattle.Ally(tauntState).Taunt == GridBattle.TAUNT_MAX, "taunt must clamp to its cap")
+		expect(GridBattle.TauntChance(tauntState, GridBattle.ALLY_ID) == 1, "a full stack must intercept everything")
 
-	--[[
-		도발은 **대상만** 바꾼다. 라인 선택에는 개입하지 않는다.
-		탑은 솔로라 아군이 하나뿐이므로, 파티 상황을 흉내내려고 둘째 아군을 끼워 넣는다.
-	]]
-	local mate = table.clone(GridBattle.Ally(tauntState))
-	mate.Id = "mate"
-	mate.Name = "동료"
-	mate.Taunt = 0
-	tauntState.Units.mate = mate
+		--[[
+			도발은 **대상만** 바꾼다. 라인 선택에는 개입하지 않는다.
+			탑은 솔로라 아군이 하나뿐이므로, 파티 상황을 흉내내려고 둘째 아군을 끼워 넣는다.
+		]]
+		local mate = table.clone(GridBattle.Ally(tauntState))
+		mate.Id = "mate"
+		mate.Name = "동료"
+		mate.Taunt = 0
+		tauntState.Units.mate = mate
 
-	local always = function()
-		return 0
+		local always = function()
+			return 0
+		end
+		local never = function()
+			return 0.999
+		end
+		expect(
+			GridBattle.RedirectTarget(tauntState, "mate", always) == GridBattle.ALLY_ID,
+			"a full taunt must pull an ally's incoming attack onto the taunter"
+		)
+		expect(
+			GridBattle.RedirectTarget(tauntState, GridBattle.ALLY_ID, always) == GridBattle.ALLY_ID,
+			"taunt must not redirect an attack already aimed at the taunter"
+		)
+
+		-- 절반만 쌓였으면 확률이므로 실패할 수 있어야 한다. 확정 가로채기는 상한에서만이다.
+		GridBattle.Ally(tauntState).Taunt = GridBattle.TAUNT_MAX // 2
+		expect(
+			GridBattle.RedirectTarget(tauntState, "mate", never) == "mate",
+			"a partial stack must be able to fail its roll"
+		)
+		expect(
+			GridBattle.RedirectTarget(tauntState, "mate", always) == GridBattle.ALLY_ID,
+			"a partial stack must still redirect when the roll passes"
+		)
+		tauntState.Units.mate = nil
+		GridBattle.Ally(tauntState).Taunt = GridBattle.TAUNT_MAX
+
+		-- 턴이 끝나면 빠진다. 유지하려면 계속 쌓아야 한다.
+		GridBattle.EndTurn(tauntState)
+		expect(
+			GridBattle.Ally(tauntState).Taunt == GridBattle.TAUNT_MAX - GridBattle.TAUNT_DECAY,
+			"taunt must decay every turn"
+		)
 	end
-	local never = function()
-		return 0.999
-	end
-	expect(
-		GridBattle.RedirectTarget(tauntState, "mate", always) == GridBattle.ALLY_ID,
-		"a full taunt must pull an ally's incoming attack onto the taunter"
-	)
-	expect(
-		GridBattle.RedirectTarget(tauntState, GridBattle.ALLY_ID, always) == GridBattle.ALLY_ID,
-		"taunt must not redirect an attack already aimed at the taunter"
-	)
-
-	-- 절반만 쌓였으면 확률이므로 실패할 수 있어야 한다. 확정 가로채기는 상한에서만이다.
-	GridBattle.Ally(tauntState).Taunt = GridBattle.TAUNT_MAX // 2
-	expect(
-		GridBattle.RedirectTarget(tauntState, "mate", never) == "mate",
-		"a partial stack must be able to fail its roll"
-	)
-	expect(
-		GridBattle.RedirectTarget(tauntState, "mate", always) == GridBattle.ALLY_ID,
-		"a partial stack must still redirect when the roll passes"
-	)
-	tauntState.Units.mate = nil
-	GridBattle.Ally(tauntState).Taunt = GridBattle.TAUNT_MAX
-
-	-- 턴이 끝나면 빠진다. 유지하려면 계속 쌓아야 한다.
-	GridBattle.EndTurn(tauntState)
-	expect(
-		GridBattle.Ally(tauntState).Taunt == GridBattle.TAUNT_MAX - GridBattle.TAUNT_DECAY,
-		"taunt must decay every turn"
-	)
 
 	--=== 등반실 (겹침 방지) ===--
+	do
 
-	--[[
-		방마다 좌표가 달라야 한다. 하나라도 겹치면 두 사람이 같은 전장에 서게 된다.
-	]]
-	local seenSlots: { [string]: boolean } = {}
-	for index = 1, SkyArena.SLOT_COUNT do
-		local origin = SkyArena.SlotOrigin(index)
-		local key = string.format("%d/%d/%d", origin.X, origin.Y, origin.Z)
-		expect(not seenSlots[key], "every tower chamber must sit at its own spot")
-		seenSlots[key] = true
-	end
-
-	--[[
-		간격이 격자보다 넓어야 한다.
-
-		격자 가로폭 = Midline + Width * (CellSize + Gap) * 2.
-		나중에 칸을 키우면서 SLOT_SPACING을 그대로 두면 옆방과 물리적으로 겹치는데,
-		그 실수를 여기서 잡는다. (ArenaExtents는 Vector2를 쓰므로 상수로 직접 센다)
+		--[[
+			방마다 좌표가 달라야 한다. 하나라도 겹치면 두 사람이 같은 전장에 서게 된다.
 		]]
-	local arenaAcross = BattleArena.DEFAULT_MIDLINE + 6 * (BattleArena.DEFAULT_CELL_SIZE + BattleArena.DEFAULT_GAP) * 2
-	expect(SkyArena.SLOT_SPACING > arenaAcross, "chambers must be spaced wider than the grid itself")
-	expect(SkyArena.FLOOR_LENGTH >= arenaAcross, "the chamber floor must cover the whole grid")
-	expect(SkyArena.SlotGap() > 0, "chamber floors must not touch each other")
+		local seenSlots: { [string]: boolean } = {}
+		for index = 1, SkyArena.SLOT_COUNT do
+			local origin = SkyArena.SlotOrigin(index)
+			local key = string.format("%d/%d/%d", origin.X, origin.Y, origin.Z)
+			expect(not seenSlots[key], "every tower chamber must sit at its own spot")
+			seenSlots[key] = true
+		end
 
-	-- 인접한 두 방의 실제 거리도 바닥판 폭보다 커야 한다.
-	local slotOne = SkyArena.SlotOrigin(1)
-	local slotTwo = SkyArena.SlotOrigin(2)
-	expect(math.abs(slotTwo.X - slotOne.X) >= SkyArena.FLOOR_LENGTH, "neighbouring chamber floors must not overlap")
+		--[[
+			간격이 격자보다 넓어야 한다.
 
-	-- 서 있는 자리는 바닥판 안이어야 한다. 밖이면 입장하자마자 떨어진다.
-	local stand = SkyArena.SlotStand(3)
-	local slotThree = SkyArena.SlotOrigin(3)
-	expect(
-		math.abs(stand.X - slotThree.X) < SkyArena.FLOOR_LENGTH / 2,
-		"the standing spot must be inside its chamber floor"
-	)
+			격자 가로폭 = Midline + Width * (CellSize + Gap) * 2.
+			나중에 칸을 키우면서 SLOT_SPACING을 그대로 두면 옆방과 물리적으로 겹치는데,
+			그 실수를 여기서 잡는다. (ArenaExtents는 Vector2를 쓰므로 상수로 직접 센다)
+			]]
+		local arenaAcross = BattleArena.DEFAULT_MIDLINE + 6 * (BattleArena.DEFAULT_CELL_SIZE + BattleArena.DEFAULT_GAP) * 2
+		expect(SkyArena.SLOT_SPACING > arenaAcross, "chambers must be spaced wider than the grid itself")
+		expect(SkyArena.FLOOR_LENGTH >= arenaAcross, "the chamber floor must cover the whole grid")
+		expect(SkyArena.SlotGap() > 0, "chamber floors must not touch each other")
+
+		-- 인접한 두 방의 실제 거리도 바닥판 폭보다 커야 한다.
+		local slotOne = SkyArena.SlotOrigin(1)
+		local slotTwo = SkyArena.SlotOrigin(2)
+		expect(math.abs(slotTwo.X - slotOne.X) >= SkyArena.FLOOR_LENGTH, "neighbouring chamber floors must not overlap")
+
+		-- 서 있는 자리는 바닥판 안이어야 한다. 밖이면 입장하자마자 떨어진다.
+		local stand = SkyArena.SlotStand(3)
+		local slotThree = SkyArena.SlotOrigin(3)
+		expect(
+			math.abs(stand.X - slotThree.X) < SkyArena.FLOOR_LENGTH / 2,
+			"the standing spot must be inside its chamber floor"
+		)
+	end
 
 	--=== 카드 그림 ===--
+	do
 
-	--[[
-		모든 카드가 그림을 갖는지 확인한다.
+		--[[
+			모든 카드가 그림을 갖는지 확인한다.
 
-		태그를 새로 만들고 `CardArt`의 문양 표에 넣는 것을 잊으면, 그 카드는 조용히
-		기본 문양으로 떨어진다. 눈으로는 알아채기 어려우니 여기서 막는다.
-	]]
-	local artChecked = 0
-	local artSignatures: { [string]: string } = {}
-	local artClassIds = {
-		"Musician",
-		"Duelist",
-		"Quasar",
-		"Pulsar",
-		"WallPilgrim",
-		"WallMason",
-		"WallBreaker",
-		"Alchemist",
-		"Berserker",
-	}
-	for _, classId in artClassIds do
-		for _, grade in { "Essential", "Rare", "Common" } do
-			for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
-				for _, tag in card.Tags do
-					expect(CardArt.HasFamily(tag), string.format("card tag '%s' has no art family (%s)", tag, card.Id))
-				end
-
-				local art = CardArt.For(card)
-				expect(#art.Shapes > 0, "every card must produce at least one shape: " .. card.Id)
-
-				--[[
-					도형이 그림 영역을 크게 벗어나면 잘려서 문양이 무너진다.
-					배경 띠와 광채는 일부러 넘치므로(ZIndex 1) 문양만 본다.
-				]]
-				for _, item in art.Shapes do
-					if item.ZIndex > 1 then
-						expect(
-							item.X >= -0.1 and item.X <= 1.1 and item.Y >= -0.1 and item.Y <= 1.1,
-							"card art glyphs must stay inside the frame: " .. card.Id
-						)
-					end
-				end
-
-				artChecked += 1
-				artSignatures[card.Id] = string.format("%d/%s", #art.Shapes, tostring(art.Accent.R))
-			end
-		end
-	end
-	-- 카드 수는 직업마다 더 둔 카드(EXTRA_CARDS) 만큼 늘 수 있다 — 등록된 카드 전부를 센다
-	do -- (함수의 지역 변수 한도 200 — 블록 안에 둔다)
-		local totalCards = 0
-		for _, module in require(ReplicatedStorage.Shared.AbilityCards).Modules do
-			totalCards += #module.Cards
-		end
-		expect(artChecked == totalCards, string.format("every one of the %d cards must have art (%d)", totalCards, artChecked))
-	end
-
-	--[[
-		**태그마다 그림이 달라야 한다** (요청: "다 나누고").
-
-		같은 Id로 그리므로 변주값이 같다 — 그림이 겹치면 문양 자체가 같다는 뜻이다.
-		예전에는 40개 태그가 14개 문양을 나눠 써서 `Brink`와 `Sacrifice`가 똑같은
-		물약병으로 나왔다. 태그를 새로 만들고 문양 붙이기를 잊으면 여기서 걸린다.
-	]]
-	local glyphSeen: { [string]: string } = {}
-	local tagList = CardArt.Tags()
-	for _, tag in tagList do
-		local art = CardArt.For({ Id = "ArtUniqueness", Grade = "Common", Tags = { tag } })
-		local parts: { string } = {}
-		for _, item in art.Shapes do
-			table.insert(
-				parts,
-				string.format("%.3f,%.3f,%.3f,%.3f,%.1f", item.X, item.Y, item.W, item.H, item.Rotation)
-			)
-		end
-		local signature = table.concat(parts, "|")
-		expect(
-			glyphSeen[signature] == nil,
-			string.format("tags '%s' and '%s' draw the same glyph", tostring(glyphSeen[signature]), tag)
-		)
-		glyphSeen[signature] = tag
-	end
-	expect(#tagList == 32, "the 32 card tags must each have their own glyph, got " .. #tagList)
-
-	--[[
-		**카드 이름은 전 직업에서 유일해야 한다** (요청: "해당 카드 이름에 맞게 짜줘").
-
-		예전에는 세 월 필그림스 직업이 `기도`·`서약`·`봉헌`·`검약`을 글자 그대로 나눠
-		썼다. 이름이 곧 기믹이어야 하는데 이름이 겹치면 직업마다 뭐가 다른지 읽히지
-		않는다. 직업별 어휘를 갈랐고, 되돌아가지 않게 여기서 막는다.
-
-		**한 축은 최소 다섯 장을 가진다.** 태그가 넷인데 한쪽이 한두 장이면 그건
-		덱 빌딩 축이 아니라 장식이다.
-	]]
-	--[[
-		**레벨별 수치**(요청: "(레벨당 +n) 표현을 없앰 / 매 레벨마다 수치를 다르게").
-
-		  · 사다리 길이는 등급 상한과 같아야 한다. 짧으면 상위 레벨이 조용히
-		    마지막 값에 물려 카드가 안 자란다.
-		  · `Levels`를 가진 카드는 설명에 `{n}` 자리표시자가 있어야 하고,
-		    그 번호마다 사다리가 있어야 한다.
-		  · 사다리를 가진 카드는 "(레벨당" 같은 옛 표기를 쓰지 않는다.
-	]]
-	for _, classId in artClassIds do
-		for _, grade in { "Essential", "Rare", "Common" } do
-			for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
-				if not AbilityCardDefinitions.HasScaling(card) then
-					continue
-				end
-				local cap = AbilityCardDefinitions.MaxLevelFor(card)
-				for slot, ladder in card.Levels :: any do
-					expect(
-						#ladder == cap,
-						string.format("%s ladder {%d} has %d rungs, needs %d", card.Id, slot, #ladder, cap)
-					)
-				end
-				--[[
-					중괄호는 **나온 순서**가 곧 사다리 번호다. 그러니 글의 중괄호 개수와
-					사다리 개수가 같아야 한다. 하나라도 어긋나면 글에 값이 안 박히거나
-					쓰이지 않는 사다리가 남는다.
-				]]
-				local marks = 0
-				for _ in card.Description:gmatch("{[%d%.%-]+}") do
-					marks += 1
-				end
-				expect(
-					marks == #(card.Levels :: any),
-					string.format("%s has %d braces but %d ladders", card.Id, marks, #(card.Levels :: any))
-				)
-				expect(
-					not string.find(card.Description, "(레벨당", 1, true),
-					"a card with level values must not also spell out '(레벨당': " .. card.Id
-				)
-				--[[
-					사다리에 붙인 키워드는 사전에 실재해야 한다. 오타가 나면 편집기가
-					그 사다리를 어디에도 못 묶고 조용히 이름 없는 칸으로 남는다.
-				]]
-				for slot, keywordIds in card.LevelKeywords or {} do
-					-- 한 슬롯에 쉼표로 여럿 이어질 수 있다("Id1,Id2"). 하나씩 갈라 검사한다.
-					for keywordId in keywordIds:gmatch("[^,]+") do
-						expect(
-							Keywords.Get(keywordId) ~= nil,
-							string.format("%s ladder {%d} names unknown keyword '%s'", card.Id, slot, keywordId)
-						)
-					end
-				end
-				-- 레벨을 올리면 글의 숫자가 실제로 달라져야 한다.
-				expect(
-					AbilityCardDefinitions.Describe(card, 1) ~= card.Description,
-					"Describe must substitute the placeholders: " .. card.Id
-				)
-			end
-		end
-	end
-
-	for _, classId in artClassIds do
-		for _, grade in { "Essential", "Rare", "Common" } do
-			for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
-				--[[
-					글에 적힌 `[낱말]`은 사전에 있어야 한다. 오타면 게임에서 색도
-					설명도 붙지 않고 대괄호만 남는다.
-				]]
-				for _, name in Keywords.Mentioned(card.Description) do
-					expect(
-						Keywords.ByName(name) ~= nil,
-						string.format("card %s mentions unknown keyword '[%s]'", card.Id, name)
-					)
-				end
-			end
-		end
-	end
-
-	local nameOwner: { [string]: string } = {}
-	for _, classId in artClassIds do
-		local tagCount: { [string]: number } = {}
-		for _, grade in { "Essential", "Rare", "Common" } do
-			for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
-				expect(
-					nameOwner[card.Name] == nil,
-					string.format(
-						"card name '%s' is shared by %s and %s",
-						card.Name,
-						tostring(nameOwner[card.Name]),
-						classId
-					)
-				)
-				nameOwner[card.Name] = classId
-				for _, tag in card.Tags do
-					tagCount[tag] = (tagCount[tag] or 0) + 1
-				end
-			end
-		end
-
-		local axes = 0
-		for tag, count in tagCount do
-			axes += 1
-			expect(count >= 5, string.format("%s axis '%s' only has %d cards", classId, tag, count))
-		end
-		expect(axes == 4, string.format("%s must have exactly 4 deck-building axes, got %d", classId, axes))
-	end
-
-	--[[
-		카드 조건에 **층 이동과 이동속도를 쓰지 않는다** (요청).
-
-		  층 이동  보상은 층마다 한 번뿐이라 "층에 진입할 때"는 사실상 상시 효과다.
-		           같은 조건을 `전투 시작 시` / `매 턴`으로 옮겼다.
-		  이동속도 턴제라서 의미가 없다. 피해·받는 피해 같은 값으로 바꿨다.
-
-		새 카드를 쓸 때 무심코 되살리기 쉬운 표현이라 검사로 막는다.
-	]]
-	for _, phrase in { "층에 진입할 때", "층을 넘길 때", "이동속도" } do
+			태그를 새로 만들고 `CardArt`의 문양 표에 넣는 것을 잊으면, 그 카드는 조용히
+			기본 문양으로 떨어진다. 눈으로는 알아채기 어려우니 여기서 막는다.
+		]]
+		local artChecked = 0
+		local artSignatures: { [string]: string } = {}
+		local artClassIds = {
+			"Musician",
+			"Duelist",
+			"Quasar",
+			"Pulsar",
+			"WallPilgrim",
+			"WallMason",
+			"WallBreaker",
+			"Alchemist",
+			"Berserker",
+		}
 		for _, classId in artClassIds do
 			for _, grade in { "Essential", "Rare", "Common" } do
 				for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
+					for _, tag in card.Tags do
+						expect(CardArt.HasFamily(tag), string.format("card tag '%s' has no art family (%s)", tag, card.Id))
+					end
+
+					local art = CardArt.For(card)
+					expect(#art.Shapes > 0, "every card must produce at least one shape: " .. card.Id)
+
+					--[[
+						도형이 그림 영역을 크게 벗어나면 잘려서 문양이 무너진다.
+						배경 띠와 광채는 일부러 넘치므로(ZIndex 1) 문양만 본다.
+					]]
+					for _, item in art.Shapes do
+						if item.ZIndex > 1 then
+							expect(
+								item.X >= -0.1 and item.X <= 1.1 and item.Y >= -0.1 and item.Y <= 1.1,
+								"card art glyphs must stay inside the frame: " .. card.Id
+							)
+						end
+					end
+
+					artChecked += 1
+					artSignatures[card.Id] = string.format("%d/%s", #art.Shapes, tostring(art.Accent.R))
+				end
+			end
+		end
+		-- 카드 수는 직업마다 더 둔 카드(EXTRA_CARDS) 만큼 늘 수 있다 — 등록된 카드 전부를 센다
+		do -- (함수의 지역 변수 한도 200 — 블록 안에 둔다)
+			local totalCards = 0
+			for _, module in require(ReplicatedStorage.Shared.AbilityCards).Modules do
+				totalCards += #module.Cards
+			end
+			expect(artChecked == totalCards, string.format("every one of the %d cards must have art (%d)", totalCards, artChecked))
+		end
+
+		--[[
+			**태그마다 그림이 달라야 한다** (요청: "다 나누고").
+
+			같은 Id로 그리므로 변주값이 같다 — 그림이 겹치면 문양 자체가 같다는 뜻이다.
+			예전에는 40개 태그가 14개 문양을 나눠 써서 `Brink`와 `Sacrifice`가 똑같은
+			물약병으로 나왔다. 태그를 새로 만들고 문양 붙이기를 잊으면 여기서 걸린다.
+		]]
+		local glyphSeen: { [string]: string } = {}
+		local tagList = CardArt.Tags()
+		for _, tag in tagList do
+			local art = CardArt.For({ Id = "ArtUniqueness", Grade = "Common", Tags = { tag } })
+			local parts: { string } = {}
+			for _, item in art.Shapes do
+				table.insert(
+					parts,
+					string.format("%.3f,%.3f,%.3f,%.3f,%.1f", item.X, item.Y, item.W, item.H, item.Rotation)
+				)
+			end
+			local signature = table.concat(parts, "|")
+			expect(
+				glyphSeen[signature] == nil,
+				string.format("tags '%s' and '%s' draw the same glyph", tostring(glyphSeen[signature]), tag)
+			)
+			glyphSeen[signature] = tag
+		end
+		expect(#tagList == 32, "the 32 card tags must each have their own glyph, got " .. #tagList)
+
+		--[[
+			**카드 이름은 전 직업에서 유일해야 한다** (요청: "해당 카드 이름에 맞게 짜줘").
+
+			예전에는 세 월 필그림스 직업이 `기도`·`서약`·`봉헌`·`검약`을 글자 그대로 나눠
+			썼다. 이름이 곧 기믹이어야 하는데 이름이 겹치면 직업마다 뭐가 다른지 읽히지
+			않는다. 직업별 어휘를 갈랐고, 되돌아가지 않게 여기서 막는다.
+
+			**한 축은 최소 다섯 장을 가진다.** 태그가 넷인데 한쪽이 한두 장이면 그건
+			덱 빌딩 축이 아니라 장식이다.
+		]]
+		--[[
+			**레벨별 수치**(요청: "(레벨당 +n) 표현을 없앰 / 매 레벨마다 수치를 다르게").
+
+			  · 사다리 길이는 등급 상한과 같아야 한다. 짧으면 상위 레벨이 조용히
+			    마지막 값에 물려 카드가 안 자란다.
+			  · `Levels`를 가진 카드는 설명에 `{n}` 자리표시자가 있어야 하고,
+			    그 번호마다 사다리가 있어야 한다.
+			  · 사다리를 가진 카드는 "(레벨당" 같은 옛 표기를 쓰지 않는다.
+		]]
+		for _, classId in artClassIds do
+			for _, grade in { "Essential", "Rare", "Common" } do
+				for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
+					if not AbilityCardDefinitions.HasScaling(card) then
+						continue
+					end
+					local cap = AbilityCardDefinitions.MaxLevelFor(card)
+					for slot, ladder in card.Levels :: any do
+						expect(
+							#ladder == cap,
+							string.format("%s ladder {%d} has %d rungs, needs %d", card.Id, slot, #ladder, cap)
+						)
+					end
+					--[[
+						중괄호는 **나온 순서**가 곧 사다리 번호다. 그러니 글의 중괄호 개수와
+						사다리 개수가 같아야 한다. 하나라도 어긋나면 글에 값이 안 박히거나
+						쓰이지 않는 사다리가 남는다.
+					]]
+					local marks = 0
+					for _ in card.Description:gmatch("{[%d%.%-]+}") do
+						marks += 1
+					end
 					expect(
-						not string.find(card.Description, phrase, 1, true),
-						string.format("card must not use '%s': %s", phrase, card.Id)
+						marks == #(card.Levels :: any),
+						string.format("%s has %d braces but %d ladders", card.Id, marks, #(card.Levels :: any))
+					)
+					expect(
+						not string.find(card.Description, "(레벨당", 1, true),
+						"a card with level values must not also spell out '(레벨당': " .. card.Id
+					)
+					--[[
+						사다리에 붙인 키워드는 사전에 실재해야 한다. 오타가 나면 편집기가
+						그 사다리를 어디에도 못 묶고 조용히 이름 없는 칸으로 남는다.
+					]]
+					for slot, keywordIds in card.LevelKeywords or {} do
+						-- 한 슬롯에 쉼표로 여럿 이어질 수 있다("Id1,Id2"). 하나씩 갈라 검사한다.
+						for keywordId in keywordIds:gmatch("[^,]+") do
+							expect(
+								Keywords.Get(keywordId) ~= nil,
+								string.format("%s ladder {%d} names unknown keyword '%s'", card.Id, slot, keywordId)
+							)
+						end
+					end
+					-- 레벨을 올리면 글의 숫자가 실제로 달라져야 한다.
+					expect(
+						AbilityCardDefinitions.Describe(card, 1) ~= card.Description,
+						"Describe must substitute the placeholders: " .. card.Id
 					)
 				end
 			end
 		end
-	end
 
-	-- 같은 카드는 몇 번을 그려도 같은 그림이어야 한다(보상 화면을 다시 열어도 안 바뀐다).
-	for cardId, signature in artSignatures do
-		local card = AbilityCardDefinitions.Get(cardId)
-		if card then
-			local redrawn = CardArt.For(card)
-			expect(
-				string.format("%d/%s", #redrawn.Shapes, tostring(redrawn.Accent.R)) == signature,
-				"card art must be deterministic: " .. cardId
-			)
-		end
-	end
-
-	--[[
-		손으로 그린 그림.
-
-		`Art`가 가리키는 그림이 없으면 조용히 태그 문양으로 돌아가야 한다 — 편집기에서
-		그림을 지웠다고 카드가 빈칸이 되면 안 된다.
-	]]
-	do
-		local sample = AbilityCardDefinitions.GetPool(artClassIds[1], "Common" :: any)[1]
-		expect(sample ~= nil, "artwork test needs a card")
-
-		local ghost = table.clone(sample)
-		ghost.Art = "그런그림없음"
-		-- 견줄 대상은 **그림을 안 가리키는** 같은 카드다(표본 카드가 이미 그림을 가리킬 수 있다)
-		local plain = table.clone(sample)
-		plain.Art = nil
-		expect(#CardArt.For(ghost).Shapes == #CardArt.For(plain).Shapes, "missing artwork must fall back to the glyph")
-
-		for _, grade in { "Essential", "Rare", "Common" } do
-			local template = CardArtworks.Template(grade)
-			expect(#template > 0, "grade template must not be empty: " .. grade)
-			template[1].X = 99
-			expect(CardArtworks.Template(grade)[1].X ~= 99, "template must hand out copies: " .. grade)
+		for _, classId in artClassIds do
+			for _, grade in { "Essential", "Rare", "Common" } do
+				for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
+					--[[
+						글에 적힌 `[낱말]`은 사전에 있어야 한다. 오타면 게임에서 색도
+						설명도 붙지 않고 대괄호만 남는다.
+					]]
+					for _, name in Keywords.Mentioned(card.Description) do
+						expect(
+							Keywords.ByName(name) ~= nil,
+							string.format("card %s mentions unknown keyword '[%s]'", card.Id, name)
+						)
+					end
+				end
+			end
 		end
 
-		for _, artwork in CardArtworks.All() do
-			local drawn = table.clone(sample)
-			drawn.Art = artwork.Id
-			expect(#CardArt.For(drawn).Shapes >= #artwork.Shapes, "saved artwork must reach the card: " .. artwork.Id)
-		end
-	end
+		local nameOwner: { [string]: string } = {}
+		for _, classId in artClassIds do
+			local tagCount: { [string]: number } = {}
+			for _, grade in { "Essential", "Rare", "Common" } do
+				for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
+					expect(
+						nameOwner[card.Name] == nil,
+						string.format(
+							"card name '%s' is shared by %s and %s",
+							card.Name,
+							tostring(nameOwner[card.Name]),
+							classId
+						)
+					)
+					nameOwner[card.Name] = classId
+					for _, tag in card.Tags do
+						tagCount[tag] = (tagCount[tag] or 0) + 1
+					end
+				end
+			end
 
-	print(
-		"[PorcelainTests] PASS stats, progression, items, honor, afterlife, tower rewards, cards, runes, prayer, profile, tower run, grid battle, dodge, groggy, chambers, card art, artworks, card effects, status effects, class skills and enemy telegraph"
-	)
+			local axes = 0
+			for tag, count in tagCount do
+				axes += 1
+				expect(count >= 5, string.format("%s axis '%s' only has %d cards", classId, tag, count))
+			end
+			expect(axes == 4, string.format("%s must have exactly 4 deck-building axes, got %d", classId, axes))
+		end
+
+		--[[
+			카드 조건에 **층 이동과 이동속도를 쓰지 않는다** (요청).
+
+			  층 이동  보상은 층마다 한 번뿐이라 "층에 진입할 때"는 사실상 상시 효과다.
+			           같은 조건을 `전투 시작 시` / `매 턴`으로 옮겼다.
+			  이동속도 턴제라서 의미가 없다. 피해·받는 피해 같은 값으로 바꿨다.
+
+			새 카드를 쓸 때 무심코 되살리기 쉬운 표현이라 검사로 막는다.
+		]]
+		for _, phrase in { "층에 진입할 때", "층을 넘길 때", "이동속도" } do
+			for _, classId in artClassIds do
+				for _, grade in { "Essential", "Rare", "Common" } do
+					for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
+						expect(
+							not string.find(card.Description, phrase, 1, true),
+							string.format("card must not use '%s': %s", phrase, card.Id)
+						)
+					end
+				end
+			end
+		end
+
+		-- 같은 카드는 몇 번을 그려도 같은 그림이어야 한다(보상 화면을 다시 열어도 안 바뀐다).
+		for cardId, signature in artSignatures do
+			local card = AbilityCardDefinitions.Get(cardId)
+			if card then
+				local redrawn = CardArt.For(card)
+				expect(
+					string.format("%d/%s", #redrawn.Shapes, tostring(redrawn.Accent.R)) == signature,
+					"card art must be deterministic: " .. cardId
+				)
+			end
+		end
+
+		--[[
+			손으로 그린 그림.
+
+			`Art`가 가리키는 그림이 없으면 조용히 태그 문양으로 돌아가야 한다 — 편집기에서
+			그림을 지웠다고 카드가 빈칸이 되면 안 된다.
+		]]
+		do
+			local sample = AbilityCardDefinitions.GetPool(artClassIds[1], "Common" :: any)[1]
+			expect(sample ~= nil, "artwork test needs a card")
+
+			local ghost = table.clone(sample)
+			ghost.Art = "그런그림없음"
+			-- 견줄 대상은 **그림을 안 가리키는** 같은 카드다(표본 카드가 이미 그림을 가리킬 수 있다)
+			local plain = table.clone(sample)
+			plain.Art = nil
+			expect(#CardArt.For(ghost).Shapes == #CardArt.For(plain).Shapes, "missing artwork must fall back to the glyph")
+
+			for _, grade in { "Essential", "Rare", "Common" } do
+				local template = CardArtworks.Template(grade)
+				expect(#template > 0, "grade template must not be empty: " .. grade)
+				template[1].X = 99
+				expect(CardArtworks.Template(grade)[1].X ~= 99, "template must hand out copies: " .. grade)
+			end
+
+			for _, artwork in CardArtworks.All() do
+				local drawn = table.clone(sample)
+				drawn.Art = artwork.Id
+				expect(#CardArt.For(drawn).Shapes >= #artwork.Shapes, "saved artwork must reach the card: " .. artwork.Id)
+			end
+		end
+
+		print(
+			"[PorcelainTests] PASS stats, progression, items, honor, afterlife, tower rewards, cards, runes, prayer, profile, tower run, grid battle, dodge, groggy, chambers, card art, artworks, card effects, status effects, class skills and enemy telegraph"
+		)
+	end
 end
 
 return PrototypeTests

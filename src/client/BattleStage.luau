@@ -343,6 +343,8 @@ end
 	  Group 이 같은 칸끼리 붙은 덩어리마다 테두리(묶음마다 조금씩 안쪽·위로 비켜 겹쳐도 보인다)·글자·레이저.
 	  source(Source) = 레이저가 나오는 부위 몸(BasePart). 부위가 움직여도(공전) Beam 이 따라간다.
 	높이는 검수 판(0.18~0.21)보다 위(0.3~0.5)라 무엇에도 덮이지 않는다.
+	2026-10-09 사용자: 판에 칠하는 것(줄무늬·바닥 테두리)은 없애고, 레이저 같은 파티클이 범위 둘레를 칸 **위에 떠서** 쭉 그린다.
+	  둘레 한 변마다 빛줄기(Beam 색 줄 + 흰 심) + 그 줄을 따라 흩날리는 빛 알갱이. 묶음마다 높이를 조금씩 달리해 겹쳐도 보인다.
 ]]
 -- 레이저 원점 Attachment 는 부위 몸에 붙는다 — 표시를 다시 짓거나 지울 때 같이 치운다
 local laserRoots: { Instance } = {}
@@ -351,6 +353,44 @@ local function clearLasers()
 		a:Destroy()
 	end
 	table.clear(laserRoots)
+end
+
+-- 떠 있는 레이저 한 변: mid 에서 ±half 까지. 빛줄기 둘(색·흰 심) + 줄을 따라 흩날리는 빛 알갱이
+local function laserEdge(mid: Vector3, half: Vector3, color: Color3, strong: boolean, parent: Instance)
+	local holder = fxPart("Laser", CFrame.lookAt(mid, mid + half.Unit), Vector3.new(0.05, 0.05, half.Magnitude * 2), color, 1, parent)
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, 0, half.Magnitude)
+	a0.Parent = holder
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, 0, -half.Magnitude)
+	a1.Parent = holder
+	-- 빛 번짐에 색이 하얗게 날아가지 않게: 색 줄은 덜 빛나게, 흰 심은 가늘고 옅게
+	for _, spec in { { if strong then 0.4 else 0.28, color, 0, 0.35 }, { if strong then 0.09 else 0.05, Color3.new(1, 1, 1), 0.35, 0.6 } } do
+		local beam = Instance.new("Beam")
+		beam.Attachment0, beam.Attachment1 = a0, a1
+		beam.Width0, beam.Width1 = spec[1], spec[1]
+		beam.Color = ColorSequence.new(spec[2])
+		beam.LightEmission = spec[4]
+		beam.LightInfluence = 0
+		beam.FaceCamera = true
+		beam.Segments = 1
+		beam.Transparency = NumberSequence.new(spec[3])
+		beam.Parent = holder
+	end
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Shape = Enum.ParticleEmitterShape.Box
+	e.EmissionDirection = Enum.NormalId.Top
+	e.Rate = half.Magnitude * 9
+	e.Lifetime = NumberRange.new(0.25, 0.5)
+	e.Speed = NumberRange.new(0.2, 0.6)
+	e.SpreadAngle = Vector2.new(25, 25)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.18), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+	e.Color = ColorSequence.new(color)
+	e.LightEmission = 0.6
+	e.LightInfluence = 0
+	e.Parent = holder
 end
 
 function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { [string]: { any } }, source: ((id: string) -> BasePart?)?)
@@ -384,7 +424,6 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 	folder.Parent = first.Parent
 	local stepX = tiles.Ally[1][2].Position - first.Position
 	local stepY = tiles.Ally[2][1].Position - first.Position
-	local ux, uy = stepX.Unit, stepY.Unit
 	-- 2026-10-03 사용자: 밝았다 어두워지는 깜빡임은 없애고, 색을 더 또렷하게 + 약간의 네온.
 	-- 묶음 색을 채도·밝기 끝까지 올리고(vivid), 줄무늬·테두리는 Neon 재질(fxPart)로 은은히 빛나게 둔다
 	local function vivid(c: Color3): Color3
@@ -412,35 +451,14 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 		slot[name] = i - 1
 	end
 
-	-- 줄무늬: 칸마다 셋, 덮은 묶음 색을 돌아가며
-	for key, entries in keys do
-		local x, y = string.match(key, "(%d+),(%d+)")
-		local t = tiles.Ally[tonumber(y) :: number] and tiles.Ally[tonumber(y) :: number][tonumber(x) :: number]
-		if not t then
-			continue
-		end
-		table.sort(entries, function(a, b)
-			return a.Group < b.Group
-		end)
-		local h = t.Size.X * 0.42
-		for si, k in { -h * 0.66, 0, h * 0.66 } do
-			local e = entries[(si - 1) % #entries + 1]
-			local u0, u1 = math.max(-h, -h + k), math.min(h, h + k)
-			local mu = (u0 + u1) / 2
-			local mid = t.Position + ux * mu + uy * (mu - k) + Vector3.new(0, 0.3, 0)
-			local len = (u1 - u0) * math.sqrt(2)
-			fxPart("Stripe", CFrame.lookAt(mid, mid + (ux + uy).Unit), Vector3.new(0.34, 0.05, len), vivid(e.Color), 0.3, folder)
-		end
-	end
-
 	-- 묶음 덩어리마다 테두리·글자·레이저
 	for _, name in order do
 		local g = groups[name]
 		local e = g.Entry
 		local i = slot[name]
 		local inset = 0.46 - math.min(i, 4) * 0.045
-		local lift = 0.34 + math.min(i, 4) * 0.03
-		local edgeColor = if e.Unavoid then Color3.new(1, 1, 1) else vivid(e.Color)
+		local lift = 1.0 + math.min(i, 4) * 0.22
+		local edgeColor = vivid(e.Color) -- 회피 불가는 흰 심을 굵게(laserEdge strong)
 		-- 2026-10-03 사용자: 글자·레이저는 떨어진 덩어리마다가 아니라 묶음(Group)에 하나만.
 		-- 가장 큰 덩어리(같으면 묶음 전체 가운데에 가까운 것)에 단다. 테두리·줄무늬는 칸마다 그대로
 		local comps = components(g.Cells)
@@ -489,7 +507,7 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 					local across = stepX * d[1] + stepY * d[2]
 					local along = if d[1] ~= 0 then stepY else stepX
 					local mid = t.Position + across * inset + Vector3.new(0, lift, 0)
-					fxPart("Edge", CFrame.lookAt(mid, mid + along.Unit), Vector3.new(if e.Unavoid then 0.42 else 0.3, 0.08, along.Magnitude * (inset * 2) + 0.3), edgeColor, 0.05, folder)
+					laserEdge(mid, along * (inset + 0.08), edgeColor, e.Unavoid == true, folder)
 				end
 			end
 			if comp ~= labelComp then

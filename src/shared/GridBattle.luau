@@ -247,8 +247,6 @@ export type Encounter = {
 }
 
 local ALLY_ID = "player"
--- 회피 QTE 를 놓치고 맞을 때마다 차는 아군 그로기(4번이면 다음 턴을 쉰다)
-local ALLY_GROGGY_ON_FAIL = 25
 -- 적 치명타 기본 확률(배율은 아군과 같은 CRIT_MULTIPLIER)
 local ENEMY_CRIT = 0.05
 
@@ -1265,6 +1263,15 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 			if n > 0 then
 				pushLog(state, string.format("연계 — 오염 추적: 라인 %d 에 버그 칸", combo.Lane))
 			end
+		end
+	end
+
+	-- 검수 칸(이번 턴 끝에 지워질 칸) 위에는 회복·버프 칸을 두지 않는다(2026-10-09 사용자: 검수 칸 위 회복 칸은 버그).
+	-- 패치는 홀수 턴에만 다시 까니 짝수 턴 새 검수와 겹친 옛 칸을 여기서 걷는다. 버그 칸은 원래 아무 데나 깔린다
+	for _, c in (boss.DeletePlan and boss.DeletePlan.Cells) or {} do
+		local key = BattleGrid.CellKey("Ally", c[1], c[2])
+		if boss.Mods[key] == "Heal" or boss.Mods[key] == "Buff" then
+			boss.Mods[key] = nil
 		end
 	end
 
@@ -2660,25 +2667,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		fire(state, "Taken", { Attacker = enemy, Damage = taken })
 	end
 
-	--[[
-		QTE 를 놓치고 그대로 맞으면 아군 그로기가 찬다(ALLY_GROGGY_ON_FAIL). 가득 차면 **다음 내 턴**을 쉰다 —
-		턴 끝(EndTurn)에서 한 번 깎이므로 1 을 더해 둔다. 카드가 막거나(무감각 `GroggyImmune`)
-		줄인다(고집 — `Stunned` 훅이 Turns 를 깎는다).
-	]]
-	if grade == "Fail" and taken > 0 and ally.Alive and query(state, "GroggyImmune", 0) < 1 then
-		if GroggyGauge.Add(ally.Groggy, ALLY_GROGGY_ON_FAIL * query(state, "AllyGroggyScale", 1)) then
-			local stun = { Turns = GroggyGauge.STUN_TURNS }
-			fire(state, "Stunned", stun)
-			if stun.Turns > 0 then
-				ally.Groggy.StunTurns = stun.Turns + 1
-				pushLog(state, string.format("%s 그로기 — 다음 턴 행동 불가", ally.Name))
-			else
-				ally.Groggy.StunTurns = 0
-				ally.Groggy.Value = 0
-				pushLog(state, "그로기를 버텼다")
-			end
-		end
-	end
+	-- 아군 그로기 없음(2026-10-09 사용자: 플레이어한테 걸리는 그로기 삭제)
 
 	pushEvent(state, {
 		Kind = "EnemyAttack",

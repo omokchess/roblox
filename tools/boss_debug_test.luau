@@ -459,6 +459,11 @@ do
 		GridBattle.EndTurn(s)
 		if s.Outcome == "Ongoing" then
 			GridBattle.EnemyPlan(s, rng)
+			-- 2026-10-09: 검수 칸 위에 회복·버프 칸이 겹치면 안 된다
+			for _, c in (s.Boss.DeletePlan and s.Boss.DeletePlan.Cells) or {} do
+				local mod = s.Boss.Mods[BattleGrid.CellKey("Ally", c[1], c[2])]
+				check(mod ~= "Heal" and mod ~= "Buff", string.format("검수 칸 (%d,%d) 위에 %s 칸", c[1], c[2], tostring(mod)))
+			end
 		end
 	end
 	print(string.format("자동 전투: %s, %d턴, 체력 %d/%d  머리 %d 삭제팔 %d 패치팔 %d 코어 %d", s.Outcome, turns, s.Units.player.Health, s.Units.player.MaxHealth, s.Units.boss_Head.Health, s.Units.boss_DeleteArm.Health, s.Units.boss_PatchArm.Health, s.Units.boss_Core.Health))
