@@ -1,6 +1,7 @@
 --!nocheck
 --[[
-	Snow_Town.luau — 2026-10-09. 설원 새 마을(슈네라이히) 짓기(편집 모드, StudioJobs).
+	Snow_Town.luau — 2026-10-09. 설원 새 마을(슈네라이히) 1판. **쓰지 말 것** — 사용자가 휑하다고 거절, 2판 = Snow_City2.luau(snow_plan2.py).
+	(아래는 1판 설명)
 	자리 = tools/snow_town_plan.py(사용자 마을 확대 그림을 딴 손 표, 겹침 검사) → Snow_Town_data.luau:
 	  python tools/snow_town_plan.py --town && sed '/--@@DATA@@/r tools/Snow_Town_data.luau' tools/Snow_Town.luau > tools/swamp/_town_run.luau && bash tools/job.sh tools/swamp/_town_run.luau
 	틀 = ServerStorage.SnowKit(옛 키트 + Snow_TownKit 새 건물). workspace.Schneereich.마을 만 지우고 새로(안쪽방·스크립트는 그대로).
