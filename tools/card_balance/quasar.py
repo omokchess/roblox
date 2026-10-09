@@ -37,8 +37,9 @@ EDITS = {
     "Quasar_C_Bulk": {"Levels": [[20, 24, 28, 32, 36, 40]], "Party": True},
     "Quasar_C_FeedMass": {"Levels": [[3, 3, 4, 4, 5, 5]]},
     "Quasar_C_Planted": {
-        "Description": "차징 중에는 [그로기]가 차지 않고, 턴을 시작할 때마다 [질량]을 {1} 얻는다.",
-        "Levels": [[1, 1, 1, 2, 2, 2]],
+        # 2026-10-09 그로기 삭제로 변경
+        "Description": "차징 중에는 받는 피해가 {10}% 감소하고, 턴을 시작할 때마다 [질량]을 {1} 얻는다.",
+        "Levels": [[10, 10, 10, 15, 15, 15], [1, 1, 1, 2, 2, 2]],
     },
     "Quasar_C_Halo": {"Levels": [[8, 9, 10, 11, 12, 14]], "Party": True},
     "Quasar_C_Cooling": {"Levels": [[15, 15, 14, 13, 12, 12], [1, 1, 1, 1, 1, 2]]},

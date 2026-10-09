@@ -16,8 +16,9 @@ from card_edit import apply
 EDITS = {
     "WallMason_E_InterlockedStone": {"MaxLevel": 1, "Party": True},
     "WallMason_R_Buttress": {
-        "Description": "[벽]을 보유한 동안 [그로기]가 {50}% 덜 찬다.",
-        "Levels": [[50]],
+        # 2026-10-09 그로기 삭제로 변경
+        "Description": "[벽]을 보유한 동안, 방어에 실패해 맞는 피해가 {30}% 감소한다.",
+        "Levels": [[30]],
     },
     "WallMason_C_EvenBreath": {"Levels": [[1, 1, 1, 1, 1, 1], [1, 1, 1, 2, 2, 2]]},
     "WallMason_C_SameStone": {"Party": True},

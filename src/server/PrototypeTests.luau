@@ -455,18 +455,24 @@ local function runCardEffects()
 
 	--=== 아군 그로기 ===--
 
-	local groggy = battleWith("Berserker", {})
-	local numb = battleWith("Berserker", { { CardId = "Berserker_C_Numb", Level = 1 } })
-	for _ = 1, 4 do
-		for _, state in { groggy, numb } do
-			local ally = GridBattle.Ally(state)
-			ally.Health = ally.MaxHealth
-			GridBattle.ResolveDodge(state, GridBattle.AliveEnemies(state)[1].Id, "Fail")
+	do
+		local groggy = battleWith("Berserker", {})
+		local numb = battleWith("Berserker", { { CardId = "Berserker_C_Numb", Level = 1 } })
+		for _ = 1, 4 do
+			for _, state in { groggy, numb } do
+				local ally = GridBattle.Ally(state)
+				ally.Health = ally.MaxHealth
+				GridBattle.ResolveDodge(state, GridBattle.AliveEnemies(state)[1].Id, "Fail")
+			end
 		end
+		-- 2026-10-09: 아군 그로기 삭제 — 몇 번을 맞아도 기절하지 않는다
+		expect(not GroggyGauge.IsStunned(GridBattle.Ally(groggy).Groggy), "the ally must never be stunned by groggy")
+		expect(not GroggyGauge.IsStunned(GridBattle.Ally(numb).Groggy), "the ally must never be stunned by groggy (numb)")
+		-- 무감각(변경): 방어에 실패해 맞으면 덜 아프다
+		local lostPlain = GridBattle.Ally(groggy).MaxHealth - GridBattle.Ally(groggy).Health
+		local lostNumb = GridBattle.Ally(numb).MaxHealth - GridBattle.Ally(numb).Health
+		expect(lostNumb < lostPlain, string.format("무감각 must cut failed-defense damage (%d vs %d)", lostNumb, lostPlain))
 	end
-	-- 2026-10-09: 아군 그로기 삭제 — 몇 번을 맞아도 기절하지 않는다
-	expect(not GroggyGauge.IsStunned(GridBattle.Ally(groggy).Groggy), "the ally must never be stunned by groggy")
-	expect(not GroggyGauge.IsStunned(GridBattle.Ally(numb).Groggy), "the ally must never be stunned by groggy (numb)")
 
 	--=== 직업 키트 ===--
 

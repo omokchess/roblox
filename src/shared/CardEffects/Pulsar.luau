@@ -362,16 +362,16 @@ M.Pulsar_R_Grounding = {
 	end,
 }
 
--- 차폐: 자기장 동안 그로기가 차지 않는다. 막을 때마다 자기장 −{1}턴
+-- 차폐(2026-10-09 그로기 삭제로 변경): 자기장 동안 받는 피해 −{1}%. 방어에 실패해 맞을 때마다 자기장 −{2}턴
 M.Pulsar_R_Shroud = {
-	Rules = {
-		GroggyImmune = function(c: Card, value: number): number
-			return if hasField(c) then 1 else value
-		end,
-	},
+	BeforeTaken = function(c: Card, info: any)
+		if hasField(c) then
+			info.Mult *= 1 - c.P(1)
+		end
+	end,
 	Defend = function(c: Card, info: any)
-		if hasField(c) and info.Grade == "Fail" and c.V(1) > 0 then
-			shiftField(c, -c.V(1))
+		if hasField(c) and info.Grade == "Fail" and c.V(2) > 0 then
+			shiftField(c, -c.V(2))
 		end
 	end,
 }

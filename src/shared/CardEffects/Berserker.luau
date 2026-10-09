@@ -488,13 +488,13 @@ M.Berserker_C_Devour = {
 	end,
 }
 
--- 무감각: 그로기에 빠지지 않는다
+-- 무감각(2026-10-09 그로기 삭제로 변경): 방어에 실패해 맞을 때 받는 피해 −{1}%
 M.Berserker_C_Numb = {
-	Rules = {
-		GroggyImmune = function(_c: Card, _value: number): number
-			return 1
-		end,
-	},
+	BeforeTaken = function(c: Card, info: any)
+		if info.Grade == "Fail" then
+			info.Mult *= 1 - c.P(1)
+		end
+	end,
 }
 
 -- 박치기: 분쇄가 {1}% 확률로 맞힌 적을 {2}턴 기절(이번 턴 예고한 공격이 취소된다)
@@ -575,13 +575,24 @@ M.Berserker_C_BloodPact = {
 	end,
 }
 
--- 고집: 전투당 {1}회, 기절을 {2}턴 줄여 받는다
+-- 고집(2026-10-09 그로기 삭제로 변경): 전투당 {1}회, 맞아서 체력이 30% 아래로 떨어지면 분노 {2}.
+-- 30% 위로 회복해야 다시 떨어진 것으로 친다
 M.Berserker_C_Stubborn = {
-	Stunned = function(c: Card, info: any)
-		if info.Turns > 0 and H.PerBattle(c, "stun", c.V(1)) then
-			info.Turns -= c.V(2)
-			H.Log(c, "버텼다")
+	Taken = function(c: Card)
+		if H.HealthRatio(c) >= 0.3 or c.Mem.low then
+			return false
+		end
+		c.Mem.low = true
+		if H.PerBattle(c, "stubborn", c.V(1)) then
+			H.Gain(c, R.RAGE, c.V(2))
+			H.Log(c, "고집 — 분노")
 			return true
+		end
+		return false
+	end,
+	TurnStart = function(c: Card)
+		if H.HealthRatio(c) >= 0.3 then
+			c.Mem.low = nil
 		end
 		return false
 	end,

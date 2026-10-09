@@ -422,16 +422,16 @@ M.Quasar_C_FeedMass = {
 	end,
 }
 
--- 고정: 차징 중 그로기가 차지 않고, 턴 시작마다 질량 {1}
+-- 고정(2026-10-09 그로기 삭제로 변경): 차징 중 받는 피해 −{1}%, 턴 시작마다 질량 {2}
 M.Quasar_C_Planted = {
-	Rules = {
-		GroggyImmune = function(c: Card, value: number): number
-			return if charge(c) > 0 then 1 else value
-		end,
-	},
+	BeforeTaken = function(c: Card, info: any)
+		if charge(c) > 0 then
+			info.Mult *= 1 - c.P(1)
+		end
+	end,
 	TurnStart = function(c: Card)
 		if charge(c) > 0 then
-			gainMass(c, c.V(1))
+			gainMass(c, c.V(2))
 			return true
 		end
 		return false

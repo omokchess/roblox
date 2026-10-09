@@ -249,13 +249,13 @@ M.WallMason_R_BackRowAim = {
 	end,
 }
 
--- 버팀벽: 벽이 있는 동안 그로기가 {1}% 덜 찬다
+-- 버팀벽(2026-10-09 그로기 삭제로 변경): 벽이 있는 동안 방어에 실패해 맞는 피해 −{1}%
 M.WallMason_R_Buttress = {
-	Rules = {
-		AllyGroggyScale = function(c: Card, value: number): number
-			return if wallOf(H.Ally(c)) > 0 then value * (1 - c.P(1)) else value
-		end,
-	},
+	BeforeTaken = function(c: Card, info: any)
+		if info.Grade == "Fail" and wallOf(H.Ally(c)) > 0 then
+			info.Mult *= 1 - c.P(1)
+		end
+	end,
 }
 
 -- 쐐기돌: 벽을 가진 아군 하나당 주는 피해 +{1}%, 최대 {2}%
