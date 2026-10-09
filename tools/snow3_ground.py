@@ -6,9 +6,8 @@ snow3_ground.py — 2026-10-09. 설원 3판 지상 땅 → tools/Snow3_Ground_da
   구역 다각형을 그림 10px(= 37 스터드) 칸으로 나눠 칸 가운데가 든 구역에 주고, 같은 구역 칸을 큰 직사각형으로 묶는다(계단식).
 바닷가: 섬 바깥 변(칸 경계)을 곧은 토막으로 이어, 토막마다 바위 벼랑. 높이·깊이는 손 표(CLIFF_STYLE)를 차례로 돌려 쓴다.
 계단 단(2026-10-09 사용자: "설원은 높낮이 차를 천천히 채울 거야, 여러 개로" → "경사가 아니라 네모난 블록들을 차근차근"):
-  단과 단 사이 모든 벽(칸 경계)을 곧은 토막으로 잇고, 토막을 손 표(SLOPE_RUNS) 길이로 나눠 조각마다 퍼짐(SLOPE_GRADS: 높이 차 / 퍼짐)과
-  켜 높이(STEP_H)를 달리해 낮은 쪽에 직사각형 블록을 여러 켜로 깐다(벽에 가까울수록 높게). 낮은 땅 밖으로 나가면 퍼짐을 줄인다.
-  높은 단의 볼록 모서리도 같은 켜로 메운다. 쐐기 비탈·한 줄 오르막은 쓰지 않는다.
+  → 다시 "썰매장마냥 놓지 말고" + 참고 사진(눈 협곡): 반듯한 켜 대신 손으로 짠 바위 덩어리 본보기(CLUSTERS)를 벽 따라 차례로·거울 번갈아
+  놓는다. 높이 비 × 높이 차, 깊이는 높이 차에 맞춰 줄이고 낮은 땅 밖으로 나가면 자른다. 쐐기·한 줄 오르막·반듯한 띠는 쓰지 않는다.
 돌리기: python tools/snow3_ground.py (문제 0건) → 짓기: tools/Snow3_Build.luau 머리 주석
 """
 import math
@@ -25,11 +24,21 @@ X0, X1, Y0, Y1 = 120, 880, 930, 1500
 CLIFF_STYLE = [(10, 26), (18, 30), (6, 24), (14, 28), (22, 32), (8, 24), (16, 28), (4, 22), (12, 26), (20, 30)]
 # 오르막 { 이름, 시작(X,Y), 끝(X,Y), 시작 높이, 끝 높이, 폭 스터드 } — 그림 좌표, 높은 단 벽 바로 바깥(낮은 땅 위)
 RAMPS = []  # 2026-10-09 비탈(slopes)로 바꿈
-# 비탈 손 표: 토막을 이 길이(칸)들로 차례로 나누고, 조각마다 기울기를 차례로(완만 0.07 ~ 0.15)
-SLOPE_RUNS = [4, 6, 3, 5, 7, 4, 2, 6, 5, 3]
-SLOPE_GRADS = [0.10, 0.13, 0.08, 0.11, 0.15, 0.09, 0.12, 0.07, 0.14, 0.10]
-# 계단 한 켜 높이(손 표) — 조각마다 차례로. 4 넘으면 뛰어올라야 해서 2.5~4
-STEP_H = [3.0, 3.5, 2.5, 4.0, 3.0, 2.5, 3.5, 3.0]
+# 단 사이 바위 덩어리 본보기(손으로 — 사용자 참고 사진: 눈 협곡, 크기 제각각 바위 상자가 엇갈려 쌓이고 턱이 튀어나옴).
+# 상자 { u0, u1 (벽 따라 스터드), v0, v1 (벽에서 낮은 쪽으로 스터드, 높이 차 40 기준), 윗면 높이 비(0 = 낮은 땅, 1 = 높은 단) }.
+# 이웃 상자 높이 비 차는 0.16 아래(높이 차 40 이면 6.4 — 뛰어 오를 수 있게). 1 넘는 것은 벽 위로 솟은 바위 기둥.
+CLUSTERS = [
+    (130, [(0, 60, 0, 45, 0.88), (55, 130, 0, 30, 0.95), (0, 40, 45, 85, 0.66), (35, 95, 30, 75, 0.74), (95, 130, 30, 60, 0.6),
+           (20, 80, 85, 125, 0.44), (80, 130, 60, 110, 0.4), (0, 30, 85, 140, 0.26), (45, 110, 125, 170, 0.12),
+           (100, 125, 110, 135, 0.27), (60, 76, 8, 26, 1.18)]),
+    (110, [(0, 110, 0, 25, 0.92), (0, 50, 25, 70, 0.76), (50, 110, 25, 50, 0.82), (60, 110, 50, 95, 0.6), (0, 45, 70, 110, 0.5),
+           (30, 80, 95, 135, 0.34), (80, 110, 95, 150, 0.2), (0, 30, 110, 160, 0.12)]),
+    (150, [(0, 80, 0, 35, 0.82), (80, 150, 0, 50, 0.9), (10, 60, 35, 80, 0.66), (60, 120, 50, 90, 0.7), (120, 150, 50, 85, 0.5),
+           (0, 45, 80, 120, 0.36), (45, 110, 90, 130, 0.5), (110, 150, 85, 140, 0.3), (20, 90, 130, 175, 0.16),
+           (95, 112, 18, 36, 1.12)]),
+    (95, [(0, 95, 0, 35, 0.86), (0, 40, 35, 75, 0.62), (40, 95, 35, 65, 0.72), (45, 95, 65, 110, 0.48), (0, 50, 75, 120, 0.34),
+          (10, 70, 120, 155, 0.16), (70, 95, 110, 140, 0.22)]),
+]
 
 
 def inside(pt, poly):
@@ -172,36 +181,32 @@ def coast(g, nx, ny):
 
 
 def slopes(g, nx, ny, bad):
-    """→ 쐐기 [(종류, cx, cy, cz, sx, sy, sz, 돌림)]. 종류 W: 로컬 +Z 가 높다(돌림 = 높은 쪽을 보는 방향의 y 각),
-    C: 모서리 쐐기(로컬 (+X,-Z) 꼭짓점이 높다)."""
+    """단 사이 벽마다 바위 덩어리 무리(CLUSTERS)를 차례로(거울 번갈아) 놓는다 → [("R", (x0,x1,z0,z1), 아래, 위, 색)]"""
     def top(i, j):
         if 0 <= i < nx and 0 <= j < ny and g[i][j] is not None:
             return ZONES[g[i][j]][2]
         return None
-    # 벽 칸 변: (축, 바깥 방향, 높은 칸 좌표) — 높은 칸 (i,j) 에서 방향 d 로 한 칸 옆이 낮은 땅
-    dirs = {(0, 1): "S", (0, -1): "N", (1, 0): "E", (-1, 0): "W"}
+    dirs = {"S": (0, 1), "N": (0, -1), "E": (1, 0), "W": (-1, 0)}
     walls = {}
     for i in range(nx):
         for j in range(ny):
             h = top(i, j)
             if h is None:
                 continue
-            for (di, dj), name in dirs.items():
+            for name, (di, dj) in dirs.items():
                 lo = top(i + di, j + dj)
                 if lo is not None and lo < h:
                     walls.setdefault((name, h, lo), set()).add((i, j))
-    pieces = []
-    seg_depth = {}  # (높은 칸, 방향) → 깊이(스터드) — 모서리 쐐기용
+    out = []
     k = 0
-    for (name, h, lo), cells in walls.items():
-        di, dj = {"S": (0, 1), "N": (0, -1), "E": (1, 0), "W": (-1, 0)}[name]
-        along = (1, 0) if dj != 0 else (0, 1)
-        # 곧은 토막: 벽 줄(같은 j 또는 i)마다 이어진 칸
+    for (name, h, lo), cells in sorted(walls.items()):
+        di, dj = dirs[name]
+        dh = h - lo
+        sv = max(0.35, min(1.0, dh / 40))  # 깊이 배율
         lines = {}
         for (i, j) in cells:
-            key = j if dj != 0 else i
-            lines.setdefault(key, []).append(i if dj != 0 else j)
-        for key, idx in lines.items():
+            lines.setdefault(j if dj != 0 else i, []).append(i if dj != 0 else j)
+        for key, idx in sorted(lines.items()):
             idx.sort()
             runs, cur = [], [idx[0]]
             for v in idx[1:]:
@@ -212,76 +217,53 @@ def slopes(g, nx, ny, bad):
                     cur = [v]
             runs.append(cur)
             for run in runs:
-                p = 0
-                while p < len(run):
-                    n = SLOPE_RUNS[k % len(SLOPE_RUNS)]
-                    grad = SLOPE_GRADS[k % len(SLOPE_GRADS)]
+                # 벽 선(월드): 따라가는 축 시작·끝, 고정 좌표, 바깥 방향
+                if dj != 0:
+                    wall = world(0, Y0 + (key + (1 if dj > 0 else 0)) * CELL)[1]
+                    a0, a1 = world(X0 + run[0] * CELL, 0)[0], world(X0 + (run[-1] + 1) * CELL, 0)[0]
+                else:
+                    wall = world(X0 + (key + (1 if di > 0 else 0)) * CELL, 0)[0]
+                    a0, a1 = world(0, Y0 + run[0] * CELL)[1], world(0, Y0 + (run[-1] + 1) * CELL)[1]
+                out_dir = dj if dj != 0 else di
+
+                def fit_at(u):
+                    """벽 따라 u(월드) 자리에서 낮은 땅이 몇 스터드 이어지나"""
+                    c = int(((u - a0) / (CELL * SCALE)))
+                    c = max(0, min(len(run) - 1, c))
+                    ci, cj = (run[c], key) if dj != 0 else (key, run[c])
+                    f = 0
+                    while f < 40 and top(ci + di * (f + 1), cj + dj * (f + 1)) == lo:
+                        f += 1
+                    return f * CELL * SCALE
+
+                cur_u = a0
+                while cur_u < a1 - 4:
+                    W, boxes = CLUSTERS[k % len(CLUSTERS)]
+                    mirror = (k // len(CLUSTERS)) % 2 == 1
                     k += 1
-                    part = run[p:p + n]
-                    p += n
-                    dh = h - lo
-                    want = dh / grad  # 스터드
-                    # 낮은 쪽으로 몇 칸까지 같은 낮은 땅인가(조각 폭 전체)
-                    fit = 0
-                    while fit < 60:
-                        ok = True
-                        for v in part:
-                            ci, cj = (v, key) if dj != 0 else (key, v)
-                            ti, tj = ci + di * (fit + 1), cj + dj * (fit + 1)
-                            if top(ti, tj) != lo:
-                                ok = False
-                                break
-                        if not ok:
-                            break
-                        fit += 1
-                    depth = min(want, fit * CELL * SCALE)
-                    if depth < dh / 0.4:
-                        bad.append(f"비탈 {name} {h}->{lo} 줄 {key} 칸 {part[0]}: 자리 {fit}칸 — 너무 가파름({dh / max(depth, 1):.2f})")
-                        depth = max(depth, 1)
-                    # 계단 켜(사용자: 경사 말고 네모난 블록을 차근차근) — 켜 높이는 손 표(STEP_H)를 조각마다 차례로
-                    n = max(2, round(dh / STEP_H[k % len(STEP_H)]))
-                    v0, v1 = part[0], part[-1] + 1
-                    for st in range(1, n):
-                        d = depth * st / n
-                        tp = h - dh * st / n
+                    for (u0, u1, v0, v1, f) in boxes:
+                        if mirror:
+                            u0, u1 = W - u1, W - u0
+                        x0, x1 = cur_u + u0, min(cur_u + u1, a1)
+                        if x1 - x0 < 4:
+                            continue
+                        fit = min(fit_at(x0 + 0.1), fit_at(x1 - 0.1))
+                        d0, d1 = v0 * sv, min(v1 * sv, fit)
+                        if f <= 1 and d1 - d0 < 4:
+                            continue
+                        if f > 1:  # 솟은 바위: 벽에 붙여 높은 단 쪽으로도 조금 들어가게
+                            d0, d1 = -abs(d1 - d0) * 0.5, d1
+                        topy = lo + f * dh
+                        if topy - lo < 1.5:
+                            continue
+                        n0, n1 = wall + out_dir * (d0 - 0.5), wall + out_dir * d1
                         if dj != 0:
-                            wall_y = Y0 + (key + (1 if dj > 0 else 0)) * CELL
-                            (wxa, wz), (wxb, _) = world(X0 + v0 * CELL, wall_y), world(X0 + v1 * CELL, wall_y)
-                            box = (wxa, wxb, min(wz - dj * 0.5, wz + dj * d), max(wz - dj * 0.5, wz + dj * d))
+                            box = (x0, x1, min(n0, n1), max(n0, n1))
                         else:
-                            wall_x = X0 + (key + (1 if di > 0 else 0)) * CELL
-                            (wx, wza), (_, wzb) = world(wall_x, Y0 + v0 * CELL), world(wall_x, Y0 + v1 * CELL)
-                            box = (min(wx - di * 0.5, wx + di * d), max(wx - di * 0.5, wx + di * d), wza, wzb)
-                        pieces.append(("B", box, lo - 2, tp, st % 2))
-                    for v in (part[0], part[-1]):
-                        ci, cj = (v, key) if dj != 0 else (key, v)
-                        seg_depth[(ci, cj, name)] = (depth, n)
-    # 볼록 모서리: 높은 칸 하나에 두 방향(예: S·E) 벽 계단이 다 있고 대각 칸이 같은 낮은 땅 → 모서리도 계단 켜로 메운다
-    corners = 0
-    for (ci, cj, a), (da, na) in list(seg_depth.items()):
-        for b in ("E", "W") if a in ("S", "N") else ():
-            got = seg_depth.get((ci, cj, b))
-            if got is None:
-                continue
-            db, nb = got
-            sj = 1 if a == "S" else -1
-            si = 1 if b == "E" else -1
-            h = top(ci, cj)
-            lo1, lo2, lo3 = top(ci, cj + sj), top(ci + si, cj), top(ci + si, cj + sj)
-            if not (lo1 == lo2 == lo3) or lo1 is None:
-                continue
-            vx = X0 + (ci + (1 if si > 0 else 0)) * CELL
-            vy = Y0 + (cj + (1 if sj > 0 else 0)) * CELL
-            wx, wz = world(vx, vy)
-            nc = max(na, nb)
-            dh = h - lo1
-            for st in range(1, nc):
-                ex, ez = db * st / nc, da * st / nc
-                tp = h - dh * st / nc
-                box = (min(wx - si * 0.5, wx + si * ex), max(wx - si * 0.5, wx + si * ex), min(wz - sj * 0.5, wz + sj * ez), max(wz - sj * 0.5, wz + sj * ez))
-                pieces.append(("B", box, lo1 - 2, tp, st % 2))
-            corners += 1
-    return pieces, corners
+                            box = (min(n0, n1), max(n0, n1), x0, x1)
+                        out.append(("R", box, lo - 2, topy, k % 2))
+                    cur_u += W
+    return out, 0
 
 
 def zone_at(X, Y, g):
@@ -339,4 +321,4 @@ if __name__ == "__main__":
     out += [f"	{{ {bx[0]:.1f}, {bx[1]:.1f}, {bx[2]:.1f}, {bx[3]:.1f}, {lo:.1f}, {tp:.2f}, {c} }}," for _, bx, lo, tp, c in wedges]
     out += ["}"]
     open(os.path.join(HERE, "Snow3_Ground_data.luau"), "w", encoding="utf-8", newline="\n").write("\n".join(out) + "\n")
-    print(f"땅 판 {len(tiles)} · 벼랑 {len(cliffs)} · 계단 켜 {len(wedges)}(모서리 {ncorner}곳 포함) · 문제 {len(bad)}건")
+    print(f"땅 판 {len(tiles)} · 벼랑 {len(cliffs)} · 바위 상자 {len(wedges)} · 문제 {len(bad)}건")
