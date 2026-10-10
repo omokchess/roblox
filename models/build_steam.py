@@ -209,6 +209,9 @@ def gear(g, mat, cx, cy, cz, r, teeth, t, axis="y", depth=None):
         g["Iron"].cyl(cx, cy, cz - t / 2 - 0.3, r * 0.22, r * 0.22, t + 0.6, seg=10)
 
 
+WIN_OUT = 0.1
+
+
 def window(g, cx, cy, z0, w, h, face="-y", cross=True, frame="Iron", glass="Glow", sill=True):
     """벽 겉면(cx,cy 가 벽면 위 한 점)에 붙이는 창. face 는 벽이 바라보는 쪽"""
     s = -1 if face[0] == "-" else 1
@@ -216,7 +219,9 @@ def window(g, cx, cy, z0, w, h, face="-y", cross=True, frame="Iron", glass="Glow
     zc = z0 + h / 2
 
     def B(mat, u, dn, z, su, sn, sz):
-        # u: 벽을 따라, dn: 벽 바깥으로
+        # u: 벽을 따라, dn: 벽 바깥으로. 창 전체를 WIN_OUT 만큼 벽에서 띄운다
+        # (2026-10-09 사용자: 창이 벽과 깜빡인다 → 0.1 앞으로)
+        dn += WIN_OUT
         if ax == "y":
             g[mat].box(cx + u, cy + s * dn, z, su, sn, sz)
         else:
@@ -620,7 +625,7 @@ def zapfen(g):
         for s in (-1, 1):
             x = s * (11.0 + k * 7.0)
             window(g, x, fy, 7.0, 3.0, 9.0, cross=True)
-            g["Glow"].hcyl(x, fy - 0.1, 16.0, 1.5, 0.2, axis="y", seg=12)
+            g["Glow"].hcyl(x, fy - 0.1 - WIN_OUT, 16.0, 1.5, 0.2, axis="y", seg=12)
             window(g, x, D / 2, 7.0, 3.0, 9.0, face="+y")
     # 굴뚝 셋. 뒤쪽. 높이를 달리한다
     for x, h in ((-19.0, 56.0), (0.0, 50.0), (19.0, 53.0)):
@@ -666,7 +671,7 @@ def frostig(g):
     fy = -D / 2
     # 진열창. 넓게, 쇠살 셋
     SX, SW, SH = 4.5, 10.0, 5.2
-    g["Glow"].box(SX, fy - 0.1, 3.3 + SH / 2, SW, 0.2, SH)
+    g["Glow"].box(SX, fy - 0.1 - WIN_OUT, 3.3 + SH / 2, SW, 0.2, SH)
     g["Brass"].box(SX, fy - 0.3, 3.3 + SH + 0.2, SW + 0.8, 0.4, 0.4)
     g["Brass"].box(SX, fy - 0.3, 3.3 - 0.2, SW + 0.8, 0.4, 0.4)
     for k in range(4):
@@ -835,12 +840,12 @@ def figuren(g):
             x = -W / 2 + 5.0 + k * 5.6
             if abs(x) < TW / 2 + 1.0:
                 continue
-            g["Glow"].box(x, -D / 2 - 0.1, z + 2.0, 0.8, 0.2, 4.0)
+            g["Glow"].box(x, -D / 2 - 0.1 - WIN_OUT, z + 2.0, 0.8, 0.2, 4.0)
             g["StoneTrim"].box(x, -D / 2 - 0.3, z - 0.2, 1.6, 0.6, 0.4)
-            g["Glow"].box(x, D / 2 + 0.1, z + 2.0, 0.8, 0.2, 4.0)
+            g["Glow"].box(x, D / 2 + 0.1 + WIN_OUT, z + 2.0, 0.8, 0.2, 4.0)
     for s in (-1, 1):
         for k in range(3):
-            g["Glow"].box(s * (W / 2 + 0.1), -6.0 + k * 6.0, 15.5, 0.2, 0.8, 4.0)
+            g["Glow"].box(s * (W / 2 + 0.1 + WIN_OUT), -6.0 + k * 6.0, 15.5, 0.2, 0.8, 4.0)
     pipe(g, [(W / 2 - 4.0, D / 2 + 0.8, 1.0), (W / 2 - 4.0, D / 2 + 0.8, 24.0)], 0.6, mat="Iron")
     vent(g, W / 2 - 4.0, D / 2 + 0.8, 24.8)
 

@@ -4,7 +4,7 @@ build_steam_town.py — 2026-10-09. 설원 마을(슈네라이히) 새 건물. b
 
 사용자 마을 확대 그림(설원 지도.jpg)의 건물 중 옛 키트에 없는 것:
   Clock_Tower   광장 시계탑. 벽돌 몸 + 네 면 시계 + 구리 뾰족지붕
-  Observatory   천문대(조율자 전직). 돌 북 위 녹청 둥근 지붕, 갈라진 틈, 놋쇠 망원경
+  Observatory   천문대(조율자 전직) → 2판은 build_steam_obs.py(들어가는 건물·도는 돔·망원경) + 놀이터 소품
   Casino_Hall   카지노+경매장. 기둥 앞면, 큰 아치 불빛창, 원통 지붕 + 옆 경매동(맞배)
   Steam_Factory 공장. 긴 벽돌동, 굴뚝 넷, 보일러 통·관
   Shop_Blue/Gold/Teal/Red  상점(잡화·장비·물약·강화소): 진열창·차양·걸린 간판(색으로 가름)
@@ -24,6 +24,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import hanok_lib as L  # noqa: E402
 import build_steam as S  # noqa: E402
+import build_steam_obs as O  # noqa: E402  (천문대 2판·놀이터 — 2026-10-09)
 
 PAL = dict(S.PALETTE)
 PAL.update({"SignBlue": "#3A5FA8", "SignGold": "#C9A23A", "SignTeal": "#3E9C93", "SignRed": "#A83A3A", "SignPurple": "#6B4AA0",
@@ -66,34 +67,6 @@ def clock_tower(g):
     S.gear(g, "Brass", 0, -6.2, 24.0, 2.6, 14, 0.4)
     S.gear(g, "Copper", 3.6, -6.25, 26.6, 1.4, 10, 0.4)
     g["LampPt"].box(0, -9.0, 50.5, 0.6, 0.6, 0.6)
-
-
-def observatory(g):
-    g["Stone"].cyl(0, 0, 0, 19, 19, 3.0, seg=28)
-    g["Brick"].cyl(0, 0, 3.0, 16, 16, 14.0, seg=28)
-    g["StoneTrim"].cyl(0, 0, 16.6, 16.8, 16.8, 0.8, seg=28)
-    # 녹청 둥근 지붕(층층 원뿔대로)
-    n = 8
-    for k in range(n):
-        a0, a1 = math.asin(k / n), math.asin((k + 1) / n)
-        r0, r1 = 15.6 * math.cos(a0), 15.6 * math.cos(a1)
-        z0 = 17.4 + 15.6 * math.sin(a0)
-        dz = 15.6 * (math.sin(a1) - math.sin(a0))
-        g["Verdigris"].cyl(0, 0, z0, r0, max(r1, 0.6), dz, seg=28)
-    g["SnowCap"].cyl(0, 0, 17.4 + 15.6 * math.sin(math.asin(6 / 8)), 15.6 * math.cos(math.asin(6 / 8)) * 0.98, 1.5, 4.2, seg=28)
-    # 관측 틈 + 망원경
-    g["Iron"].obox(0, -6.5, 26.0, 3.2, 12.0, 0.6, rx=0.85)
-    g["Brass"].obox(0, -9.5, 30.0, 2.4, 14.0, 2.4, rx=0.75)
-    g["Brass"].obox(0, -14.6, 35.0, 3.2, 1.2, 3.2, rx=0.75)
-    S.door(g, 0, -16, 3.0, 4.0, 7.4)
-    for face, (cx, cy) in (("+y", (0, 16)), ("-x", (-16, 0)), ("+x", (16, 0))):
-        S.window(g, cx, cy, 7.0, 2.6, 4.4, face=face)
-    # 옆 작은 별관(조율자 전직 접수)
-    g["Stone"].box(-20, 6, 1.0, 11, 12, 2.0)
-    g["BrickDark"].box(-20, 6, 2 + 5, 10, 11, 10)
-    S.roof_gable(g, -20, 6, 12.0, 10.6, 11.6, 4.0, along="x")
-    S.window(g, -25, 6, 5.0, 2.2, 3.4, face="-x")
-    g["LampPt"].box(0, -19.0, 10.0, 0.6, 0.6, 0.6)
 
 
 def casino(g):
@@ -272,7 +245,6 @@ def under_gate(g):
 
 JOBS = [
     ("Clock_Tower", "Clock", clock_tower),
-    ("Observatory", "Obs", observatory),
     ("Casino_Hall", "Casino", casino),
     ("Steam_Factory", "Fact", factory),
     ("Shop_Blue", "ShopB", shop("SignBlue")),
@@ -282,7 +254,7 @@ JOBS = [
     ("Inn_House", "Inn", inn),
     ("Ticket_Booth", "Ticket", ticket_booth),
     ("Under_Gate", "UGate", under_gate),
-]
+] + O.JOBS
 
 if __name__ == "__main__":
     RENDER = "render" in (sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])

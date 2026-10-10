@@ -40,7 +40,15 @@ KIT = {
     "Herzofen": ((-20.0, 20.0, -20.0, 20.0), (-20.4, 20.4, -20.4, 20.4)),
     "Inn_House": ((-12.6, 12.6, -10.0, 8.6), (-12.6, 12.6, -13.7, 13.7)),
     "Mooring_Mast": ((-4.5, 4.5, -4.5, 4.5), (-4.5, 4.5, -8.9, 4.5)),
-    "Observatory": ((-19.0, 25.5, -19.0, 19.0), (-19.0, 26.7, -19.0, 19.0)),
+    "Observatory": ((-26.0, 26.0, -28.7, 26.0), (-26.0, 26.0, -28.7, 26.0)),   # 2판(들어가는 원통, build_steam_obs.py)
+    "Play_Swing": ((-7.7, 7.7, -2.8, 2.8), (-8.1, 8.1, -3.1, 3.1)),
+    "Play_Slide": ((-2.3, 2.3, -14.2, 4.6), (-2.7, 2.7, -14.2, 4.6)),
+    "Play_Seesaw": ((-1.1, 1.1, -6.1, 6.1), (-1.1, 1.1, -6.1, 6.1)),
+    "Play_RoundBase": ((-4.9, 4.9, -4.9, 4.9), (-4.9, 4.9, -4.9, 4.9)),
+    "Play_Dome": ((-4.7, 4.7, -4.7, 4.7), (-4.7, 4.7, -4.7, 4.7)),
+    "Park_Bench": ((-3.0, 3.0, -0.9, 0.9), (-3.0, 3.0, -0.9, 0.9)),
+    "Snowman": ((-1.6, 1.6, -1.6, 1.6), (-2.5, 2.5, -1.6, 1.6)),
+    "Sled": ((-0.8, 0.8, -3.2, 2.0), (-0.8, 0.8, -3.2, 2.0)),
     "Sel_Werk_Ruin": ((-12.6, 12.6, -9.6, 9.6), (-15.2, 12.6, -10.0, 10.5)),
     "Shop_Blue": ((-8.6, 8.6, -8.0, 6.6), (-8.6, 10.7, -11.4, 9.6)),
     "Shop_Red": ((-8.6, 8.6, -8.0, 6.6), (-8.6, 10.7, -11.4, 9.6)),
@@ -54,7 +62,7 @@ KIT = {
     "Vertical_Boiler": ((-3.7, 3.7, -3.7, 3.7), (-3.7, 4.6, -3.8, 3.7)),
     "Zapfen_Werk": ((-45.0, 40.0, -21.0, 18.0), (-46.7, 40.0, -21.0, 18.0)),
 }
-SMALL = {"Gas_Lamp", "Boiler_Tank", "Big_Gear", "Vertical_Boiler"}
+SMALL = {"Gas_Lamp", "Boiler_Tank", "Big_Gear", "Vertical_Boiler", "Park_Bench", "Snowman", "Sled", "Play_Seesaw"}
 A, B, C_, SR, ST, SB = "Steam_House_A", "Steam_House_B", "Steam_House_C", "Shop_Red", "Shop_Teal", "Shop_Blue"
 
 # 들어갈 수 있는 건물. (이름표: 안쪽 방 id, 문 로컬 x, z(배율 1), 문 폭) — 옛 Snow_City 와 같은 값, 배율은 짓는 쪽이 곱한다
@@ -96,7 +104,7 @@ BUILD = [
     ("Casino_Hall", -4665, -3830, 90, "카지노", "", 1.3),         # 동. 앞이 동대로(서)를 본다
     ("Steam_Factory", -5240, -3818, -90, "공장", "", 1.3),        # 서. 앞이 서대로(동)를 본다
     ("Herzofen", -5250, -3922, -90, "공장", "", 1.0),             # 감정 변환로 — 난방관이 여기서 나온다
-    ring("Observatory", TH_SW, 262, "천문대", "", 1.3),            # 남서, 조율자 전직
+    ring("Observatory", TH_SW, 262, "천문대", "", 1.0),            # 남서, 조율자 전직 — 2판: 걸어 들어간다(문 순간이동 없음)
     ("Figuren_HQ", -4560, -3660, 90, "체스판", "figuren", 1.2),   # 남동, 앞에 체스판 연병장
     ("Mooring_Mast", CX + 52, -3600, 180, "계류탑", "", 1.0),     # 남. 비행선은 마을 끝 바위 위에 뜬다
     ("Ticket_Booth", CX + 30, -3600, 90, "계류탑", "", 1.0),      # 티켓 판매점 — 대로 쪽을 본다
@@ -221,6 +229,46 @@ BUILD += [
 # ── 체스판 둘레: 남쪽 줄은 판을 보고, 남동 골목 끝 두 채 ──
 BUILD += [(C_, -4640, -3606, 0, "체스판", "", 1.0), (A, -4608, -3606, 0, "체스판", "", 1.0), (C_, -4578, -3606, 0, "체스판", "", 1.0),
           (A, -4706, -3642, 180, "남쪽거리", "", 1.0), (C_, -4674, -3646, 180, "남쪽거리", "", 1.0)]
+# ── 놀이터(초록 구역 — 동대로 남쪽 · 카지노 남서 · 남동 골목 북쪽). 바닥 = 놀이터서·놀이터동 포장 ──
+BUILD += [
+    ("Play_Swing", -4738, -3786, 0, "놀이터", "", 1.0),
+    ("Play_Slide", -4710, -3790, 180, "놀이터", "", 1.0),      # 미끄럼판이 남쪽(+z)으로
+    ("Play_Dome", -4744, -3755, 0, "놀이터", "", 1.0),
+    ("Play_Seesaw", -4718, -3752, 90, "놀이터", "", 1.0),
+    ("Play_RoundBase", -4668, -3748, 0, "놀이터", "", 1.0),    # 위에 Play_Round 가 돈다
+    ("Snowman", -4686, -3712, 45, "놀이터", "", 1.0),
+    ("Park_Bench", -4648, -3730, 90, "놀이터", "", 1.0),
+    ("Park_Bench", -4648, -3712, 90, "놀이터", "", 1.0),
+    ("Park_Bench", -4752, -3741, 0, "놀이터", "", 1.0),
+]
+# 놀이터 울타리(무쇠, 높이 3). 꺾은선마다 끊긴 자리가 문(북 동대로 쪽 · 동 동쪽 거리 쪽 · 서 고리 쪽)
+FENCES = [
+    [(-4762, -3801), (-4735, -3801)],
+    [(-4727, -3801), (-4697, -3801), (-4697, -3775.5), (-4637, -3775.5), (-4637, -3742)],
+    [(-4637, -3734), (-4637, -3698), (-4697, -3698), (-4762, -3737), (-4762, -3770)],
+    [(-4762, -3778), (-4762, -3801)],
+]
+# ── 얼어붙은 연못(주황 구역 — 남동 골목 · 바깥 고리 집 · 남쪽 거리 집 사이 세모 땅). 건물 대신 스케이트 타는 연못 ──
+# 얼음 = 겹친 원판 넷(높이를 0.02 씩 달리해 겹친 곳이 깜빡이지 않게). (x, z, 반지름, 땅 위 높이)
+POND = [(-4775, -3680, 18, 0.30), (-4745, -3672, 14, 0.32), (-4718, -3668, 10, 0.34), (-4793, -3702, 9, 0.36)]
+# 둘레 바위 (x, z, 크기, 돌림) — 손으로
+ROCKS = [(-4796, -3710, 3.2, 20), (-4804, -3696, 2.6, 50), (-4795, -3672, 3.4, 10), (-4790, -3660, 2.4, 70),
+         (-4770, -3659, 2.2, 30), (-4752, -3655, 2.8, 15), (-4730, -3656, 2.4, 60), (-4710, -3657, 3.0, 25),
+         (-4704, -3670, 2.6, 80), (-4712, -3681, 2.2, 40), (-4732, -3688, 3.0, 5), (-4755, -3690, 2.4, 35),
+         (-4772, -3700, 2.8, 65), (-4785, -3713, 2.2, 15)]
+FIRES = [(-4738, -3699)]   # 불 피운 쇠 통(몸 녹이는 자리)
+BUILD += [
+    ("Park_Bench", -4752, -3697, 180, "연못", "", 1.0),
+    ("Park_Bench", -4722, -3686, 200, "연못", "", 1.0),
+    ("Snowman", -4808, -3672, 120, "연못", "", 1.0),
+    ("Snowman", -4700, -3662, -60, "연못", "", 1.0),
+    ("Sled", -4790, -3656, 70, "연못", "", 1.0),
+]
+# 눈 나무(숲 키트를 눈 색으로 — Snow_Field 와 같은 방식). (틀, x, z, yaw, 배율)
+TREES = [("Pine_A", -4790, -3724, 0, 0.5), ("Pine_B", -4698, -3668, 40, 0.45), ("Birch_A", -4815, -3664, 0, 0.5),
+         ("Pine_B", -4755, -3728, 110, 0.45)]   # 숲 키트 나무는 커서(필드 1.1~1.7) 마을에선 절반 아래로
+LAMPS_EXTRA = [(-4763, -3766, -90), (-4642, -3760, 90), (-4765, -3702, 180), (-4712, -3654, 0)]
+
 # ── 동쪽 고원 바깥: 차펜 공방이 불태운 옛 설 공방 폐허와 그을린 마당(1판 OUTSIDE 와 같은 자리, 땅 높이 43.8) ──
 RUIN = (-3084.8, -3921.0)
 BUILD += [
@@ -279,6 +327,8 @@ PAVES = [
     ("남쪽전망대", CX - 30, -3626, CX + 22, -3590, "stone"),
     ("연병장", -4650, -3688, -4594, -3632, "chess"),
     ("석탄마당", -5306, -3778, -5180, -3706, "soot"),
+    ("놀이터서", -4760, -3798, -4695, -3735, "play"),      # 초록 구역(사용자 그림): 동대로 남쪽 · 카지노 남서 · 남동 골목 북쪽
+    ("놀이터동", -4695, -3772, -4640, -3700, "play"),
     ("탄마당", RUIN[0] - 40, RUIN[1] - 38, RUIN[0] + 40, RUIN[1] + 38, "soot"),
 ]
 
@@ -318,7 +368,7 @@ _t = (N_Y - _jn[1]) / _nz
 PIPES = [
     ("고리관북", pipe_ring(-360 + TH_JW, TH_JE, [TH_JNE, TH_JN])),
     ("고리관남", pipe_ring(10, 170, [TH_JS])),
-    ("서관", [(-5229, -3922), (-5182, -3922), (-5182, CZ - OFF), polar(TH_JW, PIPE_R)[:2]]),
+    ("서관", [(-5229, -3922), (-5125, -3922), (-5125, CZ - OFF), polar(TH_JW, PIPE_R)[:2]]),   # 공장 앞마당을 피해 서북 거리 동쪽으로
     ("동관", [polar(TH_JE, PIPE_R)[:2], (-4704, CZ - OFF)]),
     ("북동관", [polar(TH_JNE, PIPE_R)[:2], along(TH_NE, 0, NE_END - 22, OFF)[1]]),
     ("북관", [_jn, (round(_jn[0] + _nx * _t, 2), N_Y), (-5296, N_Y)]),
@@ -331,6 +381,111 @@ JUNCTIONS = [
     (*polar(TH_JN, PIPE_R)[:2], ["고리관북", "북관"]),
     (*polar(TH_JS, PIPE_R)[:2], ["고리관남", "남관"]),
 ]
+
+
+# ── 길을 건너는 관은 끊는다(2026-10-09 사용자: "길막중인 파이프라인 없애고"). 관이 길(대로·고리길·골목·거리) 앞에서
+#    엘보로 꺾여 땅속으로 들어가고 건너편에서 다시 나오는 꼴. 끊긴 끝은 받침판이 길에 걸리지 않게 길 가에서 2.5 띄운다.
+#    모음통 3 안쪽에서 끊기면 끝을 모음통에 붙인다(엘보 없이 통에 꽂힘). 10 보다 짧은 토막은 버린다
+PIPE_MARGIN, CUT_EXTRA, MIN_PIECE, SNAP = 1.5, 1.0, 10.0, 4.0
+
+
+def _road_polys(m):
+    out = []
+    for name, w, mat, pts, lift in ROADS:
+        for a_, b_ in zip(pts, pts[1:]):
+            L_ = math.hypot(b_[0] - a_[0], b_[1] - a_[1])
+            ux_, uz_ = (b_[0] - a_[0]) / L_, (b_[1] - a_[1]) / L_
+            out.append(seg_rect(a_[0] - ux_ * m, a_[1] - uz_ * m, b_[0] + ux_ * m, b_[1] + uz_ * m, w + 2 * m))
+    return out
+
+
+def _inside(poly, x, z):
+    sg = 0
+    for i in range(len(poly)):
+        ax_, az_ = poly[i]
+        bx_, bz_ = poly[(i + 1) % len(poly)]
+        c = (bx_ - ax_) * (z - az_) - (bz_ - az_) * (x - ax_)
+        if c != 0:
+            if sg == 0:
+                sg = 1 if c > 0 else -1
+            elif (c > 0) != (sg > 0):
+                return False
+    return True
+
+
+def split_pipes(pipes, juncs):
+    polys = _road_polys(PIPE_MARGIN)
+    out, pieces_of = [], {}
+    for name, pts in pipes:
+        segs, acc = [], 0.0
+        for a_, b_ in zip(pts, pts[1:]):
+            L_ = math.hypot(b_[0] - a_[0], b_[1] - a_[1])
+            segs.append((acc, L_, a_, b_))
+            acc += L_
+        total = acc
+
+        def at(sv):
+            for s0, L_, a_, b_ in segs:
+                if sv <= s0 + L_ + 1e-9:
+                    t = (sv - s0) / L_
+                    return (a_[0] + (b_[0] - a_[0]) * t, a_[1] + (b_[1] - a_[1]) * t)
+            return pts[-1]
+        step = 0.25
+        n = int(total / step)
+        free = [not any(_inside(pl, *at(k * step)) for pl in polys) for k in range(n + 1)]
+        ivs, k = [], 0
+        while k <= n:
+            if free[k]:
+                k0 = k
+                while k <= n and free[k]:
+                    k += 1
+                ivs.append((k0 * step, min((k - 1) * step, total), k0 > 0, k <= n))
+            else:
+                k += 1
+        jss = []
+        for jx, jz, names in juncs:
+            if name in names:
+                best = min(range(n + 1), key=lambda q: math.hypot(at(q * step)[0] - jx, at(q * step)[1] - jz))
+                jss.append(best * step)
+        names_here = []
+        for s0, s1, cut0, cut1 in ivs:
+            if cut0:
+                s0 += CUT_EXTRA
+            if cut1:
+                s1 -= CUT_EXTRA
+            for sj in jss:
+                if cut0 and abs(sj - s0) < SNAP:
+                    s0, cut0 = sj, False
+                if cut1 and abs(sj - s1) < SNAP:
+                    s1, cut1 = sj, False
+            if s1 - s0 < MIN_PIECE:
+                continue
+            q0 = [at(s0)] + [b_ for s_, L_, a_, b_ in segs if s0 < s_ + L_ < s1] + [at(s1)]
+            q = [q0[0]]
+            for pt in q0[1:]:
+                if math.hypot(pt[0] - q[-1][0], pt[1] - q[-1][1]) > 0.05:
+                    q.append(pt)
+            # 끊긴 끝 바로 옆 꺾임은 엘보가 들어갈 자리가 없으니 꺾인 자리를 끝으로
+            if cut0 and len(q) > 2 and math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) < 3.0:
+                q = q[1:]
+            if cut1 and len(q) > 2 and math.hypot(q[-1][0] - q[-2][0], q[-1][1] - q[-2][1]) < 3.0:
+                q = q[:-1]
+            q = [(round(x_, 2), round(z_, 2)) for x_, z_ in q]
+            names_here.append(q)
+        for i, q in enumerate(names_here):
+            nm = name if len(names_here) == 1 else "%s_%d" % (name, i + 1)
+            out.append((nm, q))
+            pieces_of.setdefault(name, []).append(nm)
+    pd = dict(out)
+    nj = []
+    for jx, jz, names in juncs:
+        mem = [nm for o in names for nm in pieces_of.get(o, [])
+               if min(seg_dist(jx, jz, a_, b_) for a_, b_ in zip(pd[nm], pd[nm][1:])) < 0.3]
+        if mem:
+            nj.append((jx, jz, mem))
+    return out, nj
+
+
 
 
 # ── 가스등 (x, z, yaw). 팔(앞 -Z)이 길 위로 나온다. 관이 지나는 쪽 맞은편에만 ──
@@ -361,6 +516,7 @@ LAMPS += [(x, -3622 + 7, 0) for x in (-4900, -4860, -4822, -4790, -4758, -4726)]
 LAMPS += [(WS_X + 7, z, 90) for z in (-4010, -3950, -3890)]                                # 서북 거리 동쪽 가
 LAMPS += [(x, -3722 - 7, 180) for x in (-4562, -4498)]                                     # 동문길 북쪽 가
 LAMPS += [(x, WK_Z + 7, 0) for x in (-4796, -4730, -4662)]                                 # 공방 골목 남쪽 가
+LAMPS += LAMPS_EXTRA                                                                       # 놀이터·연못
 
 # 톱니 무늬 맨홀 — 대로·거리 위
 MANHOLES = [(CX + 75, CZ + 2), (CX + 180, CZ - 2), (CX - 120, CZ + 2), (CX - 230, CZ - 1), (CX - 2, CZ + 140),
@@ -407,6 +563,10 @@ def seg_dist(px, pz, a, b):
     dx, dz = bx - ax, bz - az
     t = max(0.0, min(1.0, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)))
     return math.hypot(px - ax - t * dx, pz - az - t * dz)
+
+
+PIPES_RAW = PIPES
+PIPES, JUNCTIONS = split_pipes(PIPES_RAW, JUNCTIONS)
 
 
 GROUND = json.load(open(os.path.join(HERE, "snow_town_ground.json"), encoding="utf-8"))
@@ -520,6 +680,16 @@ def check():
             h = ground_at(*q)
             if h is None or abs(h - 59.8) > 0.4:
                 msgs.append("관 %s 점 (%.0f,%.0f) 땅 %s" % (nm, q[0], q[1], h))
+    for tag, items_ in (("연못", [(x, z, r) for x, z, r, h in POND]), ("바위", [(x, z, sz / 2) for x, z, sz, y in ROCKS]),
+                        ("나무", [(x, z, 1.5) for k, x, z, y, sc in TREES]), ("불통", [(x, z, 1.2) for x, z in FIRES])):
+        for x, z, r in items_:
+            sq = [(x - r * 0.7, z - r * 0.7), (x + r * 0.7, z - r * 0.7), (x + r * 0.7, z + r * 0.7), (x - r * 0.7, z + r * 0.7)]
+            for n, p, k, raw in polys:
+                if overlap(sq, raw) and not (tag == "바위" and k in ("Park_Bench",)):
+                    msgs.append("%s (%.0f,%.0f) 이 %s 에 걸림" % (tag, x, z, n))
+            for rn, r_ in rr:
+                if overlap(sq, r_):
+                    msgs.append("%s (%.0f,%.0f) 이 길 %s 에 걸림" % (tag, x, z, rn))
     for vx, vz in VENTS:
         vr = [(vx - 2.6, vz - 2.6), (vx + 2.6, vz - 2.6), (vx + 2.6, vz + 2.6), (vx - 2.6, vz + 2.6)]
         for n, p, k, raw in polys:
@@ -565,7 +735,7 @@ def render(path, region, sc):
                 for j, z in enumerate(range(int(z0), int(z1), 7)):
                     Cv.rect(x, z, x + 7, z + 7, "#e8e8ec" if (i + j) % 2 else "#2c2c30")
         else:
-            Cv.rect(x0, z0, x1, z1, {"stone": "#8a847c", "soot": "#3a3838"}[kind])
+            Cv.rect(x0, z0, x1, z1, {"stone": "#8a847c", "soot": "#3a3838", "play": "#76604a"}[kind])
     for name, w, mat, pts, lift in ROADS:
         for a, b in zip(pts, pts[1:]):
             Cv.line(a[0], a[1], b[0], b[1], w, "#9a9288")
@@ -588,6 +758,17 @@ def render(path, region, sc):
             _, dx, dz, dw = DOORS[t]
             c, s = math.cos(r), math.sin(r)
             Cv.circle(x + (dx * c + dz * s) * sc_, z + (-dx * s + dz * c) * sc_, 2.6, "#40e0ff")
+    for x, z, r, h in POND:
+        Cv.circle(x, z, r, "#a8d4ec")
+    for x, z, sz, y in ROCKS:
+        Cv.circle(x, z, sz / 2, "#707880")
+    for pts in FENCES:
+        for a, b in zip(pts, pts[1:]):
+            Cv.line(a[0], a[1], b[0], b[1], 0.6, "#202020")
+    for k, x, z, y, sc in TREES:
+        Cv.circle(x, z, 4.5 * sc, "#3f6a56", 0.8)
+    for x, z in FIRES:
+        Cv.circle(x, z, 1.2, "#ff7030")
     for name, pts in PIPES:
         for a, b in zip(pts, pts[1:]):
             Cv.line(a[0], a[1], b[0], b[1], 2.6, "#c07a48")
@@ -615,7 +796,8 @@ def lua(v):
 
 def emit(path):
     tables = [("BUILD", BUILD), ("LAMPS", LAMPS), ("ROADS", ROADS), ("PAVES", PAVES), ("PIPES", PIPES),
-              ("VENTS", VENTS), ("MANHOLES", MANHOLES), ("JUNCTIONS", JUNCTIONS)]
+              ("VENTS", VENTS), ("MANHOLES", MANHOLES), ("JUNCTIONS", JUNCTIONS), ("FENCES", FENCES),
+              ("POND", POND), ("ROCKS", ROCKS), ("FIRES", FIRES), ("TREES", TREES)]
     lines = ["-- snow_plan2.py 가 적은 표. 손으로 고치지 말고 snow_plan2.py 를 고쳐 다시 뽑는다", "local D = {}"]
     for name, rows in tables:
         lines.append("D.%s = {" % name)

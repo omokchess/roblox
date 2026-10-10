@@ -40,6 +40,72 @@ RunService.RenderStepped:Connect(function()
 end)
 ]==]
 
+-- 천문대 망원경이 별을 따라간다(적도의 — 극축 하나만 돌리면 된다). 돔은 경통 끝 방위로 돌아 틈을 맞춘다.
+-- 보기 전용이고 서버 시간에 맞춰 모두에게 같다. 값 = models/build_steam_obs.py (블렌더 (x,y,z) → 로블록스 로컬 (-x, z, y))
+local OBS_SCRIPT = [==[
+local CS = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+local H = Vector3.new(0, 20.2284, -2.2981) -- 적위축이 극축과 만나는 점
+local P = Vector3.new(0, 0.6428, -0.7660) -- 극축(위도 40도, 문 쪽)
+local S0 = Vector3.new(0, 0.9397, -0.3420) -- 남중한 별 쪽
+local APERTURE = Vector3.new(3.6, 34.922, -7.752) -- 처음 자세의 경통 끝(차양) 가운데
+local PERIOD = 1200 -- 한 바퀴 20분. 실제 하늘(하루)보다 빨라 "조금씩" 도는 게 보인다
+local DIST = 1400
+local list = {}
+local function newStar()
+	local s = Instance.new("Part")
+	s.Name = "ObservatoryStar"
+	s.Shape = Enum.PartType.Ball
+	s.Size = Vector3.new(14, 14, 14)
+	s.Material = Enum.Material.Neon
+	s.Color = Color3.fromRGB(225, 238, 255)
+	s.Anchored, s.CanCollide, s.CanQuery, s.CanTouch, s.CastShadow = true, false, false, false, false
+	local halo = s:Clone()
+	halo.Name = "ObservatoryStarHalo"
+	halo.Size = Vector3.new(46, 46, 46)
+	halo.Transparency = 0.86
+	halo.Parent = workspace
+	s.Parent = workspace
+	return s, halo
+end
+local function add(m)
+	local dome, scope = m:FindFirstChild("Observatory_Dome"), m:FindFirstChild("Observatory_Scope")
+	if dome and scope and not list[m] then
+		local s, halo = newStar()
+		list[m] = { base = m:GetPivot(), dome = dome, scope = scope, star = s, halo = halo }
+	end
+end
+for _, m in CS:GetTagged("SnowObservatory") do
+	add(m)
+end
+CS:GetInstanceAddedSignal("SnowObservatory"):Connect(add)
+CS:GetInstanceRemovedSignal("SnowObservatory"):Connect(function(m)
+	local o = list[m]
+	if o then
+		o.star:Destroy()
+		o.halo:Destroy()
+		list[m] = nil
+	end
+end)
+RunService.RenderStepped:Connect(function()
+	local t = workspace:GetServerTimeNow()
+	local ang = (t % PERIOD) / PERIOD * 2 * math.pi
+	for m, o in list do
+		if m.Parent then
+			local rot = CFrame.fromAxisAngle(P, ang)
+			local loc = CFrame.new(H) * rot * CFrame.new(-H)
+			o.scope:PivotTo(o.base * loc)
+			local ap = loc * APERTURE
+			o.dome:PivotTo(o.base * CFrame.Angles(0, math.atan2(-ap.X, -ap.Z), 0))
+			local pos = o.base * H + o.base:VectorToWorldSpace(rot:VectorToWorldSpace(S0)) * DIST
+			o.star.Position = pos
+			o.halo.Position = pos
+			o.halo.Transparency = 0.84 + 0.05 * math.sin(t * 3.1)
+		end
+	end
+end)
+]==]
+
 local report = {}
 local function say(fmt, ...)
 	report[#report + 1] = string.format(fmt, ...)
@@ -196,7 +262,9 @@ local okRun, errRun = pcall(function()
 					slab("Rim", e[1], e[2], e[3], e[4], hi + 0.45, C.brass, f)
 				end
 			else
-				slab("Soot", x0, z0, x1, z1, hi + 0.2, C.soot, f)
+				-- 앞마당(stone)은 돌 포장, 석탄·탄 마당(soot)은 그을음, 놀이터(play)는 나무껍질 깔개
+				local col = ({ stone = C.plaza, soot = C.soot, play = { RGB(118, 92, 70), M.Sand } })[kind] or C.soot
+				slab(kind == "soot" and "Soot" or "Pave", x0, z0, x1, z1, hi + 0.2, col, f)
 			end
 		end
 	end
@@ -371,6 +439,267 @@ local okRun, errRun = pcall(function()
 		ship:PivotTo(CFrame.new(a[1], mast:GetPivot().Y + a[4], a[2]) * CFrame.Angles(0, math.rad(a[3]), 0))
 		ship.Name = "Airship"
 		ship.Parent = folder("계류탑")
+	end
+	task.wait()
+
+	--==================================================================== 3d. 천문대(들어가는 건물) · 놀이터 · 얼어붙은 연못
+	-- 천문대 틀(build_steam_obs.py)은 블렌더 좌표 (x, y, z) → 로블록스 로컬 (-x, z, y). 아래 B() 가 그 바꿈이다.
+	-- 보이는 메시는 부딪히지 않게 하고(둥근 벽 메시 충돌은 문 자리를 막을 수 있다), 걸을 자리는 여기서 상자로 짓는다:
+	-- 받침·바닥·문 앞 계단·벽 고리(문 자리 비움)·피어·탁자·책상·책장. 회랑·나선 계단·난간은 보이는 부품 그대로 밟는다.
+	local CSo = game:GetService("CollectionService")
+	do
+		local obs
+		for _, e in ipairs(placed) do
+			if e.kind == "Observatory" then
+				obs = e.m
+			end
+		end
+		assert(obs, "천문대가 없다")
+		local pv = obs:GetPivot()
+		local function B(bx, by, bz)
+			return pv * CFrame.new(-bx, bz, by)
+		end
+		for _, p in ipairs(obs:GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.CanCollide = false
+			end
+		end
+		for _, name in ipairs({ "Observatory_Dome", "Observatory_Scope", "Orrery_A", "Orrery_B", "Orrery_C", "Orrery_D" }) do
+			local c = assert(kit:FindFirstChild(name), name .. " 틀이 없다"):Clone()
+			c:PivotTo(pv)
+			for _, p in ipairs(c:GetDescendants()) do
+				if p:IsA("BasePart") then
+					p.CanCollide = false
+					p.CanQuery = false
+				end
+			end
+			c.Parent = obs
+			local speed = ({ Orrery_A = 24, Orrery_B = 15, Orrery_C = 9, Orrery_D = 5 })[name]
+			if speed then
+				-- 태양계 모형 팔: 탁자 가운데 수직축 둘레(SnowGearSpin 은 피벗의 로컬 Z 둘레로 돌린다)
+				c.WorldPivot = B(-10, 5, 0) * CFrame.Angles(-math.pi / 2, 0, 0)
+				c:SetAttribute("Speed", speed)
+				CSo:AddTag(c, "SnowGear")
+			end
+		end
+		CSo:AddTag(obs, "SnowObservatory")
+		local fc = Instance.new("Folder")
+		fc.Name = "충돌"
+		fc.Parent = obs
+		local function coll(name, cf, size, shape)
+			local p = part(name, cf, size, C.found, fc, shape)
+			p.Transparency = 1
+			p.CastShadow = false
+			return p
+		end
+		local CYL = Enum.PartType.Cylinder
+		coll("Plinth", B(0, 0, 0.85) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(1.7, 52, 52), CYL)
+		coll("Floor", B(0, 0, 1.85) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(0.3, 41, 41), CYL)
+		coll("StepA", B(0, -26.2, 0.565), Vector3.new(12, 1.13, 2.4))
+		coll("StepB", B(0, -28.0, 0.285), Vector3.new(12, 0.57, 1.4))
+		for k = 0, 39 do
+			local a = 9 * k + 4.5
+			local d = ((a - (-90) + 180) % 360) - 180
+			if math.abs(d) > 13.5 then
+				local r = math.rad(a)
+				local c0 = B(21.5 * math.cos(r), 21.5 * math.sin(r), 1.7 + 11.15)
+				local c1 = B(30 * math.cos(r), 30 * math.sin(r), 1.7 + 11.15)
+				coll("Wall", CFrame.lookAt(c0.Position, c1.Position), Vector3.new(3.8, 22.3, 2.4))
+			end
+		end
+		coll("Pier", B(0, 0, 9.0) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(14, 4.2, 4.2), CYL)
+		coll("OrreryTable", B(-10, 5, 3.9) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(3.8, 7.2, 7.2), CYL)
+		coll("Desk", B(-13.2, -6.8, 3.6) * CFrame.Angles(0, math.rad(35), 0), Vector3.new(5.2, 3.2, 2.6))
+		for k = 0, 3 do
+			local a = math.rad(140 + 65 * (k + 0.5) / 4)
+			local c0 = B(19.6 * math.cos(a), 19.6 * math.sin(a), 6.5)
+			local c1 = B(30 * math.cos(a), 30 * math.sin(a), 6.5)
+			coll("Shelf", CFrame.lookAt(c0.Position, c1.Position), Vector3.new(5.6, 9, 1.8))
+		end
+		-- 회랑(높이 14, 30 → 300 도, 계단 자리 비움) + 아래 받침살 + 안쪽 난간
+		local fg = Instance.new("Folder")
+		fg.Name = "회랑"
+		fg.Parent = obs
+		local WOOD = { RGB(90, 62, 44), M.WoodPlanks }
+		local function radial(a_deg, r, z)
+			local a = math.rad(a_deg)
+			return B(r * math.cos(a), r * math.sin(a), z).Position
+		end
+		local function boxAt(name, a_deg, r, z, tang, h, rad_, col, f)
+			local c0 = radial(a_deg, r, z)
+			local c1 = radial(a_deg, r + 10, z)
+			return part(name, CFrame.lookAt(c0, c1), Vector3.new(tang, h, rad_), col, f)
+		end
+		local nseg = 45
+		for k = 0, nseg - 1 do
+			local am = 30 + 6 * k + 3
+			boxAt("Gallery", am, 17.95, 14.0 - 0.3 + (k % 2) * 0.01, 2.25, 0.6, 4.8, WOOD, fg)
+			if k % 4 == 1 then
+				local p0, p1 = radial(am, 20.3, 11.2), radial(am, 16.6, 13.4)
+				part("Strut", CFrame.lookAt((p0 + p1) / 2, p1), Vector3.new(0.35, 0.35, (p1 - p0).Magnitude), C.iron, fg)
+			end
+		end
+		local function rail(p0, p1, f)
+			part("Rail", CFrame.lookAt((p0 + p1) / 2, p1), Vector3.new(0.2, 0.2, (p1 - p0).Magnitude + 0.15), C.iron, f)
+		end
+		local prev
+		local angs = {}
+		for a = 30, 294, 12 do
+			angs[#angs + 1] = a
+		end
+		angs[#angs + 1] = 300
+		for _, a in ipairs(angs) do
+			local base = radial(a, 15.75, 14.0)
+			part("RailPost", CFrame.new(base + Vector3.new(0, 1.6, 0)), Vector3.new(0.25, 3.2, 0.25), C.iron, fg)
+			part("RailCap", CFrame.new(base + Vector3.new(0, 3.3, 0)), Vector3.new(0.4, 0.4, 0.4), C.brass, fg, Enum.PartType.Ball)
+			if prev then
+				rail(prev + Vector3.new(0, 3.1, 0), base + Vector3.new(0, 3.1, 0), fg)
+				rail(prev + Vector3.new(0, 1.6, 0), base + Vector3.new(0, 1.6, 0), fg)
+			end
+			prev = base
+		end
+		-- 회랑 끝(300 도, 계단 시작 위) 가로 난간
+		rail(radial(300, 15.75, 17.1), radial(300, 20.3, 17.1), fg)
+		rail(radial(300, 15.75, 15.6), radial(300, 20.3, 15.6), fg)
+		-- 나선 계단(벽 따라 -60 → 30 도, 15 단, 단 높이 0.8) + 안쪽 손잡이
+		local prevTop
+		for k = 0, 14 do
+			local am = -60 + 6 * k + 3
+			local top = 2.0 + 0.8 * (k + 1)
+			boxAt("Step", am, 18.48, top - 0.25, 2.45, 0.5, 3.75, WOOD, fg)
+			local s0, s1 = radial(am, 20.3, top - 1.2), radial(am, 17.0, top - 0.55)
+			part("StepBracket", CFrame.lookAt((s0 + s1) / 2, s1), Vector3.new(0.3, 0.3, (s1 - s0).Magnitude), C.iron, fg)
+			local hp = radial(am, 16.85, top)
+			part("HandPost", CFrame.new(hp + Vector3.new(0, 1.5, 0)), Vector3.new(0.22, 3.0, 0.22), C.iron, fg)
+			if prevTop then
+				rail(prevTop + Vector3.new(0, 3.0, 0), hp + Vector3.new(0, 3.0, 0), fg)
+			end
+			prevTop = hp
+		end
+		-- 조율자 전직 자리(책상 앞). NPC 를 세울 때 쓴다
+		local spot = part("ClassChangeSpot", B(-10.5, -4.0, 2.0 + 2.5), Vector3.new(2, 5, 2), C.iron, obs)
+		spot.Transparency = 1
+		spot.CanCollide = false
+		spot.CanQuery = false
+		spot:SetAttribute("ClassChange", "조율자")
+		say("천문대: 충돌 %d · 회랑·계단 부품 %d", #fc:GetChildren(), #fg:GetChildren())
+	end
+	-- 놀이터 회전 놀이기구: 받침 위에 판을 얹고 돌린다
+	for _, e in ipairs(placed) do
+		if e.kind == "Play_RoundBase" then
+			local r = kit.Play_Round:Clone()
+			r:PivotTo(e.m:GetPivot())
+			r.WorldPivot = e.m:GetPivot() * CFrame.Angles(-math.pi / 2, 0, 0)
+			r:SetAttribute("Speed", 14)
+			CSo:AddTag(r, "SnowGear")
+			r.Parent = e.m.Parent
+		end
+	end
+	-- 놀이터 울타리(무쇠 기둥 + 가로대 둘 + 살, 기둥 끝 놋쇠 구슬)
+	do
+		local f = folder("놀이터/울타리")
+		for _, pl in ipairs(D.FENCES) do
+			for k = 1, #pl - 1 do
+				local a = Vector3.new(pl[k][1], 0, pl[k][2])
+				local b = Vector3.new(pl[k + 1][1], 0, pl[k + 1][2])
+				local Lg = (b - a).Magnitude
+				local n = math.max(1, math.ceil(Lg / 3))
+				local ga = groundY(a.X, a.Z, rpG)
+				local gb = groundY(b.X, b.Z, rpG)
+				for j = (k == 1) and 0 or 1, n do
+					local p = a + (b - a) * (j / n)
+					local gy = ga + (gb - ga) * (j / n)
+					part("Post", CFrame.new(p.X, gy + 1.5, p.Z), Vector3.new(0.3, 3.0, 0.3), C.iron, f)
+					part("Finial", CFrame.new(p.X, gy + 3.15, p.Z), Vector3.new(0.45, 0.45, 0.45), C.brass, f, Enum.PartType.Ball)
+				end
+				local m = math.floor(Lg / 1.0)
+				for j = 1, m - 1 do
+					local t = j / m
+					local p = a + (b - a) * t
+					local gy = ga + (gb - ga) * t
+					part("Picket", CFrame.new(p.X, gy + 1.45, p.Z), Vector3.new(0.12, 2.5, 0.12), C.iron, f)
+				end
+				for _, h in ipairs({ 0.6, 2.6 }) do
+					local p0 = Vector3.new(a.X, ga + h, a.Z)
+					local p1 = Vector3.new(b.X, gb + h, b.Z)
+					part("Rail", CFrame.lookAt((p0 + p1) / 2, p1), Vector3.new(0.16, 0.2, Lg), C.iron, f)
+				end
+			end
+		end
+	end
+	-- 얼어붙은 연못: 얼음 원판(미끄러운 Ice) + 둘레 바위(눈 얹음) + 불 피운 쇠 통
+	do
+		local f = folder("연못")
+		local ICE = { RGB(128, 182, 222), M.Ice }
+		local ROCK = { RGB(100, 110, 106), M.Slate }
+		local SNOW = { RGB(238, 243, 247), M.Snow }
+		for i, d in ipairs(D.POND) do
+			local x, z, r, h = d[1], d[2], d[3], d[4]
+			local _, hi = span(x - r, z - r, x + r, z + r, rpG)
+			local ice = part("Ice_" .. i, CFrame.new(x, hi + h - 0.25, z) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(0.5, 2 * r, 2 * r), ICE, f, Enum.PartType.Cylinder)
+			ice.Reflectance = 0.12
+		end
+		for i, rk in ipairs(D.ROCKS) do
+			local x, z, sz, yaw = rk[1], rk[2], rk[3], rk[4]
+			local gy = groundY(x, z, rpG)
+			local cf = CFrame.new(x, gy + sz * 0.22, z) * CFrame.Angles(math.rad(6 * ((i % 3) - 1)), math.rad(yaw), math.rad(5 * ((i % 2) * 2 - 1)))
+			local p = part("Rock_" .. i, cf, Vector3.new(sz, sz * 0.75, sz * 0.9), ROCK, f)
+			part("RockSnow", p.CFrame * CFrame.new(0, sz * 0.375 + 0.08, 0), Vector3.new(sz * 0.8, 0.16, sz * 0.7), SNOW, f)
+		end
+		for _, fr in ipairs(D.FIRES) do
+			local gy = groundY(fr[1], fr[2], rpG)
+			part("FireBarrel", CFrame.new(fr[1], gy + 1.5, fr[2]) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(3.0, 2.4, 2.4), { RGB(78, 70, 66), M.CorrodedMetal }, f, Enum.PartType.Cylinder)
+			for _, dy in ipairs({ 0.6, 2.4 }) do
+				part("BarrelBand", CFrame.new(fr[1], gy + dy, fr[2]) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(0.2, 2.55, 2.55), C.iron, f, Enum.PartType.Cylinder)
+			end
+			local coal = part("Coals", CFrame.new(fr[1], gy + 3.0, fr[2]) * CFrame.Angles(0, 0, math.rad(90)), Vector3.new(0.12, 2.1, 2.1), { RGB(255, 120, 50), M.Neon }, f, Enum.PartType.Cylinder)
+			local fire = Instance.new("Fire")
+			fire.Size = 4
+			fire.Heat = 6
+			fire.Parent = coal
+			local l = Instance.new("PointLight")
+			l.Color = RGB(255, 160, 90)
+			l.Range = 24
+			l.Brightness = 2
+			l.Parent = coal
+		end
+	end
+	-- 눈 나무(숲 키트 잎을 눈 색으로 — Snow_Field 와 같은 방식)
+	do
+		local fk = SS:FindFirstChild("ForestKit")
+		local LEAF = { LeafA = RGB(232, 240, 248), LeafB = RGB(196, 212, 228) }
+		local f = folder("나무")
+		for _, t in ipairs(D.TREES) do
+			local src = fk and fk:FindFirstChild(t[1])
+			if src then
+				local gy = groundY(t[2], t[3], rpG)
+				local base = CFrame.new(t[2], gy - 0.3, t[3]) * CFrame.Angles(0, math.rad(t[4]), 0)
+				local sc = t[5]
+				local model = Instance.new("Model")
+				model.Name = t[1]
+				for _, s in ipairs(src:GetChildren()) do
+					if s:IsA("BasePart") and s.Name ~= "Origin" then
+						local p = s:Clone()
+						p.Size = s.Size * sc
+						p.CFrame = base * CFrame.new(s.Position * sc) * s.CFrame.Rotation
+						if LEAF[p.Name] then
+							p.Color = LEAF[p.Name]
+							p.Material = M.Snow
+						end
+						p.Parent = model
+					end
+				end
+				model.Parent = f
+			end
+		end
+	end
+	-- 천문대 망원경·돔·별 돌리기(클라이언트, 서버 시간에 맞춰). 마을을 새로 지을 때마다 같이 새로 넣는다
+	do
+		local s = Instance.new("Script")
+		s.Name = "SnowObservatorySpin"
+		s.RunContext = Enum.RunContext.Client
+		s.Source = OBS_SCRIPT
+		s.Parent = town
 	end
 	task.wait()
 

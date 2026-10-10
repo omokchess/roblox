@@ -54,6 +54,11 @@ local PREFIX = {
 	Clock = "Clock_Tower", Obs = "Observatory", Casino = "Casino_Hall", Fact = "Steam_Factory",
 	ShopB = "Shop_Blue", ShopG = "Shop_Gold", ShopT = "Shop_Teal", ShopR = "Shop_Red",
 	Inn = "Inn_House", Ticket = "Ticket_Booth", UGate = "Under_Gate",
+	-- 천문대 2판(들어가는 건물·도는 돔·극축 둘레로 도는 망원경·태양계 모형 팔) + 놀이터·연못 소품 (build_steam_obs.py)
+	ObsDome = "Observatory_Dome", ObsScope = "Observatory_Scope",
+	OrrA = "Orrery_A", OrrB = "Orrery_B", OrrC = "Orrery_C", OrrD = "Orrery_D",
+	PSwing = "Play_Swing", PSlide = "Play_Slide", PSaw = "Play_Seesaw", PRoundB = "Play_RoundBase", PRound = "Play_Round",
+	PDome = "Play_Dome", PBench = "Park_Bench", PSnow = "Snowman", PSled = "Sled",
 }
 -- 피벗을 원점(바닥 가운데)이 아닌 곳에 두는 틀. 톱니는 굴대 가운데를 축으로 돌고,
 -- 꺾인 관은 꺾인 자리를 관 끝에 맞춘다(build_steam.py pipe_bend90 의 P)
