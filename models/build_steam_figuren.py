@@ -21,7 +21,7 @@ sys.path.insert(0, HERE)
 import hanok_lib as L  # noqa: E402
 import build_steam as S  # noqa: E402
 from build_steam_obs import sphere, cone, arc_wall  # noqa: E402
-from build_steam_inside import C, PROP, job, box2, lantern, arch_top, door_leaf_in, DOORWAY, CLEAR  # noqa: E402
+from build_steam_inside import C, PROP, job, box2, lantern, arch_top, door_leaf_in, DOORWAY, CLEAR, fire_logs  # noqa: E402
 from build_steam_school import chair, bookcase, books_row, green_lamp, BOOKS  # noqa: E402
 from build_steam_under import hang_chandelier  # noqa: E402
 
@@ -637,12 +637,12 @@ def wing(g, s):
         # ── 아래: 쉼터(앞) — 벽난로(바깥벽) · 안락의자 넷 · 체스 탁자 둘 / 식당(뒤) — 긴 탁자 + 걸상
         fy = -14.0
         box2(g, "Stone", xo - s * 1.6, xo, fy - 3.0, fy + 3.0, ZF, ZS)
-        box2(g, "Soot", xo - s * 1.62, xo - s * 1.55, fy - 1.4, fy + 1.4, ZF + 0.3, ZF + 3.0, coll=False)
-        g["Core"].box(xo - s * 1.5, fy, ZF + 0.5, 0.5, 1.6, 0.4)
-        g["Glow"].box(xo - s * 1.5, fy, ZF + 1.1, 0.3, 1.2, 0.7)
+        S.hole(g, xo - s * 1.6, fy, ZF + 1.6, 3.0, 2.8, "-x" if s > 0 else "+x", 1.2, pane=False)    # 화실 — 진짜 장작불
+        g["Soot"].box(xo - s * 0.45, fy, ZF + 1.6, 0.06, 2.9, 2.7)
+        fire_logs(g, xo - s * 1.0, fy, ZF + 0.25, 2.5, 1.0, axis="y", size=0.9)
+        g["Stone"].box(xo - s * 2.1, fy, ZF + 0.08, 1.0, 4.0, 0.16)
         g["StoneTrim"].box(xo - s * 1.0, fy, ZF + 3.6, 2.4, 6.6, 0.4)
         S.gear(g, "Brass", xo - s * 1.65, fy, ZF + 6.4, 1.2, 12, 0.15, axis="x")
-        g["LampPt"].box(xo - s * 2.8, fy, ZF + 1.4, 0.3, 0.3, 0.3)
         g["Banner"].box(X(6.0), fy, ZF + 0.04, 7.0, 8.0, 0.06)
         for u, y, rz in ((6.5, fy - 3.0, 0.0), (6.5, fy + 3.0, math.pi), (3.5, fy - 2.4, 0.4), (3.5, fy + 2.4, math.pi - 0.4)):
             x = X(u)
@@ -682,10 +682,11 @@ def wing(g, s):
         # ── 위: 길드장 방 — 큰 책상 · 의자 · 벽난로(아래 굴뚝 위) · 트로피 장 · 체스 받침 · 깃발 · 책장
         z0 = Z1
         box2(g, "Stone", xo - s * 1.6, xo, fy - 3.0, fy + 3.0, z0, Z2)
-        box2(g, "Soot", xo - s * 1.62, xo - s * 1.55, fy - 1.2, fy + 1.2, z0 + 0.3, z0 + 2.8, coll=False)
-        g["Core"].box(xo - s * 1.5, fy, z0 + 0.5, 0.5, 1.4, 0.4)
+        S.hole(g, xo - s * 1.6, fy, z0 + 1.5, 2.6, 2.6, "-x" if s > 0 else "+x", 1.2, pane=False)
+        g["Soot"].box(xo - s * 0.45, fy, z0 + 1.5, 0.06, 2.5, 2.5)
+        fire_logs(g, xo - s * 1.0, fy, z0 + 0.25, 2.2, 1.0, axis="y", size=0.8)
+        g["Stone"].box(xo - s * 2.1, fy, z0 + 0.08, 1.0, 3.6, 0.16)
         g["StoneTrim"].box(xo - s * 1.0, fy, z0 + 3.4, 2.4, 6.6, 0.4)
-        g["LampPt"].box(xo - s * 2.8, fy, z0 + 1.4, 0.3, 0.3, 0.3)
         dx, dy = X(6.0), -2.0
         g["Wood"].box(dx, dy, z0 + 2.8, 3.4, 7.0, 0.3)
         for sy in (-1, 1):

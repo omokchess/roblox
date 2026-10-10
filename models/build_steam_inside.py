@@ -48,6 +48,57 @@ def DIG(x0, x1, y0, y1, z0, z1, world=False):
     DIGS.setdefault(_cur[0], []).append(((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, x1 - x0, y1 - y0, z1 - z0, world))
 
 
+FIRES = {}
+
+
+def FIRE(x, y, z, size=1.0):
+    """진짜 불 자리(2026-10-10 사용자: 빛나는 블록 말고 불 떼는 것처럼). Snow_City2 가 불꽃·불티 입자와 깜빡이는 불빛을 단다. z = 장작 위"""
+    FIRES.setdefault(_cur[0], []).append((x, y, z, size))
+
+
+def fire_logs(g, x, y, z0, w, d, axis="x", size=None):
+    """화덕 속 장작불: 재 바닥 + 쇠 받침살 + 엇갈린 장작 셋(끝은 숯) + 불씨 + 불 자리. w = 장작 길이 쪽 폭, d = 깊이, axis = 장작 방향"""
+    ax = axis
+
+    def BX(mat, u, v, z, su, sv, sz, rz=0.0):
+        if ax == "x":
+            g[mat].obox(x + u, y + v, z, su, sv, sz, rz=rz)
+        else:
+            g[mat].obox(x + v, y + u, z, sv, su, sz, rz=rz)
+    r = max(0.1, min(w, d) * 0.16)
+    BX("Soot", 0, 0, z0 + 0.03, w, d, 0.06)
+    for v in (-d / 3, 0.0, d / 3):
+        BX("Iron", 0, v, z0 + 0.22, w * 0.9, 0.08, 0.08)
+    for u in (-w * 0.38, w * 0.38):
+        BX("Iron", u, 0, z0 + 0.12, 0.08, d * 0.8, 0.2)
+    for v, dz in ((-d * 0.2, 0.0), (d * 0.2, 0.0)):
+        if ax == "x":
+            g["Timber"].hcyl(x, y + v, z0 + 0.26 + r, r, w * 0.8, axis="x", seg=8)
+        else:
+            g["Timber"].hcyl(x + v, y, z0 + 0.26 + r, r, w * 0.8, axis="y", seg=8)
+    if ax == "x":
+        g["Char"].hcyl(x, y, z0 + 0.26 + 2.6 * r, r * 0.9, w * 0.7, axis="x", seg=8, rz=0.5)
+    else:
+        g["Char"].hcyl(x, y, z0 + 0.26 + 2.6 * r, r * 0.9, w * 0.7, axis="y", seg=8, rz=0.5)
+    for k in range(6):
+        u = (k - 2.5) * w * 0.13
+        v = ((k * 7) % 5 - 2) * d * 0.1
+        BX("Core", u, v, z0 + 0.1 + (k % 2) * 0.08, r * 1.3, r * 1.1, r * 0.8, rz=k * 0.9)
+    FIRE(x, y, z0 + 0.3 + 2 * r, size if size is not None else max(0.3, w * 0.4))
+
+
+def coal_bed(g, x, y, z0, w, d, size=None):
+    """숯불 바닥(대장간·보일러 화실): 재 + 숯 덩이 + 붉은 불씨 + 불 자리"""
+    g["Soot"].box(x, y, z0 + 0.05, w, d, 0.1)
+    n = max(4, int(w * d * 3))
+    for k in range(n):
+        u = ((k * 0.618) % 1.0 - 0.5) * w * 0.85
+        v = ((k * 0.382 + 0.3) % 1.0 - 0.5) * d * 0.85
+        s = 0.14 + 0.08 * ((k * 3) % 3)
+        g["Core" if k % 3 == 0 else "Char"].obox(x + u, y + v, z0 + 0.12 + s / 3, s, s * 0.8, s * 0.6, rz=k * 1.3)
+    FIRE(x, y, z0 + 0.25, size if size is not None else max(0.3, min(w, d) * 0.5))
+
+
 DOORS = {}
 
 
@@ -325,6 +376,7 @@ def frostig_in(g):
     g["SignRed"].box(-3.25, iy1 - 0.75, 9.9, 5.4, 0.08, 0.6)
     # 화덕(키트, 오른 벽 — 굴뚝 자리) + 그루터기 모루
     PROP("Forge", 8.6, 3.4, ZF, -90.0, 0.6)
+    FIRE(8.6, 3.4, ZF + 2.4, 0.5)
     C(8.6, 3.4, (ZF + 9.4) / 2, 3.9, 7.0, 9.4 - ZF)
     g["Timber"].cyl(5.6, 1.4, ZF, 0.8, 0.8, 1.6, seg=12)
     PROP("Anvil", 5.6, 1.4, ZF + 1.6, 30.0, 1.2)
@@ -730,7 +782,9 @@ def zapfen_in(g):
         g["Brass"].hcyl(bx, -16.35, ZF + 7.0, 0.8, 0.3, axis="y", seg=16)
         g["Dial"].hcyl(bx, -16.52, ZF + 7.0, 0.62, 0.06, axis="y", seg=16)
         g["Iron"].box(bx, -13.0, ZF + 0.4, 7.0, 7.0, 0.8)
-        g["Core"].box(bx, -16.25, ZF + 2.4, 1.6, 0.2, 1.0)
+        S.hole(g, bx, -16.2, ZF + 2.4, 1.6, 1.1, "-y", 1.4, pane=False)
+        coal_bed(g, bx, -15.4, ZF + 1.85, 1.3, 0.9, size=0.45)
+        g["Iron"].obox(bx - 1.15, -16.6, ZF + 2.4, 0.9, 0.08, 1.1, rz=0.9)
         C(bx, -13.0, ZF + 7.4, 6.6, 6.6, 14.8)
         S.vent(g, bx + 1.6, -11.0, ZF + 15.0)
     S.pipe(g, [(24.0, -13.0, ZF + 14.6), (24.0, -13.0, 24.0), (-20.0, -13.0, 24.0), (-20.0, -13.0, 22.6)], 0.6)
@@ -858,8 +912,8 @@ def sel_in(g):
         g["Soot"].cyl(x, y, ZF, r, r * 0.35, r * 0.6, seg=12)
         g["Core"].box(x + 0.2, y - 0.1, ZF + r * 0.35, 0.35, 0.3, 0.2)
         g["Core"].box(x - 0.4, y + 0.3, ZF + r * 0.2, 0.25, 0.25, 0.15)
-    for x, y in ((-9.0, -6.0), (7.5, -7.4), (-1.0, 3.0)):
-        g["LampPt"].box(x, y, ZF + 1.2, 0.3, 0.3, 0.3)
+    for x, y, r in ((-9.0, -6.0, 1.8), (7.5, -7.4, 1.5), (-1.0, 3.0, 1.3)):
+        FIRE(x, y, ZF + r * 0.55, 0.3)
     # 벽에서 떨어져 휜 구리 관 둘
     sweep(g, "Copper", [(ix1 - 0.2, -6.0, 12.0), (ix1 - 0.4, -6.0, 9.0), (ix1 - 1.6, -6.4, 5.5), (ix1 - 3.4, -7.0, ZF + 0.5)], 0.45, seg=10)
     sweep(g, "Copper", [(-6.0, iy1 - 0.2, 14.0), (-6.4, iy1 - 0.6, 10.0), (-7.4, iy1 - 2.4, ZF + 0.5)], 0.35, seg=10)
@@ -1027,7 +1081,8 @@ def shop_in(sign, kind):
             g["Iron"].cyl(-5.2, 2.4, ZF, 1.3, 1.5, 0.9, seg=16)
             g["Iron"].cyl(-5.2, 2.4, ZF + 0.9, 1.5, 1.2, 1.6, seg=16)
             g["GlowTeal"].cyl(-5.2, 2.4, ZF + 2.35, 1.1, 1.1, 0.12, seg=16)
-            g["Core"].box(-5.2, 2.4 - 1.45, ZF + 0.45, 0.8, 0.1, 0.4)
+            S.hole(g, -5.2, 2.4 - 1.4, ZF + 0.45, 0.9, 0.6, "-y", 1.0, pane=False)
+            coal_bed(g, -5.2, 2.4 - 0.85, ZF + 0.15, 0.7, 0.6, size=0.3)
             g["LampPt"].box(-5.2, 2.4, ZF + 3.2, 0.3, 0.3, 0.3)
             C(-5.2, 2.4, ZF + 1.25, 3.0, 3.0, 2.5)
             sweep(g, "Wood", [(-5.2 - 0.6, 2.4, ZF + 2.4), (-5.2 + 0.3, 2.4 + 0.2, ZF + 3.6)], 0.07, seg=5)
@@ -1063,9 +1118,9 @@ def shop_in(sign, kind):
             g["Brass"].box(3.8, -3.6, ZF + 2.55, 0.6, 0.15, 0.15)
             C(3.8, -3.6, ZF + 1.2, 1.8, 1.8, 2.4)
             box2(g, "BrickDark", ix1 - 1.8, ix1, -4.4, -2.4, ZF, ZF + 3.0)
-            g["Core"].box(ix1 - 1.85, -3.4, ZF + 1.2, 0.1, 1.2, 0.8)
+            S.hole(g, ix1 - 1.8, -3.4, ZF + 1.4, 1.3, 1.1, "-x", 1.3, pane=False)
+            coal_bed(g, ix1 - 1.15, -3.4, ZF + 0.85, 1.0, 1.0, size=0.45)
             g["Iron"].box(ix1 - 0.9, -3.4, ZF + 3.2, 2.0, 2.2, 0.4)
-            g["LampPt"].box(ix1 - 2.4, -3.4, ZF + 1.4, 0.3, 0.3, 0.3)
             for li, z in enumerate(tops[1:]):
                 for k in range(6):
                     x = -6.0 + k * 2.2 + (li % 2) * 0.6
@@ -1268,11 +1323,11 @@ def inn_in(g):
             g["Brass"].box(ix0 + 0.25, -5.3 + c * 0.75, 6.9 - r * 0.7, 0.12, 0.12, 0.35)
     # 벽난로(왼 벽 가운데 뒤 — 지붕 굴뚝 x -8 쪽)
     box2(g, "Stone", ix0, ix0 + 1.6, 0.6, 5.4, ZF, ZC)
-    box2(g, "Soot", ix0 + 1.55, ix0 + 1.65, 1.8, 4.2, ZF + 0.3, ZF + 2.6, coll=False)
-    g["Core"].box(ix0 + 1.5, 3.0, ZF + 0.5, 0.5, 1.4, 0.4)
-    g["Glow"].box(ix0 + 1.5, 3.0, ZF + 1.0, 0.3, 1.0, 0.6)
+    S.hole(g, ix0 + 1.6, 3.0, ZF + 1.2, 2.4, 2.2, "+x", 1.1, pane=False)          # 화실(돌 몸을 파 들어감) — 진짜 장작불
+    g["Soot"].box(ix0 + 0.55, 3.0, ZF + 1.2, 0.06, 2.3, 2.1)
+    fire_logs(g, ix0 + 1.05, 3.0, ZF + 0.1, 2.0, 0.9, axis="y", size=0.75)
+    g["Stone"].box(ix0 + 2.1, 3.0, ZF + 0.08, 1.0, 3.2, 0.16)
     g["StoneTrim"].box(ix0 + 1.0, 3.0, ZF + 3.2, 2.4, 5.4, 0.35)
-    g["LampPt"].box(ix0 + 2.6, 3.0, ZF + 1.2, 0.3, 0.3, 0.3)
     S.gear(g, "Brass", ix0 + 1.65, 3.0, ZF + 5.4, 0.9, 12, 0.15, axis="x")
     # 둥근 탁자 둘(벽난로 앞 · 오른 앞) — 걸상까지 반지름 2.9
     for x, y in ((-4.6, 0.8), (4.6, -4.2)):
@@ -1409,10 +1464,11 @@ def inn_rooms(g, ix0, ix1, iy0, iy1, Z2F, Z2C):
         g[mat].box(xx, py1 + 0.11, Z2F + 7.6, 0.7, 0.03, 0.3)
     # 굴뚝 몸(아래 벽난로 위) + 객실 A 작은 벽난로
     box2(g, "Stone", ix0, ix0 + 1.6, 0.6, 5.4, Z2F, Z2C)
-    box2(g, "Soot", ix0 + 1.58, ix0 + 1.64, 1.2, 2.8, Z2F + 0.3, Z2F + 2.2, coll=False)
-    g["Core"].box(ix0 + 1.5, 2.0, Z2F + 0.4, 0.4, 1.0, 0.3)
-    g["StoneTrim"].box(ix0 + 1.0, 2.0, Z2F + 2.6, 2.2, 2.6, 0.3)
-    g["LampPt"].box(ix0 + 2.4, 2.0, Z2F + 1.0, 0.3, 0.3, 0.3)
+    S.hole(g, ix0 + 1.6, 1.9, Z2F + 0.95, 1.6, 1.7, "+x", 1.0, pane=False)
+    g["Soot"].box(ix0 + 0.65, 1.9, Z2F + 0.95, 0.06, 1.5, 1.6)
+    fire_logs(g, ix0 + 1.1, 1.9, Z2F + 0.1, 1.3, 0.8, axis="y", size=0.5)
+    g["Stone"].box(ix0 + 2.0, 1.9, Z2F + 0.07, 0.8, 2.2, 0.14)
+    g["StoneTrim"].box(ix0 + 1.0, 1.9, Z2F + 2.15, 2.2, 2.6, 0.3)
     for s in (-1, 1):
         bed(g, s * 8.2, -3.6, Z2F, rz=0.0 if s < 0 else math.pi, mat="Banner" if s < 0 else "SignPurple")
         wardrobe(g, s * 1.2, -5.0, Z2F, "-x" if s < 0 else "+x")
@@ -1645,11 +1701,10 @@ def factory_more(g, ix0, ix1, iy0, iy1, ZF, ZT):
     # 뒤 가운데: 단조로(벽돌 화덕, 붉은 아가리) + 연통 + 석탄 통·더미 + 삽
     box2(g, "Brick", -5.0, 5.0, iy1 - 4.0, iy1, ZF, ZF + 6.0)
     g["StoneTrim"].box(0, iy1 - 2.0, ZF + 6.2, 10.6, 4.6, 0.4)
-    g["Soot"].box(0, iy1 - 4.02, ZF + 2.4, 3.6, 0.06, 2.4)
-    g["Core"].box(0, iy1 - 3.9, ZF + 1.6, 3.0, 0.3, 0.9)
-    g["Glow"].box(0, iy1 - 3.95, ZF + 2.6, 2.4, 0.1, 0.8)
-    g["Iron"].box(0, iy1 - 4.15, ZF + 3.8, 4.2, 0.3, 0.3)
-    g["LampPt"].box(0, iy1 - 5.2, ZF + 2.0, 0.3, 0.3, 0.3)
+    S.hole(g, 0, iy1 - 4.0, ZF + 2.4, 3.6, 2.6, "-y", 2.6, pane=False)          # 화구(벽돌 몸을 2.6 파 들어감) — 숯불
+    g["Soot"].box(0, iy1 - 1.45, ZF + 2.4, 3.5, 0.06, 2.5)
+    coal_bed(g, 0, iy1 - 2.7, ZF + 1.1, 3.2, 2.2, size=1.1)
+    g["Iron"].box(0, iy1 - 4.15, ZF + 3.95, 4.2, 0.3, 0.3)
     g["Iron"].cyl(0, iy1 - 2.0, ZF + 6.4, 1.0, 1.0, ZT - ZF - 6.4 + 3.0, seg=14)
     for zz in (10.0, 16.0, 22.0):
         g["Brass"].cyl(0, iy1 - 2.0, zz, 1.08, 1.08, 0.3, seg=14)
@@ -1850,6 +1905,11 @@ def emit_luau(path):
         for v in LAMPS[name]:
             out.append("\t\t\t{ %s, %s, %s }," % (f(-v.x), f(v.z), f(v.y)))
         out.append("\t\t},")
+        if FIRES.get(name):
+            out.append("\t\tfires = {")
+            for x, y, z, sz in FIRES[name]:
+                out.append("\t\t\t{ %s, %s, %s, %s }," % (f(-x), f(z), f(y), f(sz)))
+            out.append("\t\t},")
         if DIGS.get(name):
             out.append("\t\tdig = {")
             for cx, cy, cz, sx, sy, sz, world in DIGS[name]:

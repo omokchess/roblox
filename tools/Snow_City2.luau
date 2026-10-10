@@ -43,6 +43,35 @@ RunService.RenderStepped:Connect(function()
 end)
 ]==]
 
+-- 불빛이 장작불처럼 일렁인다(SnowFire 태그 파트의 PointLight 밝기·반경을 겹친 잡음으로)
+local FIRE_SCRIPT = [==[
+local CS = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+local lights = {}
+local function add(p)
+	local l = p:FindFirstChildWhichIsA("PointLight")
+	if l then
+		lights[l] = { b = l.Brightness, r = l.Range, seed = math.random() * 100 }
+	end
+end
+for _, p in CS:GetTagged("SnowFire") do
+	add(p)
+end
+CS:GetInstanceAddedSignal("SnowFire"):Connect(add)
+RunService.RenderStepped:Connect(function()
+	local t = os.clock()
+	for l, d in lights do
+		if l.Parent then
+			local n = math.noise(t * 3.1, d.seed) * 0.45 + math.noise(t * 9.7, d.seed + 13) * 0.25
+			l.Brightness = d.b * (0.85 + n)
+			l.Range = d.r * (0.95 + n * 0.12)
+		else
+			lights[l] = nil
+		end
+	end
+end)
+]==]
+
 -- 천문대 망원경이 별을 따라간다(적도의 — 극축 하나만 돌리면 된다). 돔은 경통 끝 방위로 돌아 틈을 맞춘다.
 -- 보기 전용이고 서버 시간에 맞춰 모두에게 같다. 값 = models/build_steam_obs.py (블렌더 (x,y,z) → 로블록스 로컬 (-x, z, y))
 local OBS_SCRIPT = [==[
@@ -792,7 +821,7 @@ local okRun, errRun = pcall(function()
 	-- 보이는 메시는 부딪히지 않게 하고 INSIDE 표의 상자로 벽·바닥·계단·가구를 세운다. 키트 소품은 복제해 놓는다
 	-- ("@Press" = 옛 공방 방에서 옮긴 움직이는 압착기 틀). 겉모양에 구운 옛 배율(BAKED)은 톱니·시계 바늘 자리에 곱한다
 	local CSi = game:GetService("CollectionService")
-	local nColl, nProp, nLamp = 0, 0, 0
+	local nColl, nProp, nLamp, nFire = 0, 0, 0, 0
 	for _, e in ipairs(placed) do
 		local spec = INSIDE[e.kind]
 		if spec then
@@ -854,9 +883,96 @@ local okRun, errRun = pcall(function()
 				pl.Parent = p
 				nLamp += 1
 			end
+			-- 진짜 불(사용자 2026-10-10: 빛나는 블록 말고 불 떼는 것처럼) — 장작 위 불꽃·불티 입자 + 깜빡이는 불빛(SnowFireFlicker)
+			for _, fr in ipairs(spec.fires or {}) do
+				local s = fr[4]
+				local p = part("Fire", pv * CFrame.new(fr[1], fr[2], fr[3]), Vector3.new(0.9 * s, 0.2, 0.6 * s), C.found, fc)
+				p.Transparency = 1
+				p.CanCollide = false
+				p.CanQuery = false
+				p.CanTouch = false
+				p.CastShadow = false
+				local fl = Instance.new("ParticleEmitter")
+				fl.Name = "Flame"
+				fl.Texture = "rbxasset://textures/particles/fire_main.dds"
+				fl.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, RGB(255, 222, 140)),
+					ColorSequenceKeypoint.new(0.45, RGB(255, 140, 45)),
+					ColorSequenceKeypoint.new(1, RGB(190, 45, 20)),
+				})
+				fl.LightEmission = 1
+				fl.LightInfluence = 0
+				fl.Size = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 1.0 * s),
+					NumberSequenceKeypoint.new(0.5, 0.75 * s),
+					NumberSequenceKeypoint.new(1, 0.1 * s),
+				})
+				-- 위로 갈수록 가늘고 길게 늘인다(둥근 빛덩이 말고 불꽃 혀)
+				fl.Squash = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, -0.3),
+					NumberSequenceKeypoint.new(0.6, -1.0),
+					NumberSequenceKeypoint.new(1, -1.6),
+				})
+				fl.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0.15),
+					NumberSequenceKeypoint.new(0.7, 0.5),
+					NumberSequenceKeypoint.new(1, 1),
+				})
+				fl.Lifetime = NumberRange.new(0.35, 0.7)
+				fl.Rate = 40
+				fl.Speed = NumberRange.new(1.0 * s, 2.0 * s)
+				fl.SpreadAngle = Vector2.new(10, 10)
+				fl.Acceleration = Vector3.new(0, 1.6 * s, 0)
+				fl.Rotation = NumberRange.new(-15, 15)
+				fl.RotSpeed = NumberRange.new(-25, 25)
+				fl.EmissionDirection = Enum.NormalId.Top
+				fl.Shape = Enum.ParticleEmitterShape.Box
+				fl.Parent = p
+				-- 장작 바로 위 하얗게 달아오른 속불
+				local co = fl:Clone()
+				co.Name = "Core"
+				co.Color = ColorSequence.new(RGB(255, 245, 200), RGB(255, 190, 80))
+				co.Size = NumberSequence.new(0.5 * s, 0.15 * s)
+				co.Squash = NumberSequence.new(-0.4)
+				co.Lifetime = NumberRange.new(0.2, 0.35)
+				co.Rate = 25
+				co.Speed = NumberRange.new(0.4 * s, 0.9 * s)
+				co.Acceleration = Vector3.zero
+				co.Parent = p
+				local sp = Instance.new("ParticleEmitter")
+				sp.Name = "Sparks"
+				sp.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+				sp.Color = ColorSequence.new(RGB(255, 170, 70), RGB(255, 90, 30))
+				sp.LightEmission = 1
+				sp.LightInfluence = 0
+				sp.Size = NumberSequence.new(0.07 * math.max(1, s), 0.02)
+				sp.Lifetime = NumberRange.new(0.8, 1.6)
+				sp.Rate = 4 + 3 * s
+				sp.Speed = NumberRange.new(1.5 * s, 3.0 * s)
+				sp.SpreadAngle = Vector2.new(25, 25)
+				sp.Acceleration = Vector3.new(0, 0.8, 0)
+				sp.Drag = 1.5
+				sp.EmissionDirection = Enum.NormalId.Top
+				sp.Parent = p
+				local pl = Instance.new("PointLight")
+				pl.Color = RGB(255, 150, 70)
+				pl.Brightness = 1.8
+				pl.Range = 8 + 8 * s
+				pl.Parent = p
+				CSi:AddTag(p, "SnowFire")
+				nFire += 1
+			end
 		end
 	end
-	say("들어가는 건물: 충돌 상자 %d · 소품 %d · 등 %d", nColl, nProp, nLamp)
+	say("들어가는 건물: 충돌 상자 %d · 소품 %d · 등 %d · 불 %d", nColl, nProp, nLamp, nFire)
+	-- 불빛 깜빡임(클라이언트, 보기 전용). 마을을 새로 지을 때마다 같이 새로 넣는다
+	do
+		local s = Instance.new("Script")
+		s.Name = "SnowFireFlicker"
+		s.RunContext = Enum.RunContext.Client
+		s.Source = FIRE_SCRIPT
+		s.Parent = town
+	end
 
 	--==================================================================== 3b. 도는 톱니와 시계 바늘
 	-- 돌리는 일은 클라이언트 스크립트(맨 끝에서 넣는다)가 서버 시간에 맞춰 한다. 보기 전용이다.

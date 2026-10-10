@@ -16,7 +16,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import build_steam as S  # noqa: E402
 from build_steam_obs import sphere, sweep  # noqa: E402
-from build_steam_inside import C, job, box2, wall_door, lantern, arch_top, door_leaf_in, DOORWAY, CLEAR  # noqa: E402
+from build_steam_inside import C, job, box2, wall_door, lantern, arch_top, door_leaf_in, DOORWAY, CLEAR, fire_logs  # noqa: E402
 
 R = math.radians
 W, D, T = 52.0, 36.0, 1.0
@@ -442,13 +442,21 @@ def classroom(g, ix0, iy0, iy1):
     for x in (-14.4, -18.0, -21.6):
         for y in (-10.5, -5.5, 4.5, 9.5):
             school_desk(g, x, y, ZF, face=1.0)
-    # 무쇠 난로(뒤 오른 구석) + 연통
-    g["Iron"].cyl(-21.0, 15.4, ZF, 0.9, 1.0, 3.2, seg=14)
-    sphere(g, "Iron", (-21.0, 15.4, ZF + 3.3), 0.9, sub=1)
-    g["Core"].box(-20.2, 15.4, ZF + 1.2, 0.3, 0.6, 0.5)
-    g["Iron"].cyl(-21.0, 15.4, ZF + 4.0, 0.3, 0.3, ZS - ZF - 4.0, seg=8)
-    C(-21.0, 15.4, ZF + 1.8, 2.0, 2.0, 3.6)
-    g["LampPt"].box(-19.8, 15.4, ZF + 1.4, 0.3, 0.3, 0.3)
+    # 무쇠 배불뚝이 난로(뒤 오른 구석): 다리 넷 · 몸통 · 앞 화구(문 열림, 속에 장작불) · 뚜껑 · 연통
+    sx_, sy_ = -21.0, 15.4
+    for a in range(4):
+        aa = math.pi / 4 + a * math.pi / 2
+        g["Iron"].obox(sx_ + 0.7 * math.cos(aa), sy_ + 0.7 * math.sin(aa), ZF + 0.3, 0.25, 0.25, 0.6, rz=aa)
+    g["Iron"].cyl(sx_, sy_, ZF + 0.5, 1.0, 1.15, 1.4, seg=16)
+    g["Iron"].cyl(sx_, sy_, ZF + 1.9, 1.15, 0.85, 1.4, seg=16)
+    g["Brass"].cyl(sx_, sy_, ZF + 1.85, 1.2, 1.2, 0.12, seg=16)
+    g["Iron"].cyl(sx_, sy_, ZF + 3.3, 0.9, 0.6, 0.4, seg=12)
+    S.hole(g, sx_ + 1.12, sy_, ZF + 1.3, 0.9, 1.0, "+x", 1.2, pane=False)      # 불꽃이 보이게 화구를 놋쇠 띠 밑까지
+    fire_logs(g, sx_ + 0.45, sy_, ZF + 0.86, 0.75, 0.75, axis="y", size=0.42)
+    g["Iron"].obox(sx_ + 1.35, sy_ - 0.75, ZF + 1.3, 0.9, 0.08, 1.0, rz=-1.2)
+    sphere(g, "Brass", (sx_ + 1.55, sy_ - 1.15, ZF + 1.3), 0.08, sub=1)
+    g["Iron"].cyl(sx_, sy_, ZF + 3.7, 0.3, 0.3, ZS - ZF - 3.7, seg=8)
+    C(sx_, sy_, ZF + 1.8, 2.3, 2.3, 3.6)
     # 뒤 사물칸(왼 벽 아래, 창 밑) + 옷걸이 줄
     g["Wood"].box(ix0 + 0.6, 0.0, ZF + 1.0, 1.2, 30.0, 2.0)
     for k in range(15):
