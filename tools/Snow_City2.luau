@@ -241,6 +241,26 @@ local okRun, errRun = pcall(function()
 				local q = Vector3.new(cx + math.cos(a) * (r - 0.45), top - 0.15, cz + math.sin(a) * (r - 0.45))
 				part("Curb", CFrame.lookAt(q, q + Vector3.new(-math.sin(a), 0, math.cos(a))), Vector3.new(0.9, 0.6, 2 * math.pi * r / n + 0.25), C.curb, f)
 			end
+		elseif p[#p] == "playtri" then
+			-- 직각삼각형 바닥: 쐐기 부품을 눕힌다. 쐐기 단면(로컬 YZ)의 직각 꼭짓점 = (y -h/2, z +L/2).
+			-- 로컬 Y = z 쪽 다리, 로컬 -Z = x 쪽 다리, 로컬 X(두께) = 위
+			local x0, z0, dx, dz = p[2], p[3], p[4], p[5]
+			local Ly, Lz = math.abs(dz), math.abs(dx)
+			local Y = Vector3.new(0, 0, dz > 0 and 1 or -1)
+			local Zv = Vector3.new(dx > 0 and -1 or 1, 0, 0)
+			local X = Y:Cross(Zv)
+			local _, hi = span(math.min(x0, x0 + dx), math.min(z0, z0 + dz), math.max(x0, x0 + dx), math.max(z0, z0 + dz), rpG)
+			local top, bot = hi + 0.2, hi - 0.9
+			local c = Vector3.new(x0, (top + bot) / 2, z0) + Y * (Ly / 2) - Zv * (Lz / 2)
+			local w = Instance.new("WedgePart")
+			w.Name = "Pave"
+			w.Anchored = true
+			w.Size = Vector3.new(top - bot, Ly, Lz)
+			w.CFrame = CFrame.fromMatrix(c, X, Y, Zv)
+			w.Color, w.Material = RGB(118, 92, 70), M.Sand
+			w.TopSurface, w.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+			w.Parent = f
+			nParts += 1
 		else
 			local x0, z0, x1, z1, kind = p[2], p[3], p[4], p[5], p[6]
 			local _, hi = span(x0, z0, x1, z1, rpG)
@@ -630,7 +650,7 @@ local okRun, errRun = pcall(function()
 			end
 		end
 	end
-	-- 얼어붙은 분수 웅덩이: 얼음 원판(미끄러운 Ice) + 둘레 돌 벽·돌기둥 + 가운데 얼어붙은 분수대 + 불 피운 쇠 통
+	-- 얼어붙은 분수 웅덩이: 얼음 원판(미끄러운 Ice) + 둘레 돌 벽·돌기둥 + 불 피운 쇠 통
 	do
 		local f = folder("연못")
 		local ICE = { RGB(128, 182, 222), M.Ice }
@@ -667,56 +687,6 @@ local okRun, errRun = pcall(function()
 			part("BasinPier", CFrame.new(q[1], gy + 1.3, q[2]), Vector3.new(2.3, 2.6, 2.3), STONE, f)
 			part("PierCap", CFrame.new(q[1], gy + 2.75, q[2]), Vector3.new(2.7, 0.3, 2.7), C.curb, f)
 			part("PierBall", CFrame.new(q[1], gy + 3.35, q[2]), Vector3.new(0.9, 0.9, 0.9), C.brass, f, Enum.PartType.Ball)
-		end
-		-- 얼어붙은 2단 분수대(큰 원 가운데): 받침·기둥·아래 그릇·위 기둥·위 그릇·꼭지 + 얼어붙은 물 막·고드름
-		do
-			local fx, fz = D.FOUNTAIN[1], D.FOUNTAIN[2]
-			local gy = groundY(fx, fz, rpG) -- 땅(얼음은 그 위 0.3 — 받침이 얼음을 뚫고 선다)
-			local CY = Enum.PartType.Cylinder
-			local up = CFrame.Angles(0, 0, math.rad(90))
-			local function cyl(name, y0, h, r, col, tr)
-				local p = part(name, CFrame.new(fx, y0 + h / 2, fz) * up, Vector3.new(h, 2 * r, 2 * r), col, f, CY)
-				if tr then
-					p.Transparency = tr
-					p.CastShadow = false
-				end
-				return p
-			end
-			local FICE = { RGB(170, 214, 240), M.Ice }
-			cyl("FBase", gy, 0.5, 3.9, C.curb)
-			cyl("FPlinth", gy + 0.5, 1.0, 3.3, STONE)
-			cyl("FColumn", gy + 1.5, 3.2, 0.95, C.curb)
-			cyl("FBowlLow", gy + 4.7, 0.8, 3.3, STONE)
-			cyl("FBowlLowRim", gy + 5.5, 0.25, 3.45, C.curb)
-			cyl("FBowlLowIce", gy + 5.5, 0.3, 2.95, FICE)
-			cyl("FColumn2", gy + 5.8, 2.4, 0.6, C.curb)
-			cyl("FBowlUp", gy + 8.2, 0.55, 1.8, STONE)
-			cyl("FBowlUpRim", gy + 8.75, 0.2, 1.92, C.curb)
-			cyl("FBowlUpIce", gy + 8.75, 0.25, 1.55, FICE)
-			cyl("FFinialBase", gy + 9.0, 0.6, 0.35, C.brass)
-			part("FFinial", CFrame.new(fx, gy + 9.95, fz), Vector3.new(0.8, 0.8, 0.8), C.brass, f, Enum.PartType.Ball)
-			cyl("FSpire", gy + 10.3, 1.0, 0.12, C.brass)
-			-- 얼어붙어 멈춘 물 막(위 그릇 → 아래 그릇, 아래 그릇 → 웅덩이)
-			cyl("FrozenFall_Up", gy + 5.8, 2.4, 1.75, FICE, 0.45)
-			cyl("FrozenFall_Low", gy + 0.5, 4.2, 3.25, FICE, 0.55)
-			-- 놋쇠 톱니 장식(받침 네 면)
-			for k = 0, 3 do
-				local a = math.rad(45 + 90 * k)
-				local p = Vector3.new(fx + 3.32 * math.cos(a), gy + 1.0, fz + 3.32 * math.sin(a))
-				part("FGear", CFrame.lookAt(p, p + Vector3.new(math.cos(a), 0, math.sin(a))) * CFrame.Angles(0, math.rad(90), 0),
-					Vector3.new(0.15, 1.1, 1.1), C.brass, f, CY)
-			end
-			-- 고드름: 그릇 테 둘레에 길이를 번갈아
-			for _, ring in ipairs({ { 3.35, gy + 4.7, 24, 2.2 }, { 1.85, gy + 8.2, 14, 1.4 } }) do
-				local rr, ytop, n, maxL = ring[1], ring[2], ring[3], ring[4]
-				for k = 0, n - 1 do
-					local a = 2 * math.pi * k / n
-					local L = maxL * (0.45 + 0.55 * (((k * 7) % 5) / 4))
-					local rad = 0.1 + 0.06 * ((k * 3) % 3) / 2
-					part("Icicle", CFrame.new(fx + rr * math.cos(a), ytop - L / 2, fz + rr * math.sin(a)) * up,
-						Vector3.new(L, 2 * rad, 2 * rad), FICE, f, CY).CastShadow = false
-				end
-			end
 		end
 		say("분수 웅덩이: 벽 토막 %d · 돌기둥 %d", nWall, #D.CUSPS)
 		for _, fr in ipairs(D.FIRES) do

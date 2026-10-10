@@ -414,7 +414,6 @@ def observatory(g):
     for u_, v_, top in ((-0.65, 0.65, 3.0), (0.65, 0.65, 3.0), (-0.65, -0.72, 5.55), (0.65, -0.72, 5.55)):
         lx, ly = chx + c35 * u_ - s35 * v_, chy + s35 * u_ + c35 * v_
         g["Wood"].obox(lx, ly, (Z_FL + top) / 2, 0.2, 0.2, top - Z_FL, rz=R(35))
-    g["Wood"].obox(chx, chy, 2.5, 1.3, 0.12, 0.12, rz=R(35))   # 가로대
     # ── 안 불빛(벽 등 넷: 놋쇠 받침 + 불빛 등)
     for a in (60.0, 120.0, 200.0, 330.0):
         L.transformed(g, polar_m(a, RI), lambda t: (t["Brass"].box(0, 0.6, 10.5, 0.3, 1.2, 0.3),

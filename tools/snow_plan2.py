@@ -276,8 +276,8 @@ FENCES = [
 # ── 얼어붙은 연못(주황 구역 — 남동 골목 · 바깥 고리 집 · 남쪽 거리 집 사이 세모 땅). 건물 대신 스케이트 타는 연못 ──
 # 얼음 = 겹친 원판 넷(높이를 0.02 씩 달리해 겹친 곳이 깜빡이지 않게). (x, z, 반지름, 땅 위 높이)
 POND = [(-4775, -3680, 18, 0.30), (-4745, -3672, 14, 0.32), (-4724, -3667, 10, 0.34), (-4790, -3698, 9, 0.36)]   # 넷이 서로 겹쳐 한 웅덩이
-# 2026-10-10 "벽 같은 거 놔서 분수 웅덩이처럼": 원판 넷을 합친 테두리를 따라 돌 벽(호), 호가 만나는 꺾인 자리에 돌기둥,
-# 큰 원 가운데 얼어붙은 2단 분수대. 벽 = (원 가운데 x, z, 반지름(벽 가운데선), 시작각, 끝각) — 원판 겹침에서 계산
+# 2026-10-10 "벽 같은 거 놔서 분수 웅덩이처럼": 원판 넷을 합친 테두리를 따라 돌 벽(호), 호가 만나는 꺾인 자리에 돌기둥
+# (가운데 분수대는 사용자가 지우라 함). 벽 = (원 가운데 x, z, 반지름(벽 가운데선), 시작각, 끝각) — 원판 겹침에서 계산
 BASIN_OFF = 0.6   # 얼음 가장자리에서 벽 가운데선까지
 
 
@@ -312,7 +312,6 @@ def basin_arcs():
 
 
 BASIN, CUSPS = basin_arcs()
-FOUNTAIN = (POND[0][0], POND[0][1])
 FIRES = [(-4738, -3699)]   # 불 피운 쇠 통(몸 녹이는 자리)
 BUILD += [
     ("Park_Bench", -4752, -3697, 180, "연못", "", 1.0),
@@ -384,8 +383,10 @@ PAVES = [
     ("남쪽전망대", CX - 30, -3626, CX + 22, -3590, "stone"),
     ("연병장", -4650, -3688, -4594, -3632, "chess"),
     ("석탄마당", -5306, -3778, -5180, -3706, "soot"),
-    ("놀이터서", -4760, -3798, -4695, -3735, "play"),      # 초록 구역(사용자 그림): 동대로 남쪽 · 카지노 남서 · 남동 골목 북쪽
-    ("놀이터동", -4695, -3772, -4640, -3700, "play"),
+    ("놀이터서", -4762, -3801, -4695, -3735, "play"),      # 초록 구역(사용자 그림): 동대로 남쪽 · 카지노 남서 · 남동 골목 북쪽
+    ("놀이터동", -4695, -3775.5, -4637, -3697, "play"),    # 바닥은 울타리 선까지
+    # 남쪽 사선 울타리 안 세모(직각 꼭짓점 x, z · x 쪽 다리 · z 쪽 다리) — 쐐기 부품을 눕혀 깐다(2026-10-10 "이쪽 흙 채워주고")
+    ("놀이터남", -4695, -3735, -67, 38, "playtri"),
     ("탄마당", RUIN[0] - 40, RUIN[1] - 38, RUIN[0] + 40, RUIN[1] + 38, "soot"),
 ]
 
@@ -649,7 +650,7 @@ def road_rects():
         for a, b in zip(pts, pts[1:]):
             out.append((name, seg_rect(a[0], a[1], b[0], b[1], w)))
     for p in PAVES:
-        if p[-1] == "disc":
+        if p[-1] in ("disc", "playtri"):
             continue
         name, x0, z0, x1, z1, kind = p
         out.append((name, [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]))
@@ -786,6 +787,10 @@ def render(path, region, sc):
         if pv[-1] == "disc":
             Cv.circle(pv[1], pv[2], pv[3], "#8a847c")
             continue
+        if pv[-1] == "playtri":
+            _, x0, z0, dx, dz, _k = pv
+            Cv.poly([(x0, z0), (x0 + dx, z0), (x0, z0 + dz)], "#76604a")
+            continue
         name, x0, z0, x1, z1, kind = pv
         if kind == "chess":
             for i, x in enumerate(range(int(x0), int(x1), 7)):
@@ -824,7 +829,6 @@ def render(path, region, sc):
             Cv.line(p0[0], p0[1], p1[0], p1[1], 1.2, "#8c8b8a")
     for x, z in CUSPS:
         Cv.circle(x, z, 1.2, "#55565c")
-    Cv.circle(FOUNTAIN[0], FOUNTAIN[1], 3.4, "#8c8b8a")
     for pts in FENCES:
         for a, b in zip(pts, pts[1:]):
             Cv.line(a[0], a[1], b[0], b[1], 0.6, "#202020")
@@ -872,7 +876,6 @@ def emit(path):
         lines.append("\t%s = %s," % (k, lua([iid, dx, dz, dw])))
     lines.append("}")
     lines.append("D.AIRSHIP = %s" % lua(list(airship_pose())))
-    lines.append("D.FOUNTAIN = %s" % lua(list(FOUNTAIN)))
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
 
