@@ -227,7 +227,8 @@ def window(g, cx, cy, z0, w, h, face="-y", cross=True, frame="Iron", glass="Glow
         else:
             g[mat].box(cx + s * dn, cy + u, z, sn, su, sz)
 
-    B(glass, 0, 0.1, zc, w, 0.2, h)
+    if glass:   # None = 틀만(유리는 바깥 창이 맡음)
+        B(glass, 0, 0.1, zc, w, 0.2, h)
     fw = 0.35
     B(frame, 0, 0.25, z0 + h + fw / 2, w + 2 * fw, 0.4, fw)
     B(frame, 0, 0.25, z0 - fw / 2, w + 2 * fw, 0.4, fw)

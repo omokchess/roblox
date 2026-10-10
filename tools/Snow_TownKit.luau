@@ -43,12 +43,16 @@ local SKIN = {
 	SignRed = { RGB(168, 58, 58), M.SmoothPlastic },
 	SignPurple = { RGB(107, 74, 160), M.SmoothPlastic },
 	Dial = { RGB(242, 232, 200), M.SmoothPlastic },
+	Marble = { RGB(225, 225, 228), M.Marble },
+	DarkStone = { RGB(40, 40, 44), M.Slate },
+	Felt = { RGB(46, 107, 69), M.Fabric },
+	GlowTeal = { RGB(79, 224, 200), M.Neon },
 	LampPt = { RGB(255, 255, 255), M.SmoothPlastic },
 }
 -- 지붕과 눈은 껍데기, 불빛은 부딪히지 않는다. 나머지는 모양대로 잡는다.
 -- 조각 여럿이 든 메시를 상자로 잡으면 굴뚝까지 한 덩이 벽이 된다
 local HULL = { RoofMetal = true, SnowCap = true, Canvas = true }
-local NOCOLLIDE = { Glow = true, Core = true, Banner = true, Vent = true, LampPt = true }
+local NOCOLLIDE = { Glow = true, Core = true, Banner = true, Vent = true, LampPt = true, GlowTeal = true }
 
 local PREFIX = {
 	Clock = "Clock_Tower", Obs = "Observatory", Casino = "Casino_Hall", Fact = "Steam_Factory",
@@ -61,6 +65,10 @@ local PREFIX = {
 	PDome = "Play_Dome", PBench = "Park_Bench", PSnow = "Snowman", PSled = "Sled",
 	PSpring = "Play_Spring", PMonkey = "Play_MonkeyBars", PTunnel = "Play_Tunnel", PTire = "Play_TireSwing",
 	PBeam = "Play_Balance", PBin = "Park_Bin",
+	-- 들어가는 건물(build_steam_inside.py) — 옛 키트(Snow_Kit)의 같은 이름 틀을 갈아 끼운다
+	FrosIn = "Frostig_Werk", ZapfIn = "Zapfen_Werk", FiguIn = "Figuren_HQ", SelIn = "Sel_Werk_Ruin",
+	ShopBIn = "Shop_Blue", ShopTIn = "Shop_Teal", ShopRIn = "Shop_Red", TicketIn = "Ticket_Booth", InnIn = "Inn_House",
+	CasinoIn = "Casino_Hall", FactIn = "Steam_Factory",
 }
 -- 피벗을 원점(바닥 가운데)이 아닌 곳에 두는 틀. 톱니는 굴대 가운데를 축으로 돌고,
 -- 꺾인 관은 꺾인 자리를 관 끝에 맞춘다(build_steam.py pipe_bend90 의 P)

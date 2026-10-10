@@ -5,13 +5,16 @@
 	1판(Snow_Town.luau)은 큰 마을 땅에 키운 건물 몇 채를 흩어 놓아 휑했다. 2판은 옛 도시(Snow_City.luau, 2026-09-26)의
 	짓는 법을 그대로 쓴다: 집은 배율 1 로 빽빽이, 포장길·연석·맨홀, 쇠 받침 위 난방관·모음통·밸브·압력계·김, 가스등,
 	도는 톱니, 계류탑 비행선, 체스판 연병장. 자리는 tools/snow_plan2.py(사용자 마을 그림 그대로, 손 표) → Snow_City2_data.luau.
-	  python tools/snow_plan2.py && sed -e '/--@@DATA@@/r tools/Snow_City2_data.luau' tools/Snow_City2.luau > tools/swamp/_city2_run.luau && bash tools/job.sh tools/swamp/_city2_run.luau
+	  python tools/snow_plan2.py && sed -e '/--@@DATA@@/r tools/Snow_City2_data.luau' -e '/--@@INSIDE@@/r tools/Snow_Inside_data.luau' 	    tools/Snow_City2.luau > tools/swamp/_city2_run.luau && bash tools/job.sh tools/swamp/_city2_run.luau
+	  (Snow_Inside_data.luau 는 blender -b -P models/build_steam_town.py 가 키트 FBX 와 함께 뽑는다)
 
-	Workspace.Schneereich.마을 만 지우고 새로 짓는다. 안쪽 방(안쪽방 — Snow_Press·Snow_BurntRoom 손질이 들어 있다)과
-	SnowGearSpin·SnowPressRun·ServerScriptService.SnowInteriors 는 그대로 둔다. 문은 옛 것과 같은 태그·속성(SnowDoor,
-	InteriorId·ReturnPos·ReturnLook)이라 방과 짝이 맞는다. 땅은 Surface.R_설원3(평지 59.8). 보고: /snowcity2
+	Workspace.Schneereich.마을 만 지우고 새로 짓는다. SnowGearSpin·SnowPressRun 은 그대로 둔다.
+	2026-10-10: 순간이동 안쪽 방을 없애고 건물 자체에 들어가게 했다(천문대·장비상점·공방·체스판 건물·폐허 — 3e 절).
+	옛 방(안쪽방)과 SnowInteriors 는 처음 돌 때 ServerStorage(Snow_Rooms_Old·Snow_Interiors_Old)로 옮기고,
+	움직이는 압착기는 Snow_PressTemplate 로 남겨 공방 안에 다시 놓는다. 땅은 Surface.R_설원3(평지 59.8). 보고: /snowcity2
 ]]
 --@@DATA@@
+--@@INSIDE@@
 -- 도는 톱니. 클라이언트에서만 돈다(보기 전용). 태그 SnowGear 모델을 속성 Speed(도/초)대로
 -- 서버 시간에 맞춰 돌려서 모든 사람에게 같은 각도로 보인다. 처음 각도는 서버 쪽 피벗에 들어 있다
 local GEAR_SCRIPT = [==[
@@ -153,7 +156,26 @@ local okRun, errRun = pcall(function()
 		city.Name = "Schneereich"
 		city.Parent = workspace
 	end
-	local KEEP = { ["안쪽방"] = true, SnowGearSpin = true, SnowPressRun = true }
+	-- 옛 순간이동 안쪽 방은 들어가는 건물로 바뀌었다(2026-10-10). 움직이는 압착기는 틀로 남기고,
+	-- 방과 순간이동 스크립트는 ServerStorage 로 보관한다(마을 서쪽 하늘에 떠 보이던 것)
+	local rooms = city:FindFirstChild("안쪽방")
+	if rooms then
+		local press = rooms:FindFirstChild("Press_Moving", true)
+		if press and not SS:FindFirstChild("Snow_PressTemplate") then
+			local t = press:Clone()
+			t.Name = "Snow_PressTemplate"
+			t.Parent = SS
+		end
+		rooms.Name = "Snow_Rooms_Old"
+		rooms.Parent = SS
+	end
+	local oldTp = game:GetService("ServerScriptService"):FindFirstChild("SnowInteriors")
+	if oldTp then
+		oldTp.Name = "Snow_Interiors_Old"
+		oldTp.Disabled = true
+		oldTp.Parent = SS
+	end
+	local KEEP = { SnowGearSpin = true, SnowPressRun = true }
 	for _, c in ipairs(city:GetChildren()) do
 		if not KEEP[c.Name] then
 			c:Destroy()
@@ -430,13 +452,9 @@ local okRun, errRun = pcall(function()
 		return m
 	end
 
-	local tagged = {}
 	for i, e in ipairs(D.BUILD) do
 		local m = place(e[1], e[2], e[3], e[4], folder(e[5]), e[7])
 		m.Name = e[1]
-		if e[6] ~= "" then
-			tagged[e[6]] = m
-		end
 		if i % 6 == 0 then
 			task.wait()
 		end
@@ -746,6 +764,76 @@ local okRun, errRun = pcall(function()
 	end
 	task.wait()
 
+	--==================================================================== 3e. 들어가는 건물(models/build_steam_inside.py)
+	-- 보이는 메시는 부딪히지 않게 하고 INSIDE 표의 상자로 벽·바닥·계단·가구를 세운다. 키트 소품은 복제해 놓는다
+	-- ("@Press" = 옛 공방 방에서 옮긴 움직이는 압착기 틀). 겉모양에 구운 옛 배율(BAKED)은 톱니·시계 바늘 자리에 곱한다
+	local CSi = game:GetService("CollectionService")
+	local nColl, nProp, nLamp = 0, 0, 0
+	for _, e in ipairs(placed) do
+		local spec = INSIDE[e.kind]
+		if spec then
+			local pv = e.m:GetPivot()
+			for _, p in ipairs(e.m:GetDescendants()) do
+				if p:IsA("BasePart") then
+					p.CanCollide = false
+				end
+			end
+			local fc = Instance.new("Folder")
+			fc.Name = "충돌"
+			fc.Parent = e.m
+			for _, b in ipairs(spec.coll) do
+				local p = part("Coll", pv * CFrame.new(b[1], b[2], b[3]) * CFrame.Angles(0, math.rad(b[7]), 0), Vector3.new(b[4], b[5], b[6]), C.found, fc)
+				p.Transparency = 1
+				p.CastShadow = false
+				nColl += 1
+			end
+			for _, pr in ipairs(spec.props) do
+				local src = if pr[1] == "@Press" then SS:FindFirstChild("Snow_PressTemplate") else kit:FindFirstChild(pr[1])
+				if src then
+					local m = src:Clone()
+					if pr[6] ~= 1 then
+						m:ScaleTo(pr[6])
+					end
+					m:PivotTo(pv * CFrame.new(pr[2], pr[3], pr[4]) * CFrame.Angles(0, math.rad(pr[5]), 0)
+						* CFrame.Angles(math.rad(pr[7]), math.rad(pr[8]), math.rad(pr[9])))
+					local col = pr[11] and C[string.lower(pr[11])]
+					for _, p in ipairs(m:GetDescendants()) do
+						if p:IsA("BasePart") then
+							p.CanCollide = false
+							if col then
+								p.Color, p.Material = col[1], col[2]
+							end
+						end
+					end
+					if pr[10] then
+						m:SetAttribute("Speed", pr[10])
+						CSi:AddTag(m, "SnowGear")
+					end
+					m.Parent = e.m
+					nProp += 1
+				else
+					say("소품 틀 없음 %s", pr[1])
+				end
+			end
+			-- 등마다 따뜻한 점광원(블렌더 LampPt 상자 자리)
+			for _, l in ipairs(spec.lamps) do
+				local p = part("Lamp", pv * CFrame.new(l[1], l[2], l[3]), Vector3.new(0.2, 0.2, 0.2), C.found, fc)
+				p.Transparency = 1
+				p.CanCollide = false
+				p.CanQuery = false
+				p.CanTouch = false
+				p.CastShadow = false
+				local pl = Instance.new("PointLight")
+				pl.Color = RGB(255, 190, 120)
+				pl.Brightness = 1.4
+				pl.Range = 16
+				pl.Parent = p
+				nLamp += 1
+			end
+		end
+	end
+	say("들어가는 건물: 충돌 상자 %d · 소품 %d · 등 %d", nColl, nProp, nLamp)
+
 	--==================================================================== 3b. 도는 톱니와 시계 바늘
 	-- 돌리는 일은 클라이언트 스크립트(맨 끝에서 넣는다)가 서버 시간에 맞춰 한다. 보기 전용이다.
 	-- 여기서는 제자리와 처음 각도만 정한다. 톱니 틀 셋은 이 간격(1.96)이 같아 서로 맞물리고,
@@ -759,6 +847,7 @@ local okRun, errRun = pcall(function()
 	-- 건물 틀마다 붙는 톱니 무리. 로컬 좌표는 건물 피벗 기준이고 판은 건물 앞(-Z)을 본다. ry 로 더 돌린다.
 	-- { 구동 톱니, 배율, x, y, z, 초당 도, ry, { { 맞물리는 톱니, 방향(도) }, ... } }
 	-- 한 구동 톱니에 둘을 물릴 때는 두 방향 차가 360/이수 의 정수배여야 둘 다 맞물린다
+	local BAKED = { Zapfen_Werk = 1.3, Figuren_HQ = 1.2 } -- 들어가는 건물로 다시 지으며 옛 배율을 겉모양에 구워 넣은 틀
 	local GEAR_SETS = {
 		City_Gate = {
 			{ "Gear_16", 0.8, 0, 20.6, -1.8, 24, 0, { { "Gear_10", 213.75 }, { "Gear_10", 326.25 } } },
@@ -814,7 +903,7 @@ local okRun, errRun = pcall(function()
 			local f = folder("톱니")
 			for _, st in ipairs(sets) do
 				-- 건물을 키웠으면 자리·톱니·받침판도 같은 배율로
-				local k = e.sc
+				local k = e.sc * (BAKED[e.kind] or 1)
 				local kind, sc, x, y, z, speed, ry, mates = st[1], st[2] * k, st[3] * k, st[4] * k, st[5] * k, st[6], st[7], st[8]
 				local base = e.m:GetPivot() * CFrame.new(x, y, z) * CFrame.Angles(0, math.rad(ry), 0)
 				gearTrain(base, kind, sc, still and 0 or speed, mates, f, still)
@@ -835,7 +924,7 @@ local okRun, errRun = pcall(function()
 		end
 		if e.kind == "Figuren_HQ" then
 			-- 시계 바늘. 앞에서 보면 로컬 +X 가 왼쪽이라 양의 각속도가 시계 방향이다
-			local k = e.sc
+			local k = e.sc * (BAKED[e.kind] or 1)
 			local c = e.m:GetPivot() * CFrame.new(0, 35.5 * k, -17.1 * k)
 			for _, hd in ipairs({ { "Hour", 0.55, 2.3, 0.25, 125 }, { "Minute", 0.38, 3.3, 3.0, 10 } }) do
 				local m = Instance.new("Model")
@@ -1130,37 +1219,6 @@ local okRun, errRun = pcall(function()
 	end
 	task.wait()
 
-	--==================================================================== 6. 문
-	local TITLES = { Frostig = "장비상점 (프로스티히 공방)", Zapfen = "슈네라이히 공방", Sel = "설 공방 (폐허)", Figuren = "체스판 건물 (기물군 본부)" }
-	local nDoors = 0
-	for tag, d in pairs(D.DOORS) do
-		local m = assert(tagged[tag], "문을 달 건물이 없다: " .. tag)
-		local k = m:GetScale()
-		local id, dx, dz, dw = d[1], d[2] * k, d[3] * k, d[4] * k
-		local pv = m:GetPivot()
-		local front = pv.LookVector
-		local base = pv:PointToWorldSpace(Vector3.new(dx, 0, dz))
-		local door = part("Door_" .. id, CFrame.lookAt(base + front * 0.9 * k + Vector3.new(0, 4.5 * k, 0), base + front * 2 * k + Vector3.new(0, 4.5 * k, 0)),
-			Vector3.new(dw, 8 * k, 1), C.iron, folder("문"))
-		door.Transparency = 1
-		door.CanCollide = false
-		door:SetAttribute("InteriorId", id)
-		local ret = base + front * 7 * k
-		local gy = assert(groundY(ret.X, ret.Z), id .. " 문 앞에 땅이 없다")
-		door:SetAttribute("ReturnPos", Vector3.new(ret.X, gy + 3.2, ret.Z))
-		door:SetAttribute("ReturnLook", front)
-		local pr = Instance.new("ProximityPrompt")
-		pr.ActionText = "들어가기"
-		pr.ObjectText = TITLES[id]
-		pr.HoldDuration = 0.25
-		pr.MaxActivationDistance = 12
-		pr.RequiresLineOfSight = false
-		pr.Parent = door
-		CS:AddTag(door, "SnowDoor")
-		nDoors += 1
-	end
-
-
 	-- 도는 톱니 스크립트(SnowGearSpin)는 옛 도시 것을 그대로 쓴다. 없으면 넣는다
 	if not city:FindFirstChild("SnowGearSpin") then
 		local gs = Instance.new("Script")
@@ -1186,24 +1244,6 @@ local okRun, errRun = pcall(function()
 	end
 	say("%s", table.concat(line, ", "))
 	say("모델 %d, 받침돌 %d 개, 가장 큰 땅 높이차 %.2f", #placed, foundations, maxGap)
-	-- 문과 방 짝
-	local ids = {}
-	for _, tag in ipairs({ "SnowDoor", "SnowArrive", "SnowExit" }) do
-		for _, inst in ipairs(CS:GetTagged(tag)) do
-			if inst:IsDescendantOf(city) then
-				local id = inst:GetAttribute("InteriorId")
-				ids[id] = (ids[id] or "") .. tag:sub(5, 5)
-			end
-		end
-	end
-	for id, s in pairs(ids) do
-		assert(#s == 3, "짝이 안 맞는 방 " .. id .. " (" .. s .. ")")
-	end
-	local pairsTxt = {}
-	for id, s in pairs(ids) do
-		pairsTxt[#pairsTxt + 1] = id .. "=" .. s
-	end
-	say("문 %d, 문·도착·출구 짝 %s", nDoors, table.concat(pairsTxt, " "))
 	say("톱니 %d (도는 것 %d), 밸브 %d, 압력계 %d, 김 새는 이음 %d, 모음통 %d", nGear, #CS:GetTagged("SnowGear"), nValve, nGauge, nLeak, nJunction)
 	local n = 0
 	for _, d in ipairs(town:GetDescendants()) do
