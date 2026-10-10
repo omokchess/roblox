@@ -20,7 +20,7 @@ sys.path.insert(0, HERE)
 import hanok_lib as L  # noqa: E402
 import build_steam as S  # noqa: E402
 from build_steam_obs import sphere, sweep, sector, arc_wall, polar_m  # noqa: E402
-from build_steam_inside import C, PROP, DIG, job, box2, wall_door, lantern, arch_top, armor_stand, slot_machine, bottle  # noqa: E402
+from build_steam_inside import C, PROP, DIG, DOORWAY, job, box2, wall_door, lantern, arch_top, slot_machine, bottle  # noqa: E402
 
 R = math.radians
 ZU = -28.0                     # 땅 밑 바닥 윗면
@@ -148,6 +148,7 @@ def casino_gate(g):
         g["Glow"].box(1.75 * math.cos(a), 1.75 * math.sin(a), 7.85, 0.2, 0.2, 0.4)
     g["LampPt"].box(0, 0, 6.8, 0.3, 0.3, 0.3)
     PROP("Casino_Under", 0, 0, 0, 0.0)
+    DOORWAY(-2.0, 2.0, -RO_S - 0.2, -RI_S + 0.2, Z_LAND, 8.0)
     # 땅 파기: 입구 굴(세계 축 정사각 ±8 — 안쪽 반지름 7.6 을 덮고, 꼭짓점 11.3 은 받침 고리 11.6 안에 든다)
     DIG(-8.0, 8.0, -8.0, 8.0, ZU - 1.6, 1.0, world=True)
 
@@ -159,7 +160,10 @@ def spiral(g):
     arc_wall(g, "Brick", ZU + 9.0, 0.0, RI_S, RO_S, -180, 180, n=48)
     ring_coll(RI_S, RO_S, ZU, 0.4, skip=[(EXIT_A, DOOR_H, ZU, ZU + 9.0)])
     for z in range(int(ZU) + 4, 0, 6):
-        arc_wall(g, "StoneTrim", z, z + 0.4, RI_S - 0.15, RI_S, -180, 180, n=48)
+        if z < ZU + 9.5:      # 굴 바닥 문 높이에서는 문 자리를 비운다(머리 높이 띠가 문을 가로질렀다)
+            arc_wall(g, "StoneTrim", z, z + 0.4, RI_S - 0.15, RI_S, EXIT_A + DOOR_H, EXIT_A - DOOR_H + 360, n=48)
+        else:
+            arc_wall(g, "StoneTrim", z, z + 0.4, RI_S - 0.15, RI_S, -180, 180, n=48)
     sector(g, "Marble", 0.0, RO_S, -180, 180, ZU - 0.5, ZU, n=32)
     C(0, 0, ZU - 0.25, 2 * RO_S, 2 * RO_S, 0.5)
     g["Brass"].cyl(0, 0, ZU, 0.9, 0.9, 10.4 - ZU, seg=16)
@@ -180,7 +184,7 @@ def spiral(g):
         if i % 2 == 0:
             g["Iron"].cyl(7.1 * math.cos(R(am)), 7.1 * math.sin(R(am)), top, 0.07, 0.07, 3.0, seg=5)
     sweep(g, "Brass", rail, 0.12, seg=6)
-    for k, (a, z) in enumerate(((0.0, -4.0), (180.0, -9.0), (0.0, -15.0), (180.0, -21.0), (90.0, -24.0))):
+    for k, (a, z) in enumerate(((0.0, -4.0), (180.0, -9.0), (0.0, -15.0), (180.0, -21.0), (135.0, -24.0))):
         x, y = (RI_S - 0.6) * math.cos(R(a)), (RI_S - 0.6) * math.sin(R(a))
         g["Brass"].box(x, y, z, 0.6, 0.6, 0.3)
         g["Glow"].box(x, y, z + 0.5, 0.5, 0.5, 0.7)
@@ -234,9 +238,8 @@ def foyer(g):
     C(8.3, 19.6, ZU + 1.8, 1.2, 1.4, 3.6)
     g["Wood"].cyl(7.0, 14.0, ZU, 0.5, 0.45, 1.9, seg=10)
     g["Leather"].cyl(7.0, 14.0, ZU + 1.9, 0.55, 0.55, 0.2, seg=10)
-    # 문지기 자동인형 둘(큰 쌍문 양옆, 문 쪽을 본다) + 놋쇠 화병 + 그림
+    # 놋쇠 화병 둘 + 간판(문지기는 사용자가 나중에 NPC 로 — 2026-10-10)
     for s in (-1, 1):
-        armor_stand(g, s * 5.6, y1 - 2.4, ZU, R(180))
         g["Brass"].cyl(s * 8.3, y1 - 1.8, ZU, 0.6, 0.9, 2.4, seg=12)
         g["Felt"].cyl(s * 8.3, y1 - 1.8, ZU + 2.4, 0.9, 1.2, 1.2, seg=8)
         C(s * 8.3, y1 - 1.8, ZU + 1.8, 2.0, 2.0, 3.6)
@@ -324,8 +327,9 @@ def main_hall(g):
             g["Brass"].box(x, y, zc - 0.05, 5.0, 4.0, 0.1)
             g["Banner"].box(x, y, zc - 0.08, 4.4, 3.4, 0.06)
     for xw, s in ((ix0, 1), (ix1, -1)):
-        g["Wood"].box(xw + s * 0.06, (iy0 + iy1) / 2, ZU + 2.0, 0.12, iy1 - iy0, 4.0)
-        g["Brass"].box(xw + s * 0.1, (iy0 + iy1) / 2, ZU + 4.05, 0.12, iy1 - iy0, 0.15)
+        for y0_, y1_ in (((iy0, iy1),) if s > 0 else ((iy0, 41.0), (47.0, iy1))):
+            g["Wood"].box(xw + s * 0.06, (y0_ + y1_) / 2, ZU + 2.0, 0.12, y1_ - y0_, 4.0)
+            g["Brass"].box(xw + s * 0.1, (y0_ + y1_) / 2, ZU + 4.05, 0.12, y1_ - y0_, 0.15)
     g["Wood"].box(0, iy1 - 0.06, ZU + 2.0, ix1 - ix0, 0.12, 4.0)
     # 바닥: 무늬 깔개 + 붉은 길
     g["Banner"].box(0, (iy0 + 56.0) / 2, ZU + 0.04, 6.0, 56.0 - iy0, 0.06)
@@ -506,6 +510,9 @@ def auction_hall(g):
 
 
 def casino_under(g):
+    DOORWAY(-2.0, 2.0, RI_S - 0.2, RO_S + 1.0, ZU, 9.0, depth=1.5)
+    DOORWAY(-4.0, 4.0, 24.6, 25.6, ZU, 10.0)
+    DOORWAY(25.0, 26.0, 41.0, 47.0, ZU, 10.0)
     spiral(g)
     foyer(g)
     main_hall(g)

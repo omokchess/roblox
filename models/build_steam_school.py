@@ -16,7 +16,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import build_steam as S  # noqa: E402
 from build_steam_obs import sphere, sweep  # noqa: E402
-from build_steam_inside import C, job, box2, wall_door, lantern, arch_top, door_leaf_in  # noqa: E402
+from build_steam_inside import C, job, box2, wall_door, lantern, arch_top, door_leaf_in, DOORWAY, CLEAR  # noqa: E402
 
 R = math.radians
 W, D, T = 52.0, 36.0, 1.0
@@ -416,6 +416,15 @@ def school_in(g):
     for x0, x1 in ((ix0, -HX - 0.3), (HX + 0.3, ix1), (-HX + 0.3, HX - 0.3)):
         g["Wood"].box((x0 + x1) / 2, 0, Z2 + 0.3, x1 - x0, iy1 - iy0, 0.6)
     classroom(g, ix0, iy0, iy1)
+    DOORWAY(-2.6, 2.6, PY0, PY0 + T, ZF, 9.0)
+    for s in (-1, 1):
+        x0, x1 = sorted((s * (HX - 0.3), s * (HX + 0.3)))
+        DOORWAY(x0, x1, -13.0, -9.0, ZF, 8.0)
+        DOORWAY(x0, x1, 13.0, 16.6, Z1, 8.0)
+    DOORWAY(W / 2 - T, W / 2, 8.0, 11.0, ZF, 8.0)
+    DOORWAY(36.0, 40.0, -2.0, -1.0, ZF, 8.0)
+    CLEAR(-2.8, 2.8, -3.5, -1.1, ZF + 0.15, ZF + 6.6)
+    CLEAR(-2.8, 2.8, 12.1, 14.5, Z1 + 0.15, Z1 + 6.6)
     workshop_room(g, ix1, iy0, iy1)
     library(g, ix0, iy0, iy1)
     science_lab(g, ix1, iy0, iy1)
