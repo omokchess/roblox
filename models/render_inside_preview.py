@@ -12,6 +12,8 @@ sys.path.insert(0, HERE)
 import hanok_lib as L  # noqa: E402
 import build_steam_town as T  # noqa: E402
 import build_steam_inside as I  # noqa: E402
+import build_steam_school as SCH  # noqa: E402
+import build_steam_under as UND  # noqa: E402
 
 only = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 # 이름: (바깥 카메라, 바라볼 점), [(파일 꼬리, 카메라, 바라볼 점, 렌즈)] — 안 시점은 사람 눈높이
@@ -30,10 +32,18 @@ VIEWS = {
     "Casino_Hall": [("ext", (60, -70, 35), (10, 0, 15), 30), ("in1", (0, -17, 8.5), (0, 8, 11), 16), ("in2", (20, -14, 8.5), (-8, 6, 9), 16),
                     ("in3", (39, -6, 8.0), (39, 14, 6), 18)],
     "Steam_Factory": [("ext", (50, -70, 40), (0, 0, 15), 30), ("in1", (0, -31, 8.5), (0, 10, 12), 16), ("in2", (16, 20, 9.0), (-6, -10, 8), 16)],
+    "Schule": [("ext", (60, -75, 40), (8, 0, 14), 30), ("ext2", (75, 20, 30), (30, 8, 8), 30), ("in1", (0, -19, 7.5), (0, 12, 10), 16),
+               ("in2", (-8.5, -15, 7.5), (-22, 10, 4), 16), ("in3", (8.5, -12, 7.5), (22, 10, 5), 16), ("in4", (-8.5, 14, 19.5), (-22, -10, 17), 16),
+               ("in5", (8.5, 15, 19.5), (22, -8, 17), 16), ("in6", (28, 0, 7.5), (46, 14, 5), 16), ("in7", (0, 15, 19.5), (0, -16, 12), 16)],
+    "Casino_Gate": [("ext", (26, -30, 18), (0, 0, 6), 30), ("in1", (0, -6, 3.0), (2, 4, -6), 16)],
+    "Casino_Under": [("sp1", (-5.5, -2.0, -16.0), (5, 3, -26), 16), ("fo1", (0, 10.5, -22.5), (0, 22, -24), 16),
+                     ("ha1", (0, 27.0, -21.5), (2, 50, -24), 16), ("ha2", (20, 30, -21.5), (-12, 58, -24), 16),
+                     ("au1", (28.0, 43.0, -22.0), (50, 43, -24), 16), ("au2", (50, 52, -18), (33, 38, -26), 16)],
+    "Observatory": [("ext", (45, -60, 25), (0, 0, 12), 30), ("in1", (0, -14, 7.0), (12, 14, 8), 16)],
 }
 L.clear_scene()
 made = {}
-for name, prefix, fn in I.JOBS:
+for name, prefix, fn in I.JOBS + SCH.JOBS + UND.JOBS:
     if only and name not in only:
         continue
     g = L.new_groups(prefix, T.PAL)
@@ -49,7 +59,7 @@ for name, prefix, fn in I.JOBS:
         obs.append(ob)
     made[name] = obs
     print("  %-16s %d objs %d tri, coll %d, props %d" % (name, len(obs), sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in obs),
-                                                        len(I.COLL[name]), len(I.PROPS[name])))
+                                                        len(I.COLL.get(name, [])), len(I.PROPS.get(name, []))))
 scene = bpy.context.scene
 scene.render.engine = "BLENDER_WORKBENCH"
 sh = scene.display.shading
@@ -65,7 +75,7 @@ out = os.path.join(HERE, "snowtown_render")
 for name, obs in made.items():
     for n2, lst in made.items():
         for ob in lst:
-            ob.hide_render = n2 != name
+            ob.hide_render = n2 != name or ob.name.endswith("WinGlass")    # 창유리는 숨겨 구멍이 보이게
     for tail, loc, look, lens in VIEWS[name]:
         cam.location = Vector(loc)
         cam.rotation_euler = (Vector(look) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()

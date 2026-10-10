@@ -47,6 +47,8 @@ local SKIN = {
 	DarkStone = { RGB(40, 40, 44), M.Slate },
 	Felt = { RGB(46, 107, 69), M.Fabric },
 	GlowTeal = { RGB(79, 224, 200), M.Neon },
+	Paint = { RGB(230, 226, 214), M.SmoothPlastic }, -- 흰 칠 나무 창틀(학교)
+	WinGlass = { RGB(191, 217, 230), M.Glass }, -- 진짜 창유리(들어가는 건물). 더 맑게(skin 아래)
 	LampPt = { RGB(255, 255, 255), M.SmoothPlastic },
 }
 -- 지붕과 눈은 껍데기, 불빛은 부딪히지 않는다. 나머지는 모양대로 잡는다.
@@ -55,9 +57,9 @@ local HULL = { RoofMetal = true, SnowCap = true, Canvas = true }
 local NOCOLLIDE = { Glow = true, Core = true, Banner = true, Vent = true, LampPt = true, GlowTeal = true }
 
 local PREFIX = {
-	Clock = "Clock_Tower", Obs = "Observatory", Casino = "Casino_Hall", Fact = "Steam_Factory",
+	Clock = "Clock_Tower", Obs = "Observatory", Fact = "Steam_Factory",
 	ShopB = "Shop_Blue", ShopG = "Shop_Gold", ShopT = "Shop_Teal", ShopR = "Shop_Red",
-	Inn = "Inn_House", Ticket = "Ticket_Booth", UGate = "Under_Gate",
+	Inn = "Inn_House", Ticket = "Ticket_Booth",
 	-- 천문대 2판(들어가는 건물·도는 돔·극축 둘레로 도는 망원경·태양계 모형 팔) + 놀이터·연못 소품 (build_steam_obs.py)
 	ObsDome = "Observatory_Dome", ObsScope = "Observatory_Scope",
 	OrrA = "Orrery_A", OrrB = "Orrery_B", OrrC = "Orrery_C", OrrD = "Orrery_D",
@@ -68,7 +70,9 @@ local PREFIX = {
 	-- 들어가는 건물(build_steam_inside.py) — 옛 키트(Snow_Kit)의 같은 이름 틀을 갈아 끼운다
 	FrosIn = "Frostig_Werk", ZapfIn = "Zapfen_Werk", FiguIn = "Figuren_HQ", SelIn = "Sel_Werk_Ruin",
 	ShopBIn = "Shop_Blue", ShopTIn = "Shop_Teal", ShopRIn = "Shop_Red", TicketIn = "Ticket_Booth", InnIn = "Inn_House",
-	CasinoIn = "Casino_Hall", FactIn = "Steam_Factory",
+	FactIn = "Steam_Factory",
+	-- 학교(카지노 자리)와 지하 카지노(둥근 입구 + 땅 밑) — 2026-10-10
+	SchuleIn = "Schule", CasGate = "Casino_Gate", CasUnder = "Casino_Under",
 }
 -- 피벗을 원점(바닥 가운데)이 아닌 곳에 두는 틀. 톱니는 굴대 가운데를 축으로 돌고,
 -- 꺾인 관은 꺾인 자리를 관 끝에 맞춘다(build_steam.py pipe_bend90 의 P)
@@ -94,6 +98,9 @@ local function skin(p, key, modelName)
 	p.RenderFidelity = Enum.RenderFidelity.Precise
 	if key == "Glass" then
 		p.Transparency = 0.55
+		p.CastShadow = false
+	elseif key == "WinGlass" then
+		p.Transparency = 0.78
 		p.CastShadow = false
 	end
 	if key == "Vent" or key == "LampPt" then

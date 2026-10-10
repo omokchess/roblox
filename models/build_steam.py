@@ -210,10 +210,29 @@ def gear(g, mat, cx, cy, cz, r, teeth, t, axis="y", depth=None):
 
 
 WIN_OUT = 0.1
+# 걸어 들어가는 건물(2026-10-10 사용자: 노란 불빛 창 말고 진짜 뚫린 창): 숫자면 window() 가 그 깊이만큼 벽에 구멍을 내고
+# (Cut 표지) 맑은 유리 한 장(Pane 표지)을 낀다. 안팎 짝 창은 같은 구멍·같은 유리가 되어 apply_cuts 가 하나로 합친다.
+# 짓는 쪽(build_steam_inside.job)이 켜고 끈다. 옛 키트(집·탑)는 None 그대로 = 불빛 창
+CUT_T = None
 
 
-def window(g, cx, cy, z0, w, h, face="-y", cross=True, frame="Iron", glass="Glow", sill=True):
-    """벽 겉면(cx,cy 가 벽면 위 한 점)에 붙이는 창. face 는 벽이 바라보는 쪽"""
+def hole(g, cx, cy, zc, w, h, face, t, pane=True, pane_at=None):
+    """벽 겉면 한 점(cx, cy)에서 안으로 t 깊이 네모 구멍 + 유리. 벽이 t 보다 얇으면 뚫리고, 두꺼우면 움푹한 방(벽감)이 된다"""
+    s = -1 if face[0] == "-" else 1
+
+    def B(mat, dn, sn):
+        if face[1] == "y":
+            g[mat].box(cx, cy + s * dn, zc, w, sn, h)
+        else:
+            g[mat].box(cx + s * dn, cy, zc, sn, w, h)
+    B("Cut", -t / 2, t + 0.04)
+    if pane:    # 뚫린 벽은 벽 가운데(안팎 짝 창이 같은 유리 한 장), 벽감은 pane_at(겉에서 안쪽 거리)
+        B("Pane", -(t / 2 if pane_at is None else pane_at), 0.08)
+
+
+def window(g, cx, cy, z0, w, h, face="-y", cross=True, frame="Iron", glass="Glow", sill=True, cut=None, pane_at=None):
+    """벽 겉면(cx,cy 가 벽면 위 한 점)에 붙이는 창. face 는 벽이 바라보는 쪽.
+    cut: None = CUT_T 를 따름, False = 불빛 창, 숫자 = 그 깊이로 뚫는다"""
     s = -1 if face[0] == "-" else 1
     ax = face[1]
     zc = z0 + h / 2
@@ -227,7 +246,10 @@ def window(g, cx, cy, z0, w, h, face="-y", cross=True, frame="Iron", glass="Glow
         else:
             g[mat].box(cx + s * dn, cy + u, z, sn, su, sz)
 
-    if glass:   # None = 틀만(유리는 바깥 창이 맡음)
+    t = CUT_T if cut is None else cut
+    if t:
+        hole(g, cx, cy, zc, w, h, face, t, pane_at=pane_at)
+    elif glass:   # None = 틀만(유리는 바깥 창이 맡음)
         B(glass, 0, 0.1, zc, w, 0.2, h)
     fw = 0.35
     B(frame, 0, 0.25, z0 + h + fw / 2, w + 2 * fw, 0.4, fw)
@@ -239,6 +261,186 @@ def window(g, cx, cy, z0, w, h, face="-y", cross=True, frame="Iron", glass="Glow
         B(frame, 0, 0.3, zc, w, 0.3, 0.22)
     if sill:
         B("StoneTrim", 0, 0.45, z0 - fw - 0.2, w + 1.0, 0.9, 0.4)
+
+
+# ---------------------------------------------------------------- 창 구멍 내기(apply_cuts)
+NO_CUT = ("Cut", "Pane", "WinGlass", "Glass", "LampPt", "Vent")
+
+
+def _comps(bm):
+    """이어진 덩이로 나눈다 → [(꼭짓점들, 면들)]"""
+    bm.verts.index_update()
+    parent = list(range(len(bm.verts)))
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+    for e in bm.edges:
+        a, b = find(e.verts[0].index), find(e.verts[1].index)
+        if a != b:
+            parent[a] = b
+    vs, fs = {}, {}
+    for v in bm.verts:
+        vs.setdefault(find(v.index), []).append(v)
+    for f in bm.faces:
+        fs.setdefault(find(f.verts[0].index), []).append(f)
+    return [(vs[r], fs.get(r, [])) for r in vs]
+
+
+def _box_frame(vs, fs):
+    """덩이가 상자면 (원점, 오른손 축 셋, 길이 셋), 아니면 None"""
+    if len(vs) != 8 or len(fs) != 6:
+        return None
+    v0 = vs[0]
+    es = [e.other_vert(v0).co - v0.co for e in v0.link_edges]
+    if len(es) != 3 or min(e.length for e in es) < 1e-6:
+        return None
+    ls = [e.length for e in es]
+    us = [e / e.length for e in es]
+    if max(abs(us[0].dot(us[1])), abs(us[0].dot(us[2])), abs(us[1].dot(us[2]))) > 1e-4:
+        return None
+    if us[0].cross(us[1]).dot(us[2]) < 0:
+        us[1], us[2], ls[1], ls[2] = us[2], us[1], ls[2], ls[1]
+    o = v0.co.copy()
+    for v in vs:
+        d = v.co - o
+        if any(min(abs(d.dot(u)), abs(d.dot(u) - l)) > 1e-3 for u, l in zip(us, ls)):
+            return None
+    return o, us, ls
+
+
+def _aabb(pts):
+    return [min(p[i] for p in pts) for i in range(3)], [max(p[i] for p in pts) for i in range(3)]
+
+
+def _overlap(a, b, eps=1e-4):
+    return all(min(a[1][i], b[1][i]) - max(a[0][i], b[0][i]) > eps for i in range(3))
+
+
+def _sub(lo, hi, clo, chi):
+    """상자 [lo, hi] 에서 [clo, chi] 를 뺀 조각들(같은 틀의 축 정렬 상자)"""
+    if any(min(hi[i], chi[i]) - max(lo[i], clo[i]) <= 1e-4 for i in range(3)):
+        return [(lo, hi)]
+    out, lo, hi = [], list(lo), list(hi)
+    for i in range(3):
+        if clo[i] > lo[i] + 1e-4:
+            a, b = list(lo), list(hi)
+            b[i] = clo[i]
+            out.append((a, b))
+            lo[i] = clo[i]
+        if chi[i] < hi[i] - 1e-4:
+            a, b = list(lo), list(hi)
+            a[i] = chi[i]
+            out.append((a, b))
+            hi[i] = chi[i]
+    return out
+
+
+def _add_frame_box(bm, o, us, lo, hi):
+    c = o + sum((u * ((a + b) / 2) for u, a, b in zip(us, lo, hi)), Vector())
+    rot = Matrix((tuple(us[0]), tuple(us[1]), tuple(us[2]))).transposed().to_4x4()
+    bmesh.ops.create_cube(bm, size=1.0, matrix=Matrix.Translation(c) @ rot
+                          @ Matrix.Diagonal((hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2], 1.0)))
+
+
+def _mesh_obj(name, pts, faces):
+    import bpy
+    me = bpy.data.meshes.new(name)
+    me.from_pydata([tuple(p) for p in pts], [], faces)
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(ob)
+    return ob
+
+
+def _cut_bool(grp, pts, faces, cs):
+    """상자가 아닌 닫힌 덩이(둥근 벽·원기둥)에서 구멍들을 불리언으로 뺀다"""
+    import bpy
+    target = _mesh_obj("cut_target", pts, faces)
+    cuts = [_mesh_obj("cut_%d" % i, c["pts"], c["faces"]) for i, c in enumerate(cs)]
+    for c in cuts:
+        mod = target.modifiers.new(name="b_" + c.name, type="BOOLEAN")
+        mod.operation = "DIFFERENCE"
+        mod.object = c
+        mod.solver = "EXACT"
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(target.evaluated_get(dg))
+    grp.bm.from_mesh(me)
+    bpy.data.meshes.remove(me)
+    for ob in [target] + cuts:
+        m = ob.data
+        bpy.data.objects.remove(ob, do_unlink=True)
+        bpy.data.meshes.remove(m)
+
+
+def _cut_group(grp, cutters):
+    """grp 의 덩이 중 구멍 자리와 겹치는 것을 자른다. 상자는 조각 상자로 나누고(깨끗), 그 밖의 닫힌 덩이는 불리언"""
+    hits = []
+    for vs, fs in _comps(grp.bm):
+        bb = _aabb([v.co for v in vs])
+        cs = [c for c in cutters if _overlap(bb, c["bb"])]
+        # 구멍 안에 통째로 든 덩이(벽감 속 커튼·액자)는 일부러 넣은 것이라 두고, 구멍 밖으로 뻗은 것(벽)만 자른다
+        if cs and not any(all(c["bb"][0][i] - 1e-3 <= bb[0][i] and bb[1][i] <= c["bb"][1][i] + 1e-3 for i in range(3)) for c in cs):
+            hits.append((vs, fs, cs))
+    if not hits:
+        return 0
+    adds, bools, dead = [], [], []
+    for vs, fs, cs in hits:
+        fr = _box_frame(vs, fs)
+        aligned = fr is not None and all(
+            c["fr"] is not None and all(max(abs(cu.dot(u)) for u in fr[1]) > 1 - 1e-4 for cu in c["fr"][1]) for c in cs)
+        if aligned:
+            o, us, ls = fr
+            pieces = [([0.0, 0.0, 0.0], list(ls))]
+            for c in cs:
+                clo, chi = _aabb([[(p - o).dot(u) for u in us] for p in c["pts"]])
+                nxt = []
+                for a, b in pieces:
+                    nxt += _sub(a, b, clo, chi)
+                pieces = nxt
+            if len(pieces) == 1 and pieces[0] == ([0.0, 0.0, 0.0], list(ls)):
+                continue
+            dead.append(vs)
+            adds += [(o, us, a, b) for a, b in pieces if min(b[i] - a[i] for i in range(3)) > 0.004]
+        elif all(len(e.link_faces) == 2 for v in vs for e in v.link_edges):    # 닫힌 덩이만 불리언(열린 띠는 둔다)
+            lv = {v.index: k for k, v in enumerate(vs)}
+            dead.append(vs)
+            bools.append(([v.co.copy() for v in vs], [[lv[v.index] for v in f.verts] for f in fs], cs))
+    for vs in dead:
+        bmesh.ops.delete(grp.bm, geom=vs, context="VERTS")
+    for o, us, a, b in adds:
+        _add_frame_box(grp.bm, o, us, a, b)
+    for pts, faces, cs in bools:
+        _cut_bool(grp, pts, faces, cs)
+    return len(dead)
+
+
+def apply_cuts(g):
+    """Cut 표지 덩이(구멍)로 모든 재질 덩이를 자르고, Pane 표지(유리)는 같은 자리 겹친 것을 하나로 해 WinGlass 로 옮긴다"""
+    cutters = []
+    for vs, fs in _comps(g["Cut"].bm):
+        lv = {v.index: k for k, v in enumerate(vs)}
+        pts = [v.co.copy() for v in vs]
+        cutters.append({"pts": pts, "faces": [[lv[v.index] for v in f.verts] for f in fs], "bb": _aabb(pts),
+                        "fr": _box_frame(vs, fs)})
+    n = 0
+    if cutters:
+        for k, grp in g.items():
+            if k not in NO_CUT and grp.bm.verts:
+                n += _cut_group(grp, cutters)
+    seen = set()
+    for vs, fs in _comps(g["Pane"].bm):
+        c = sum((v.co for v in vs), Vector()) / len(vs)
+        key = tuple(round(x * 4) for x in c)
+        if key in seen:
+            continue
+        seen.add(key)
+        lv = {v.index: k for k, v in enumerate(vs)}
+        g["WinGlass"].add_mesh([tuple(v.co) for v in vs], [[lv[v.index] for v in f.verts] for f in fs])
+    g["Cut"].bm.clear()
+    g["Pane"].bm.clear()
+    return len(cutters), n, len(seen)
 
 
 def door(g, cx, cy, z0, w, h, face="-y", canopy=True):

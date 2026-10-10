@@ -396,7 +396,7 @@ def observatory(g):
             t["Glow"].box(rr * math.cos(a), 0.12, 7.5 + rr * math.sin(a), 0.14, 0.06, 0.14)
         for k in range(4):
             t["Iron"].obox(0, 0.1, 7.5, 5.8, 0.03, 0.05, ry=k * math.pi / 4)
-    L.transformed(g, polar_m(232.0, RI - 0.05), starmap)
+    L.transformed(g, polar_m(246.0, RI - 0.05), starmap)    # 아래 창(225 도)을 가리지 않게
     dx, dy = -13.2, -6.8
     g["Wood"].obox(dx, dy, 5.0, 5.2, 2.6, 0.3, rz=R(35))
     for sx in (-1, 1):

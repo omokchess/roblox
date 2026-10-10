@@ -26,11 +26,15 @@ import hanok_lib as L  # noqa: E402
 import build_steam as S  # noqa: E402
 import build_steam_obs as O  # noqa: E402  (천문대 2판·놀이터 — 2026-10-09)
 import build_steam_inside as I  # noqa: E402  (들어가는 건물 — 2026-10-10)
+import build_steam_school as SCH  # noqa: E402  (학교 — 2026-10-10, 카지노 자리)
+import build_steam_under as UND  # noqa: E402  (지하 카지노 — 2026-10-10)
 
 PAL = dict(S.PALETTE)
 PAL.update({"SignBlue": "#3A5FA8", "SignGold": "#C9A23A", "SignTeal": "#3E9C93", "SignRed": "#A83A3A", "SignPurple": "#6B4AA0",
             "Dial": "#F2E8C8", "Marble": "#E1E1E4", "DarkStone": "#28282C",
-            "Felt": "#2E6B45", "GlowTeal": "#4FE0C8"})
+            "Felt": "#2E6B45", "GlowTeal": "#4FE0C8",
+            # 진짜 창(2026-10-10): WinGlass = 맑은 창유리, Cut·Pane = 구멍·유리 표지(apply_cuts 가 비우고 옮긴다 — 내보내지 않음)
+            "WinGlass": "#BFD9E6", "Paint": "#E6E2D6", "Cut": "#FF00FF", "Pane": "#00FFFF"})
 
 
 def G(prefix):
@@ -99,32 +103,10 @@ def shop(sign):
     return fn
 
 
-def under_gate(g):
-    W, D, H = 14.0, 10.0, 11.0
-    g["Stone"].box(0, 0, H / 2, W, D, H)
-    g["StoneTrim"].box(0, 0, H + 0.4, W + 1.0, D + 1.0, 0.8)
-    S.pyramid(g, "SnowCap", 0, 0, H + 0.8, W + 1.0, D + 1.0, 1.4)
-    fy = -D / 2
-    # 아치 입구(어두운 안) + 쇠창살
-    g["Soot"].box(0, fy - 0.1, 3.6, 6.0, 0.3, 7.2)
-    g["Soot"].hcyl(0, fy - 0.1, 7.2, 3.0, 0.3, axis="y", seg=16)
-    for x in (-2.2, -1.1, 0.0, 1.1, 2.2):
-        g["Iron"].box(x, fy - 0.4, 4.6, 0.25, 0.25, 9.2)
-    g["Iron"].box(0, fy - 0.4, 3.0, 6.2, 0.25, 0.3)
-    g["Iron"].box(0, fy - 0.4, 6.4, 6.2, 0.25, 0.3)
-    g["StoneTrim"].hcyl(0, fy - 0.35, 7.2, 3.8, 0.5, axis="y", seg=16)
-    S.gear(g, "Brass", 0, fy - 0.6, 10.2, 1.3, 10, 0.3)
-    for s in (-1, 1):
-        g["Iron"].cyl(s * 5.2, fy - 1.5, 0, 0.3, 0.3, 7.0, seg=8)
-        g["Glow"].box(s * 5.2, fy - 1.5, 7.6, 0.9, 0.9, 1.2)
-    g["LampPt"].box(0, fy - 2.0, 9.0, 0.5, 0.5, 0.5)
-
-
 JOBS = [
     ("Clock_Tower", "Clock", clock_tower),
     ("Shop_Gold", "ShopG", shop("SignGold")),
-    ("Under_Gate", "UGate", under_gate),
-] + O.JOBS + I.JOBS
+] + [j for j in O.JOBS if j[0] != "Observatory"] + I.JOBS + SCH.JOBS + UND.JOBS    # 천문대는 I.JOBS 가 job() 으로 감싸 짓는다(진짜 창·등)
 
 if __name__ == "__main__":
     RENDER = "render" in (sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])

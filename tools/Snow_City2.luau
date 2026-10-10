@@ -201,6 +201,30 @@ local okRun, errRun = pcall(function()
 	local FStone = folder("돌")
 
 	local G = assert(workspace.Surface:FindFirstChild("R_설원3"), "Surface.R_설원3(설원 땅)이 없다")
+	-- 지난번 지하 카지노 땅 파기를 먼저 되돌린다(건물을 앉힐 때 땅 높이를 재는데, 구멍이 열려 있으면 굴 속까지 받침돌을 채운다).
+	-- 다시 파는 일은 맨 끝(3f)에서
+	do
+		local land = assert(G:FindFirstChild("Land"), "R_설원3.Land 가 없다")
+		local store = SS:FindFirstChild("Snow_LandOriginal")
+		if not store then
+			store = Instance.new("Folder")
+			store.Name = "Snow_LandOriginal"
+			store.Parent = SS
+		end
+		-- 되돌리기
+		for _, orig in ipairs(store:GetChildren()) do
+			local key = orig:GetAttribute("CarveKey")
+			for _, p in ipairs(land:GetChildren()) do
+				if p:GetAttribute("CarvedFrom") == key then
+					p:Destroy()
+				end
+			end
+			local back = orig:Clone()
+			back:SetAttribute("CarveKey", nil)
+			back.Parent = land
+			orig:Destroy()
+		end
+	end
 	local rpG = RaycastParams.new()
 	rpG.FilterType = Enum.RaycastFilterType.Include
 	rpG.FilterDescendantsInstances = { G }
@@ -774,7 +798,7 @@ local okRun, errRun = pcall(function()
 		if spec then
 			local pv = e.m:GetPivot()
 			for _, p in ipairs(e.m:GetDescendants()) do
-				if p:IsA("BasePart") then
+				if p:IsA("MeshPart") then -- 키트 메시만(천문대처럼 먼저 지은 충돌 상자는 둔다)
 					p.CanCollide = false
 				end
 			end
@@ -1252,6 +1276,105 @@ local okRun, errRun = pcall(function()
 		end
 	end
 	say("파트 합계 %d", n)
+
+	--==================================================================== 3f. 지하 카지노 땅 파기(INSIDE.dig — build_steam_under.py)
+	-- Surface.R_설원3.Land 의 축 정렬 큰 판(마을·마을_눈)을 상자 빼기로 쪼갠다. 처음 판은 ServerStorage.Snow_LandOriginal 에
+	-- 두고 다시 지을 때마다 되돌린 뒤 다시 판다(몇 번 돌려도 같다). 마을 다른 것들이 땅 높이를 다 잰 뒤라 맨 끝에 한다.
+	do
+		local digs = {}
+		for _, e in ipairs(placed) do
+			local spec = INSIDE[e.kind]
+			if spec and spec.dig then
+				local pv = e.m:GetPivot()
+				local X, Y, Z = pv.XVector, pv.YVector, pv.ZVector
+				for _, d in ipairs(spec.dig) do
+					local c = pv:PointToWorldSpace(Vector3.new(d[1], d[2], d[3]))
+					local hx, hy, hz = d[4] / 2, d[5] / 2, d[6] / 2
+					local h = if d[7]
+						then Vector3.new(hx, hy, hz)
+						else Vector3.new(
+							math.abs(X.X) * hx + math.abs(Y.X) * hy + math.abs(Z.X) * hz,
+							math.abs(X.Y) * hx + math.abs(Y.Y) * hy + math.abs(Z.Y) * hz,
+							math.abs(X.Z) * hx + math.abs(Y.Z) * hy + math.abs(Z.Z) * hz
+						)
+					digs[#digs + 1] = { c - h, c + h }
+				end
+			end
+		end
+		local land = G:FindFirstChild("Land")
+		local store = SS:FindFirstChild("Snow_LandOriginal")
+		if not store then
+			store = Instance.new("Folder")
+			store.Name = "Snow_LandOriginal"
+			store.Parent = SS
+		end
+		local function sub(lo, hi, clo, chi)
+			for _, ax in ipairs({ "X", "Y", "Z" }) do
+				if math.min(hi[ax], chi[ax]) - math.max(lo[ax], clo[ax]) <= 1e-3 then
+					return { { lo, hi } }
+				end
+			end
+			local out = {}
+			local l, h = { X = lo.X, Y = lo.Y, Z = lo.Z }, { X = hi.X, Y = hi.Y, Z = hi.Z }
+			for _, ax in ipairs({ "X", "Y", "Z" }) do
+				if clo[ax] > l[ax] + 1e-3 then
+					local a, b = table.clone(l), table.clone(h)
+					b[ax] = clo[ax]
+					out[#out + 1] = { Vector3.new(a.X, a.Y, a.Z), Vector3.new(b.X, b.Y, b.Z) }
+					l[ax] = clo[ax]
+				end
+				if chi[ax] < h[ax] - 1e-3 then
+					local a, b = table.clone(l), table.clone(h)
+					a[ax] = chi[ax]
+					out[#out + 1] = { Vector3.new(a.X, a.Y, a.Z), Vector3.new(b.X, b.Y, b.Z) }
+					h[ax] = chi[ax]
+				end
+			end
+			return out
+		end
+		local nCut, nPiece, k = 0, 0, 0
+		for _, p in ipairs(land:GetChildren()) do
+			if p:IsA("Part") and p.Shape == Enum.PartType.Block and p.CFrame.XVector.X > 0.9999 and p.CFrame.YVector.Y > 0.9999 then
+				local lo, hi = p.Position - p.Size / 2, p.Position + p.Size / 2
+				local boxes = { { lo, hi } }
+				local hit = false
+				for _, d in ipairs(digs) do
+					local nxt = {}
+					for _, b in ipairs(boxes) do
+						local r = sub(b[1], b[2], d[1], d[2])
+						if #r ~= 1 or r[1][1] ~= b[1] or r[1][2] ~= b[2] then
+							hit = true
+						end
+						for _, q in ipairs(r) do
+							nxt[#nxt + 1] = q
+						end
+					end
+					boxes = nxt
+				end
+				if hit then
+					k += 1
+					local key = p.Name .. "#" .. k
+					local orig = p:Clone()
+					orig:SetAttribute("CarveKey", key)
+					orig.Parent = store
+					for _, b in ipairs(boxes) do
+						local s = b[2] - b[1]
+						if s.X > 0.05 and s.Y > 0.05 and s.Z > 0.05 then
+							local q = p:Clone()
+							q.Size = s
+							q.CFrame = CFrame.new((b[1] + b[2]) / 2)
+							q:SetAttribute("CarvedFrom", key)
+							q.Parent = land
+							nPiece += 1
+						end
+					end
+					p:Destroy()
+					nCut += 1
+				end
+			end
+		end
+		say("땅 파기: 상자 %d, 쪼갠 판 %d → 조각 %d", #digs, nCut, nPiece)
+	end
 end)
 if not okRun then
 	say("ERR %s", tostring(errRun))
