@@ -45,7 +45,8 @@ scene.camera = cam
 out = os.path.join(HERE, "snowtown_render")
 os.makedirs(out, exist_ok=True)
 
-PLAY = ["Play_Swing", "Play_Slide", "Play_Seesaw", "Play_RoundBase", "Play_Round", "Play_Dome", "Park_Bench", "Snowman", "Sled"]
+PLAY = ["Play_Swing", "Play_Slide", "Play_Seesaw", "Play_RoundBase", "Play_Round", "Play_Dome", "Park_Bench", "Snowman", "Sled",
+        "Play_Spring", "Play_MonkeyBars", "Play_Tunnel", "Play_TireSwing", "Play_Balance", "Park_Bin"]
 OBS = ["Observatory", "Observatory_Dome", "Observatory_Scope", "Orrery_A", "Orrery_B", "Orrery_C", "Orrery_D"]
 
 
@@ -101,4 +102,8 @@ for n in PLAY:
 show(PLAY)
 shot("obs_play.png", (40, -40, 16), (40, 0, 3), lens=30)
 shot("obs_play2.png", (95, -40, 16), (95, 0, 3), lens=30)
+shot("obs_play3.png", (165, -40, 16), (165, 0, 3), lens=30)
+shot("obs_play4.png", (128, -7, 5), (128, 0, 2.6), lens=35)
+show(OBS)
+shot("obs_chair.png", (-4, -16, 7), (-11.3, -9.4, 3.5), lens=35)
 print("done")

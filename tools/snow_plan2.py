@@ -49,6 +49,12 @@ KIT = {
     "Park_Bench": ((-3.0, 3.0, -0.9, 0.9), (-3.0, 3.0, -0.9, 0.9)),
     "Snowman": ((-1.6, 1.6, -1.6, 1.6), (-2.5, 2.5, -1.6, 1.6)),
     "Sled": ((-0.8, 0.8, -3.2, 2.0), (-0.8, 0.8, -3.2, 2.0)),
+    "Play_Spring": ((-0.9, 0.9, -0.9, 0.9), (-1.0, 1.0, -1.95, 2.1)),
+    "Play_MonkeyBars": ((-1.3, 1.3, -5.3, 5.3), (-1.3, 1.3, -5.3, 5.3)),
+    "Play_Tunnel": ((-4.8, 4.8, -3.6, 3.6), (-4.8, 4.8, -3.6, 3.6)),
+    "Play_TireSwing": ((-4.6, 4.6, -2.8, 2.8), (-4.6, 4.6, -2.8, 2.8)),
+    "Play_Balance": ((-6.6, 6.6, -1.8, 1.8), (-6.6, 6.6, -1.8, 1.8)),
+    "Park_Bin": ((-0.95, 0.95, -0.95, 0.95), (-0.95, 0.95, -0.95, 0.95)),
     "Sel_Werk_Ruin": ((-12.6, 12.6, -9.6, 9.6), (-15.2, 12.6, -10.0, 10.5)),
     "Shop_Blue": ((-8.6, 8.6, -8.0, 6.6), (-8.6, 10.7, -11.4, 9.6)),
     "Shop_Red": ((-8.6, 8.6, -8.0, 6.6), (-8.6, 10.7, -11.4, 9.6)),
@@ -62,7 +68,8 @@ KIT = {
     "Vertical_Boiler": ((-3.7, 3.7, -3.7, 3.7), (-3.7, 4.6, -3.8, 3.7)),
     "Zapfen_Werk": ((-45.0, 40.0, -21.0, 18.0), (-46.7, 40.0, -21.0, 18.0)),
 }
-SMALL = {"Gas_Lamp", "Boiler_Tank", "Big_Gear", "Vertical_Boiler", "Park_Bench", "Snowman", "Sled", "Play_Seesaw"}
+SMALL = {"Gas_Lamp", "Boiler_Tank", "Big_Gear", "Vertical_Boiler", "Park_Bench", "Snowman", "Sled", "Play_Seesaw", "Play_Spring",
+         "Park_Bin", "Play_Balance"}
 A, B, C_, SR, ST, SB = "Steam_House_A", "Steam_House_B", "Steam_House_C", "Shop_Red", "Shop_Teal", "Shop_Blue"
 
 # 들어갈 수 있는 건물. (이름표: 안쪽 방 id, 문 로컬 x, z(배율 1), 문 폭) — 옛 Snow_City 와 같은 값, 배율은 짓는 쪽이 곱한다
@@ -231,15 +238,33 @@ BUILD += [(C_, -4640, -3606, 0, "체스판", "", 1.0), (A, -4608, -3606, 0, "체
           (A, -4706, -3642, 180, "남쪽거리", "", 1.0), (C_, -4674, -3646, 180, "남쪽거리", "", 1.0)]
 # ── 놀이터(초록 구역 — 동대로 남쪽 · 카지노 남서 · 남동 골목 북쪽). 바닥 = 놀이터서·놀이터동 포장 ──
 BUILD += [
-    ("Play_Swing", -4738, -3786, 0, "놀이터", "", 1.0),
-    ("Play_Slide", -4710, -3790, 180, "놀이터", "", 1.0),      # 미끄럼판이 남쪽(+z)으로
-    ("Play_Dome", -4744, -3755, 0, "놀이터", "", 1.0),
-    ("Play_Seesaw", -4718, -3752, 90, "놀이터", "", 1.0),
-    ("Play_RoundBase", -4668, -3748, 0, "놀이터", "", 1.0),    # 위에 Play_Round 가 돈다
-    ("Snowman", -4686, -3712, 45, "놀이터", "", 1.0),
+    # (2026-10-10 "더 밀도있게") 큰 기구 1.3 배·시소·스프링 1.2 배로 키우고 빈 데를 메움
+    ("Play_Swing", -4740, -3789, 0, "놀이터", "", 1.3),
+    ("Play_Slide", -4708, -3791, 180, "놀이터", "", 1.3),     # 미끄럼판이 남쪽(+z)으로
+    ("Play_Dome", -4746, -3758, 0, "놀이터", "", 1.3),
+    ("Play_Seesaw", -4724, -3752, 90, "놀이터", "", 1.2),
+    ("Play_Seesaw", -4702, -3758, 0, "놀이터", "", 1.2),
+    ("Play_Spring", -4724, -3770, 60, "놀이터", "", 1.2),
+    ("Play_Spring", -4716, -3766, -40, "놀이터", "", 1.2),
+    ("Play_Balance", -4730, -3741, 0, "놀이터", "", 1.3),
+    ("Play_RoundBase", -4668, -3748, 0, "놀이터", "", 1.3),    # 위에 Play_Round 가 돈다
+    ("Play_MonkeyBars", -4668, -3765, 90, "놀이터", "", 1.3),
+    ("Play_Spring", -4650, -3766, 30, "놀이터", "", 1.2),
+    ("Play_Spring", -4651, -3756, -20, "놀이터", "", 1.2),
+    ("Play_TireSwing", -4686, -3741, 0, "놀이터", "", 1.3),
+    ("Play_Balance", -4688, -3722, 90, "놀이터", "", 1.3),
+    ("Play_Tunnel", -4672, -3718, 0, "놀이터", "", 1.3),
+    ("Play_Dome", -4655, -3705, 0, "놀이터", "", 1.0),
+    ("Play_TireSwing", -4708, -3741, 0, "놀이터", "", 1.3),
+    ("Play_Spring", -4688, -3762, 10, "놀이터", "", 1.2),
+    ("Play_Spring", -4680, -3756, -50, "놀이터", "", 1.2),
     ("Park_Bench", -4648, -3730, 90, "놀이터", "", 1.0),
-    ("Park_Bench", -4648, -3712, 90, "놀이터", "", 1.0),
+    ("Park_Bench", -4648, -3721, 90, "놀이터", "", 1.0),
     ("Park_Bench", -4752, -3741, 0, "놀이터", "", 1.0),
+    ("Park_Bench", -4757, -3750, -90, "놀이터", "", 1.0),
+    ("Park_Bin", -4701, -3790, 0, "놀이터", "", 1.0),
+    ("Park_Bin", -4641, -3747, 0, "놀이터", "", 1.0),
+    ("Snowman", -4730, -3712, -30, "놀이터", "", 1.0),        # 흙바닥 말고 울타리 밖 눈밭(남서 울타리와 골목 사이)
 ]
 # 놀이터 울타리(무쇠, 높이 3). 꺾은선마다 끊긴 자리가 문(북 동대로 쪽 · 동 동쪽 거리 쪽 · 서 고리 쪽)
 FENCES = [
@@ -250,12 +275,44 @@ FENCES = [
 ]
 # ── 얼어붙은 연못(주황 구역 — 남동 골목 · 바깥 고리 집 · 남쪽 거리 집 사이 세모 땅). 건물 대신 스케이트 타는 연못 ──
 # 얼음 = 겹친 원판 넷(높이를 0.02 씩 달리해 겹친 곳이 깜빡이지 않게). (x, z, 반지름, 땅 위 높이)
-POND = [(-4775, -3680, 18, 0.30), (-4745, -3672, 14, 0.32), (-4718, -3668, 10, 0.34), (-4793, -3702, 9, 0.36)]
-# 둘레 바위 (x, z, 크기, 돌림) — 손으로
-ROCKS = [(-4796, -3710, 3.2, 20), (-4804, -3696, 2.6, 50), (-4795, -3672, 3.4, 10), (-4790, -3660, 2.4, 70),
-         (-4770, -3659, 2.2, 30), (-4752, -3655, 2.8, 15), (-4730, -3656, 2.4, 60), (-4710, -3657, 3.0, 25),
-         (-4704, -3670, 2.6, 80), (-4712, -3681, 2.2, 40), (-4732, -3688, 3.0, 5), (-4755, -3690, 2.4, 35),
-         (-4772, -3700, 2.8, 65), (-4785, -3713, 2.2, 15)]
+POND = [(-4775, -3680, 18, 0.30), (-4745, -3672, 14, 0.32), (-4724, -3667, 10, 0.34), (-4790, -3698, 9, 0.36)]   # 넷이 서로 겹쳐 한 웅덩이
+# 2026-10-10 "벽 같은 거 놔서 분수 웅덩이처럼": 원판 넷을 합친 테두리를 따라 돌 벽(호), 호가 만나는 꺾인 자리에 돌기둥,
+# 큰 원 가운데 얼어붙은 2단 분수대. 벽 = (원 가운데 x, z, 반지름(벽 가운데선), 시작각, 끝각) — 원판 겹침에서 계산
+BASIN_OFF = 0.6   # 얼음 가장자리에서 벽 가운데선까지
+
+
+def basin_arcs():
+    arcs, cusps = [], []
+    for i, (cx, cz, r, h) in enumerate(POND):
+        rr = r + BASIN_OFF
+        on = []
+        for a in range(360):
+            x, z = cx + rr * math.cos(math.radians(a)), cz + rr * math.sin(math.radians(a))
+            on.append(all(math.hypot(x - qx, z - qz) > qr + BASIN_OFF for j, (qx, qz, qr, qh) in enumerate(POND) if j != i))
+        if all(on):
+            arcs.append((cx, cz, rr, 0, 360))
+            continue
+        k0 = on.index(False)
+        run = None
+        for d in range(1, 361):
+            a = (k0 + d) % 360
+            if on[a] and run is None:
+                run = k0 + d
+            if (not on[a] or d == 360) and run is not None:
+                a0, a1 = run, k0 + d - 1
+                arcs.append((cx, cz, rr, a0, a1))
+                for aa in (a0, a1):
+                    cusps.append((round(cx + rr * math.cos(math.radians(aa)), 2), round(cz + rr * math.sin(math.radians(aa)), 2)))
+                run = None
+    uniq = []
+    for q in cusps:
+        if all(math.hypot(q[0] - u_[0], q[1] - u_[1]) > 0.8 for u_ in uniq):
+            uniq.append(q)
+    return arcs, uniq
+
+
+BASIN, CUSPS = basin_arcs()
+FOUNTAIN = (POND[0][0], POND[0][1])
 FIRES = [(-4738, -3699)]   # 불 피운 쇠 통(몸 녹이는 자리)
 BUILD += [
     ("Park_Bench", -4752, -3697, 180, "연못", "", 1.0),
@@ -266,8 +323,8 @@ BUILD += [
 ]
 # 눈 나무(숲 키트를 눈 색으로 — Snow_Field 와 같은 방식). (틀, x, z, yaw, 배율)
 TREES = [("Pine_A", -4790, -3724, 0, 0.5), ("Pine_B", -4698, -3668, 40, 0.45), ("Birch_A", -4815, -3664, 0, 0.5),
-         ("Pine_B", -4755, -3728, 110, 0.45)]   # 숲 키트 나무는 커서(필드 1.1~1.7) 마을에선 절반 아래로
-LAMPS_EXTRA = [(-4763, -3766, -90), (-4642, -3760, 90), (-4765, -3702, 180), (-4712, -3654, 0)]
+         ("Pine_B", -4755, -3728, 110, 0.45), ("Pine_A", -4690, -3768, 20, 0.32), ("Pine_B", -4644, -3703, 70, 0.3)]   # 숲 키트 나무는 커서(필드 1.1~1.7) 마을에선 절반 아래로
+LAMPS_EXTRA = [(-4763, -3766, -90), (-4642, -3760, 90), (-4765, -3702, 180), (-4712, -3654, 0), (-4729, -3762, 0)]
 
 # ── 동쪽 고원 바깥: 차펜 공방이 불태운 옛 설 공방 폐허와 그을린 마당(1판 OUTSIDE 와 같은 자리, 땅 높이 43.8) ──
 RUIN = (-3084.8, -3921.0)
@@ -680,12 +737,12 @@ def check():
             h = ground_at(*q)
             if h is None or abs(h - 59.8) > 0.4:
                 msgs.append("관 %s 점 (%.0f,%.0f) 땅 %s" % (nm, q[0], q[1], h))
-    for tag, items_ in (("연못", [(x, z, r) for x, z, r, h in POND]), ("바위", [(x, z, sz / 2) for x, z, sz, y in ROCKS]),
+    for tag, items_ in (("연못", [(x, z, r + BASIN_OFF + 0.6) for x, z, r, h in POND]), ("돌기둥", [(x, z, 1.1) for x, z in CUSPS]),
                         ("나무", [(x, z, 1.5) for k, x, z, y, sc in TREES]), ("불통", [(x, z, 1.2) for x, z in FIRES])):
         for x, z, r in items_:
             sq = [(x - r * 0.7, z - r * 0.7), (x + r * 0.7, z - r * 0.7), (x + r * 0.7, z + r * 0.7), (x - r * 0.7, z + r * 0.7)]
             for n, p, k, raw in polys:
-                if overlap(sq, raw) and not (tag == "바위" and k in ("Park_Bench",)):
+                if overlap(sq, raw):
                     msgs.append("%s (%.0f,%.0f) 이 %s 에 걸림" % (tag, x, z, n))
             for rn, r_ in rr:
                 if overlap(sq, r_):
@@ -760,8 +817,14 @@ def render(path, region, sc):
             Cv.circle(x + (dx * c + dz * s) * sc_, z + (-dx * s + dz * c) * sc_, 2.6, "#40e0ff")
     for x, z, r, h in POND:
         Cv.circle(x, z, r, "#a8d4ec")
-    for x, z, sz, y in ROCKS:
-        Cv.circle(x, z, sz / 2, "#707880")
+    for cx, cz, rr, a0, a1 in BASIN:
+        for a in range(a0, a1):
+            p0 = (cx + rr * math.cos(math.radians(a)), cz + rr * math.sin(math.radians(a)))
+            p1 = (cx + rr * math.cos(math.radians(a + 1)), cz + rr * math.sin(math.radians(a + 1)))
+            Cv.line(p0[0], p0[1], p1[0], p1[1], 1.2, "#8c8b8a")
+    for x, z in CUSPS:
+        Cv.circle(x, z, 1.2, "#55565c")
+    Cv.circle(FOUNTAIN[0], FOUNTAIN[1], 3.4, "#8c8b8a")
     for pts in FENCES:
         for a, b in zip(pts, pts[1:]):
             Cv.line(a[0], a[1], b[0], b[1], 0.6, "#202020")
@@ -797,7 +860,7 @@ def lua(v):
 def emit(path):
     tables = [("BUILD", BUILD), ("LAMPS", LAMPS), ("ROADS", ROADS), ("PAVES", PAVES), ("PIPES", PIPES),
               ("VENTS", VENTS), ("MANHOLES", MANHOLES), ("JUNCTIONS", JUNCTIONS), ("FENCES", FENCES),
-              ("POND", POND), ("ROCKS", ROCKS), ("FIRES", FIRES), ("TREES", TREES)]
+              ("POND", POND), ("BASIN", BASIN), ("CUSPS", CUSPS), ("FIRES", FIRES), ("TREES", TREES)]
     lines = ["-- snow_plan2.py 가 적은 표. 손으로 고치지 말고 snow_plan2.py 를 고쳐 다시 뽑는다", "local D = {}"]
     for name, rows in tables:
         lines.append("D.%s = {" % name)
@@ -809,6 +872,7 @@ def emit(path):
         lines.append("\t%s = %s," % (k, lua([iid, dx, dz, dw])))
     lines.append("}")
     lines.append("D.AIRSHIP = %s" % lua(list(airship_pose())))
+    lines.append("D.FOUNTAIN = %s" % lua(list(FOUNTAIN)))
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
 

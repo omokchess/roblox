@@ -59,6 +59,8 @@ local PREFIX = {
 	OrrA = "Orrery_A", OrrB = "Orrery_B", OrrC = "Orrery_C", OrrD = "Orrery_D",
 	PSwing = "Play_Swing", PSlide = "Play_Slide", PSaw = "Play_Seesaw", PRoundB = "Play_RoundBase", PRound = "Play_Round",
 	PDome = "Play_Dome", PBench = "Park_Bench", PSnow = "Snowman", PSled = "Sled",
+	PSpring = "Play_Spring", PMonkey = "Play_MonkeyBars", PTunnel = "Play_Tunnel", PTire = "Play_TireSwing",
+	PBeam = "Play_Balance", PBin = "Park_Bin",
 }
 -- 피벗을 원점(바닥 가운데)이 아닌 곳에 두는 틀. 톱니는 굴대 가운데를 축으로 돌고,
 -- 꺾인 관은 꺾인 자리를 관 끝에 맞춘다(build_steam.py pipe_bend90 의 P)

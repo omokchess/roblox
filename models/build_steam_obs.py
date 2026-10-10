@@ -275,9 +275,10 @@ def observatory(g):
                                                      t["StoneTrim"].box(0, -0.55, 22.9, 2.3, 1.1, 0.8),
                                                      t["StoneTrim"].box(0, -0.55, 2.9, 2.3, 1.1, 0.6)))
     # 창: 아래(밖만 — 안쪽은 계단·책장 자리) / 회랑 높이(안팎)
-    for a in (150, -150, 30, -30):
+    # 창은 벽기둥(30 도마다) 사이 한가운데(15 + 30k)에 — 기둥과 겹치지 않게(2026-10-10 사용자)
+    for a in (45, 135, 225, 315):
         rwin(g, a, 5.0, 2.6, 5.0, inner=False)
-    for a in (0, 45, 90, 135, 180, 225, -45):
+    for a in (15, 75, 105, 165, 195, 225, 315, 345):
         rwin(g, a, 16.4, 2.6, 5.4, inner=True)
     # ── 문: 돌 문틀 + 반달 불빛창(문 위) + 활짝 연 쌍여닫이
     fr = polar_m(DOOR_A, RO)
@@ -405,8 +406,15 @@ def observatory(g):
     g["Canvas"].obox(dx + 0.4, dy - 0.2, 5.17, 2.4, 1.6, 0.04, rz=R(28))
     g["Brass"].obox(dx - 1.4, dy + 0.4, 5.4, 0.9, 0.1, 0.9, rz=R(35), rx=0.3)
     g["Glass"].cyl(dx - 1.9, dy - 0.6, 5.15, 0.22, 0.22, 0.35, seg=10)
-    g["Wood"].obox(dx + 1.9, dy - 2.6, 3.1, 1.6, 1.6, 0.25, rz=R(35))
+    # 의자: 앉을판 + 등받이 + 다리 넷(뒷다리는 등받이까지 올라간다)
+    chx, chy = dx + 1.9, dy - 2.6
+    c35, s35 = math.cos(R(35)), math.sin(R(35))
+    g["Wood"].obox(chx, chy, 3.1, 1.6, 1.6, 0.25, rz=R(35))
     g["Wood"].obox(dx + 2.4, dy - 3.25, 4.4, 1.6, 0.2, 2.4, rz=R(35))
+    for u_, v_, top in ((-0.65, 0.65, 3.0), (0.65, 0.65, 3.0), (-0.65, -0.72, 5.55), (0.65, -0.72, 5.55)):
+        lx, ly = chx + c35 * u_ - s35 * v_, chy + s35 * u_ + c35 * v_
+        g["Wood"].obox(lx, ly, (Z_FL + top) / 2, 0.2, 0.2, top - Z_FL, rz=R(35))
+    g["Wood"].obox(chx, chy, 2.5, 1.3, 0.12, 0.12, rz=R(35))   # 가로대
     # ── 안 불빛(벽 등 넷: 놋쇠 받침 + 불빛 등)
     for a in (60.0, 120.0, 200.0, 330.0):
         L.transformed(g, polar_m(a, RI), lambda t: (t["Brass"].box(0, 0.6, 10.5, 0.3, 1.2, 0.3),
@@ -789,6 +797,121 @@ def snowman(g):
         sweep(g, "Timber", [(s * 1.9, 0.1, 4.4), (s * 2.3, 0.1, 4.4)], 0.05, seg=5)
 
 
+def spring_rider(g):
+    """용수철 위 꼬마 비행선(앉아서 흔드는 놀이기구)"""
+    g["Iron"].cyl(0, 0, 0, 0.9, 0.9, 0.15, seg=16)
+    pts = []
+    for i in range(61):
+        t = i / 60
+        a = t * 2 * math.pi * 5
+        pts.append((0.42 * math.cos(a), 0.42 * math.sin(a), 0.2 + 1.7 * t))
+    sweep(g, "Iron", pts, 0.1, seg=6)
+    g["Iron"].cyl(0, 0, 1.85, 0.55, 0.55, 0.25, seg=14)
+    bm = g["Copper"].bm
+    bmesh.ops.create_icosphere(bm, subdivisions=3, radius=1.0, matrix=Matrix.Translation((0, 0, 2.75)) @ Matrix.Diagonal((0.85, 1.9, 0.75, 1.0)))
+    for y in (-0.9, 0.0, 0.9):
+        L.transformed(g, Matrix.Translation((0, y, 2.75)) @ Matrix.Rotation(math.pi / 2, 4, "X"),
+                      lambda t, yy=y: S.ring(t, "Brass", 0, 0, -0.06, 0.8 * math.sqrt(max(0.0, 1 - (yy / 1.9) ** 2)) * 0.98,
+                                             0.86 * math.sqrt(max(0.0, 1 - (yy / 1.9) ** 2)), 0.12, n=24))
+    g["Leather"].box(0, 0.1, 3.45, 0.75, 1.0, 0.25)
+    g["Leather"].box(0, 0.62, 3.75, 0.75, 0.15, 0.6)
+    sweep(g, "Brass", [(-0.5, -0.6, 3.4), (-0.5, -0.75, 3.95), (0.5, -0.75, 3.95), (0.5, -0.6, 3.4)], 0.07, seg=6)
+    for s in (-1, 1):
+        g["Iron"].obox(s * 0.85, 1.4, 2.75, 0.5, 0.9, 0.08, ry=s * 0.3)
+        g["Brass"].box(s * 0.92, -0.2, 2.75, 0.06, 0.22, 0.22)
+    g["Iron"].obox(0, 1.55, 3.35, 0.08, 0.8, 0.6)
+    g["Brass"].cyl(0, 1.95, 2.7, 0.12, 0.12, 0.1, seg=8)
+    for k in range(3):
+        a = 2 * math.pi * k / 3
+        g["Brass"].obox(0.3 * math.cos(a), 2.0, 2.75 + 0.3 * math.sin(a), 0.12, 0.05, 0.6, ry=a)
+    for s in (-1, 1):
+        g["Glow"].box(s * 0.5, -1.6, 2.85, 0.18, 0.06, 0.18)
+
+
+def monkey_bars(g):
+    """구름사다리: 양끝 사다리 + 위 가로 사다리(놋쇠 칸)"""
+    L_, Hh, W = 10.0, 6.8, 2.0
+    for sy in (-1, 1):
+        for sx in (-1, 1):
+            g["Iron"].cyl(sx * W / 2, sy * L_ / 2, 0, 0.13, 0.13, Hh + 0.3, seg=8)
+        for k in range(1, 7):
+            S.tube(g, "Brass", (-W / 2, sy * L_ / 2, k * 0.95), (W / 2, sy * L_ / 2, k * 0.95), 0.07, seg=6)
+    for sx in (-1, 1):
+        S.tube(g, "Iron", (sx * W / 2, -L_ / 2, Hh), (sx * W / 2, L_ / 2, Hh), 0.12, seg=8)
+    y = -L_ / 2 + 1.0
+    while y < L_ / 2 - 0.5:
+        S.tube(g, "Brass", (-W / 2, y, Hh), (W / 2, y, Hh), 0.07, seg=6)
+        y += 1.0
+    for sy in (-1, 1):
+        for sx in (-1, 1):
+            g["Iron"].box(sx * W / 2, sy * L_ / 2, 0.08, 0.6, 0.6, 0.16)
+            sphere(g, "Brass", (sx * W / 2, sy * L_ / 2, Hh + 0.4), 0.18, sub=1)
+
+
+def pipe_tunnel(g):
+    """구리 관 터널(걸어서 지나간다). x 로 눕힘. 안 바닥은 나무 판"""
+    Lt, Ro, Ri = 9.0, 3.3, 3.0
+    M = Matrix.Translation((0, 0, Ro)) @ Matrix.Rotation(math.pi / 2, 4, "Y")
+    L.transformed(g, M, lambda t: S.ring(t, "Copper", 0, 0, -Lt / 2, Ri, Ro, Lt, n=32))
+    for x in (-Lt / 2, Lt / 2):
+        L.transformed(g, Matrix.Translation((x, 0, Ro)) @ Matrix.Rotation(math.pi / 2, 4, "Y"),
+                      lambda t: S.ring(t, "Brass", 0, 0, -0.3, Ri - 0.05, Ro + 0.3, 0.6, n=32))
+        for k in range(12):
+            a = 2 * math.pi * k / 12
+            g["Iron"].box(x, (Ro + 0.15) * math.cos(a), Ro + (Ro + 0.15) * math.sin(a), 0.7, 0.18, 0.18)
+    L.transformed(g, Matrix.Translation((0, 0, Ro)) @ Matrix.Rotation(math.pi / 2, 4, "Y"),
+                  lambda t: S.ring(t, "Brass", 0, 0, -0.2, Ro, Ro + 0.12, 0.4, n=32))
+    g["Timber"].box(0, 0, 0.42, Lt + 0.2, 3.6, 0.2)
+    for x in (-Lt / 2 + 1.0, Lt / 2 - 1.0):
+        g["Iron"].box(x, 0, 0.25, 0.6, 4.2, 0.5)
+    S.gear(g, "Brass", 0, -Ro - 0.13, Ro + 0.8, 0.9, 12, 0.15, axis="y")
+    g["SnowCap"].box(0, 0, 2 * Ro + 0.12, Lt * 0.8, 1.6, 0.2)
+
+
+def tire_swing(g):
+    for s in (-1, 1):
+        x = 4.2 * s
+        for yy in (-2.4, 2.4):
+            S.tube(g, "Iron", (x, yy, 0.0), (x, 0.0, 7.6), 0.2, seg=10)
+            g["Iron"].box(x, yy, 0.1, 0.8, 0.8, 0.2)
+        S.gear(g, "Brass", x + s * 0.3, 0.0, 6.8, 0.7, 10, 0.15, axis="x")
+    S.tube(g, "Iron", (-4.6, 0, 7.6), (4.6, 0, 7.6), 0.26, seg=12)
+    g["Brass"].cyl(0, 0, 7.0, 0.3, 0.3, 0.45, seg=10)
+    rt, zt = 1.25, 2.2
+    for k in range(3):
+        a = 2 * math.pi * k / 3 + 0.3
+        tx, ty = (rt - 0.1) * math.cos(a), (rt - 0.1) * math.sin(a)
+        n = 14
+        for i in range(n):
+            t0 = i / n
+            px, py, pz = tx * t0, ty * t0, 7.0 + (zt + 0.3 - 7.0) * t0
+            g["Iron"].obox(px, py, pz, 0.07, 0.16 if i % 2 else 0.06, 0.36, rz=a)
+    ring_pts = [(rt * math.cos(2 * math.pi * i / 28), rt * math.sin(2 * math.pi * i / 28), zt) for i in range(29)]
+    sweep(g, "Soot", ring_pts, 0.42, seg=10, cap=False)
+
+
+def balance_beam(g):
+    """지그재그 평균대(나무 들보 셋, 무쇠 발)"""
+    pts = [(-6.0, -1.2), (-2.0, 1.2), (2.0, -1.2), (6.0, 1.2)]
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        L_ = math.hypot(bx - ax, by - ay)
+        rz = math.atan2(by - ay, bx - ax)
+        g["Timber"].obox((ax + bx) / 2, (ay + by) / 2, 1.0, L_ + 0.4, 0.55, 0.3, rz=rz)
+        g["Brass"].obox((ax + bx) / 2, (ay + by) / 2, 0.82, L_ * 0.9, 0.6, 0.06, rz=rz)
+    for x, y in pts:
+        g["Iron"].cyl(x, y, 0, 0.35, 0.25, 0.85, seg=10)
+        g["Iron"].box(x, y, 0.06, 1.1, 1.1, 0.12)
+
+
+def park_bin(g):
+    g["Iron"].cyl(0, 0, 0, 0.75, 0.85, 2.6, seg=16)
+    for z in (0.5, 1.6, 2.5):
+        g["Brass"].cyl(0, 0, z, 0.9, 0.9, 0.15, seg=16)
+    g["Iron"].cyl(0, 0, 2.65, 0.95, 0.55, 0.45, seg=16)
+    sphere(g, "Brass", (0, 0, 3.15), 0.15, sub=1)
+    g["Soot"].cyl(0, 0, 2.62, 0.7, 0.7, 0.05, seg=16)
+
+
 def sled(g):
     for s in (-1, 1):
         sweep(g, "Brass", [(s * 0.7, 2.0, 0.1), (s * 0.7, -1.6, 0.1), (s * 0.7, -2.1, 0.35), (s * 0.7, -2.2, 0.75), (s * 0.7, -1.9, 0.9)], 0.07, seg=6)
@@ -817,6 +940,12 @@ JOBS = [
     ("Park_Bench", "PBench", park_bench),
     ("Snowman", "PSnow", snowman),
     ("Sled", "PSled", sled),
+    ("Play_Spring", "PSpring", spring_rider),
+    ("Play_MonkeyBars", "PMonkey", monkey_bars),
+    ("Play_Tunnel", "PTunnel", pipe_tunnel),
+    ("Play_TireSwing", "PTire", tire_swing),
+    ("Play_Balance", "PBeam", balance_beam),
+    ("Park_Bin", "PBin", park_bin),
 ]
 
 if __name__ == "__main__":
