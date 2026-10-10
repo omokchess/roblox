@@ -28,6 +28,7 @@ import build_steam_obs as O  # noqa: E402  (천문대 2판·놀이터 — 2026-1
 import build_steam_inside as I  # noqa: E402  (들어가는 건물 — 2026-10-10)
 import build_steam_school as SCH  # noqa: E402  (학교 — 2026-10-10, 카지노 자리)
 import build_steam_under as UND  # noqa: E402  (지하 카지노 — 2026-10-10)
+import build_steam_figuren as FIG  # noqa: E402  (기물군 본부 2판 — 2026-10-10)
 
 PAL = dict(S.PALETTE)
 PAL.update({"SignBlue": "#3A5FA8", "SignGold": "#C9A23A", "SignTeal": "#3E9C93", "SignRed": "#A83A3A", "SignPurple": "#6B4AA0",
@@ -106,7 +107,7 @@ def shop(sign):
 JOBS = [
     ("Clock_Tower", "Clock", clock_tower),
     ("Shop_Gold", "ShopG", shop("SignGold")),
-] + [j for j in O.JOBS if j[0] != "Observatory"] + I.JOBS + SCH.JOBS + UND.JOBS    # 천문대는 I.JOBS 가 job() 으로 감싸 짓는다(진짜 창·등)
+] + [j for j in O.JOBS if j[0] != "Observatory"] + I.JOBS + SCH.JOBS + UND.JOBS + FIG.JOBS    # 천문대는 I.JOBS 가 job() 으로 감싸 짓는다(진짜 창·등)
 
 if __name__ == "__main__":
     RENDER = "render" in (sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])

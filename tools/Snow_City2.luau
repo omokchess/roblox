@@ -871,7 +871,7 @@ local okRun, errRun = pcall(function()
 	-- 건물 틀마다 붙는 톱니 무리. 로컬 좌표는 건물 피벗 기준이고 판은 건물 앞(-Z)을 본다. ry 로 더 돌린다.
 	-- { 구동 톱니, 배율, x, y, z, 초당 도, ry, { { 맞물리는 톱니, 방향(도) }, ... } }
 	-- 한 구동 톱니에 둘을 물릴 때는 두 방향 차가 360/이수 의 정수배여야 둘 다 맞물린다
-	local BAKED = { Zapfen_Werk = 1.3, Figuren_HQ = 1.2 } -- 들어가는 건물로 다시 지으며 옛 배율을 겉모양에 구워 넣은 틀
+	local BAKED = { Zapfen_Werk = 1.3 } -- 들어가는 건물로 다시 지으며 옛 배율을 겉모양에 구워 넣은 틀(기물군 본부는 2판에서 새로 지음)
 	local GEAR_SETS = {
 		City_Gate = {
 			{ "Gear_16", 0.8, 0, 20.6, -1.8, 24, 0, { { "Gear_10", 213.75 }, { "Gear_10", 326.25 } } },
@@ -948,8 +948,9 @@ local okRun, errRun = pcall(function()
 		end
 		if e.kind == "Figuren_HQ" then
 			-- 시계 바늘. 앞에서 보면 로컬 +X 가 왼쪽이라 양의 각속도가 시계 방향이다
-			local k = e.sc * (BAKED[e.kind] or 1)
-			local c = e.m:GetPivot() * CFrame.new(0, 35.5 * k, -17.1 * k)
+			-- 2판(build_steam_figuren.py CLOCK): 시계 판 앞면 블렌더 y -34.9, 가운데 z 41 → 로컬 (0, 41, -34.9 - 0.15)
+			local k = e.sc * 1.25
+			local c = e.m:GetPivot() * CFrame.new(0, 41.0 * e.sc, (-34.9 - 0.15) * e.sc)
 			for _, hd in ipairs({ { "Hour", 0.55, 2.3, 0.25, 125 }, { "Minute", 0.38, 3.3, 3.0, 10 } }) do
 				local m = Instance.new("Model")
 				m.Name = "ClockHand_" .. hd[1]
