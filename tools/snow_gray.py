@@ -32,6 +32,8 @@ MATS = {
     "Ghost": ((70, 200, 90), "SmoothPlastic", False, 0.65),     # NPC 크기 유령(R6 4×5×1)
     "Zone": ((250, 210, 60), "SmoothPlastic", False, 0.55),    # 카운터 앞 빈 바닥 10×10
     "Spawn": ((90, 200, 230), "Neon", False, 0.3),              # 부활 자리
+    "Yard": ((176, 172, 162), "SmoothPlastic", True, 0),        # 뜰 바닥
+    "Herb": ((96, 150, 70), "Grass", True, 0),                  # 약초밭·정원
 }
 
 
@@ -95,8 +97,8 @@ def shell(out, W, D, H, front_holes, side_holes=(), back_holes=(), roof=True):
 SIGNS = {}     # kind → (글, x, y, z, w, h)
 
 
-def sign(kind, text, D, z, w=12.0, h=3.0):
-    SIGNS[kind] = (text, 0.0, -D / 2 - 0.35, z, w, h)
+def sign(kind, text, D, z, w=12.0, h=3.0, y=None, both=False, x=0.0):
+    SIGNS[kind] = (text, x, -D / 2 - 0.35 if y is None else y, z, w, h, both)
 
 
 # ── 건물 ─────────────────────────────────────────────────────────────────────
@@ -155,7 +157,7 @@ def gray_smithy():
     o = []
     W, D, H = 36.0, 30.0, 16.0
     fh = [(-7.0, 7.0, FZ, FZ + 11.0)]
-    ix0, ix1, iy0, iy1 = shell(o, W, D, H, fh)
+    ix0, ix1, iy0, iy1 = shell(o, W, D, H, fh, back_holes=[(1.0, 7.0, FZ, FZ + 9.0)])   # 뒷문 → 대장간 마당
     sign("Gray_Smithy", "대장간", D, FZ + 13.2, w=14.0)
     box(o, "Story", ix0 + 1.0, ix0 + 9.0, iy1 - 6.0, iy1, FZ, FZ + 7.0)    # 화덕
     box(o, "Fire", ix0 + 3.0, ix0 + 7.0, iy1 - 6.3, iy1 - 5.8, FZ + 2.0, FZ + 4.5)
@@ -196,7 +198,7 @@ def gray_hospital():
     o = []
     W, D, H = 40.0, 30.0, 16.0
     fh = [(-5.0, 5.0, FZ, FZ + 10.0), (-16.0, -10.0, 4.0, 10.0), (10.0, 16.0, 4.0, 10.0)]
-    ix0, ix1, iy0, iy1 = shell(o, W, D, H, fh, [(-6.0, 0.0, 5.0, 10.0)])
+    ix0, ix1, iy0, iy1 = shell(o, W, D, H, fh, [(-6.0, 0.0, 5.0, 10.0)], back_holes=[(-3.0, 3.0, FZ, FZ + 9.0)])   # 뒷문 → 회복 정원
     sign("Gray_Hospital", "병원", D, FZ + 12.2)
     box(o, "Counter", -10.5, -8.0, -8.0, 0.0, FZ, FZ + 3.5)              # 접수 카운터(문 길을 본다)
     npc(o, -13.0, -4.0, face="x")
@@ -220,7 +222,7 @@ def gray_inn():
     Z2, H = 13.4, 27.4                     # 2층 바닥 윗면(1층 천장 13), 벽 윗면
     fh = [(-4.0, 4.0, FZ, FZ + 10.0), (-15.0, -9.0, 3.5, 8.5), (9.0, 14.0, 3.5, 8.5),
           (-16.5, -11.5, Z2 + 3.0, Z2 + 8.0), (-5.5, -0.5, Z2 + 3.0, Z2 + 8.0), (5.0, 10.0, Z2 + 3.0, Z2 + 8.0)]
-    ix0, ix1, iy0, iy1 = shell(o, W, D, H, fh)
+    ix0, ix1, iy0, iy1 = shell(o, W, D, H, fh, back_holes=[(-11.0, -5.0, FZ, FZ + 9.0)])   # 뒷문 → 마구간
     sign("Gray_Inn", "여관", D, FZ + 11.2)
     # 계단: x 13..19, y -11.5 → 8 (13 단, 단 높이 1.0, 디딤 1.5), 꼭대기 = 2층 바닥
     sx0, sx1, sy0, n = 13.0, ix1, -11.5, 13
@@ -253,6 +255,95 @@ def gray_inn():
     return o
 
 
+# ── 뜰(2026-10-11 사용자: "뜰 활용 아이디어 좋아 보이네") — 건물 뒤, 구역 남은 땅을 그 기능의 바깥 연장으로.
+#    앞(-y)이 건물 뒷벽을 본다. 바닥 판 0.2 + 덩어리. 간판은 앞 가운데 양면 ──
+
+def yard(kind, text, W, D):
+    o = []
+    box(o, "Yard", -W / 2, W / 2, -D / 2, D / 2, 0.0, 0.2)
+    px = -W / 2 + 1.0                                                     # 간판 기둥은 앞 왼 모서리(뒷문에서 오는 길을 비운다)
+    box(o, "Story", px - 0.3, px + 0.3, -D / 2 + 0.2, -D / 2 + 0.8, 0.2, 7.0)
+    sign(kind, text, D, 7.6, w=8.0, h=1.8, y=-D / 2 + 0.5, both=True, x=px + 3.5)
+    return o
+
+
+def yard_smithy():
+    """대장간 마당: 광석 더미 셋 · 바깥 모루 · 담금질 통 · 장작"""
+    o = yard("Gray_Yard_Smithy", "대장간 마당", 30.0, 16.0)
+    for x in (-11.0, -6.0, -1.0):
+        box(o, "Story", x - 2.0, x + 2.0, 2.0, 6.0, 0.2, 2.7)
+    box(o, "Counter", 5.0, 7.6, -1.0, 0.2, 0.2, 3.0)                     # 바깥 모루
+    box(o, "Story", 9.0, 14.0, -5.0, -3.0, 0.2, 2.2)                     # 담금질 통
+    box(o, "Story", 9.0, 14.0, 3.0, 7.0, 0.2, 3.2)                       # 장작 더미
+    return o
+
+
+def yard_enhance():
+    """룬 시험대: 룬 돌 기둥 셋(꼭대기 빛)"""
+    o = yard("Gray_Yard_Enhance", "룬 시험대", 20.0, 12.0)
+    for x in (-6.0, 0.0, 6.0):
+        box(o, "Story", x - 1.0, x + 1.0, 1.0, 3.0, 0.2, 4.2)
+        box(o, "Fire", x - 0.5, x + 0.5, 1.5, 2.5, 4.2, 5.0)
+    return o
+
+
+def yard_bank():
+    """오늘의 시세판(양면 큰 판) + 걸상 둘 — 명예 거래·시세 보는 곳"""
+    o = []
+    box(o, "Yard", -8.0, 8.0, -5.0, 5.0, 0.0, 0.2)
+    for x in (-5.5, 5.5):
+        box(o, "Story", x - 0.3, x + 0.3, -0.3, 0.3, 0.2, 9.0)
+        box(o, "Story", x - 2.5, x + 2.5, 3.0, 4.5, 0.2, 2.0)             # 걸상
+    sign("Gray_Yard_Bank", "오늘의 시세", 10.0, 6.0, w=11.0, h=5.0, y=0.0, both=True)
+    return o
+
+
+def yard_inn():
+    """마구간: 지붕 덮인 칸 넷(뒤 벽), 여물통, 건초, 마부 자리 — 말 등록·호출"""
+    o = yard("Gray_Yard_Inn", "마구간", 26.0, 14.0)
+    box(o, "Wall", -12.0, 12.0, 6.4, 7.0, 0.2, 9.0)                       # 뒤 벽
+    for x in (-12.0, 12.0):
+        box(o, "Story", x - 0.3, x + 0.3, -1.0, 7.0, 0.2, 9.0)            # 옆 벽(칸 깊이)
+    for x in (-6.0, 0.0, 6.0):
+        box(o, "Story", x - 0.2, x + 0.2, 1.0, 6.4, 0.2, 4.5)             # 칸막이
+    box(o, "Roof", -12.6, 12.6, -1.6, 7.0, 9.0, 9.6)
+    box(o, "Story", -11.0, -3.0, -4.5, -3.5, 0.2, 1.6)                   # 여물통
+    box(o, "Counter", 3.0, 6.0, -5.5, -3.5, 0.2, 2.2)                    # 건초
+    npc(o, 9.0, -4.0, z=0.2)
+    return o
+
+
+def yard_potion():
+    """약초밭: 돋운 밭 넷 + 물통 — 채집 퀘스트"""
+    o = yard("Gray_Yard_Potion", "약초밭", 20.0, 16.0)
+    for x in (-7.5, -2.5, 2.5, 7.5):
+        box(o, "Herb", x - 1.5, x + 1.5, -4.0, 7.0, 0.2, 1.0)
+    box(o, "Story", 7.0, 9.0, -7.0, -5.0, 0.2, 2.7)
+    return o
+
+
+def yard_hospital():
+    """회복 정원: 부활 뒤 병원 뒷문으로 나오는 곳 — 가운데 화단 · 걸상 셋(앞은 비움)"""
+    o = yard("Gray_Yard_Hospital", "회복 정원", 20.0, 16.0)
+    box(o, "Herb", -2.0, 2.0, 0.0, 4.0, 0.2, 1.5)
+    for x in (-7.5, 7.5):
+        box(o, "Story", x - 0.75, x + 0.75, -0.5, 4.5, 0.2, 2.0)
+    box(o, "Story", -2.5, 2.5, 6.0, 7.5, 0.2, 2.0)
+    return o
+
+
+def yard_general():
+    """노점 칸: 가운데 길(폭 6)을 사이에 두고 셋씩 — 25인 서버 거래 만남"""
+    o = yard("Gray_Yard_General", "노점", 28.0, 16.0)
+    for y, s in ((-4.0, -1), (4.0, 1)):
+        for x in (-9.0, 0.0, 9.0):
+            box(o, "Counter", x - 2.5, x + 2.5, y - 0.75, y + 0.75, 0.2, 3.7)
+            box(o, "Story", x - 2.5, x - 2.1, y + s * 2.5 - 0.2, y + s * 2.5 + 0.2, 0.2, 8.0)
+            box(o, "Story", x + 2.1, x + 2.5, y + s * 2.5 - 0.2, y + s * 2.5 + 0.2, 0.2, 8.0)
+            box(o, "Roof", x - 3.0, x + 3.0, y + s * 0.5 - 1.5, y + s * 0.5 + 2.5 if s > 0 else y + s * 0.5 + 1.5, 8.0, 8.3)
+    return o
+
+
 GRAY = {
     "Gray_General": gray_general,
     "Gray_Potion": gray_potion,
@@ -261,9 +352,18 @@ GRAY = {
     "Gray_Bank": gray_bank,
     "Gray_Hospital": gray_hospital,
     "Gray_Inn": gray_inn,
+    "Gray_Yard_Smithy": yard_smithy,
+    "Gray_Yard_Enhance": yard_enhance,
+    "Gray_Yard_Bank": yard_bank,
+    "Gray_Yard_Inn": yard_inn,
+    "Gray_Yard_Potion": yard_potion,
+    "Gray_Yard_Hospital": yard_hospital,
+    "Gray_Yard_General": yard_general,
 }
 SIZE = {"Gray_General": (26, 26), "Gray_Potion": (26, 26), "Gray_Enhance": (26, 26), "Gray_Smithy": (36, 30),
-        "Gray_Bank": (36, 30), "Gray_Hospital": (40, 30), "Gray_Inn": (40, 30)}
+        "Gray_Bank": (36, 30), "Gray_Hospital": (40, 30), "Gray_Inn": (40, 30),
+        "Gray_Yard_Smithy": (30, 16), "Gray_Yard_Enhance": (20, 12), "Gray_Yard_Bank": (16, 10), "Gray_Yard_Inn": (26, 14),
+        "Gray_Yard_Potion": (20, 16), "Gray_Yard_Hospital": (20, 16), "Gray_Yard_General": (28, 16)}
 
 
 def kit():
@@ -286,8 +386,8 @@ def lua():
         for mat, x, y, z, sx, sy, sz in o:
             if sx > 0.01 and sy > 0.01 and sz > 0.01:
                 out.append('\t\t{ "%s", %.3f, %.3f, %.3f, %.3f, %.3f, %.3f },' % (mat, -x, z, y, sx, sz, sy))
-        t, x, y, z, w, h = SIGNS[kind]
-        out.append('\t}, sign = { "%s", %.3f, %.3f, %.3f, %.3f, %.3f } },' % (t, -x, z, y, w, h))
+        t, x, y, z, w, h, both = SIGNS[kind]
+        out.append('\t}, sign = { "%s", %.3f, %.3f, %.3f, %.3f, %.3f, %s } },' % (t, -x, z, y, w, h, str(both).lower()))
     out.append("}")
     out.append('''local n = 0
 for kind, d in pairs(DATA) do
@@ -328,19 +428,21 @@ for kind, d in pairs(DATA) do
 	p.Color = MATS.Sign[1]
 	p.Material = MATS.Sign[2]
 	p.Parent = m
-	local g = Instance.new("SurfaceGui")
-	g.Face = Enum.NormalId.Front
-	g.CanvasSize = Vector2.new(s[5] * 40, s[6] * 40)
-	g.LightInfluence = 0
-	g.Parent = p
-	local l = Instance.new("TextLabel")
-	l.Size = UDim2.fromScale(1, 1)
-	l.BackgroundTransparency = 1
-	l.Text = s[1]
-	l.TextScaled = true
-	l.Font = Enum.Font.GothamBold
-	l.TextColor3 = Color3.fromRGB(255, 226, 150)
-	l.Parent = g
+	for _, face in ipairs(s[7] and { Enum.NormalId.Front, Enum.NormalId.Back } or { Enum.NormalId.Front }) do
+		local g = Instance.new("SurfaceGui")
+		g.Face = face
+		g.CanvasSize = Vector2.new(s[5] * 40, s[6] * 40)
+		g.LightInfluence = 0
+		g.Parent = p
+		local l = Instance.new("TextLabel")
+		l.Size = UDim2.fromScale(1, 1)
+		l.BackgroundTransparency = 1
+		l.Text = s[1]
+		l.TextScaled = true
+		l.Font = Enum.Font.GothamBold
+		l.TextColor3 = Color3.fromRGB(255, 226, 150)
+		l.Parent = g
+	end
 	m.WorldPivot = CFrame.new()
 	m.Parent = kit
 end

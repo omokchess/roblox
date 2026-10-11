@@ -22,12 +22,19 @@ end
 
 -- 문 앞(로컬 -Z 로 앞면 깊이 + 3)
 local TARGETS = {
-	{ "동문 안쪽 12", "City_Gate", -12 },
-	{ "동문 바깥 12", "City_Gate", 12 },
-	{ "동문 바깥 30", "City_Gate", 30 },
-	{ "계류탑 앞 -8", "Mooring_Mast", -8 },
-	{ "계류탑 뒤 +8", "Mooring_Mast", 8 },
-	{ "티켓 판매점 앞", "Ticket_Booth", 6 },
+	{ "대장간", "Gray_Smithy", 18 },
+	{ "강화소", "Gray_Enhance", 16 },
+	{ "은행", "Gray_Bank", 18 },
+	{ "여관", "Gray_Inn", 18 },
+	{ "물약상점", "Gray_Potion", 16 },
+	{ "병원", "Gray_Hospital", 18 },
+	{ "잡화점", "Gray_General", 16 },
+	{ "마구간(여관 뜰)", "Gray_Yard_Inn", 9 },
+	{ "노점(잡화점 뜰)", "Gray_Yard_General", 10 },
+	{ "지하 경매장 정자(북동 바깥)", "Casino_Gate", 16 },
+	{ "길드(기물군 본부)", "Figuren_HQ", 44 },
+	{ "동문(필드) 안쪽", "City_Gate", -12 },
+	{ "계류탑(비행선) 앞", "Mooring_Mast", -8 },
 }
 
 local start = Vector3.new(CX, ground(CX, CZ + 22) + 3, CZ + 22) -- 시계탑 남쪽 광장
