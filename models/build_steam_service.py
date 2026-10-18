@@ -44,14 +44,17 @@ def prism_xz(g, mat, pts, y0, y1):
     g[mat].add_mesh(v, f)
 
 
-def quoins(g, W, D, z0, z1, step=3.6):
-    """모서리 돌(엇갈려 쌓은 띠돌)"""
+def quoins(g, W, D, z0, z1, step=1.5):
+    """모서리 돌: 긴 돌·짧은 돌을 엇갈려 빈틈없이 쌓는다(2026-10-18 점검: 띄엄띄엄 놓으면 벽에 뜬 상자처럼 보였다)"""
     k = 0
-    z = z0 + 0.9
-    while z < z1 - 0.9:
+    z = z0
+    while z < z1 - 0.2:
+        h = min(step, z1 - z)
         for sx in (-1, 1):
             for sy in (-1, 1):
-                g["StoneTrim"].box(sx * (W / 2 + 0.05), sy * (D / 2 + 0.05), z, 1.6 if k % 2 else 1.1, 1.1 if k % 2 else 1.6, 1.8)
+                long_x = k % 2 == 0
+                lx, ly = (2.2, 1.2) if long_x else (1.2, 2.2)
+                g["StoneTrim"].box(sx * (W / 2 - lx / 2 + 0.25), sy * (D / 2 - ly / 2 + 0.25), z + h / 2 - 0.04, lx, ly, h - 0.08)
         z += step
         k += 1
 
@@ -373,7 +376,9 @@ def smithy_shell(g):
     tx, ty = W / 2 + 1.7, 10.0
     S.banded_cyl(g, "Copper", tx, ty, FZ, 1.4, 11.0, every=3.0)
     S.vent(g, tx, ty, FZ + 11.8)
-    S.pipe(g, [(tx - 1.4, ty, 6.0), (W / 2, ty, 6.0)], 0.4, mat="Iron")
+    S.pipe(g, [(tx, ty, FZ + 11.0), (tx, ty, FZ + 12.6), (W / 2 - 0.2, ty, FZ + 12.6)], 0.35, mat="Copper")
+    g["Iron"].hcyl(tx, ty - 0.55, FZ + 12.0, 0.6, 0.12, axis="y", seg=12)
+    g["Brass"].hcyl(tx, ty - 0.62, FZ + 12.0, 0.15, 0.1, axis="y", seg=8)
     g["Brass"].hcyl(tx, ty - 1.38, 4.0, 0.55, 0.25, axis="y", seg=14)
     g["Glow"].hcyl(tx, ty - 1.52, 4.0, 0.42, 0.06, axis="y", seg=14)
     C(tx, ty, FZ + 5.5, 2.8, 2.8, 11.0)
@@ -699,10 +704,16 @@ def bottle_col(g, x, y0, y1, z, seed=0, liquids=("SignRed", "SignTeal", "SignPur
         y += 2 * r + rnd.uniform(0.08, 0.2)
 
 
-def goods_row(g, x0, x1, y, z, seed=0, depth=0.9):
-    """잡화 선반 물건: 상자·통·병·자루가 섞인 줄"""
+def goods_row(g, x0, x1, y, z, seed=0, depth=0.9, k_=1.5):
+    """잡화 선반 물건: 상자·통·병·자루가 섞인 줄. k_ = 크기 배율(점검: 1 배는 칸 높이에 비해 작아 선반이 비어 보였다)"""
     import random
     rnd = random.Random(seed)
+    from mathutils import Matrix
+    import hanok_lib as L_
+    if k_ != 1.0:
+        L_.transformed(g, Matrix.Translation((x0, y, z)) @ Matrix.Scale(k_, 4) @ Matrix.Translation((-x0, -y, -z)),
+                       lambda q: goods_row(q, x0, x0 + (x1 - x0) / k_, y, z, seed, depth, 1.0))
+        return
     x = x0 + 0.2
     while x < x1 - 0.3:
         k = rnd.randint(0, 4)
@@ -725,9 +736,15 @@ def goods_row(g, x0, x1, y, z, seed=0, depth=0.9):
             x += 0.7
 
 
-def goods_col(g, x, y0, y1, z, seed=0, depth=0.9):
+def goods_col(g, x, y0, y1, z, seed=0, depth=0.9, k_=1.5):
     import random
     rnd = random.Random(seed)
+    from mathutils import Matrix
+    import hanok_lib as L_
+    if k_ != 1.0:
+        L_.transformed(g, Matrix.Translation((x, y0, z)) @ Matrix.Scale(k_, 4) @ Matrix.Translation((-x, -y0, -z)),
+                       lambda q: goods_col(q, x, y0, y0 + (y1 - y0) / k_, z, seed, depth, 1.0))
+        return
     y = y0 + 0.2
     while y < y1 - 0.3:
         k = rnd.randint(0, 3)
@@ -765,13 +782,14 @@ def herb_bundle(g, x, y, z, mat="Felt"):
 W_SH, D_SH, H_SH = 26.0, 26.0, 14.0
 SHOP_FRONT = ((-8.75, 3.5, 4.5, 5.0), (8.75, 3.5, 4.5, 5.0))
 SHOP_SIDE = ((-7.25, 3.5, 4.5, 5.0),)
+SHOP_BACK = ((-6.0, 10.0, 3.0, 2.8), (6.0, 10.0, 3.0, 2.8))        # 뒷벽이 민짜로 보여 뒤 선반 위 높은 창(2026-10-18 점검)
 
 
 def svc_enhance(g):
     """강화소: 아래 검은 돌·위 벽돌, 가파른 네모뿔 지붕 + 청록 수정 꼭지, 룬 돌 간판. 안: 룬 새기는 돌 작업대(새김 팔·확대경),
     바닥 룬 고리(놋쇠 + 청록), 왼 벽 룬 받침 셋(떠 있는 룬 돌), 뒤 룬 칸 선반, 오른 선반(두루마리·책) + 쓰고 남은 돌덩이 통(사양: 쓴 룬은 돌덩이)"""
     W, D, H = W_SH, D_SH, H_SH
-    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE)
+    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE, back_win=SHOP_BACK)
     # 아래 검은 돌 옷(창 밑까지)
     for (x0, x1, y0, y1) in ((-W / 2 - 0.2, -3.6, -D / 2 - 0.2, -D / 2), (3.6, W / 2 + 0.2, -D / 2 - 0.2, -D / 2), (-W / 2 - 0.2, W / 2 + 0.2, D / 2, D / 2 + 0.2),
                              (-W / 2 - 0.2, -W / 2, -D / 2, D / 2), (W / 2, W / 2 + 0.2, -D / 2, D / 2)):
@@ -864,11 +882,16 @@ def distiller(g, x, y):
     for k in range(5):
         z = FZ + 2.0 + k * 1.2
         S.ring(g, "Copper", x, y, z, 1.45, 1.6, 0.25, n=16)
-    for k, (dy, z) in enumerate(((-2.4, 3.0), (2.4, 4.2), (0.0, 9.6))):
-        sphere(g, "Glass", (x + (0.3 if k < 2 else 0), y + dy, FZ + z), 0.8, sub=2)
-        sphere(g, "Verdigris", (x + (0.3 if k < 2 else 0), y + dy, FZ + z - 0.25), 0.55, sub=1)
-    S.pipe(g, [(x, y - 1.3, FZ + 3.0), (x, y - 2.4, FZ + 3.0)], 0.2, mat="Copper")
-    S.pipe(g, [(x, y + 1.3, FZ + 4.2), (x, y + 2.4, FZ + 4.2)], 0.2, mat="Copper")
+    g["Copper"].cyl(x, y, FZ + 8.2, 0.28, 0.28, 0.7, seg=10)                     # 목
+    sphere(g, "Glass", (x, y, FZ + 9.55), 0.8, sub=2)
+    sphere(g, "Verdigris", (x, y, FZ + 9.3), 0.55, sub=1)
+    for dy, z in ((-2.0, 3.0), (2.0, 4.2)):                                 # 옆 구: 통 옆구리 쇠 받침 팔에 얹는다(땅에 닿지 않게 — 길 여유)
+        sgn = 1 if dy > 0 else -1
+        g["Iron"].obox(x, y + sgn * 1.55, FZ + z - 0.85, 0.3, 1.2, 0.15)
+        g["Brass"].cyl(x, y + dy, FZ + z - 0.9, 0.45, 0.25, 0.25, seg=10)
+        sphere(g, "Glass", (x, y + dy, FZ + z), 0.65, sub=2)
+        sphere(g, "Verdigris", (x, y + dy, FZ + z - 0.2), 0.45, sub=1)
+        S.pipe(g, [(x, y + sgn * 1.25, FZ + z + 0.6), (x, y + dy, FZ + z + 0.6)], 0.2, mat="Copper")
     S.pipe(g, [(x - 1.3, y, FZ + 5.5), (x - 2.0, y, FZ + 5.5)], 0.3, mat="Copper")
     S.vent(g, x, y, FZ + 10.6)
     C(x, y, FZ + 3.5, 3.0, 6.4, 7.0)
@@ -878,7 +901,7 @@ def svc_potion(g):
     """물약상점: 벽돌 + 녹청 덧창·문틀·차양, 앞벽과 나란한 박공 지붕 + 구리 환기탑, 오른 벽 밖 구리 증류 탑, 둥근 병 간판.
     안: 큰 솥(진짜 불)·끓는 녹청 물약, 뒤 벽 색색 병 선반, 옆 선반(병·단지), 천장 마른 약초 다발, 카운터(놋쇠 저울·절구·병)"""
     W, D, H = W_SH, D_SH, H_SH
-    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE)
+    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE, back_win=SHOP_BACK)
     for cx in (-8.75, 8.75):
         for s in (-1, 1):
             g["PaintGreen"].box(cx + s * 3.15, -D / 2 - 0.15, 6.0, 1.3, 0.2, 5.4)
@@ -951,7 +974,7 @@ def svc_general(g):
     """잡화점: 앞면 나무 판자 옷 · 줄무늬 천 차양 · 문 양옆 바깥 물건(통·상자·자루) · 자루 간판 · 앞 박공 + 다락 도르래 들보.
     안: 물건 가득한 선반(뒤·옆), 놋쇠 금전 등록기 카운터, 밀가루 자루 더미, 매단 등·냄비, 앞 구석 상자 더미"""
     W, D, H = W_SH, D_SH, H_SH
-    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE)
+    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE, back_win=SHOP_BACK)
     fy = -D / 2 - 0.12
     for x0, x1 in ((-W / 2, -11.6), (-5.9, -3.6), (3.6, 5.9), (11.6, W / 2)):
         g["Wood"].box((x0 + x1) / 2, fy, FZ + 6.5, x1 - x0, 0.24, 12.2)
@@ -989,7 +1012,6 @@ def svc_general(g):
     for k, x in enumerate((-9.0, -7.0, 7.0, 9.0)):
         g["Iron"].cyl(x, 6.0, 10.2, 0.05, 0.05, H - 10.95, seg=4)
         g["Copper" if k % 2 else "Iron"].cyl(x, 6.0, 9.4, 0.55, 0.45, 0.8, seg=12)
-    S.ring(g, "Canvas", -9.0, 0.0, 10.4, 0.4, 0.75, 0.3, n=12)
     g["Timber"].box(0, 5.25, (FZ + 3.2) / 2, 11.6, 2.2, 3.2 - FZ)
     g["Wood"].box(0, 5.25, 3.35, 12.2, 2.8, 0.3)
     for x in (-5.0, -2.5, 0.0, 2.5, 5.0):
@@ -1080,6 +1102,15 @@ def svc_bank(g):
     # 밑동 검은 돌 · 앞면 붙임기둥 넷(대리석) + 머리 · 처마 띠 · 박공(금화 톱니)
     for a, b in ((-W / 2 - 0.2, -5.6), (5.6, W / 2 + 0.2)):
         g["DarkStone"].box((a + b) / 2, fy - 0.12, FZ + 1.6, b - a, 0.24, 2.4)
+    g["DarkStone"].box(0, D / 2 + 0.12, FZ + 1.6, W + 0.4, 0.24, 2.4)
+    for s_ in (-1, 1):
+        g["DarkStone"].box(s_ * (W / 2 + 0.12), 0, FZ + 1.6, 0.24, D + 0.4, 2.4)
+        for y in (1.5, 8.5):                                               # 옆벽 붙임기둥(옆 창 y -10..-4 비움)
+            g["Marble"].box(s_ * (W / 2 + 0.25), y, FZ + 7.0, 0.5, 1.4, 13.0)
+            g["Marble"].box(s_ * (W / 2 + 0.4), y, FZ + 13.6, 0.8, 2.0, 0.7)
+    for x in (-6.0, 0.0, 6.0):                                             # 뒷벽 붙임기둥(뒤 창 x ±11 비움)
+        g["Marble"].box(x, D / 2 + 0.25, FZ + 7.0, 1.4, 0.5, 13.0)
+        g["Marble"].box(x, D / 2 + 0.4, FZ + 13.6, 2.0, 0.8, 0.7)
     for x in (-16.4, -6.4, 6.4, 16.4):
         g["Marble"].box(x, fy - 0.3, FZ + 7.0, 1.6, 0.6, 13.0)
         g["Marble"].box(x, fy - 0.45, FZ + 13.6, 2.2, 0.9, 0.7)
@@ -1243,7 +1274,8 @@ def svc_hospital(g):
     안: 밝은 대리석 바닥·천장, 접수대, 침대 여섯(커튼 줄), 침대 곁 구리 방열기, 가운데 뒤 부활 고리(놋쇠 테 + 심장) → 뒷문 → 회복 정원, 약장"""
     W, D, H = 40.0, 30.0, 16.0
     ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Paint", (-5.0, 5.0, 10.0), ((-13.0, 4.0, 6.0, 6.0), (13.0, 4.0, 6.0, 6.0)),
-                                     ((-3.0, 5.0, 6.0, 5.0),), back_door=(-3.0, 3.0, 9.0), trim="Brick")
+                                     ((-3.0, 5.0, 6.0, 5.0),), back_door=(-3.0, 3.0, 9.0), trim="Brick",
+                                     back_win=((-12.0, 9.0, 2.6, 4.0), (-6.0, 9.0, 2.6, 4.0), (6.0, 9.0, 2.6, 4.0), (12.0, 9.0, 2.6, 4.0)))
     fy = -D / 2
     # 벽돌 밑동 · 창 둘레 벽돌 테 · 쌍문(안으로 연) · 유리 차양 · 간판 · 큰 심장 톱니
     for a, b in ((-W / 2 - 0.2, -5.6), (5.6, W / 2 + 0.2)):
@@ -1274,7 +1306,7 @@ def svc_hospital(g):
     # 안: 밝은 바닥 · 회 천장 · 매단 등
     checker_floor(g, ix0, ix1, iy0, iy1, sq=4.0, a="Marble", b="Paint")
     g["Paint"].box(0, 0, H - 0.2, W - 2 * T, D - 2 * T, 0.4)
-    for x, y in ((-8.0, -6.0), (8.0, -6.0), (-12.0, 9.0), (12.0, 9.0), (0.0, 2.0)):
+    for x, y in ((-8.0, -6.0), (8.0, -6.0), (-12.0, 9.0), (12.0, 9.0)):
         lantern(g, x, y, H - 0.4, 11.4)
     # 접수대(x -10.5..-8, y -8..0, 높이 3.5): 흰 몸 · 놋쇠 윗테 · 장부 · 종 + 뒤 서류장(왼 벽)
     g["Paint"].box(-9.25, -4.0, (FZ + 3.2) / 2, 2.2, 7.6, 3.2 - FZ)
@@ -1375,8 +1407,6 @@ def svc_inn(g):
             g["Timber"].box(x, y, (Z2 + H) / 2, 0.35, 0.24, H - Z2)
         for z in (Z2 + 0.3, Z2 + 2.6, Z2 + 8.4, H - 0.5):
             g["Timber"].box(0, y, z, W + 0.2, 0.24, 0.35)
-    for x, ry in ((-18.4, 0.9), (16.7, -0.9)):
-        g["Timber"].obox(x, fy - 0.12, Z2 + 5.5, 3.4, 0.24, 0.3, ry=ry)
     for s in (-1, 1):
         xw = s * (W / 2 + 0.12)
         for y in (-14.85, -6.0, 3.0, 14.85):
@@ -1519,7 +1549,14 @@ def svc_inn(g):
         g[("Banner", "SignTeal", "SignGold")[k]].box(cx, -3.0, Z2 + 0.03, 4.6, 6.0, 0.05)
         lantern(g, cx, -4.0, H - 0.5, Z2 + 9.0)
     g["Banner"].box((ix0 + wall_x) / 2, 10.2, Z2 + 0.03, wall_x - ix0 - 2.0, 3.0, 0.05)
-    for x in (-15.0, -4.0, 7.0):
+    # 복도 징두리(나무 판 + 놋쇠 띠) — 크림 벽이 등빛에 너무 노랗게 떠서 아래를 나무로
+    for a_, b_ in zip([ix0] + [c + 3.0 for c in door_cx], [c - 3.0 for c in door_cx] + [wall_x - 0.3]):
+        g["Wood"].box((a_ + b_) / 2, 6.36, Z2 + 1.6, b_ - a_, 0.12, 3.2)
+        g["Brass"].box((a_ + b_) / 2, 6.42, Z2 + 3.25, b_ - a_, 0.08, 0.1)
+    for a_, b_ in ((ix0, -2.0), (2.0, wall_x + 0.3)):
+        g["Wood"].box((a_ + b_) / 2, iy1 - 0.06, Z2 + 1.6, b_ - a_, 0.12, 3.2)
+        g["Brass"].box((a_ + b_) / 2, iy1 - 0.12, Z2 + 3.25, b_ - a_, 0.08, 0.1)
+    for x in (-12.0, 4.0):
         lantern(g, x, 11.0, H - 0.5, Z2 + 9.0)
     g["Wood"].box(-18.3, 10.0, Z2 + 1.4, 1.2, 3.0, 2.8)
     potted_plant(g, -18.2, 13.0, Z2)

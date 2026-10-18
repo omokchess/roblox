@@ -822,6 +822,7 @@ local okRun, errRun = pcall(function()
 	-- ("@Press" = 옛 공방 방에서 옮긴 움직이는 압착기 틀). 겉모양에 구운 옛 배율(BAKED)은 톱니·시계 바늘 자리에 곱한다
 	local CSi = game:GetService("CollectionService")
 	local nColl, nProp, nLamp, nFire = 0, 0, 0, 0
+	local LAMP_DIM = { Svc_Inn = 0.6, Svc_Hospital = 0.6 }
 	for _, e in ipairs(placed) do
 		local spec = INSIDE[e.kind]
 		if spec then
@@ -878,7 +879,7 @@ local okRun, errRun = pcall(function()
 				p.CastShadow = false
 				local pl = Instance.new("PointLight")
 				pl.Color = RGB(255, 190, 120)
-				pl.Brightness = 1.4
+				pl.Brightness = 1.4 * (LAMP_DIM[e.kind] or 1) -- 크림 회벽 방은 등이 겹쳐 너무 노랗다(2026-10-18 점검)
 				pl.Range = 16
 				pl.Parent = p
 				nLamp += 1

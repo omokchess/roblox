@@ -74,7 +74,7 @@ KIT.update(snow_gray.kit())
 KIT.update({
     "Svc_Smithy": ((-18.3, 18.3, -15.3, 15.3), (-21.4, 19.5, -16.2, 16.2)),
     "Yard_Smithy": ((-15.0, 15.0, -8.0, 8.0), (-15.0, 15.0, -8.0, 8.4)),
-    "Svc_Enhance": ((-13.3, 13.3, -13.3, 13.3), (-14.0, 14.0, -15.0, 13.9)),
+    "Svc_Enhance": ((-13.3, 13.3, -13.3, 13.3), (-14.0, 14.0, -15.0, 14.0)),
     "Svc_Bank": ((-18.3, 18.3, -15.3, 15.3), (-19.0, 19.0, -17.5, 16.0)),
     "Svc_Inn": ((-20.3, 20.3, -15.3, 15.3), (-21.2, 21.2, -19.0, 16.6)),
     "Svc_Potion": ((-13.3, 13.3, -13.3, 13.3), (-16.3, 14.2, -15.6, 14.5)),
@@ -379,6 +379,42 @@ ROADS = [
     ("공방골목", 10, "pave", [(CX + (WK_Z - CZ) / math.tan(math.radians(TH_NE)), WK_Z), (ES_X - 4, WK_Z)], 0.04),
     ("남서거리", 10, "pave", [(-5306, -3672), (-5112, -3672)], 0.04),
 ]
+
+# ── 서비스 구역 길(2026-10-18 점검: 광장에서 문까지 눈밭이라 부자연스러움) — 광장 고리길 → 정문 앞길(문 폭 + 1),
+#    대장간·여관·병원은 뒷문 → 뜰 뒷길. 길 이름은 ROAD_ENDS 에 건물·뜰과 함께 넣어 겹침 검사에서 뺀다 ──
+SVC_DOOR = {"Svc_Smithy": (12.0, 15.0), "Svc_Enhance": (7.0, 13.0), "Svc_Potion": (7.0, 13.0), "Svc_General": (7.0, 13.0),
+            "Svc_Bank": (11.0, 15.0), "Svc_Hospital": (11.0, 15.0), "Svc_Inn": (9.0, 15.0)}       # (앞길 폭, 앞면까지 D/2)
+SVC_BACK = {"Svc_Smithy": ("Yard_Smithy", 4.0, 8.0), "Svc_Inn": ("Yard_Inn", -8.0, 7.0), "Svc_Hospital": ("Yard_Hospital", 0.0, 8.0)}  # (뜰, 뒷문 x, 뜰 D/2)
+SVC_ROAD_ENDS = set()
+SVC_LAMP_AT = []   # (각, 앞길 폭) — 가스등은 lamp_along 이 정의된 뒤 LAMPS 에서 만든다
+
+
+def _svc_local(e, bx, by):
+    """BUILD 항목 e 의 블렌더 로컬 (bx, by) → 세계 (x, z). 로블록스 로컬 = (-bx, by)"""
+    _, x, z, yaw = e[:4]
+    r = math.radians(yaw)
+    c, s_ = math.cos(r), math.sin(r)
+    lx, lz = -bx, by
+    return (round(x + lx * c + lz * s_, 2), round(z - lx * s_ + lz * c, 2))
+
+
+_ent = {e[0]: e for e in BUILD}
+for _k, (_w, _d2) in SVC_DOOR.items():
+    _e = _ent[_k]
+    _th = math.degrees(math.atan2(_e[2] - CZ, _e[1] - CX))
+    _r = math.hypot(_e[1] - CX, _e[2] - CZ)
+    _nm = "앞길_" + _k
+    ROADS.append((_nm, _w, "pave", [polar(_th, 50.0)[:2], polar(_th, _r - _d2 + 0.6)[:2]], 0.03))
+    SVC_ROAD_ENDS.add((_nm, _k))
+    SVC_LAMP_AT.append((_th, _w))
+for _k, (_yk, _bx, _yd2) in SVC_BACK.items():
+    _e, _ye = _ent[_k], _ent[_yk]
+    _rb = math.hypot(_e[1] - CX, _e[2] - CZ)
+    _ry = math.hypot(_ye[1] - CX, _ye[2] - CZ)
+    _nm = "뒷길_" + _k
+    ROADS.append((_nm, 6.0, "pave", [_svc_local(_e, _bx, SVC_DOOR[_k][1] - 0.6), _svc_local(_e, _bx, (_ry - _rb) - _yd2 + 0.6)], 0.03))
+    SVC_ROAD_ENDS |= {(_nm, _k), (_nm, _yk)}
+
 PAVES = [
     # (이름, x0, z0, x1, z1, 재질) 또는 원판
     ("시계광장", CX, CZ, 42, "plaza", 0.0, "disc"),     # (이름, x, z, 반지름, 색, 들어올림, "disc")
@@ -579,6 +615,8 @@ LAMPS += [(x, -3622 + 7, 0) for x in (-4900, -4860, -4822, -4790, -4758, -4726)]
 LAMPS += [(WS_X + 7, z, 90) for z in (-4010, -3950, -3890)]                                # 서북 거리 동쪽 가
 LAMPS += [(x, -3722 - 7, 180) for x in (-4562, -4498)]                                     # 동문길 북쪽 가
 LAMPS += [(x, WK_Z + 7, 0) for x in (-4796, -4730, -4662)]                                 # 공방 골목 남쪽 가
+for _th, _w in SVC_LAMP_AT:                                                                # 서비스 건물 앞길 양옆
+    LAMPS += lamp_along(_th, (57.0,), _w / 2 + 1.8) + lamp_along(_th, (57.0,), -(_w / 2 + 1.8))
 LAMPS += LAMPS_EXTRA                                                                       # 놀이터·연못
 
 # 톱니 무늬 맨홀 — 대로·거리 위
@@ -665,6 +703,7 @@ def road_rects():
 ROAD_NAMES = set()
 # 길 끝이 건물 문 앞에 닿도록 낸 것. 겹침 검사에서 뺀다
 ROAD_ENDS = {("동대로", "Schule"), ("서대로", "Steam_Factory"), ("남서골목", "Observatory"), ("경매장길", "Casino_Gate")}
+ROAD_ENDS |= SVC_ROAD_ENDS
 _POLES = {}
 
 
