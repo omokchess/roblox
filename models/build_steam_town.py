@@ -29,13 +29,15 @@ import build_steam_inside as I  # noqa: E402  (들어가는 건물 — 2026-10-1
 import build_steam_school as SCH  # noqa: E402  (학교 — 2026-10-10, 카지노 자리)
 import build_steam_under as UND  # noqa: E402  (지하 카지노 — 2026-10-10)
 import build_steam_figuren as FIG  # noqa: E402  (기물군 본부 2판 — 2026-10-10)
+import build_steam_service as SVC  # noqa: E402  (서비스 구역 꾸민 건물 — 2026-10-18)
 
 PAL = dict(S.PALETTE)
 PAL.update({"SignBlue": "#3A5FA8", "SignGold": "#C9A23A", "SignTeal": "#3E9C93", "SignRed": "#A83A3A", "SignPurple": "#6B4AA0",
             "Dial": "#F2E8C8", "Marble": "#E1E1E4", "DarkStone": "#28282C",
             "Felt": "#2E6B45", "GlowTeal": "#4FE0C8",
             # 진짜 창(2026-10-10): WinGlass = 맑은 창유리, Cut·Pane = 구멍·유리 표지(apply_cuts 가 비우고 옮긴다 — 내보내지 않음)
-            "WinGlass": "#BFD9E6", "Paint": "#E6E2D6", "Cut": "#FF00FF", "Pane": "#00FFFF"})
+            "WinGlass": "#BFD9E6", "Paint": "#E6E2D6", "Cut": "#FF00FF", "Pane": "#00FFFF",
+            "Steel": "#B4BCC6"})   # 칼날(2026-10-18: IronLight 는 Studio 에서 줄무늬 철판이라 칼날이 체크무늬로 보였다)
 
 
 def G(prefix):
@@ -107,7 +109,7 @@ def shop(sign):
 JOBS = [
     ("Clock_Tower", "Clock", clock_tower),
     ("Shop_Gold", "ShopG", shop("SignGold")),
-] + [j for j in O.JOBS if j[0] != "Observatory"] + I.JOBS + SCH.JOBS + UND.JOBS + FIG.JOBS    # 천문대는 I.JOBS 가 job() 으로 감싸 짓는다(진짜 창·등)
+] + [j for j in O.JOBS if j[0] != "Observatory"] + I.JOBS + SCH.JOBS + UND.JOBS + FIG.JOBS + SVC.JOBS    # 천문대는 I.JOBS 가 job() 으로 감싸 짓는다(진짜 창·등)
 
 if __name__ == "__main__":
     RENDER = "render" in (sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])

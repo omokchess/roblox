@@ -15,6 +15,7 @@ import build_steam_inside as I  # noqa: E402
 import build_steam_school as SCH  # noqa: E402
 import build_steam_under as UND  # noqa: E402
 import build_steam_figuren as FIG  # noqa: E402
+import build_steam_service as SVC  # noqa: E402
 
 only = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 # 이름: (바깥 카메라, 바라볼 점), [(파일 꼬리, 카메라, 바라볼 점, 렌즈)] — 안 시점은 사람 눈높이
@@ -43,10 +44,13 @@ VIEWS = {
                      ("ha1", (0, 27.0, -21.5), (2, 50, -24), 16), ("ha2", (20, 30, -21.5), (-12, 58, -24), 16),
                      ("au1", (28.0, 43.0, -22.0), (50, 43, -24), 16), ("au2", (50, 52, -18), (33, 38, -26), 16)],
     "Observatory": [("ext", (45, -60, 25), (0, 0, 12), 30), ("in1", (0, -14, 7.0), (12, 14, 8), 16)],
+    "Svc_Smithy": [("ext", (34, -52, 24), (0, 0, 10), 30), ("front", (0, -46, 6.5), (0, 0, 9), 26), ("in1", (2, -12, 5.4), (-6, 10, 4), 16),
+                   ("in2", (-6, -9, 5.4), (12, 6, 3.5), 16), ("in3", (10, 1.5, 5.4), (-16, -6, 4), 16), ("back", (24, 30, 14), (0, 8, 6), 26)],
+    "Yard_Smithy": [("ext", (22, -26, 16), (0, 2, 2), 26), ("ext2", (-24, -20, 12), (2, 2, 2), 26)],
 }
 L.clear_scene()
 made = {}
-for name, prefix, fn in I.JOBS + SCH.JOBS + UND.JOBS + FIG.JOBS:
+for name, prefix, fn in I.JOBS + SCH.JOBS + UND.JOBS + FIG.JOBS + SVC.JOBS:
     if only and name not in only:
         continue
     g = L.new_groups(prefix, T.PAL)

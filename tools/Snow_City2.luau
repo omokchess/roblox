@@ -884,6 +884,16 @@ local okRun, errRun = pcall(function()
 				nLamp += 1
 			end
 			-- 진짜 불(사용자 2026-10-10: 빛나는 블록 말고 불 떼는 것처럼) — 장작 위 불꽃·불티 입자 + 깜빡이는 불빛(SnowFireFlicker)
+			-- NPC 설 자리(2026-10-18): 사용자가 NPC 를 놓을 곳 — 안 보이는 표지, 앞(-Z)이 NPC 가 보는 쪽
+			for _, n in ipairs(spec.npc or {}) do
+				local p = part("NPC자리", pv * CFrame.new(n[1], n[2] + 2.5, n[3]) * CFrame.Angles(0, math.rad(n[4]), 0), Vector3.new(4, 5, 1), C.found, fc)
+				p.Transparency = 1
+				p.CanCollide = false
+				p.CanQuery = false
+				p.CanTouch = false
+				p.CastShadow = false
+				p:SetAttribute("NpcSpot", true) -- 속성 이름은 영문만 된다
+			end
 			for _, fr in ipairs(spec.fires or {}) do
 				local s = fr[4]
 				local p = part("Fire", pv * CFrame.new(fr[1], fr[2], fr[3]), Vector3.new(0.9 * s, 0.2, 0.6 * s), C.found, fc)

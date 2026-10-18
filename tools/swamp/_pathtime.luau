@@ -22,7 +22,7 @@ end
 
 -- 문 앞(로컬 -Z 로 앞면 깊이 + 3)
 local TARGETS = {
-	{ "대장간", "Gray_Smithy", 18 },
+	{ "대장간", "Svc_Smithy", 18 },
 	{ "강화소", "Gray_Enhance", 16 },
 	{ "은행", "Gray_Bank", 18 },
 	{ "여관", "Gray_Inn", 18 },

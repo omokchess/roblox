@@ -70,6 +70,11 @@ KIT = {
     "Zapfen_Werk": ((-58.5, 52.0, -28.9, 23.4), (-60.7, 52.0, -28.9, 23.4)),   # 들어가는 건물(최종 크기)
 }
 KIT.update(snow_gray.kit())
+# 꾸민 서비스 건물(Snow_TownKit 보고 snowtownkit 그대로 — 처음엔 회색 상자 발자국으로 두고 가져온 뒤 고친다)
+KIT.update({
+    "Svc_Smithy": ((-18.3, 18.3, -15.3, 15.3), (-21.4, 19.5, -16.2, 16.2)),
+    "Yard_Smithy": ((-15.0, 15.0, -8.0, 8.0), (-15.0, 15.0, -8.0, 8.4)),
+})
 SMALL = {"Gas_Lamp", "Boiler_Tank", "Big_Gear", "Vertical_Boiler", "Park_Bench", "Snowman", "Sled", "Play_Seesaw", "Play_Spring",
          "Park_Bin", "Play_Balance"}
 A, B, C_, SR, ST, SB = "Steam_House_A", "Steam_House_B", "Steam_House_C", "Shop_Red", "Shop_Teal", "Shop_Blue"
@@ -121,7 +126,7 @@ BUILD = [
     #    가운데(광장 ~ 바깥 고리길 r 135)를 일곱 구역으로 가르고, 구역마다 건물 하나만. 가운데 고리길·가운데 고리 집(옛 r 117)은 지웠다.
     #    앞면은 모두 r 67.5(광장 고리길 바깥 가에서 앞마당 14), 각도는 구역 안 허용 범위의 가운데(scratchpad wedge 계산).
     #    회색 상자로 먼저 — 승인 뒤 블렌더로 꾸민다. 크기 기준: 마을_플레이_기준.md ──
-    ring("Gray_Smithy", -30.8, 82.5, "서비스구역"),     # 북동: 대장간(장비 제작)
+    ring("Svc_Smithy", -30.8, 82.5, "서비스구역"),      # 북동: 대장간(장비 제작) — 꾸민 건물(build_steam_service.py, 2026-10-18)
     ring("Gray_Enhance", 21.0, 80.5, "서비스구역"),     # 동남동: 강화소(룬 = 대장간 별관)
     ring("Gray_Bank", 62.1, 82.5, "서비스구역"),        # 남동: 은행
     ring("Gray_Inn", 117.9, 82.5, "서비스구역"),        # 남서: 여관 2층
@@ -129,7 +134,7 @@ BUILD = [
     ring("Gray_Hospital", -145.6, 82.5, "서비스구역"),  # 서북서: 병원 — 사망 뒤 돌아오는 곳
     ring("Gray_General", -90.2, 80.5, "서비스구역"),    # 북: 잡화점
     # 뜰(사용자 2026-10-11: 뜰 활용 좋아 보이네) — 건물 뒤, 같은 각도. 그 기능의 바깥 연장(snow_gray.py yard_*)
-    ring("Gray_Yard_Smithy", -30.8, 112, "서비스구역"),     # 대장간 마당(뒷문)
+    ring("Yard_Smithy", -30.8, 112, "서비스구역"),          # 대장간 마당(뒷문) — 꾸민 뜰
     ring("Gray_Yard_Enhance", 21.0, 106, "서비스구역"),     # 룬 시험대
     ring("Gray_Yard_Bank", 62.1, 108, "서비스구역"),        # 오늘의 시세판
     ring("Gray_Yard_Inn", 117.9, 111, "서비스구역"),        # 마구간(뒷문) — 말 등록·호출

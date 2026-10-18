@@ -49,6 +49,12 @@ def DIG(x0, x1, y0, y1, z0, z1, world=False):
 
 
 FIRES = {}
+NPCS = {}
+
+
+def NPC(x, y, z, yaw=0.0):
+    """NPC 설 자리(2026-10-18): 사용자가 나중에 NPC 를 놓을 곳. 빌더가 안 보이는 표지(NPC자리)를 세운다. yaw 도 = 보는 쪽(0 = 앞 -y)"""
+    NPCS.setdefault(_cur[0], []).append((x, y, z, yaw))
 
 
 def FIRE(x, y, z, size=1.0):
@@ -1910,6 +1916,11 @@ def emit_luau(path):
             for x, y, z, sz in FIRES[name]:
                 out.append("\t\t\t{ %s, %s, %s, %s }," % (f(-x), f(z), f(y), f(sz)))
             out.append("\t\t},")
+        if NPCS.get(name):
+            out.append("		npc = {")
+            for x, y, z, yaw in NPCS[name]:
+                out.append("			{ %s, %s, %s, %s }," % (f(-x), f(z), f(y), f(yaw)))
+            out.append("		},")
         if DIGS.get(name):
             out.append("\t\tdig = {")
             for cx, cy, cz, sx, sy, sz, world in DIGS[name]:
