@@ -22,6 +22,7 @@ local SKIN = {
 	Iron = { RGB(58, 60, 66), M.Metal },
 	IronLight = { RGB(94, 98, 107), M.DiamondPlate },
 	Steel = { RGB(180, 188, 198), M.Metal }, -- 칼날(2026-10-18)
+	PaintGreen = { RGB(62, 110, 90), M.Wood }, -- 녹색 칠 나무(물약상점, 2026-10-18)
 	Brass = { RGB(184, 145, 63), M.Metal },
 	Copper = { RGB(176, 106, 63), M.Metal },
 	Verdigris = { RGB(95, 158, 140), M.CorrodedMetal },
@@ -75,6 +76,8 @@ local PREFIX = {
 	-- 학교(카지노 자리)와 지하 카지노(둥근 입구 + 땅 밑) — 2026-10-10
 	SchuleIn = "Schule", CasGate = "Casino_Gate", CasUnder = "Casino_Under",
 	SvcSmithy = "Svc_Smithy", YdSmithy = "Yard_Smithy", -- 서비스 구역 꾸민 건물(2026-10-18, models/build_steam_service.py)
+	SvcEnh = "Svc_Enhance", SvcPot = "Svc_Potion", SvcGen = "Svc_General", SvcBank = "Svc_Bank", SvcHosp = "Svc_Hospital", SvcInn = "Svc_Inn",
+	YdEnh = "Yard_Enhance", YdBank = "Yard_Bank", YdInn = "Yard_Inn", YdPot = "Yard_Potion", YdHosp = "Yard_Hospital", YdGen = "Yard_General",
 }
 -- 피벗을 원점(바닥 가운데)이 아닌 곳에 두는 틀. 톱니는 굴대 가운데를 축으로 돌고,
 -- 꺾인 관은 꺾인 자리를 관 끝에 맞춘다(build_steam.py pipe_bend90 의 P)
