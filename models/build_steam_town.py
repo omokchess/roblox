@@ -37,7 +37,7 @@ PAL.update({"SignBlue": "#3A5FA8", "SignGold": "#C9A23A", "SignTeal": "#3E9C93",
             "Felt": "#2E6B45", "GlowTeal": "#4FE0C8",
             # 진짜 창(2026-10-10): WinGlass = 맑은 창유리, Cut·Pane = 구멍·유리 표지(apply_cuts 가 비우고 옮긴다 — 내보내지 않음)
             "WinGlass": "#BFD9E6", "Paint": "#E6E2D6", "Cut": "#FF00FF", "Pane": "#00FFFF",
-            "Steel": "#B4BCC6", "PaintGreen": "#3E6E5A"})   # PaintGreen = 녹색 칠 나무(Verdigris 는 Studio 에서 부식 금속 무늬)   # 칼날(2026-10-18: IronLight 는 Studio 에서 줄무늬 철판이라 칼날이 체크무늬로 보였다)
+            "Steel": "#B4BCC6", "PaintGreen": "#3E6E5A", "SnowDrift": "#EEF3F7"})   # PaintGreen = 녹색 칠 나무(Verdigris 는 Studio 에서 부식 금속 무늬)   # 칼날(2026-10-18: IronLight 는 Studio 에서 줄무늬 철판이라 칼날이 체크무늬로 보였다)
 
 
 def G(prefix):

@@ -20,6 +20,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import build_steam as S  # noqa: E402
+import hanok_lib as L_  # noqa: E402
 from build_steam_obs import sphere  # noqa: E402
 from build_steam_inside import (C, PROP, NPC, job, box2, lantern, coal_bed, armor_stand, shelf_unit, bottle, fire_logs,  # noqa: E402
                                 round_table, bed, wardrobe, washstand, DOORWAY, CLEAR)
@@ -133,6 +134,186 @@ def ore_lumps(g, x, y, z0, r=1.8, n=10, seed=1, mats=("Stone", "IronLight", "Sto
                                      rx=rnd.uniform(-0.4, 0.4), ry=rnd.uniform(-0.4, 0.4), rz=a)
 
 
+
+# ------------------------------------------------------------------ 눈·세밀 소품(2026-10-18 사용자: 작동할 것 같은 건 세밀하게, 겉은 눈 쌓임·대칭으로 예쁘게)
+def solid(g, mat, verts, faces):
+    """볼록 덩이: 면마다 바깥을 보게 감는 방향을 맞춘다(뉴얼 법선 · 무게중심 기준)"""
+    n = len(verts)
+    cx, cy, cz = (sum(v[i] for v in verts) / n for i in range(3))
+    out = []
+    for f in faces:
+        pts = [verts[i] for i in f]
+        nx = ny = nz = 0.0
+        for i in range(len(pts)):
+            x1, y1, z1 = pts[i]
+            x2, y2, z2 = pts[(i + 1) % len(pts)]
+            nx += (y1 - y2) * (z1 + z2)
+            ny += (z1 - z2) * (x1 + x2)
+            nz += (x1 - x2) * (y1 + y2)
+        fx, fy_, fz = (sum(p_[i] for p_ in pts) / len(pts) for i in range(3))
+        out.append(tuple(f) if nx * (fx - cx) + ny * (fy_ - cy) + nz * (fz - cz) >= 0 else tuple(reversed(f)))
+    g[mat].add_mesh(verts, out)
+
+
+def drift(g, x0, x1, yw, face, d=1.3, h=0.75):
+    """벽 밑에 쌓인 눈 더미(x0..x1 을 따라, 벽 겉면 yw 에서 face 쪽으로 d, 끝은 비스듬히)"""
+    if x1 - x0 < 1.6:
+        return
+    yo = yw + face * d
+    v = [(x0, yw, 0.0), (x1, yw, 0.0), (x1, yo, 0.0), (x0, yo, 0.0), (x0 + 0.7, yw, h), (x1 - 0.7, yw, h)]
+    solid(g, "SnowDrift", v, [(0, 1, 2, 3), (0, 1, 5, 4), (3, 2, 5, 4), (0, 3, 4), (1, 2, 5)])   # 지붕·창턱 눈과 따로(발자국 재기)
+
+
+def snow(g, x, y, ztop, sx, sy, t=0.16):
+    """평평한 윗면에 얹힌 눈"""
+    g["SnowCap"].box(x, y, ztop + t / 2, sx, sy, t)
+
+
+def lamp_snow(g, x, y, zl):
+    """바깥 등 놋쇠 지붕 위 눈"""
+    S.pyramid(g, "SnowCap", x, y, zl + 0.62, 1.4, 1.4, 0.55, frac=0.55, lift=0.06)
+
+
+def cash_register(g, x, y, z0):
+    """놋쇠 금전 등록기: 서랍 받침 · 몸통 · 비탈 자판(3×6 둥근 단추) · 위 숫자 창(유리 + 숫자 패) · 꼭대기 톱니 문장 · 오른쪽 손잡이 · 옆 구리 판.
+    자판은 +y(주인 쪽), 숫자 창은 -y(손님 쪽)"""
+    W, D = 1.8, 1.5
+    g["Wood"].box(x, y, z0 + 0.3, W, D, 0.6)
+    g["Brass"].box(x, y, z0 + 0.63, W + 0.08, D + 0.08, 0.06)
+    g["Timber"].box(x, y + D / 2 + 0.02, z0 + 0.3, W - 0.3, 0.06, 0.4)
+    g["Brass"].box(x, y + D / 2 + 0.08, z0 + 0.32, 0.45, 0.08, 0.1)
+    g["Brass"].box(x, y - 0.2, z0 + 1.1, W - 0.12, D - 0.55, 0.9)
+    g["Brass"].obox(x, y + 0.42, z0 + 0.86, W - 0.12, 0.72, 0.4, rx=-0.5)
+    for r in range(3):
+        for c in range(6):
+            kx = x - 0.66 + c * 0.264
+            ky = y + 0.62 - r * 0.2
+            kz = z0 + 0.98 + r * 0.11
+            g["Iron"].cyl(kx, ky, kz, 0.025, 0.025, 0.14, seg=6)
+            g["Paint"].cyl(kx, ky, kz + 0.14, 0.085, 0.085, 0.05, seg=10)
+            g["Brass"].cyl(kx, ky, kz + 0.13, 0.095, 0.095, 0.02, seg=10)
+    g["Brass"].box(x, y - 0.25, z0 + 1.82, 1.3, 0.4, 0.55)
+    g["Glass"].box(x, y - 0.46, z0 + 1.84, 1.1, 0.03, 0.38)
+    for k in range(4):
+        g["Paint"].box(x - 0.42 + k * 0.28, y - 0.4, z0 + 1.84, 0.22, 0.02, 0.28)
+        g["Char"].box(x - 0.42 + k * 0.28, y - 0.42, z0 + 1.84, 0.05, 0.01, 0.18)
+    S.gear(g, "Brass", x, y - 0.25, z0 + 2.32, 0.28, 10, 0.1)
+    for sx in (-1, 1):
+        g["Brass"].hcyl(x + sx * 0.6, y - 0.25, z0 + 2.15, 0.1, 0.42, axis="y", seg=8)
+        g["Copper"].box(x + sx * (W / 2 - 0.03), y - 0.2, z0 + 1.1, 0.04, 0.6, 0.45)
+    g["Iron"].hcyl(x + W / 2 + 0.06, y, z0 + 1.05, 0.13, 0.2, axis="x", seg=10)
+    g["Iron"].obox(x + W / 2 + 0.2, y - 0.18, z0 + 0.86, 0.07, 0.07, 0.55, rx=0.75)
+    g["Wood"].cyl(x + W / 2 + 0.26, y - 0.38, z0 + 0.55, 0.06, 0.06, 0.28, seg=8)
+
+
+def balance_scale(g, x, y, z0):
+    """놋쇠 저울: 나무 받침 · 기둥 · 받침점 · 살짝 기운 대 · 바늘 · 사슬 셋에 매단 접시 둘 · 추 넷"""
+    g["Wood"].box(x, y, z0 + 0.08, 1.6, 0.7, 0.16)
+    g["Brass"].box(x, y, z0 + 0.17, 1.62, 0.72, 0.03)
+    g["Brass"].cyl(x, y, z0 + 0.18, 0.12, 0.06, 1.3, seg=10)
+    g["Brass"].box(x, y, z0 + 1.52, 0.22, 0.14, 0.16)
+    g["Brass"].obox(x, y, z0 + 1.6, 1.75, 0.06, 0.07, ry=0.06)
+    g["Steel"].box(x, y - 0.08, z0 + 1.3, 0.03, 0.03, 0.5)
+    for sx in (-1, 1):
+        ex, ez = x + sx * 0.84, z0 + 1.6 - sx * 0.05
+        g["Brass"].cyl(ex, y, ez - 0.05, 0.04, 0.04, 0.1, seg=6)
+        pz = z0 + 0.62 - sx * 0.05
+        for k in range(3):
+            a = k * 2 * math.pi / 3
+            S.tube(g, "Iron", (ex, y, ez - 0.05), (ex + 0.27 * math.cos(a), y + 0.27 * math.sin(a), pz + 0.05), 0.012, seg=4)
+        g["Brass"].cyl(ex, y, pz, 0.3, 0.34, 0.06, seg=14)
+    for k, r in enumerate((0.13, 0.11, 0.09, 0.07)):
+        g["Brass"].cyl(x - 0.45 + k * 0.28, y - 0.22, z0 + 0.2, r, r, 0.12 + r, seg=10)
+
+
+def mortar(g, x, y, z0):
+    """돌 절구 + 공이"""
+    g["Stone"].cyl(x, y, z0, 0.32, 0.45, 0.5, seg=12)
+    g["Char"].cyl(x, y, z0 + 0.46, 0.36, 0.36, 0.05, seg=12)
+    g["Stone"].obox(x + 0.15, y, z0 + 0.75, 0.13, 0.13, 0.85, ry=0.45)
+    g["Stone"].cyl(x + 0.36, y, z0 + 1.08, 0.09, 0.09, 0.12, seg=8)
+
+
+def engraving_machine(g, x, y, z0):
+    """룬 새김 기계: 쇠 바닥판 · 바이스(턱 둘 · 나사 · 손잡이)에 문 룬 돌 · 뒤 기둥(놋쇠 띠 · 톱니 상자 · 조절 바퀴) ·
+    관절 팔 둘(놋쇠 관 · 쇠 축통) · 공구 머리(쇠 통 + 강철 끝이 돌 바로 위) · 뒤 무게추 · 거위목 확대경 · 끌 받침"""
+    g["Iron"].box(x, y, z0 + 0.06, 2.6, 1.6, 0.12)
+    for sx in (-1, 1):
+        g["Iron"].box(x + sx * 0.55, y - 0.1, z0 + 0.32, 0.22, 1.0, 0.4)
+    g["DarkStone"].box(x, y - 0.1, z0 + 0.25, 0.86, 0.9, 0.26)
+    g["GlowTeal"].box(x, y - 0.1, z0 + 0.39, 0.42, 0.06, 0.02)
+    g["GlowTeal"].box(x, y - 0.1, z0 + 0.39, 0.06, 0.5, 0.02)
+    g["Steel"].hcyl(x + 0.9, y - 0.1, z0 + 0.34, 0.05, 0.9, axis="x", seg=6)
+    g["Steel"].box(x + 1.35, y - 0.1, z0 + 0.34, 0.06, 0.6, 0.06)
+    for dy in (-0.32, 0.32):
+        sphere(g, "Brass", (x + 1.35, y - 0.1 + dy, z0 + 0.34), 0.07, sub=1)
+    cx_, cy_ = x - 1.0, y + 0.5
+    g["Iron"].cyl(cx_, cy_, z0 + 0.12, 0.17, 0.15, 1.75, seg=12)
+    for zz in (0.5, 1.2):
+        g["Brass"].cyl(cx_, cy_, z0 + zz, 0.21, 0.21, 0.08, seg=12)
+    S.ring(g, "Brass", cx_, cy_, z0 + 0.9, 0.24, 0.34, 0.06, n=16)
+    g["Brass"].box(cx_, cy_, z0 + 1.95, 0.5, 0.5, 0.45)
+    S.gear(g, "Copper", cx_ - 0.27, cy_, z0 + 1.95, 0.22, 10, 0.06, axis="x")
+    S.gear(g, "Brass", cx_ - 0.27, cy_ + 0.18, z0 + 1.75, 0.13, 8, 0.06, axis="x")
+    sh, el, hd = (cx_ + 0.15, cy_, z0 + 2.05), (x - 0.15, y + 0.25, z0 + 2.3), (x, y - 0.05, z0 + 1.25)
+    S.tube(g, "Brass", sh, el, 0.07, seg=8)
+    S.tube(g, "Brass", el, hd, 0.06, seg=8)
+    for p_ in (sh, el):
+        g["Iron"].hcyl(p_[0], p_[1], p_[2], 0.11, 0.24, axis="y", seg=10)
+    S.tube(g, "Iron", sh, (cx_ - 0.55, cy_, z0 + 1.85), 0.05, seg=6)
+    g["Iron"].cyl(cx_ - 0.6, cy_, z0 + 1.6, 0.17, 0.17, 0.35, seg=10)
+    g["Iron"].cyl(hd[0], hd[1], hd[2] - 0.35, 0.13, 0.13, 0.4, seg=10)
+    g["Brass"].cyl(hd[0], hd[1], hd[2] - 0.36, 0.15, 0.15, 0.05, seg=10)
+    g["Steel"].cyl(hd[0], hd[1], z0 + 0.45, 0.012, 0.035, 0.45, seg=6)
+    gn = [(x + 1.15, y + 0.6, z0 + 0.12), (x + 1.15, y + 0.6, z0 + 0.9), (x + 0.85, y + 0.3, z0 + 1.35), (x + 0.45, y - 0.05, z0 + 1.45)]
+    for a_, b_ in zip(gn, gn[1:]):
+        S.tube(g, "Iron", a_, b_, 0.035, seg=5)
+    S.ring(g, "Brass", x + 0.3, y - 0.1, z0 + 1.42, 0.3, 0.38, 0.06, n=16)
+    g["Glass"].cyl(x + 0.3, y - 0.1, z0 + 1.43, 0.3, 0.3, 0.03, seg=16)
+    g["Wood"].box(x - 0.2, y + 0.65, z0 + 0.17, 0.9, 0.25, 0.1)
+    for k in range(3):
+        g["Steel"].obox(x - 0.5 + k * 0.3, y + 0.65, z0 + 0.25, 0.04, 0.04, 0.45, rx=1.3)
+
+
+def beer_tower(g, x, y, z0, taps=3, along=1.0):
+    """맥주 꼭지 탑: 놋쇠 기둥 · 둥근 머리 · 꼭지 셋(나무 손잡이 · 놋쇠 띠 · 굽은 부리) · 쇠 받침 쟁반(창살)"""
+    g["Brass"].cyl(x, y, z0, 0.22, 0.18, 1.1, seg=12)
+    sphere(g, "Brass", (x, y, z0 + 1.15), 0.24, sub=1)
+    g["Brass"].hcyl(x + 0.2, y, z0 + 0.85, 0.08, 0.55 * (taps - 1) + 0.2, axis="y", seg=8)   # 꼭지를 잇는 가로 관
+    for k in range(taps):
+        ty = y + (k - (taps - 1) / 2) * 0.55 * along
+        g["Brass"].hcyl(x + 0.22, ty, z0 + 0.85, 0.07, 0.3, axis="x", seg=8)
+        g["Brass"].cyl(x + 0.36, ty, z0 + 0.55, 0.05, 0.05, 0.32, seg=8)
+        g["Brass"].cyl(x + 0.28, ty, z0 + 0.92, 0.07, 0.07, 0.12, seg=8)
+        g["Wood"].cyl(x + 0.28, ty, z0 + 1.04, 0.05, 0.08, 0.6, seg=8)
+        g["Brass"].cyl(x + 0.28, ty, z0 + 1.62, 0.085, 0.085, 0.06, seg=8)
+    g["Iron"].box(x + 0.4, y, z0 + 0.04, 0.6, 0.55 * taps + 0.3, 0.08)
+    for k in range(5):
+        g["Steel"].box(x + 0.4, y - 0.55 * taps / 2 + k * 0.55 * taps / 4, z0 + 0.09, 0.55, 0.03, 0.02)
+
+
+def beer_mug(g, x, y, z0):
+    g["Glass"].cyl(x, y, z0, 0.22, 0.24, 0.55, seg=10)
+    g["SignGold"].cyl(x, y, z0 + 0.03, 0.19, 0.2, 0.42, seg=10)
+    g["Canvas"].cyl(x, y, z0 + 0.45, 0.21, 0.23, 0.12, seg=10)
+    g["Glass"].box(x + 0.28, y, z0 + 0.28, 0.06, 0.08, 0.36)
+
+
+def mantel_clock(g, x, y, z0, face=-1):
+    """벽난로 선반 시계: 나무 함(둥근 머리) · 흰 판 · 놋쇠 테 · 시침·분침 · 아래 추 창 · 다리"""
+    yf = y + face * 0.31
+    g["Wood"].box(x, y, z0 + 0.8, 1.3, 0.6, 1.2)
+    g["Wood"].hcyl(x, y, z0 + 1.4, 0.65, 0.6, axis="y", seg=16)
+    g["Paint"].hcyl(x, yf, z0 + 1.35, 0.42, 0.04, axis="y", seg=16)
+    g["Brass"].hcyl(x, yf - face * 0.01, z0 + 1.35, 0.5, 0.03, axis="y", seg=16)
+    g["Paint"].hcyl(x, yf + face * 0.02, z0 + 1.35, 0.42, 0.03, axis="y", seg=16)
+    g["Iron"].obox(x + 0.08, yf + face * 0.05, z0 + 1.47, 0.04, 0.02, 0.28, ry=-0.6)
+    g["Iron"].obox(x - 0.1, yf + face * 0.05, z0 + 1.42, 0.04, 0.02, 0.2, ry=1.1)
+    g["Glass"].box(x, yf, z0 + 0.6, 0.5, 0.03, 0.5)
+    g["Brass"].cyl(x, yf - face * 0.1, z0 + 0.4, 0.1, 0.1, 0.04, seg=8)
+    for sx in (-1, 1):
+        sphere(g, "Brass", (x + sx * 0.55, y, z0 + 0.12), 0.1, sub=1)
+
 # ------------------------------------------------------------------ 대장간
 W_SM, D_SM, H_SM = 36.0, 30.0, 16.0
 FORGE = (-11.0, 10.5)
@@ -176,11 +357,21 @@ def smithy_forge(g):
     bx = fx - 4.75
     for y in (fy - 1.0, fy + 1.0):
         g["Wood"].box(bx, y, 1.5, 1.6, 0.3, 2.2)
-    g["Wood"].box(bx, fy, 2.65, 2.0, 2.6, 0.2)
-    g["Leather"].obox(bx, fy, 3.05, 1.8, 2.4, 0.6, rx=0.08)
-    g["Wood"].obox(bx, fy, 3.45, 2.0, 2.8, 0.16, rx=0.18)
-    g["Wood"].obox(bx, fy + 1.6, 4.0, 0.16, 0.16, 1.4, rx=0.3)
-    g["Brass"].hcyl(fx - 3.6, fy - 0.4, 3.1, 0.18, 0.8, axis="x", seg=10)
+    # 풀무: 아래 판(고정) · 가죽 주름 넷(부리 쪽으로 낮아짐) · 놋쇠 띠 · 윗판(부리 쪽 경첩, 뒤가 들림) · 놋쇠 부리(화덕으로) ·
+    #       뒤 기둥 + 지렛대 + 사슬(윗판 손잡이까지)
+    g["Wood"].box(bx, fy, 2.66, 2.2, 1.7, 0.16)
+    for k in range(4):
+        u = -0.75 + k * 0.45                                  # 뒤(-x) → 부리(+x)
+        hh = 0.62 - k * 0.13
+        g["Leather"].box(bx + u, fy, 2.74 + hh / 2, 0.36, 1.55 - (k % 2) * 0.12, hh)
+        g["Brass"].box(bx + u + 0.2, fy, 2.74 + hh / 2, 0.04, 1.62, hh + 0.02)
+    g["Wood"].obox(bx, fy, 3.18, 2.25, 1.7, 0.14, ry=0.3)
+    g["Iron"].hcyl(bx + 1.05, fy, 2.82, 0.08, 1.4, axis="y", seg=8)
+    S.tube(g, "Brass", (bx + 1.05, fy - 0.4, 2.8), (fx - 3.45, fy - 0.4, 3.0), 0.12, seg=10)
+    g["Timber"].box(bx - 0.95, fy + 0.95, 3.2, 0.3, 0.3, 4.4)
+    g["Timber"].obox(bx - 0.5, fy + 0.95, 5.25, 1.6, 0.16, 0.16, ry=0.35)
+    S.tube(g, "Iron", (bx + 0.25, fy + 0.95, 4.98), (bx - 0.6, fy, 3.42), 0.03, seg=4)
+    g["Brass"].box(bx - 0.6, fy, 3.42, 0.3, 0.3, 0.1)
     C(bx, fy, 2.0, 2.2, 3.0, 3.6)
     # 연장 걸이(화덕 오른 옆면): 쇠 막대 + 집게 둘 · 망치 · 부지깽이
     rx = fx + 3.62
@@ -290,7 +481,10 @@ def grindstone(g, x, y):
     g["Iron"].box(x, y, 0.9, 0.9, 2.0, 0.5)
     g["Glass"].box(x, y, 1.12, 0.7, 1.8, 0.06)
     g["Wood"].obox(x, y - 1.5, 0.6, 0.9, 1.0, 0.12, rx=0.3)
-    g["Iron"].obox(x + 1.15, y, 2.4, 0.12, 0.12, 0.9, rx=0.0)
+    # 손잡이 크랭크(축 끝) + 발판 → 크랭크 막대
+    g["Iron"].obox(x + 1.15, y, 2.05, 0.1, 0.12, 0.8)
+    g["Wood"].hcyl(x + 1.35, y, 1.68, 0.07, 0.4, axis="x", seg=8)
+    S.tube(g, "Iron", (x + 1.12, y - 1.5, 0.66), (x + 1.12, y, 1.7), 0.035, seg=5)
     C(x, y, 1.8, 2.6, 3.2, 3.0)
 
 
@@ -321,6 +515,10 @@ def smithy_shell(g):
                            (-D / 2 + 0.4, D / 2 - 0.4, -W / 2 - 0.4, -W / 2 + 0.4), (-D / 2 + 0.4, D / 2 - 0.4, W / 2 - 0.4, W / 2 + 0.4)):
         g["StoneTrim"].box((x0 + x1) / 2, (y0 + y1) / 2, H - 0.3, x1 - x0, y1 - y0, 0.7)
     quoins(g, W, D, FZ, H - 0.8)
+    for a_, b_ in ((-W / 2, -15.0), (15.0, W / 2)):
+        drift(g, a_, b_, -D / 2 - 0.85, -1, d=1.0)
+    for a_, b_ in ((-W / 2, 0.4), (7.6, W / 2)):
+        drift(g, a_, b_, D / 2, 1)
     # 트임: 띠돌 기둥 · 리벳 박은 쇠 들보 · 밀어 연 쇠문 둘(겉, 레일)
     fy = -D / 2
     for s in (-1, 1):
@@ -328,6 +526,7 @@ def smithy_shell(g):
     g["Iron"].box(0, fy - 0.3, FZ + 11.5, 15.6, 0.6, 1.0)
     for z in (FZ + 11.05, FZ + 11.95):
         g["IronLight"].box(0, fy - 0.42, z, 15.8, 0.8, 0.16)
+    snow(g, 0, fy - 0.42, FZ + 12.03, 15.6, 0.7)                             # 들보 위 눈
     for k in range(13):
         g["Brass"].box(-7.2 + k * 1.2, fy - 0.66, FZ + 11.5, 0.16, 0.12, 0.16)
     g["Iron"].box(0, fy - 0.85, FZ + 11.1, 30.0, 0.2, 0.22)                 # 문 레일
@@ -344,6 +543,7 @@ def smithy_shell(g):
     g["Timber"].box(0, fy - 0.35, FZ + 13.5, 7.4, 0.3, 3.0)
     for z in (FZ + 12.05, FZ + 14.95):
         g["Brass"].box(0, fy - 0.5, z, 7.6, 0.2, 0.2)
+    snow(g, 0, fy - 0.45, FZ + 15.05, 7.5, 0.4)
     for x in (-3.75, 3.75):
         g["Brass"].box(x, fy - 0.5, FZ + 13.5, 0.2, 0.2, 3.1)
     anvil_icon(g, -0.5, fy - 0.5, FZ + 12.62, s=0.9)
@@ -359,6 +559,7 @@ def smithy_shell(g):
     S.roof_gable(g, 0, 0, H, W + 0.6, D + 0.6, 9.0, along="y")
     gy = -D / 2 - 0.35
     g["Iron"].box(0, gy, H + 3.4, 4.4, 0.3, 2.8)
+    snow(g, 0, gy - 0.05, H + 4.8, 4.3, 0.4, t=0.12)
     for k in range(5):
         g["IronLight"].obox(0, gy - 0.15, H + 2.3 + k * 0.52, 4.0, 0.12, 0.42, rx=0.6)
     S.gear(g, "Brass", 0, gy - 0.1, H + 6.0, 1.3, 12, 0.3)
@@ -449,6 +650,8 @@ def yard_sign(g, x, y, icon):
         g["Iron"].box(x + dx, y, 6.35, 0.06, 0.06, 0.8)
     g["Timber"].box(x + 1.4, y, 5.3, 2.6, 0.22, 1.8)
     g["Brass"].box(x + 1.4, y, 6.24, 2.7, 0.26, 0.12)
+    snow(g, x + 1.4, y, 6.3, 2.6, 0.3, t=0.12)
+    snow(g, x + 1.4, y, 6.88, 2.9, 0.18, t=0.08)
     icon(g, x + 1.4, y - 0.11, 5.1, -1)
     icon(g, x + 1.4, y + 0.11, 5.1, 1)
     C(x, y, 3.6, 0.6, 0.6, 7.2)
@@ -522,7 +725,10 @@ def yard_smithy(g):
     g["Iron"].box(-1.2, -5.5, 2.8, 0.25, 0.25, 5.6)
     g["Iron"].box(-0.6, -5.5, 5.5, 1.4, 0.15, 0.15)
     lantern(g, 0.0, -5.5, 5.4, 4.3)
+    lamp_snow(g, 0.0, -5.5, 4.3)
     C(-1.2, -5.5, 2.8, 0.5, 0.5, 5.6)
+    for k, x in enumerate((-12.0, -7.5, -3.0)):                            # 광석 더미 위 눈
+        sphere(g, "SnowCap", (x + 0.2, 4.1, 2.25), 0.9, sub=1)
 
 
 
@@ -548,7 +754,8 @@ def side_shelf(g, xw, y0, y1, z0, h, depth=1.4, levels=4, face=1, mat="Wood"):
     return tops
 
 
-def shell_walls(g, W, D, H, mat, door, front_win=(), side_win=(), back_win=(), back_door=None, frame="Iron", trim="StoneTrim"):
+def shell_walls(g, W, D, H, mat, door, front_win=(), side_win=(), back_win=(), back_door=None, frame="Iron", trim="StoneTrim",
+                front_drift=True):
     """바닥 돌 판 + 네 벽(안팎 짝 창은 job cut 이 뚫는다) + 밑동 띠·처마 띠·모서리 돌. door = (x0, x1, 높이)"""
     ix0, ix1, iy0, iy1 = -W / 2 + T, W / 2 - T, -D / 2 + T, D / 2 - T
     g["Stone"].box(0, 0, FZ / 2, W + 0.6, D + 0.6, FZ)
@@ -587,6 +794,14 @@ def shell_walls(g, W, D, H, mat, door, front_win=(), side_win=(), back_win=(), b
                            (-D / 2 + 0.4, D / 2 - 0.4, -W / 2 - 0.4, -W / 2 + 0.4), (-D / 2 + 0.4, D / 2 - 0.4, W / 2 - 0.4, W / 2 + 0.4)):
         g[trim].box((x0 + x1) / 2, (y0 + y1) / 2, H - 0.3, x1 - x0, y1 - y0, 0.7)
     quoins(g, W, D, FZ, H - 0.8)
+    # 벽 밑 눈 더미: 앞(문 길 비움) · 뒤(뒷문 비움). 옆은 길과 가까워 두지 않는다
+    for a_, b_ in ((-W / 2, dx0 - 1.0), (dx1 + 1.0, W / 2)) if front_drift else ():     # 좁은 구역 가게는 앞 모서리가 길 여유에 걸려 뺀다
+        drift(g, a_, b_, -D / 2, -1)
+    if back_door:
+        for a_, b_ in ((-W / 2, back_door[0] - 0.6), (back_door[1] + 0.6, W / 2)):
+            drift(g, a_, b_, D / 2, 1)
+    else:
+        drift(g, -W / 2, W / 2, D / 2, 1)
     return ix0, ix1, iy0, iy1
 
 
@@ -594,6 +809,7 @@ def wall_lamp(g, x, y, z, face=-1):
     """문 옆 벽 등(쇠 팔 + 매단 등). face = 벽 바깥쪽(-1 앞 -y)"""
     g["Iron"].box(x, y + face * 0.7, z + 1.2, 0.15, 1.4, 0.15)
     lantern(g, x, y + face * 1.3, z + 1.2, z)
+    lamp_snow(g, x, y + face * 1.3, z)
 
 
 def door_frame(g, x0, x1, y, z1, mat="StoneTrim"):
@@ -601,6 +817,7 @@ def door_frame(g, x0, x1, y, z1, mat="StoneTrim"):
     for x in (x0 - 0.35, x1 + 0.35):
         g[mat].box(x, y - 0.15, (FZ + z1) / 2, 0.7, 0.5, z1 - FZ)
     g[mat].box((x0 + x1) / 2, y - 0.15, z1 + 0.35, x1 - x0 + 1.4, 0.5, 0.7)
+    snow(g, (x0 + x1) / 2, y - 0.17, z1 + 0.7, x1 - x0 + 1.3, 0.45, t=0.14)
 
 
 def hanging_sign(g, x, y, z, icon, board="Timber"):
@@ -611,6 +828,7 @@ def hanging_sign(g, x, y, z, icon, board="Timber"):
     for xx in (x - 2.75, x + 2.75):
         g["Brass"].box(xx, y - 0.32, z, 0.18, 0.2, 2.8)
     icon(g, x, y - 0.35, z - 1.0, -1)
+    snow(g, x, y - 0.26, z + 1.44, 5.5, 0.4, t=0.14)
 
 
 def poly_disc(n, r, cx, cz, a0=0.0):
@@ -723,7 +941,7 @@ def goods_row(g, x0, x1, y, z, seed=0, depth=0.9, k_=1.5):
             x += s + 0.1
         elif k == 1:
             r = rnd.uniform(0.25, 0.35)
-            g["Copper" if rnd.random() < 0.5 else "IronLight"].cyl(x + r, y, z, r, r, rnd.uniform(0.5, 0.8), seg=10)
+            g["Copper" if rnd.random() < 0.5 else "Steel"].cyl(x + r, y, z, r, r, rnd.uniform(0.5, 0.8), seg=10)
             x += 2 * r + 0.1
         elif k == 2:
             bottle(g, x + 0.2, y, z, rnd.choice(("SignGold", "Verdigris", "SignRed")), r=0.18, h=0.6)
@@ -754,7 +972,7 @@ def goods_col(g, x, y0, y1, z, seed=0, depth=0.9, k_=1.5):
             y += s + 0.1
         elif k == 1:
             r = rnd.uniform(0.25, 0.35)
-            g["Copper" if rnd.random() < 0.5 else "IronLight"].cyl(x, y + r, z, r, r, rnd.uniform(0.5, 0.8), seg=10)
+            g["Copper" if rnd.random() < 0.5 else "Steel"].cyl(x, y + r, z, r, r, rnd.uniform(0.5, 0.8), seg=10)
             y += 2 * r + 0.1
         elif k == 2:
             bottle(g, x, y + 0.2, z, rnd.choice(("SignGold", "Verdigris", "SignRed")), r=0.18, h=0.6)
@@ -789,7 +1007,7 @@ def svc_enhance(g):
     """강화소: 아래 검은 돌·위 벽돌, 가파른 네모뿔 지붕 + 청록 수정 꼭지, 룬 돌 간판. 안: 룬 새기는 돌 작업대(새김 팔·확대경),
     바닥 룬 고리(놋쇠 + 청록), 왼 벽 룬 받침 셋(떠 있는 룬 돌), 뒤 룬 칸 선반, 오른 선반(두루마리·책) + 쓰고 남은 돌덩이 통(사양: 쓴 룬은 돌덩이)"""
     W, D, H = W_SH, D_SH, H_SH
-    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE, back_win=SHOP_BACK)
+    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE, back_win=SHOP_BACK, front_drift=False)
     # 아래 검은 돌 옷(창 밑까지)
     for (x0, x1, y0, y1) in ((-W / 2 - 0.2, -3.6, -D / 2 - 0.2, -D / 2), (3.6, W / 2 + 0.2, -D / 2 - 0.2, -D / 2), (-W / 2 - 0.2, W / 2 + 0.2, D / 2, D / 2 + 0.2),
                              (-W / 2 - 0.2, -W / 2, -D / 2, D / 2), (W / 2, W / 2 + 0.2, -D / 2, D / 2)):
@@ -827,15 +1045,9 @@ def svc_enhance(g):
     for x in (-3.0, 0.0, 3.0):
         g["GlowTeal"].box(x, 4.18, 2.0, 0.6, 0.06, 0.6)
     C(0, 5.5, (FZ + 3.5) / 2, 8.2, 3.2, 3.5 - FZ)
-    g["Brass"].cyl(-2.6, 6.4, 3.5, 0.35, 0.35, 0.3, seg=10)
-    g["Brass"].obox(-2.0, 6.0, 4.6, 0.18, 0.18, 2.2, ry=0.5)
-    g["Brass"].obox(-0.8, 5.4, 5.3, 0.16, 0.16, 2.0, ry=-0.9)
-    g["Steel"].obox(-0.1, 5.2, 4.2, 0.08, 0.08, 1.0, ry=0.1)
-    g["Brass"].cyl(2.4, 6.2, 3.5, 0.25, 0.25, 1.4, seg=8)
-    g["Brass"].hcyl(2.0, 5.6, 4.9, 0.55, 0.12, axis="y", seg=14)
-    g["Glass"].hcyl(2.0, 5.6, 4.9, 0.45, 0.06, axis="y", seg=14)
-    g["DarkStone"].box(-0.1, 5.1, 3.6, 1.2, 0.8, 0.2)
-    g["GlowTeal"].box(-0.1, 5.1, 3.72, 0.7, 0.4, 0.04)
+    from mathutils import Matrix as M_
+    L_.transformed(g, M_.Translation((0.3, 5.5, 3.5)) @ M_.Scale(1.3, 4) @ M_.Translation((-0.3, -5.5, -3.5)),
+                   lambda q: engraving_machine(q, 0.3, 5.5, 3.5))                 # 작업대에 비해 작아 1.3 배
     NPC(0.0, 9.0, FZ, 0.0)
     # 뒤 룬 칸 선반(x -9..9): 칸마다 룬 돌
     g["Wood"].box(0, iy1 - 0.75, FZ + 4.5, 18.0, 1.5, 9.0)
@@ -901,7 +1113,7 @@ def svc_potion(g):
     """물약상점: 벽돌 + 녹청 덧창·문틀·차양, 앞벽과 나란한 박공 지붕 + 구리 환기탑, 오른 벽 밖 구리 증류 탑, 둥근 병 간판.
     안: 큰 솥(진짜 불)·끓는 녹청 물약, 뒤 벽 색색 병 선반, 옆 선반(병·단지), 천장 마른 약초 다발, 카운터(놋쇠 저울·절구·병)"""
     W, D, H = W_SH, D_SH, H_SH
-    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE, back_win=SHOP_BACK)
+    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, H, "Brick", (-3.0, 3.0, 9.0), SHOP_FRONT, SHOP_SIDE, back_win=SHOP_BACK, front_drift=False)
     for cx in (-8.75, 8.75):
         for s in (-1, 1):
             g["PaintGreen"].box(cx + s * 3.15, -D / 2 - 0.15, 6.0, 1.3, 0.2, 5.4)
@@ -909,6 +1121,7 @@ def svc_potion(g):
                 g["Wood"].box(cx + s * 3.15, -D / 2 - 0.28, z, 1.1, 0.06, 0.18)
     door_frame(g, -3.0, 3.0, -D / 2, FZ + 9.0, mat="PaintGreen")
     g["PaintGreen"].obox(0, -D / 2 - 1.3, FZ + 10.4, 8.0, 2.6, 0.2, rx=0.3)       # 차양: 바깥 끝이 낮게
+    g["SnowCap"].obox(0, -D / 2 - 1.1, FZ + 10.62, 7.6, 2.0, 0.14, rx=0.3)
     for x in (-3.8, 3.8):
         g["Iron"].obox(x, -D / 2 - 0.8, FZ + 9.6, 0.12, 1.8, 0.12, rx=0.9)
     hanging_sign(g, 0, -D / 2, FZ + 12.2, flask_icon)
@@ -930,13 +1143,8 @@ def svc_potion(g):
     for x in (-5.0, -1.7, 1.7, 5.0):
         g["Brass"].box(x, 4.12, 1.8, 0.2, 0.06, 2.6)
     C(0, 5.25, (FZ + 3.5) / 2, 12.2, 2.8, 3.5 - FZ)
-    g["Brass"].cyl(-3.5, 5.3, 3.5, 0.4, 0.3, 0.2, seg=10)
-    g["Brass"].cyl(-3.5, 5.3, 3.7, 0.06, 0.06, 1.4, seg=6)
-    g["Brass"].box(-3.5, 5.3, 5.1, 2.0, 0.1, 0.1)
-    for dx in (-0.95, 0.95):
-        g["Brass"].cyl(-3.5 + dx, 5.3, 4.5, 0.35, 0.45, 0.12, seg=10)
-    g["Stone"].cyl(0.5, 5.4, 3.5, 0.4, 0.5, 0.5, seg=10)
-    g["Wood"].obox(0.7, 5.4, 4.2, 0.12, 0.12, 0.9, ry=0.4)
+    balance_scale(g, -3.5, 5.3, 3.5)
+    mortar(g, 0.4, 5.4, 3.5)
     bottle_row(g, 2.0, 5.5, 5.3, 3.5, seed=5)
     NPC(0.0, 8.5, FZ, 0.0)
     tops = shelf_unit(g, -6.0, 9.0, iy1, FZ, 9.0, depth=1.5, levels=5, face=-1)
@@ -987,13 +1195,16 @@ def svc_general(g):
         x = -11.5 + k * 2.09
         g["SignBlue" if k % 2 else "Canvas"].obox(x, -D / 2 - 1.5, FZ + 9.7, 2.09, 3.0, 0.15, rx=0.32)     # 바깥 끝이 낮게
     g["Canvas"].box(0, -D / 2 - 2.95, FZ + 9.1, 25.0, 0.1, 0.6)
+    g["SnowCap"].obox(0, -D / 2 - 1.26, FZ + 9.93, 24.4, 2.3, 0.14, rx=0.32)
     for x in (-11.0, 11.0):
         g["Iron"].obox(x, -D / 2 - 1.0, FZ + 9.0, 0.12, 2.2, 0.12, rx=0.9)
     hanging_sign(g, 0, -D / 2 - 0.25, FZ + 11.6, sack_icon)
     for s in (-1, 1):
         barrel(g, s * 5.0, -D / 2 - 1.2, 0.0, r=0.75, h=1.9)
+        g["SnowCap"].cyl(s * 5.0, -D / 2 - 1.2, 1.95, 0.7, 0.62, 0.14, seg=14)
         crate(g, s * 8.0, -D / 2 - 1.3, 0.0, 1.8)
         crate(g, s * 8.2, -D / 2 - 1.3, 1.8, 1.4, rz=0.3)
+        g["SnowCap"].obox(s * 8.2, -D / 2 - 1.3, 3.27, 1.3, 1.3, 0.14, rz=0.3)
         C(s * 8.0, -D / 2 - 1.3, 1.6, 2.0, 2.0, 3.2)
         g["Canvas"].obox(s * 10.3, -D / 2 - 1.1, 0.5, 1.2, 0.9, 1.0, rz=0.2)
         g["Canvas"].obox(s * 10.6, -D / 2 - 1.2, 1.3, 1.0, 0.8, 0.8, rz=-0.3)
@@ -1017,11 +1228,7 @@ def svc_general(g):
     for x in (-5.0, -2.5, 0.0, 2.5, 5.0):
         g["Wood"].box(x, 4.12, 1.8, 2.2, 0.06, 2.4)
     C(0, 5.25, (FZ + 3.5) / 2, 12.2, 2.8, 3.5 - FZ)
-    g["Brass"].box(3.2, 5.5, 4.0, 1.6, 1.2, 1.0)
-    g["Brass"].obox(3.2, 5.0, 4.4, 1.5, 0.5, 0.4, rx=-0.5)
-    for k in range(4):
-        g["Dial"].box(2.7 + k * 0.33, 4.75, 4.55, 0.22, 0.05, 0.18)
-    g["Brass"].box(3.2, 6.0, 4.9, 1.0, 0.2, 0.6)
+    cash_register(g, 3.3, 5.3, 3.5)
     goods_row(g, -5.6, 1.6, 5.3, 3.5, seed=3)
     NPC(0.0, 8.5, FZ, 0.0)
     tops = shelf_unit(g, -9.0, 9.0, iy1, FZ, 9.0, depth=1.5, levels=5, face=-1)
@@ -1120,6 +1327,8 @@ def svc_bank(g):
     v = [(-9.0, fy - 0.9, H + 1.2), (9.0, fy - 0.9, H + 1.2), (0, fy - 0.9, H + 5.4), (-9.0, fy + 0.6, H + 1.2), (9.0, fy + 0.6, H + 1.2), (0, fy + 0.6, H + 5.4)]
     g["Marble"].add_mesh(v, [(0, 2, 1), (3, 4, 5), (0, 1, 4, 3), (1, 2, 5, 4), (2, 0, 3, 5)])
     coin_icon(g, 0, fy - 0.9, H + 1.75, -1)
+    for s_ in (-1, 1):                                                     # 박공 비탈 위 눈
+        g["SnowCap"].obox(s_ * 4.5, fy - 0.15, H + 3.45, 9.95, 1.4, 0.18, ry=s_ * 0.437)
     # 문: 대리석 문틀 + 놋쇠 징 박은 쌍문(안으로 연) + 문 위 판(금화)
     door_frame(g, -5.0, 5.0, fy, FZ + 10.0, mat="Marble")
     for s in (-1, 1):
@@ -1140,6 +1349,7 @@ def svc_bank(g):
     for y0, y1, x0, x1 in ((fy - 0.2, fy + 0.6, -W / 2 - 0.2, W / 2 + 0.2), (D / 2 - 0.6, D / 2 + 0.2, -W / 2 - 0.2, W / 2 + 0.2),
                            (fy + 0.6, D / 2 - 0.6, -W / 2 - 0.2, -W / 2 + 0.6), (fy + 0.6, D / 2 - 0.6, W / 2 - 0.6, W / 2 + 0.2)):
         g["Marble"].box((x0 + x1) / 2, (y0 + y1) / 2, H + 1.8, x1 - x0, y1 - y0, 0.5)
+        snow(g, (x0 + x1) / 2, (y0 + y1) / 2, H + 2.05, x1 - x0 - 0.1, y1 - y0 - 0.1, t=0.18)
         g["Marble"].box((x0 + x1) / 2, (y0 + y1) / 2, H + 1.0, x1 - x0 - 0.4, y1 - y0 - 0.2 if y1 - y0 < 1 else y1 - y0, 1.2)
     g["StoneTrim"].cyl(0, 2.0, H + 0.6, 4.4, 4.4, 3.6, seg=24)
     S.ring(g, "Marble", 0, 2.0, H + 4.0, 4.2, 4.8, 0.5, n=24)
@@ -1185,7 +1395,11 @@ def svc_bank(g):
         g["Brass"].box(cx, 4.6, 6.0, 2.4, 0.1, 0.12)
         half_ring_y(g, "Brass", cx, 4.6, 6.0, 1.1, 1.3, 0.2)
         g["Brass"].box(cx, 3.6, 3.55, 2.6, 0.6, 0.06)
-        g["SignGold"].cyl(cx + 0.8, 3.8, 3.5, 0.18, 0.18, 0.25, seg=10)
+        for k in range(3):                                                 # 금화 더미
+            g["SignGold"].cyl(cx + 0.8 + k * 0.32, 3.8, 3.5, 0.15, 0.15, 0.12 + k * 0.1, seg=10)
+        g["Char"].box(cx - 0.9, 3.85, 3.53, 0.5, 0.35, 0.06)                # 잉크판 + 도장
+        g["Brass"].box(cx - 0.4, 3.85, 3.6, 0.3, 0.2, 0.12)
+        g["Wood"].cyl(cx - 0.4, 3.85, 3.66, 0.06, 0.08, 0.35, seg=8)
         NPC(cx, 8.0, FZ, 0.0)
     # 뒤 벽: 둥근 금고 문(쇠 원판 · 놋쇠 테 · 바퀴 손잡이 · 빗장) + 양옆 대여 금고 서랍 벽
     vz = FZ + 5.5
@@ -1200,6 +1414,21 @@ def svc_bank(g):
     for k in range(8):
         a = k * math.pi / 4
         g["Steel"].hcyl(3.6 * math.cos(a), iy1 - 1.0, vz + 3.6 * math.sin(a), 0.22, 0.2, axis="y", seg=8)
+    for k in range(6):                                                     # 바퀴 살 끝 손잡이
+        a = k * math.pi / 3
+        sphere(g, "Brass", (1.8 * math.cos(a), iy1 - 1.25, vz + 1.8 * math.sin(a)), 0.16, sub=1)
+    for zz in (vz - 2.6, vz + 2.6):                                         # 왼쪽 경첩 통 둘
+        g["Iron"].cyl(-4.75, iy1 - 0.75, zz - 0.8, 0.32, 0.32, 1.6, seg=12)
+        g["Brass"].cyl(-4.75, iy1 - 0.75, zz - 0.85, 0.36, 0.36, 0.1, seg=12)
+    for zz in (vz - 1.2, vz, vz + 1.2):                                     # 빗장 막대(가운데 → 테)
+        g["Steel"].box(2.6, iy1 - 1.02, zz, 2.8, 0.1, 0.16)
+    g["Paint"].hcyl(2.3, iy1 - 1.05, vz + 2.3, 0.45, 0.06, axis="y", seg=20)   # 번호 다이얼
+    g["Brass"].hcyl(2.3, iy1 - 1.03, vz + 2.3, 0.52, 0.04, axis="y", seg=20)
+    for k in range(12):
+        a = k * math.pi / 6
+        g["Char"].box(2.3 + 0.38 * math.cos(a), iy1 - 1.1, vz + 2.3 + 0.38 * math.sin(a), 0.04, 0.02, 0.04)
+    g["Brass"].hcyl(2.3, iy1 - 1.16, vz + 2.3, 0.14, 0.12, axis="y", seg=10)
+    g["Brass"].box(-2.4, iy1 - 1.04, vz - 3.0, 1.4, 0.04, 0.4)              # 이름판
     C(0, iy1 - 0.5, vz, 9.0, 1.0, 9.0)
     for x0, x1 in ((-14.5, -5.8), (5.8, 14.5)):
         g["Wood"].box((x0 + x1) / 2, iy1 - 0.3, FZ + 4.6, x1 - x0, 0.6, 8.4)
@@ -1282,6 +1511,7 @@ def svc_hospital(g):
         g["Brick"].box((a + b) / 2, fy - 0.12, FZ + 1.6, b - a, 0.24, 2.4)
     for cx in (-13.0, 13.0):
         g["Brick"].box(cx, fy - 0.15, FZ + 10.2, 7.4, 0.3, 0.7)
+        snow(g, cx, fy - 0.15, FZ + 10.55, 7.3, 0.28, t=0.1)
     door_frame(g, -5.0, 5.0, fy, FZ + 10.0, mat="Brick")
     for s in (-1, 1):
         cxl, cyl = s * 5.0 - s * math.cos(math.radians(100.0)) * 2.5, iy0 + 0.2 + math.sin(math.radians(100.0)) * 2.5
@@ -1289,6 +1519,7 @@ def svc_hospital(g):
         g["WinGlass"].obox(cxl - s * 0.17, cyl, FZ + 6.5, 0.06, 3.0, 3.5, rz=-s * math.radians(10.0))
     g["Iron"].box(0, fy - 1.6, FZ + 11.0, 12.0, 3.2, 0.25)
     g["WinGlass"].box(0, fy - 1.6, FZ + 11.2, 11.4, 2.8, 0.1)
+    snow(g, 0, fy - 1.0, FZ + 11.25, 11.0, 1.6, t=0.14)
     for x in (-5.8, 5.8):
         g["Iron"].obox(x, fy - 1.0, FZ + 10.0, 0.15, 2.4, 0.15, rx=0.8)
     g["Paint"].hcyl(0, fy - 0.15, FZ + 14.0, 2.2, 0.3, axis="y", seg=20)
@@ -1385,7 +1616,7 @@ def svc_inn(g):
     1층: 바(맥주 꼭지·병 선반·통), 벽난로(진짜 장작불), 둥근 탁자 셋, 계단(오른 벽, 난간). 2층: 뒤 복도(깔개·벽등) + 앞 방 셋(침대·옷장·세면대·깔개)"""
     W, D = 40.0, 30.0
     Z2, H = Z2_INN, H_INN
-    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, Z2, "Brick", (-4.0, 4.0, 10.0), ((-12.0, 3.5, 6.0, 5.0), (11.5, 3.5, 5.0, 5.0)),
+    ix0, ix1, iy0, iy1 = shell_walls(g, W, D, Z2, "Brick", (-4.0, 4.0, 10.0), ((-12.0, 3.5, 6.0, 5.0), (12.0, 3.5, 6.0, 5.0)),
                                      (), back_door=(-11.0, -5.0, 9.0))
     S.window(g, -W / 2, -9.0, 3.5, 5.0, 5.0, face="-x", cross=True, frame="Iron")
     S.window(g, ix0, -9.0, 3.5, 5.0, 5.0, face="+x", cross=True, sill=False, frame="Iron")
@@ -1395,13 +1626,13 @@ def svc_inn(g):
     box2(g, "Paint", -W / 2, W / 2, iy1, D / 2, Z2, H)
     for s in (-1, 1):
         box2(g, "Paint", *sorted((s * W / 2, s * ix1)), iy0, iy1, Z2, H)
-    for x in (-14.0, -3.0, 7.5):
+    for x in (-15.5, -5.5, 5.5, 15.5):                                    # 앞 위층 창 넷(좌우 대칭 — 오른 끝은 계단 칸)
         front_window(g, x, fy, iy0, Z2 + 3.0, 5.0, 5.0, frame="Timber")
     side_window(g, -W / 2, ix0, -8.0, Z2 + 3.0, 4.0, 5.0, "-x")
     side_window(g, W / 2, ix1, 11.0, Z2 + 3.0, 4.0, 5.0, "+x")
     for x in (-12.0, 2.0):
         back_window(g, x, D / 2, iy1, Z2 + 3.0, 4.0, 4.5)
-    for y, xs_, face in ((fy - 0.12, (-19.85, -17.0, -10.9, -8.5, -5.9, -0.1, 2.5, 4.6, 10.4, 13.5, 19.85), -1),
+    for y, xs_, face in ((fy - 0.12, (-19.85, -12.6, -8.4, -2.6, 0.0, 2.6, 8.4, 12.6, 19.85), -1),
                          (D / 2 + 0.12, (-19.85, -14.5, -9.5, 0.0, 4.5, 9.5, 19.85), 1)):
         for x in xs_:
             g["Timber"].box(x, y, (Z2 + H) / 2, 0.35, 0.24, H - Z2)
@@ -1438,13 +1669,7 @@ def svc_inn(g):
     for x in (-4.6, 4.6):
         g["Timber"].obox(x, fy - 1.0, FZ + 10.3, 0.2, 2.2, 0.2, rx=0.9)
     hanging_sign(g, 0, fy - 0.25, FZ + 13.2, mug_icon)
-    g["Iron"].box(7.4, fy - 1.3, Z2 + 1.6, 0.18, 2.6, 0.18)
-    g["Timber"].box(7.4, fy - 2.4, Z2 - 0.2, 0.25, 3.0, 2.6)
-    for zz in (Z2 + 1.15, Z2 - 1.55):
-        g["Brass"].box(7.4, fy - 2.4, zz, 0.3, 3.2, 0.16)
-    for side in (-1, 1):
-        mug_icon_x(g, 7.4 + side * 0.15, fy - 2.4, Z2 - 1.2, side)
-    for cx, w in ((-12.0, 6.0), (11.5, 5.0)):
+    for cx, w in ((-12.0, 6.0), (12.0, 6.0)):
         g["Wood"].box(cx, fy - 0.5, 3.0, w + 0.4, 0.8, 0.6)
         for k in range(int(w / 0.8)):
             x = cx - w / 2 + 0.4 + k * 0.8
@@ -1483,13 +1708,9 @@ def svc_inn(g):
     g["Brass"].box(bx1 + 0.35, (by0 + by1) / 2, FZ + 0.6, 0.12, by1 - by0, 0.12)
     g["Wood"].box((bx0 + bx1) / 2, (by0 + by1) / 2, 3.35, bx1 - bx0 + 0.4, by1 - by0 + 0.3, 0.3)
     C((bx0 + bx1) / 2, (by0 + by1) / 2, (FZ + 3.5) / 2, bx1 - bx0 + 0.4, by1 - by0 + 0.3, 3.5 - FZ)
-    for y in (1.0, 3.0, 5.0):
-        g["Brass"].cyl(-12.9, y, 3.5, 0.15, 0.15, 1.3, seg=8)
-        g["Brass"].obox(-12.5, y, 4.7, 0.6, 0.12, 0.12)
-        g["Wood"].box(-12.9, y, 5.0, 0.2, 0.2, 0.5)
-    for y in (7.0, 7.7, 9.5):
-        g["Glass"].cyl(-12.4, y, 3.5, 0.25, 0.22, 0.6, seg=8)
-        g["SignGold"].cyl(-12.4, y, 3.52, 0.2, 0.2, 0.4, seg=8)
+    beer_tower(g, -13.2, 3.0, 3.5)
+    for y in (7.0, 7.8, 9.6):
+        beer_mug(g, -12.4, y, 3.5)
     tops = side_shelf(g, ix0, -4.0, 12.0, FZ, 9.0, depth=1.0, levels=5, face=1)
     for k, z in enumerate(tops[2:]):
         bottle_col(g, ix0 + 0.5, -3.8, 11.8, z, seed=70 + k, liquids=("SignGold", "Wood", "SignRed", "Verdigris"))
@@ -1508,8 +1729,7 @@ def svc_inn(g):
     g["Soot"].box(0, iy1 - 0.3, FZ + 1.8, 4.0, 0.2, 3.6)
     fire_logs(g, 0, iy1 - 1.0, FZ + 0.05, 2.6, 1.2, axis="x", size=0.7)
     g["Wood"].box(0, iy1 - 2.2, FZ + 7.2, 9.0, 1.0, 0.4)
-    g["Brass"].box(0, iy1 - 2.2, FZ + 8.2, 1.2, 0.5, 1.6)
-    g["Dial"].hcyl(0, iy1 - 2.48, FZ + 8.4, 0.45, 0.06, axis="y", seg=12)
+    mantel_clock(g, 0, iy1 - 2.2, FZ + 7.4)
     for x in (-3.0, 3.0):
         g["Brass"].cyl(x, iy1 - 2.2, FZ + 7.4, 0.15, 0.12, 0.8, seg=8)
         g["Canvas"].cyl(x, iy1 - 2.2, FZ + 8.2, 0.1, 0.1, 0.4, seg=6)
@@ -1571,20 +1791,6 @@ def svc_inn(g):
     CLEAR(13.2, 18.2, sy1 + 0.2, iy1 - 0.2, Z2 + 0.15, Z2 + 5.6)    # 옆 창 안 틀 비켜
 
 
-def mug_icon_x(g, x, y, z, face):
-    """옆으로 매단 간판(판이 x 를 본다)용 맥주잔 — face = ±x"""
-    x0, x1 = (x, x + 0.2) if face > 0 else (x - 0.2, x)
-
-    def P(pts, mat, dz=0.0):
-        n = len(pts)
-        v = [(x0, yy, zz + dz) for yy, zz in pts] + [(x1, yy, zz + dz) for yy, zz in pts]
-        f = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))] + [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
-        g[mat].add_mesh(v, f)
-    P([(y - 0.7, z + 0.1), (y + 0.5, z + 0.1), (y + 0.5, z + 1.6), (y - 0.7, z + 1.6)], "Wood")
-    P([(y - 0.8, z + 1.55), (y + 0.6, z + 1.55), (y + 0.45, z + 2.0), (y - 0.65, z + 2.0)], "Canvas")
-    P([(y + 0.5, z + 0.45), (y + 1.0, z + 0.45), (y + 1.0, z + 1.25), (y + 0.5, z + 1.25)], "Wood")
-
-
 # ------------------------------------------------------------------ 뜰 다섯 + 은행 시세판
 def horseshoe_icon(g, x, y, z, face=-1):
     y0, y1 = _yy(y, face)
@@ -1620,6 +1826,7 @@ def yard_enhance(g):
     ore_lumps(g, -7.0, -2.6, 0.2, r=1.3, n=9, seed=31, mats=("Stone", "StoneTrim"))
     C(-7.0, -2.6, 0.9, 2.6, 2.6, 1.6)
     g["StoneTrim"].box(0, 4.8, 1.0, 4.0, 1.2, 0.4)
+    snow(g, 0, 4.8, 1.2, 3.8, 1.0, t=0.12)
     for x in (-1.5, 1.5):
         g["StoneTrim"].box(x, 4.8, 0.5, 0.6, 1.0, 0.8)
     C(0, 4.8, 0.65, 4.0, 1.2, 1.3)
@@ -1646,6 +1853,7 @@ def yard_bank(g):
     C(0, 0, 4.5, 12.0, 0.6, 9.0)
     for x in (-4.5, 4.5):
         bench(g, x, 3.6, 0.2, 4.0, axis="x", mat="Wood")
+        snow(g, x, 3.6, 1.82, 3.6, 1.3, t=0.1)
     for x in (-7.0, 7.0):
         potted_plant(g, x, -4.0, 0.2, s=0.9)
 
@@ -1736,10 +1944,13 @@ def yard_hospital(g):
     C(0, 2.0, 0.95, 4.0, 4.0, 1.5)
     for x in (-7.5, 7.5):
         bench(g, x, 2.0, 0.2, 5.0, axis="y", mat="Wood")
+        snow(g, x, 2.0, 1.82, 1.3, 4.6, t=0.1)
     bench(g, 0, 6.8, 0.2, 5.0, axis="x", mat="Wood")
+    snow(g, 0, 6.8, 1.82, 4.6, 1.3, t=0.1)
     for x in (-5.0, 5.0):
         g["Iron"].box(x, -5.0, 2.8, 0.25, 0.25, 5.6)
         lantern(g, x, -5.0, 6.3, 5.0)
+        lamp_snow(g, x, -5.0, 5.0)
         C(x, -5.0, 2.8, 0.5, 0.5, 5.6)
     yard_sign(g, -W / 2 + 1.0, -D / 2 + 0.6, lambda q, x, y, z, f: heart_icon(q, x, y, z - 0.3, face=f))
 

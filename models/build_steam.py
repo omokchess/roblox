@@ -230,37 +230,52 @@ def hole(g, cx, cy, zc, w, h, face, t, pane=True, pane_at=None):
         B("Pane", -(t / 2 if pane_at is None else pane_at), 0.08)
 
 
+_WIN_SEEN = set()     # 뚫린 창 틀 자리(안팎 짝 창을 한 번만 짓는다) — apply_cuts 가 건물마다 비운다
+
+
 def window(g, cx, cy, z0, w, h, face="-y", cross=True, frame="Iron", glass="Glow", sill=True, cut=None, pane_at=None):
     """벽 겉면(cx,cy 가 벽면 위 한 점)에 붙이는 창. face 는 벽이 바라보는 쪽.
-    cut: None = CUT_T 를 따름, False = 불빛 창, 숫자 = 그 깊이로 뚫는다"""
+    cut: None = CUT_T 를 따름, False = 불빛 창, 숫자 = 그 깊이로 뚫는다.
+    뚫린 창(2026-10-18 사용자: 창이 두 겹으로 보인다 → 구멍 가운데 한 겹): 틀·창살을 벽 두께 가운데에 하나만 놓는다.
+    안팎 짝으로 두 번 불러도 같은 자리면 틀은 한 번만 짓고, 바깥 창턱(sill)에는 눈을 얹는다"""
     s = -1 if face[0] == "-" else 1
     ax = face[1]
     zc = z0 + h / 2
+    t = CUT_T if cut is None else cut
+    mid = bool(t) and pane_at is None
 
-    def B(mat, u, dn, z, su, sn, sz):
+    def B(mat, u, dn, z, su, sn, sz, at_mid=False):
         # u: 벽을 따라, dn: 벽 바깥으로. 창 전체를 WIN_OUT 만큼 벽에서 띄운다
-        # (2026-10-09 사용자: 창이 벽과 깜빡인다 → 0.1 앞으로)
-        dn += WIN_OUT
+        # (2026-10-09 사용자: 창이 벽과 깜빡인다 → 0.1 앞으로). at_mid = 벽 두께 가운데(뚫린 창의 틀)
+        dn = -t / 2 if at_mid else dn + WIN_OUT
         if ax == "y":
             g[mat].box(cx + u, cy + s * dn, z, su, sn, sz)
         else:
             g[mat].box(cx + s * dn, cy + u, z, sn, su, sz)
 
-    t = CUT_T if cut is None else cut
     if t:
         hole(g, cx, cy, zc, w, h, face, t, pane_at=pane_at)
     elif glass:   # None = 틀만(유리는 바깥 창이 맡음)
         B(glass, 0, 0.1, zc, w, 0.2, h)
     fw = 0.35
-    B(frame, 0, 0.25, z0 + h + fw / 2, w + 2 * fw, 0.4, fw)
-    B(frame, 0, 0.25, z0 - fw / 2, w + 2 * fw, 0.4, fw)
-    for su in (-1, 1):
-        B(frame, su * (w / 2 + fw / 2), 0.25, zc, fw, 0.4, h)
-    if cross:
-        B(frame, 0, 0.3, zc, 0.22, 0.3, h)
-        B(frame, 0, 0.3, zc, w, 0.3, 0.22)
+    dup = False
+    if mid:
+        mx, my = (cx, cy - s * t / 2) if ax == "y" else (cx - s * t / 2, cy)
+        key = (round(mx, 2), round(my, 2), round(z0, 2), round(w, 2), round(h, 2), ax)
+        dup = key in _WIN_SEEN
+        _WIN_SEEN.add(key)
+    if not dup:
+        B(frame, 0, 0.25, z0 + h + fw / 2, w + 2 * fw, 0.4, fw, mid)
+        B(frame, 0, 0.25, z0 - fw / 2, w + 2 * fw, 0.4, fw, mid)
+        for su in (-1, 1):
+            B(frame, su * (w / 2 + fw / 2), 0.25, zc, fw, 0.4, h, mid)
+        if cross:
+            B(frame, 0, 0.3, zc, 0.22, 0.3, h, mid)
+            B(frame, 0, 0.3, zc, w, 0.3, 0.22, mid)
     if sill:
         B("StoneTrim", 0, 0.45, z0 - fw - 0.2, w + 1.0, 0.9, 0.4)
+        if mid:     # 바깥 창턱의 눈(안쪽 창턱은 짓지 않는다)
+            B("SnowCap", 0, 0.5, z0 - fw + 0.06, w + 0.7, 0.7, 0.14)
 
 
 # ---------------------------------------------------------------- 창 구멍 내기(apply_cuts)
@@ -440,6 +455,7 @@ def apply_cuts(g):
         g["WinGlass"].add_mesh([tuple(v.co) for v in vs], [[lv[v.index] for v in f.verts] for f in fs])
     g["Cut"].bm.clear()
     g["Pane"].bm.clear()
+    _WIN_SEEN.clear()
     return len(cutters), n, len(seen)
 
 

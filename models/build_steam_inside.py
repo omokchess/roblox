@@ -214,8 +214,7 @@ def arch_top(g, x, y, z, r, t, frame="Brass", cut=None):
     g["Cut"].hcyl(x, y + c / 2, z, r, c + 0.04, axis="y", seg=16)
     L.transformed(g, Matrix.Translation((x, y + t / 2, z)) @ Matrix.Rotation(math.pi / 2, 4, "Z"),
                   lambda q: S.half_disc(q, "Pane", 0, 0, 0, r, 0.08))
-    for yy in (y - 0.15, y + t + 0.15):
-        half_ring(g, frame, x, yy, z, r - 0.05, r + 0.3, 0.24)
+    half_ring(g, frame, x, y + t / 2, z, r - 0.05, r + 0.3, 0.24)       # 벽 두께 가운데 한 겹(2026-10-18 사용자: 창이 두 겹)
 
 
 def box2(g, mat, x0, x1, y0, y1, z0, z1, coll=True):
@@ -238,10 +237,14 @@ def scaled(g, k, fn):
 
 
 def lantern(g, x, y, ztop, zl, lamp=True):
-    """매단 등: 사슬 + 놋쇠 갓 + 불빛 + 무쇠 밑"""
-    g["Iron"].cyl(x, y, zl + 0.8, 0.06, 0.06, ztop - zl - 0.8, seg=6)
-    g["Brass"].box(x, y, zl + 0.75, 1.4, 1.4, 0.3)
-    g["Glow"].box(x, y, zl, 0.9, 0.9, 1.2)
+    """매단 등: 사슬 + 놋쇠 지붕(뿔) · 고리 + 유리 갓 + 안의 작은 불꽃 심지 + 무쇠 밑(2026-10-18: 네모 불빛 덩이가 싸구려처럼 보여 유리 등으로)"""
+    g["Iron"].cyl(x, y, zl + 1.25, 0.06, 0.06, ztop - zl - 1.25, seg=6)
+    S.ring(g, "Iron", x, y, zl + 1.15, 0.12, 0.22, 0.1, n=8)
+    S.pyramid(g, "Brass", x, y, zl + 0.62, 1.4, 1.4, 0.55)
+    g["Brass"].box(x, y, zl + 0.66, 1.3, 1.3, 0.1)
+    g["Glass"].box(x, y, zl, 0.86, 0.86, 1.15)
+    g["Glow"].box(x, y, zl - 0.12, 0.22, 0.22, 0.42)
+    g["Brass"].cyl(x, y, zl - 0.58, 0.18, 0.12, 0.25, seg=8)
     g["Iron"].box(x, y, zl - 0.7, 1.1, 1.1, 0.2)
     for sx in (-1, 1):
         for sy in (-1, 1):

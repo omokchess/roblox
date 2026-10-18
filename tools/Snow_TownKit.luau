@@ -23,6 +23,7 @@ local SKIN = {
 	IronLight = { RGB(94, 98, 107), M.DiamondPlate },
 	Steel = { RGB(180, 188, 198), M.Metal }, -- 칼날(2026-10-18)
 	PaintGreen = { RGB(62, 110, 90), M.Wood }, -- 녹색 칠 나무(물약상점, 2026-10-18)
+	SnowDrift = { RGB(238, 243, 247), M.Snow }, -- 벽 밑 눈 더미(지붕 눈과 따로 — 발자국을 재려고)
 	Brass = { RGB(184, 145, 63), M.Metal },
 	Copper = { RGB(176, 106, 63), M.Metal },
 	Verdigris = { RGB(95, 158, 140), M.CorrodedMetal },
