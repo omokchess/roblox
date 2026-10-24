@@ -73,19 +73,12 @@ KIT.update(snow_gray.kit())
 # 꾸민 서비스 건물(Snow_TownKit 보고 snowtownkit 그대로 — 처음엔 회색 상자 발자국으로 두고 가져온 뒤 고친다)
 KIT.update({
     "Svc_Smithy": ((-18.3, 18.3, -16.8, 16.3), (-21.4, 19.5, -16.8, 16.3)),
-    "Yard_Smithy": ((-15.0, 15.0, -8.0, 8.0), (-15.0, 15.0, -8.0, 8.4)),
     "Svc_Enhance": ((-13.3, 13.3, -13.3, 14.3), (-14.0, 14.0, -15.0, 14.3)),
-    "Svc_Bank": ((-18.3, 18.3, -16.3, 16.3), (-19.0, 19.0, -17.5, 16.3)),
+    "Svc_Bank": ((-18.3, 18.3, -16.3, 15.3), (-19.0, 19.0, -17.5, 15.4)),
     "Svc_Inn": ((-20.3, 20.3, -16.3, 16.3), (-21.2, 21.2, -17.9, 16.6)),
     "Svc_Potion": ((-13.3, 13.3, -13.3, 14.3), (-16.3, 14.2, -15.6, 14.5)),
     "Svc_Hospital": ((-20.3, 20.3, -17.0, 16.3), (-21.2, 21.2, -18.2, 16.4)),
     "Svc_General": ((-13.3, 13.3, -16.3, 14.3), (-14.5, 14.5, -16.5, 14.3)),
-    "Yard_Enhance": ((-10.0, 10.0, -6.0, 6.0), (-10.0, 10.0, -6.0, 6.0)),
-    "Yard_Bank": ((-8.0, 8.0, -5.0, 5.0), (-8.0, 8.0, -5.0, 5.0)),
-    "Yard_Inn": ((-13.0, 13.0, -7.0, 7.0), (-13.0, 13.0, -7.0, 7.3)),
-    "Yard_Potion": ((-10.0, 10.0, -8.0, 8.0), (-10.0, 10.0, -8.0, 8.0)),
-    "Yard_Hospital": ((-10.0, 10.0, -8.0, 8.0), (-10.0, 10.0, -8.0, 8.0)),
-    "Yard_General": ((-14.0, 14.0, -8.0, 8.0), (-14.0, 14.0, -8.1, 8.0)),
 })
 SMALL = {"Gas_Lamp", "Boiler_Tank", "Big_Gear", "Vertical_Boiler", "Park_Bench", "Snowman", "Sled", "Play_Seesaw", "Play_Spring",
          "Park_Bin", "Play_Balance"}
@@ -145,14 +138,15 @@ BUILD = [
     ring("Svc_Potion", 159.0, 80.5, "서비스구역"),     # 서남서: 물약상점
     ring("Svc_Hospital", -145.6, 82.5, "서비스구역"),  # 서북서: 병원 — 사망 뒤 돌아오는 곳
     ring("Svc_General", -90.2, 80.5, "서비스구역"),    # 북: 잡화점
-    # 뜰(사용자 2026-10-11: 뜰 활용 좋아 보이네) — 건물 뒤, 같은 각도. 그 기능의 바깥 연장(snow_gray.py yard_*)
-    ring("Yard_Smithy", -30.8, 112, "서비스구역"),          # 대장간 마당(뒷문) — 꾸민 뜰
-    ring("Yard_Enhance", 21.0, 106, "서비스구역"),     # 룬 시험대
-    ring("Yard_Bank", 62.1, 108, "서비스구역"),        # 오늘의 시세판
-    ring("Yard_Inn", 117.9, 111, "서비스구역"),        # 마구간(뒷문) — 말 등록·호출
-    ring("Yard_Potion", 159.0, 108, "서비스구역"),     # 약초밭
-    ring("Yard_Hospital", -145.6, 112, "서비스구역"),  # 회복 정원(뒷문) — 부활 뒤 나오는 곳
-    ring("Yard_General", -90.2, 108, "서비스구역"),    # 노점 칸
+    # 뜰(사용자 2026-10-11: 뜰 활용 좋아 보이네) — 그 기능의 바깥 연장. 2026-10-24 "건물 뒤 작은 공간을 빨간 구역 정도로 쭉 늘려도 좋을 듯":
+    #   건물 양옆·뒤를 양옆 방사 길과 고리관 사이 전부 뜰로(YARD_ZONES). 뜰 틀은 건물과 같은 자리·각(블렌더 로컬 = 건물 로컬)
+    ring("Yard_Smithy", -30.8, 82.5, "서비스구역"),          # 대장간 마당(뒷문) — 꾸민 뜰
+    ring("Yard_Enhance", 21.0, 80.5, "서비스구역"),     # 룬 시험대
+    ring("Yard_Bank", 62.1, 82.5, "서비스구역"),        # 오늘의 시세판
+    ring("Yard_Inn", 117.9, 82.5, "서비스구역"),        # 마구간(뒷문) — 말 등록·호출
+    ring("Yard_Potion", 159.0, 80.5, "서비스구역"),     # 약초밭
+    ring("Yard_Hospital", -145.6, 82.5, "서비스구역"),  # 회복 정원(뒷문) — 부활 뒤 나오는 곳
+    ring("Yard_General", -90.2, 80.5, "서비스구역"),    # 노점 칸
     # ── 바깥 고리 r 162 ──
     ring(C_, 11, 162, "바깥고리"),
     ring(A, 22, 162, "바깥고리"),
@@ -381,10 +375,9 @@ ROADS = [
 ]
 
 # ── 서비스 구역 길(2026-10-18 점검: 광장에서 문까지 눈밭이라 부자연스러움) — 광장 고리길 → 정문 앞길(문 폭 + 1),
-#    대장간·여관·병원은 뒷문 → 뜰 뒷길. 길 이름은 ROAD_ENDS 에 건물·뜰과 함께 넣어 겹침 검사에서 뺀다 ──
+#    길 이름은 ROAD_ENDS 에 건물과 함께 넣어 겹침 검사에서 뺀다(뒷문 → 뜰 길은 2026-10-24 부터 뜰 틀 안에 블렌더로) ──
 SVC_DOOR = {"Svc_Smithy": (12.0, 15.0), "Svc_Enhance": (7.0, 13.0), "Svc_Potion": (7.0, 13.0), "Svc_General": (7.0, 13.0),
             "Svc_Bank": (11.0, 15.0), "Svc_Hospital": (11.0, 15.0), "Svc_Inn": (9.0, 15.0)}       # (앞길 폭, 앞면까지 D/2)
-SVC_BACK = {"Svc_Smithy": ("Yard_Smithy", 4.0, 8.0), "Svc_Inn": ("Yard_Inn", -8.0, 7.0), "Svc_Hospital": ("Yard_Hospital", 0.0, 8.0)}  # (뜰, 뒷문 x, 뜰 D/2)
 SVC_ROAD_ENDS = set()
 SVC_LAMP_AT = []   # (각, 앞길 폭) — 가스등은 lamp_along 이 정의된 뒤 LAMPS 에서 만든다
 
@@ -407,13 +400,92 @@ for _k, (_w, _d2) in SVC_DOOR.items():
     ROADS.append((_nm, _w, "pave", [polar(_th, 50.0)[:2], polar(_th, _r - _d2 + 0.6)[:2]], 0.03))
     SVC_ROAD_ENDS.add((_nm, _k))
     SVC_LAMP_AT.append((_th, _w))
-for _k, (_yk, _bx, _yd2) in SVC_BACK.items():
-    _e, _ye = _ent[_k], _ent[_yk]
-    _rb = math.hypot(_e[1] - CX, _e[2] - CZ)
-    _ry = math.hypot(_ye[1] - CX, _ye[2] - CZ)
-    _nm = "뒷길_" + _k
-    ROADS.append((_nm, 6.0, "pave", [_svc_local(_e, _bx, SVC_DOOR[_k][1] - 0.6), _svc_local(_e, _bx, (_ry - _rb) - _yd2 + 0.6)], 0.03))
-    SVC_ROAD_ENDS |= {(_nm, _k), (_nm, _yk)}
+
+# ── 서비스 뜰 구역(2026-10-24). 건물 '모두' 발자국에서 YARD_GAP 띄우고, 양옆 방사 길 가에서 YARD_M(가스등 줄을 길 쪽에 남김),
+#    뒤는 고리관(r 128) 받침 안쪽 YARD_R. 볼록 조각 셋(뒤 · 왼 날개 · 오른 날개)과 울타리 꺾은선을 블렌더 로컬(bx, by — 앞 -by 가 광장)로 잰다.
+#    snow_yard_zones.json 으로 build_steam_service.py 에 넘겨 땅·울타리를 짓고, 겹침 검사도 이 조각으로 한다 ──
+YARD_OF = {"Svc_Smithy": "Yard_Smithy", "Svc_Enhance": "Yard_Enhance", "Svc_Bank": "Yard_Bank", "Svc_Inn": "Yard_Inn",
+           "Svc_Potion": "Yard_Potion", "Svc_Hospital": "Yard_Hospital", "Svc_General": "Yard_General"}
+RADIAL = [(0.0, 18), (90.0, 18), (180.0, 18), (TH_NE, 18), (TH_SE_IN, 9), (TH_SW_IN, 9), (TH_N_IN, 9)]   # (각, 폭) — 광장 ~ r 137 곧은 길
+YARD_M, YARD_R, YARD_GAP = 4.5, 125.0, 1.0
+
+
+def _clip(poly, nx, ny, c):
+    """볼록 다각형에서 nx·x + ny·y >= c 쪽만 남긴다"""
+    out = []
+    for i, p_ in enumerate(poly):
+        q = poly[(i + 1) % len(poly)]
+        dp, dq = nx * p_[0] + ny * p_[1] - c, nx * q[0] + ny * q[1] - c
+        if dp >= 0:
+            out.append(p_)
+        if (dp >= 0) != (dq >= 0):
+            t = dp / (dp - dq)
+            out.append((p_[0] + t * (q[0] - p_[0]), p_[1] + t * (q[1] - p_[1])))
+    return out
+
+
+def yard_zone(svc):
+    _, x, z, yaw = _ent[svc][:4]
+    th = math.degrees(math.atan2(z - CZ, x - CX))
+    rb = math.hypot(x - CX, z - CZ)
+    x0, x1, z0, z1 = KIT[svc][1]
+    bx0, bx1, yb = -x1 - YARD_GAP, -x0 + YARD_GAP, z1 + YARD_GAP
+    planes, lines = [], []
+    for side in (-1, 1):
+        d_, phi, w = min((((p_ - th + 180) % 360 - 180, p_, w_) for p_, w_ in RADIAL if side * ((p_ - th + 180) % 360 - 180) > 0),
+                         key=lambda t: abs(t[0]))
+        a = math.radians(phi - th)
+        dx, dy = math.sin(a), math.cos(a)          # 길 방향(로컬, 밖으로)
+        nx, ny = -side * dy, side * dx             # 건물 쪽 법선
+        off = w / 2 + YARD_M
+        planes.append((nx, ny, ny * -rb + off))
+        lines.append((off * nx, -rb + off * ny, dx, dy, off))
+    n_arc = 72
+    vs = [(YARD_R * math.sin(2 * math.pi * i / n_arc), -rb + YARD_R * math.cos(2 * math.pi * i / n_arc)) for i in range(n_arc)]
+    for i in range(n_arc):
+        p_, q = vs[i], vs[(i + 1) % n_arc]
+        mx, my = (p_[0] + q[0]) / 2, (p_[1] + q[1]) / 2 + rb
+        L_ = math.hypot(mx, my)
+        planes.append((-mx / L_, -my / L_, -mx / L_ * p_[0] - my / L_ * p_[1]))
+    BIG = 400.0
+    parts = []
+    for poly in ([(-BIG, yb), (BIG, yb), (BIG, BIG), (-BIG, BIG)], [(-BIG, z0), (bx0, z0), (bx0, yb), (-BIG, yb)],
+                 [(bx1, z0), (BIG, z0), (BIG, yb), (bx1, yb)]):
+        for pl in planes:
+            poly = _clip(poly, *pl)
+            if not poly:
+                break
+        area = 0.5 * abs(sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1] for i in range(len(poly)))) if poly else 0
+        if area > 4.0:
+            parts.append([(round(px, 2), round(py, 2)) for px, py in poly])
+    # 울타리: (왼 앞 건물 모서리 →) 왼 길 선 → 고리 호 → 오른 길 선(→ 오른 앞 모서리)
+    fence = []
+    ends = []
+    for (ox, oy, dx, dy, off), bxe in zip(lines, (bx0, bx1)):
+        t_front = (z0 - oy) / dy
+        fx = ox + t_front * dx
+        if (fx - bxe) * (1 if bxe < 0 else -1) < 0:          # 앞 모서리 밖에 날개가 있다
+            st = [(bxe, z0), (fx, z0)]
+        else:                                                 # 길 선이 건물 옆벽에 먼저 닿는다
+            t_ = (bxe - ox) / dx
+            st = [(bxe, oy + t_ * dy)]
+        t_arc = math.sqrt(YARD_R ** 2 - off ** 2)
+        ends.append((st, (ox + t_arc * dx, oy + t_arc * dy)))
+    (stL, aL), (stR, aR) = ends
+    fence += stL + [aL]
+    psL, psR = math.atan2(aL[0], aL[1] + rb), math.atan2(aR[0], aR[1] + rb)
+    nseg = max(2, int(abs(psR - psL) * YARD_R / 4.0))
+    fence += [(YARD_R * math.sin(psL + (psR - psL) * k / nseg), -rb + YARD_R * math.cos(psL + (psR - psL) * k / nseg)) for k in range(1, nseg)]
+    fence += [aR] + stR[::-1]
+    return {"parts": parts, "fence": [(round(px, 2), round(py, 2)) for px, py in fence], "back_y": round(yb, 2), "bx": (round(bx0, 2), round(bx1, 2)),
+            "front_y": z0, "rb": round(rb, 2)}
+
+
+YARD_ZONES = {YARD_OF[k]: yard_zone(k) for k in YARD_OF}
+# 뜰 뒤 큰 문(build_steam_yards.py fence gates 와 같은 값). 문 바로 밖 고리관 받침 기둥은 비운다(2026-10-24 걷기 검사: 잡화점 문 앞을 막음)
+YARD_GATES = {"Yard_Smithy": (4.0, 42.4), "Yard_Enhance": (0.0, 44.5), "Yard_Inn": (2.5, 42.47), "Yard_Potion": (0.0, 44.47),
+              "Yard_Hospital": (0.0, 42.5), "Yard_General": (0.0, 44.5)}
+NOPOST = [_svc_local(_ent[k], bx, by) for k, (bx, by) in YARD_GATES.items()]
 
 PAVES = [
     # (이름, x0, z0, x1, z1, 재질) 또는 원판
@@ -605,7 +677,7 @@ LAMPS += lamp_along(0, (115, 165, 210), 11.5)          # 동대로 남쪽 가
 LAMPS += lamp_along(180, (150, 205, 252), -11.5)  # 서대로 남쪽 가
 LAMPS += lamp_along(90, (150, 205), 11.5)         # 남대로 서쪽 가
 LAMPS += lamp_along(TH_NE, (115, 165, 210), -11.5)     # 북동 대로 서쪽 가
-LAMPS += lamp_along(TH_N, (115, 170), -7)                  # 북 골목 서쪽 가
+LAMPS += lamp_along(TH_N, (170,), -7) + lamp_along(TH_N_IN, (112,), 7)   # 북 골목(옛 선 r 115 등은 잡화점 뜰 안이라 안쪽 곧은 길 가로, 2026-10-24)
 LAMPS += lamp_along(TH_SW, (160, 205), 7) + lamp_along(TH_SW_IN, (112,), 7)   # 남서 골목
 # 거리 등은 집과 집 사이 틈에 손으로(거리 쪽 집 앞이 등 자리와 같은 줄이면)
 LAMPS += [(x, N1_Z + 10, 0) for x in (-5272, -5204, -5162, -5090, -5025, -4918, -4883)]     # 북쪽 거리 남쪽 가
@@ -719,10 +791,19 @@ def check():
     for k, x, z, y, g, t, sc in items:
         pad = 1.0 if k in SMALL else 2.0
         nm = f"{g}:{k}@({x},{z})"
+        if k in YARD_ZONES:          # 뜰은 구역 조각으로 잰다(길·건물에서 이미 띄운 선이라 덧대지 않는다)
+            for i, part in enumerate(YARD_ZONES[k]["parts"]):
+                wp = [_svc_local((k, x, z, y), bx, by) for bx, by in part]
+                polys.append((nm + "#%d" % i, wp, k, wp))
+            continue
         polys.append((nm, rect_world(k, x, z, y, 0, pad, sc), k, rect_world(k, x, z, y, 0, 0.0, sc)))
         _POLES[nm] = [(x - 0.9, z - 0.9), (x + 0.9, z - 0.9), (x + 0.9, z + 0.9), (x - 0.9, z + 0.9)]
+    pair = {(v, k) for k, v in YARD_OF.items()} | {(k, v) for k, v in YARD_OF.items()}
     for i in range(len(polys)):
         for j in range(i + 1, len(polys)):
+            ki, kj = polys[i][2], polys[j][2]
+            if (ki == kj and ki in YARD_ZONES) or (ki, kj) in pair:    # 뜰 조각끼리, 뜰과 제 건물은 맞닿는다
+                continue
             if overlap(polys[i][1], polys[j][1]):
                 msgs.append("건물겹침 " + polys[i][0] + " <> " + polys[j][0])
     rr = [r for r in road_rects() if r[0] in ROAD_NAMES]
@@ -745,12 +826,13 @@ def check():
         if any(math.hypot(px - CX, pz - CZ) < 42 + 1 for px, pz in p):
             msgs.append("광장겹침 " + n)
     # 땅: 바닥 네 귀·가운데가 59.8 평지여야(폐허는 격자 밖)
-    for (k, x, z, y, g, t, sc), (n, p, _, raw) in zip(items, polys):
-        hs = [ground_at(px, pz) for px, pz in raw + [(x, z)]]
-        hs = [h for h in hs if h is not None]
-        if g == "설공방":
+    for n, p, _, raw in polys:
+        if n.startswith("설공방:"):
             continue
-        if len(hs) < 5 or max(hs) > 60.3 or min(hs) < 59.4:
+        cx_, cz_ = sum(q[0] for q in raw) / len(raw), sum(q[1] for q in raw) / len(raw)
+        hs = [ground_at(px, pz) for px, pz in raw + [(cx_, cz_)]]
+        hs = [h for h in hs if h is not None]
+        if len(hs) < len(raw) + 1 or max(hs) > 60.3 or min(hs) < 59.4:
             msgs.append("땅 %s (%s)" % (n, ", ".join("%.1f" % h for h in hs)))
     # 길 밑 땅: 가운데·두 가장자리를 5 마다 — 평지(59.8) 위여야 길 판이 뜨지 않는다
     for name, w, mat, pts, lift in ROADS:
@@ -848,6 +930,13 @@ def render(path, region, sc):
         for p in pts[1:-1]:
             Cv.circle(p[0], p[1], w / 2, "#9a9288")
     for k, x, z, y, gname, t, sc_ in all_items():
+        if k in YARD_ZONES:
+            for part in YARD_ZONES[k]["parts"]:
+                Cv.poly([_svc_local((k, x, z, y), bx, by) for bx, by in part], "#b9c7a8", 0.9)
+            fw = [_svc_local((k, x, z, y), bx, by) for bx, by in YARD_ZONES[k]["fence"]]
+            for a, b in zip(fw, fw[1:]):
+                Cv.line(a[0], a[1], b[0], b[1], 0.8, "#3a3a3a")
+            continue
         allp = rect_world(k, x, z, y, 1, 0, sc_)
         base = rect_world(k, x, z, y, 0, 0, sc_)
         col = {"Herzofen": "#c05a3a", "Zapfen_Werk": "#7a4034", "Figuren_HQ": "#55565c", "Frostig_Werk": "#8a4a34",
@@ -904,7 +993,8 @@ def lua(v):
 def emit(path):
     tables = [("BUILD", BUILD), ("LAMPS", LAMPS), ("ROADS", ROADS), ("PAVES", PAVES), ("PIPES", PIPES),
               ("VENTS", VENTS), ("MANHOLES", MANHOLES), ("JUNCTIONS", JUNCTIONS), ("FENCES", FENCES),
-              ("POND", POND), ("BASIN", BASIN), ("CUSPS", CUSPS), ("FIRES", FIRES), ("TREES", TREES)]
+              ("POND", POND), ("BASIN", BASIN), ("CUSPS", CUSPS), ("FIRES", FIRES), ("TREES", TREES),
+              ("NOPOST", NOPOST)]
     lines = ["-- snow_plan2.py 가 적은 표. 손으로 고치지 말고 snow_plan2.py 를 고쳐 다시 뽑는다", "local D = {}"]
     for name, rows in tables:
         lines.append("D.%s = {" % name)
@@ -920,6 +1010,8 @@ if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "snow_plan2.png")
     render(out, (-5360, -4200, -4440, -3480), 1.2)
     emit(os.path.join(HERE, "Snow_City2_data.luau"))
+    with open(os.path.join(HERE, "snow_yard_zones.json"), "w", encoding="utf-8", newline="\n") as f:   # 블렌더 뜰(build_steam_service.py)이 읽는다
+        json.dump(YARD_ZONES, f, ensure_ascii=False, indent=1)
     msgs = check()
     nh = sum(1 for b in BUILD if b[0].startswith("Steam_House"))
     print("건물 %d (집 %d), 가스등 %d, 길 %d, 관 %d" % (len(BUILD), nh, len(LAMPS), len(ROADS), len(PIPES)))

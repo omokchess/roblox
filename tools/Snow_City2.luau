@@ -1253,6 +1253,17 @@ local okRun, errRun = pcall(function()
 			if workspace:Raycast(Vector3.new(q.X, 400, q.Z), Vector3.new(0, -800, 0), rpRoadP) then
 				continue
 			end
+			-- 뜰 뒤 큰 문 바로 밖도 비운다(2026-10-24 — 문을 나서면 받침 기둥이 앞을 막았다)
+			local atGate = false
+			for _, gp in ipairs(D.NOPOST or {}) do
+				if (Vector2.new(q.X, q.Z) - Vector2.new(gp[1], gp[2])).Magnitude < 7 then
+					atGate = true
+					break
+				end
+			end
+			if atGate then
+				continue
+			end
 			local gy = groundY(q.X, q.Z)
 			part("Post", CFrame.new(q.X, (h - PR + gy) / 2, q.Z), Vector3.new(0.9, h - PR - gy, 0.9), C.iron, f)
 			part("PostFoot", CFrame.new(q.X, gy + 0.2, q.Z), Vector3.new(1.8, 0.4, 1.8), C.iron, f)

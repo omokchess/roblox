@@ -16,6 +16,7 @@ import build_steam_school as SCH  # noqa: E402
 import build_steam_under as UND  # noqa: E402
 import build_steam_figuren as FIG  # noqa: E402
 import build_steam_service as SVC  # noqa: E402
+import build_steam_yards as YD  # noqa: E402
 
 only = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 # 이름: (바깥 카메라, 바라볼 점), [(파일 꼬리, 카메라, 바라볼 점, 렌즈)] — 안 시점은 사람 눈높이
@@ -46,24 +47,31 @@ VIEWS = {
     "Observatory": [("ext", (45, -60, 25), (0, 0, 12), 30), ("in1", (0, -14, 7.0), (12, 14, 8), 16)],
     "Svc_Smithy": [("bell", (-13.6, 5.0, 5.0), (-15.8, 10.5, 2.9), 24), ("ext", (34, -52, 24), (0, 0, 10), 30), ("front", (0, -46, 6.5), (0, 0, 9), 26), ("in1", (2, -12, 5.4), (-6, 10, 4), 16),
                    ("in2", (-6, -9, 5.4), (12, 6, 3.5), 16), ("in3", (10, 1.5, 5.4), (-16, -6, 4), 16), ("back", (24, 30, 14), (0, 8, 6), 26)],
-    "Yard_Smithy": [("ext", (22, -26, 16), (0, 2, 2), 26), ("ext2", (-24, -20, 12), (2, 2, 2), 26)],
     "Svc_Enhance": [("mach", (2.5, 1.2, 6.2), (0.0, 5.5, 4.2), 26), ("ext", (26, -40, 20), (0, 0, 9), 30), ("in1", (2, -10, 5.4), (0, 8, 4), 18), ("in2", (6, 2, 5.4), (-12, -6, 4), 18)],
     "Svc_Potion": [("scale", (-2.0, 1.0, 5.6), (-3.0, 5.3, 4.2), 28), ("ext", (30, -40, 20), (0, 0, 9), 30), ("in1", (2, -10, 5.4), (-4, 8, 4), 18), ("in2", (-4, 0, 5.4), (12, 6, 4), 18)],
     "Svc_General": [("reg", (3.3, 9.0, 6.4), (3.3, 5.2, 4.2), 30), ("ext", (24, -40, 18), (0, 0, 8), 30), ("in1", (2, -10, 5.4), (0, 8, 4), 18), ("in2", (6, -2, 5.4), (-12, 6, 4), 18)],
     "Svc_Bank": [("vault", (0, 7.0, 5.9), (0, 14.0, 5.9), 24), ("ext", (34, -52, 26), (0, 0, 10), 30), ("in1", (0, -12, 5.4), (0, 10, 5), 16), ("in2", (10, -8, 5.4), (-14, 2, 5), 16)],
+    "Yard_Smithy": [("top", (0, -30, 95), (0, 18, 0), 22), ("back", (10, 78, 30), (-2, 22, 3), 24), ("hammer", (-12, 16, 9), (-24.5, 31, 6), 22),
+                    ("forge", (8, 18, 7), (22, 31, 2), 22), ("wingL", (-14, -20, 12), (-32, 8, 2), 24)],
+    "Yard_Enhance": [("top", (0, -25, 85), (0, 20, 0), 24), ("back", (8, 70, 26), (0, 28, 4), 24), ("circle", (12, 16, 10), (0, 31, 4), 22)],
+    "Yard_Bank": [("top", (0, -30, 100), (0, 14, 0), 22), ("back", (12, 80, 34), (0, 22, 6), 24), ("cut", (0, 16, 80), (0, 17, 0), 20, 68.8), ("door", (-8, -1, 5.4), (-26, 1, 3.5), 18),
+                  ("annexL", (-20, -3, 5.0), (-30, 20, 3), 16), ("corr", (14, 31, 5.0), (-14, 34, 3), 16), ("annexR", (20, -3, 5.0), (32, 20, 3), 16),
+                  ("gold", (0, 9.0, 5.9), (0, 22, 1.5), 22), ("cage", (16, 24, 5.0), (30, 34, 3), 18)],
+    "Yard_Inn": [("top", (0, -30, 95), (0, 18, 0), 22), ("back", (10, 78, 30), (0, 24, 3), 24), ("stable", (-2, 15, 8), (-16, 32, 3), 22),
+                 ("coach", (-24, 18, 6), (-33, 28, 3), 22), ("beer", (-20, 2, 7), (-31, 14, 2), 22), ("well", (20, 4, 7), (28.4, 12, 2.5), 24), ("stback", (-10, 41, 7), (-14, 37, 5), 24)],
+    "Yard_Potion": [("top", (0, -25, 85), (0, 20, 0), 24), ("back", (8, 70, 26), (0, 30, 4), 24), ("gh", (6, 20, 7), (0, 36, 3), 22),
+                    ("ghin", (1.5, 33.0, 4.6), (0, 40, 2.5), 16)],
+    "Yard_Hospital": [("top", (0, -30, 105), (0, 15, 0), 22), ("back", (12, 80, 32), (0, 24, 3), 24), ("plaza", (10, 18.5, 8), (0, 27, 2), 22),
+                      ("pond", (-20, 20, 8), (-31, 31, 1), 22), ("dial", (20, 20, 8), (30, 30, 2), 22)],
+    "Yard_General": [("top", (0, -25, 85), (0, 20, 0), 24), ("back", (8, 72, 26), (0, 28, 4), 24), ("aisle", (0, 17, 6), (0, 34, 4), 20),
+                     ("scale", (-12, 20, 7), (-22, 29, 2), 22)],
     "Svc_Hospital": [("ext", (36, -54, 24), (0, 0, 9), 30), ("in1", (0, -12, 5.4), (0, 10, 3), 16), ("in2", (-4, 0, 5.4), (14, 10, 3), 16)],
     "Svc_Inn": [("taps", (-9.5, 3.0, 5.5), (-13.2, 3.0, 4.0), 28), ("win", (-20.0, -22.0, 6.0), (-12.0, -15.0, 6.0), 30), ("ext", (40, -60, 30), (0, 0, 14), 30), ("in1", (2, -12, 5.4), (-10, 8, 4), 16), ("in2", (-6, -2, 5.4), (16, 6, 6), 16),
                 ("up1", (16, 11, 18.8), (-16, 9, 16), 16), ("up2", (-3, 4, 18.8), (-3, -12, 15), 18)],
-    "Yard_Enhance": [("ext", (18, -18, 12), (0, 1, 2), 26)],
-    "Yard_Bank": [("ext", (16, -16, 10), (0, 0, 4), 26)],
-    "Yard_Inn": [("ext", (20, -22, 12), (0, 2, 3), 26)],
-    "Yard_Potion": [("ext", (18, -22, 12), (0, 1, 1), 26)],
-    "Yard_Hospital": [("ext", (16, -20, 12), (0, 1, 2), 26)],
-    "Yard_General": [("ext", (22, -24, 14), (0, 0, 3), 26)],
 }
 L.clear_scene()
 made = {}
-for name, prefix, fn in I.JOBS + SCH.JOBS + UND.JOBS + FIG.JOBS + SVC.JOBS:
+for name, prefix, fn in I.JOBS + SCH.JOBS + UND.JOBS + FIG.JOBS + SVC.JOBS + YD.JOBS:
     if only and name not in only:
         continue
     g = L.new_groups(prefix, T.PAL)
@@ -92,15 +100,22 @@ cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
 scene.collection.objects.link(cam)
 scene.camera = cam
 out = os.path.join(HERE, "snowtown_render")
+if any(n.startswith("Yard_") for n in made):                    # 뜰 미리보기: 눈 땅 판
+    bpy.ops.mesh.primitive_plane_add(size=400, location=(0, 0, -0.01))
+    gp = bpy.context.active_object
+    gp.data.materials.append(L.material("SnowCap", T.PAL))
 for name, obs in made.items():
+    pair = "Svc_" + name[5:] if name.startswith("Yard_") else None
     for n2, lst in made.items():
         for ob in lst:
-            ob.hide_render = n2 != name or ob.name.endswith("WinGlass")    # 창유리는 숨겨 구멍이 보이게
-    for tail, loc, look, lens in VIEWS[name]:
+            ob.hide_render = (n2 != name and n2 != pair) or ob.name.endswith("WinGlass")    # 창유리는 숨겨 구멍이 보이게
+    for v_ in VIEWS[name]:
+        tail, loc, look, lens = v_[:4]
         cam.location = Vector(loc)
         cam.rotation_euler = (Vector(look) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
         cam.data.lens = lens
-        cam.data.clip_start = 0.1
+        cam.data.clip_start = v_[4] if len(v_) > 4 else 0.1        # 다섯째 값 = 가까운 자르기(위에서 지붕을 잘라 속을 본다)
+        cam.data.clip_end = 2000.0
         scene.render.filepath = os.path.join(out, "in_%s_%s.png" % (name, tail))
         bpy.ops.render.render(write_still=True)
 print("done")
