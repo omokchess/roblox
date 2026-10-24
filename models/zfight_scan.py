@@ -5,7 +5,7 @@ zfight_scan.py — 2026-10-24. 설원 마을 키트의 반짝임(z-fighting) 찾
 사용자(2026-10-24): "겹쳐서 반짝거리는 부분들 다 체크해서 수정하고."
 두 면이 같은 쪽을 보고(법선 0.01 안) 같은 평면(0.012 안)에서 넓이가 겹치면 카메라가 움직일 때 번갈아 비친다.
 틀마다 모든 재질 덩이의 면을 법선·평면 칸으로 묶고, 칸 안에서 평면 위 2D 상자로 훑은 뒤 볼록 다각형을 잘라 겹친 넓이를 잰다.
-빼는 것: 같은 모습(Snow_TownKit SKIN 의 색·재질이 같음 — 반짝여도 안 보임), 땅에 닿은 밑면,
+빼는 것: 같은 모습이면서 무늬 없는 재질(SmoothPlastic·Neon·Glass — 반짝여도 안 보임), 땅에 닿은 밑면,
 겹친 곳 바로 앞(0.03)이 다른 덩이 속인 면(광선이 처음 맞힌 자리의 면 가운데 광선 쪽을 보는 것이 있으면 속 — 겹친 면까지 본다).
 
 fix(g): 보이는 쌍마다 두 면 중 작은 쪽(띠·장식·판)을 제 법선 쪽으로 STEP 밀어(그 덩이의 꼭짓점을 옮겨 그만큼 두꺼워짐) 앞으로 나오게 한다.
@@ -26,14 +26,16 @@ EPS_N, EPS_D, MIN_A, STEP = 0.01, 0.012, 0.03, 0.02
 
 
 def looks(skin_file="Snow_TownKit.luau"):
-    """Studio 가르기 스크립트의 SKIN: 재질 이름 → (색, Studio 재질). 같은 모습끼리는 반짝여도 보이지 않는다.
+    """Studio 가르기 스크립트의 SKIN: 재질 이름 → (색, Studio 재질). 같은 모습이라도 무늬 있는 재질(나무·돌…)은
+    면마다 무늬가 달라 겹치면 번갈아 보인다(2026-10-24 사용자 신고: 창살 십자). 무늬 없는 것만 FLAT 으로 뺀다.
     다른 키트는 내보내기 전에 Z.LOOK = Z.looks("Roman_Kit.luau") 처럼 제 표로 바꾼다(같은 이름도 키트마다 빛이 다르다)"""
     import re
     src = open(os.path.join(HERE, "..", "tools", skin_file), encoding="utf-8").read()
-    return {m.group(1): (m.group(2).replace(" ", ""), m.group(3)) for m in re.finditer(r"^\t(\w+) = \{ RGB\(([\d, ]+)\), M\.(\w+) \}", src, re.M)}
+    return {m.group(1): (m.group(2).replace(" ", ""), m.group(3)) for m in re.finditer(r"^\t(\w+) = \{ RGB\(([\d, ]+)\), M\.(\w+)[^}]*\}", src, re.M)}
 
 
 LOOK = looks()
+FLAT = {"SmoothPlastic", "Neon", "Glass", "ForceField"}
 
 
 def collect(g, tag, movable=True):
@@ -125,9 +127,8 @@ def find_pairs(faces):
                 if key in seen or P[j][3] >= P[i][4] or P[i][3] >= P[j][4]:
                     continue
                 fa, fb = faces[i], faces[j]
-                if fa[0] == fb[0] and fa[1] == fb[1]:
-                    continue
-                if LOOK.get(fa[1], fa[1]) == LOOK.get(fb[1], fb[1]):
+                la = LOOK.get(fa[1], fa[1])
+                if la == LOOK.get(fb[1], fb[1]) and la[-1] in FLAT:
                     continue
                 di, dj = fa[2].dot(fa[3][0]), fb[2].dot(fb[3][0])
                 if abs(di - dj) > EPS_D or (fa[2] - fb[2]).length > EPS_N * 1.5:
@@ -145,9 +146,10 @@ def find_pairs(faces):
     return out
 
 
-def fix(g, tag, extra=(), passes=12):
-    """보이는 쌍마다 작은 쪽 면을 STEP 앞으로(같은 덩이 꼭짓점을 법선마다 한 번씩). 아홉째 번부터는 번갈아 큰 쪽도 민다
-    (작은 쪽만 밀면 다른 면과 다시 겹쳐 오가는 곳이 있다). (민 면 수, 남은 쌍 수)"""
+def fix(g, tag, extra=(), passes=30):
+    """보이는 쌍마다 작은 쪽 면을 상대 면보다 STEP 앞으로. 아홉째 번부터는 번갈아 큰 쪽도 민다
+    (작은 쪽만 밀면 다른 면과 다시 겹쳐 오가는 곳이 있다). 한 번에 다룬 쌍의 두 면은 그 번엔 다시 안 건드린다 —
+    같은 평면에 줄지어 겹친 판(미끄럼틀 옆벽 마디)을 하나 걸러 하나씩 밀어야 이웃끼리 다시 맞붙지 않는다. (민 면 수, 남은 쌍 수)"""
     def mine(faces):    # extra 끼리의 쌍은 여기서 못 고친다(그 틀 차례에 고친다)
         return [p for p in find_pairs(faces) if faces[p[1]][5] is not None or faces[p[2]][5] is not None]
 
@@ -157,19 +159,24 @@ def fix(g, tag, extra=(), passes=12):
         ps = mine(faces)
         if not ps:
             break
-        done = set()
+        held = set()
         for a, i, j in sorted(ps, reverse=True):
             mov = [k for k in (i, j) if faces[k][5] is not None and faces[k][5].is_valid]
-            if not mov:
+            if not mov or i in held or j in held:
                 continue
+            held.update((i, j))
             pick = max if (ps_i >= 8 and ps_i % 2 == 1) else min
             k = pick(mov, key=lambda k: (faces[k][5].calc_area(), -k))
             f, n = faces[k][5], faces[k][2]
-            nk = (round(n.x, 2), round(n.y, 2), round(n.z, 2))
+            # 꼭짓점마다 그 자리에서 상대 면 평면보다 STEP 앞까지 민다. 고정 거리로 밀면 0.01 어긋난 쌍이 반대로 넘어가
+            # 다시 겹치고, 이웃 면과 같이 쓰는 꼭짓점 때문에 비스듬해진 면이 끝까지 남는다
+            o = j if k == i else i
+            no = faces[o][2]
+            do = no.dot(faces[o][3][0])
             for vtx in f.verts:
-                if (vtx, nk) not in done:
-                    vtx.co += n * STEP
-                    done.add((vtx, nk))
+                need = (do - no.dot(vtx.co)) / no.dot(n) + STEP
+                if need > 0:
+                    vtx.co += n * need
             total += 1
     left = len(mine(collect(g, tag) + list(extra)))
     return total, left

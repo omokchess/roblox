@@ -9,13 +9,14 @@
 	   (Jeolhwa_Refresh 가 소품을 복사해 둔 Prop_* 틀)에서 옛 MeshId 를 쓰는 MeshPart 를 새 것 복제본으로 바꾼다.
 	   자리 = 옛 파트 CFrame + 옛→새 틀 안 어긋남(면을 밀어 상자 가운데가 0.01 쯤 움직인다), 크기 = 새 틀 크기 × (옛 파트 / 옛 틀).
 	   이름·색·재질·투명·충돌·속성·자식(불빛 등)은 옛 파트 것. 모델·피벗은 그대로. 다시 돌려도 된다(바꿀 것이 없으면 0).
-	   틀(ServerStorage 키트)도 같은 식으로 = 옛 틀 복제본에 메시만 새것(속성 ZFightSwapped). 가르기 스크립트가 새로 만든 틀에는
+	   틀(ServerStorage 키트)도 같은 식으로 = 옛 틀 복제본에 메시만 새것(속성 ZFightSwapped = 보관 Token). 가르기 스크립트가 새로 만든 틀에는
 	   나중에 붙인 고침이 없어서다 — 곳간 Collider_Wall(Jeolhwa_GranaryWalls), 문간 충돌 끔(Jeolhwa_GateFix), 칼로도르 등불 표지 넷.
 	되돌리기: 같은 세션의 _G.KitSwapUndo({새, 옛} 목록). 보고 /kitswap
+	다음에 키트를 또 다시 낼 때는 ServerStorage.ZFight_OldKits 를 먼저 지우고 1) 부터(지난 보관은 이미 쓸모없다).
 ]]
 local HS = game:GetService("HttpService")
 local SS = game:GetService("ServerStorage")
-local KITS = { "JeolhwaKit", "JeolhwaProps", "RomanKit", "RuinsKit" }
+local KITS = { "JeolhwaKit", "JeolhwaProps", "RomanKit", "RuinsKit", "SnowKit", "SwampKit" }
 local USER = { Rig = true, Building_Hall = true, Fetra = true, MotionStudio = true }
 local COPY = { "Name", "Color", "Material", "MaterialVariant", "Transparency", "Reflectance", "CanCollide", "CanQuery",
 	"CanTouch", "CastShadow", "Anchored", "Locked", "Massless", "CollisionGroup" }
@@ -30,6 +31,7 @@ local ok, err = pcall(function()
 	if not bak then
 		bak = Instance.new("Folder")
 		bak.Name = "ZFight_OldKits"
+		bak:SetAttribute("Token", HS:GenerateGUID(false)) -- 이 보관 차례에 다시 만든 틀 표시(다음 차례엔 또 만든다)
 		for _, n in ipairs(KITS) do
 			local k = assert(SS:FindFirstChild(n), "ServerStorage." .. n .. " 이 없다")
 			k:Clone().Parent = bak
@@ -56,10 +58,33 @@ local ok, err = pcall(function()
 	end
 	say("바뀐 틀 파트 %d", nPair)
 
+	-- 담 틀은 Jeolhwa_WallHeight 가 바닥선 기준으로 세로만 늘려 두었다(속성 HeightScaled). 새 틀 파트도 같이 늘려 놓고 잰다.
+	-- 바닥선은 HeightBase 속성이 있으면 그것(Wall_Corner 는 Jeolhwa_WallCorner 가 원점 y 0 기준으로 늘렸다), 없으면 가장 낮은 파트 밑면
+	local bases = {}
+	local function scaled(op, np)
+		local f = op.Parent:GetAttribute("HeightScaled")
+		if not f then
+			return np.CFrame, np.Size
+		end
+		local m = np.Parent
+		if not bases[m] then
+			local b = math.huge
+			for _, q in ipairs(m:GetChildren()) do
+				if q:IsA("BasePart") and q.Name ~= "Foundation" then
+					b = math.min(b, q.Position.Y - q.Size.Y / 2) -- 틀 파트는 돌지 않았다
+				end
+			end
+			bases[m] = b
+		end
+		local b, pos = op.Parent:GetAttribute("HeightBase") or bases[m], np.Position
+		return CFrame.new(pos.X, b + (pos.Y - b) * f, pos.Z) * np.CFrame.Rotation, np.Size * Vector3.new(1, f, 1)
+	end
+
 	local far, maxMove = 0, 0
 	local function swap(p, e)
 		local op, np = e[1], e[2]
-		local d = op.CFrame:ToObjectSpace(np.CFrame)
+		local ncf, nsize = scaled(op, np)
+		local d = op.CFrame:ToObjectSpace(ncf)
 		if d.Position.Magnitude > 0.5 then
 			far += 1 -- 옛 틀이 원점에서 옮겨져 있었다 — 건드리지 않는다
 			return nil
@@ -67,7 +92,7 @@ local ok, err = pcall(function()
 		local s = p.Size / op.Size
 		local c = np:Clone()
 		c:ClearAllChildren()
-		c.Size = np.Size * s
+		c.Size = nsize * s
 		c.CFrame = p.CFrame * CFrame.new(d.Position * s) * d.Rotation
 		for _, k in ipairs(COPY) do
 			c[k] = p[k]
@@ -98,7 +123,7 @@ local ok, err = pcall(function()
 		local live = SS:FindFirstChild(n)
 		for _, om in ipairs(bak:FindFirstChild(n):GetChildren()) do
 			local nm = live:FindFirstChild(om.Name)
-			if nm and not nm:GetAttribute("ZFightSwapped") then
+			if nm and nm:GetAttribute("ZFightSwapped") ~= bak:GetAttribute("Token") then
 				local t = om:Clone()
 				local k = 0
 				for _, p in ipairs(t:GetDescendants()) do
@@ -108,7 +133,7 @@ local ok, err = pcall(function()
 					end
 				end
 				if k > 0 then
-					t:SetAttribute("ZFightSwapped", true)
+					t:SetAttribute("ZFightSwapped", bak:GetAttribute("Token"))
 					fresh[#fresh + 1] = { live, nm, t }
 				else
 					t:Destroy()

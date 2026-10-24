@@ -45,7 +45,9 @@ local function nkey(n)
 end
 
 -- 2026-10-24: 내가 지은 폴더(Surface · 절화 · 슈네라이히) 안 파트만 손본다(Rig · Building_Hall · Fetra 같은 사용자 모델은 건드리지 않는다).
--- 같은 색·재질끼리 겹친 쌍은 번갈아 비쳐도 보이지 않으니 그대로 둔다
+-- 같은 색·재질끼리 겹친 쌍은 무늬 없는 재질(SmoothPlastic·Neon·Glass)일 때만 그대로 둔다 — 나무·돌·자갈처럼 무늬가 있으면
+-- 파트마다 무늬 자리가 달라 번갈아 보인다(2026-10-24 사용자 "아직 깜빡여")
+local FLAT = { [Enum.Material.SmoothPlastic] = true, [Enum.Material.Neon] = true, [Enum.Material.Glass] = true, [Enum.Material.ForceField] = true }
 local ROOTS = { workspace:FindFirstChild("Surface"), workspace:FindFirstChild("Jeolhwa"), workspace:FindFirstChild("Schneereich") }
 local function ok(p)
 	for _, r in ipairs(ROOTS) do
@@ -58,7 +60,7 @@ end
 local list = {}
 for _, q in ipairs(pairsIn) do
 	if q.n.Y > -0.5 and q.a.Parent and q.b.Parent and (ok(q.a) or ok(q.b))
-		and not (q.a.Color == q.b.Color and q.a.Material == q.b.Material) then
+		and not (q.a.Color == q.b.Color and q.a.Material == q.b.Material and FLAT[q.a.Material]) then
 		list[#list + 1] = q
 	end
 end

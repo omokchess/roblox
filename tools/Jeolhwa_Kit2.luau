@@ -36,6 +36,11 @@ local SKIN = {
 	Soil = { RGB(122, 100, 73), M.Ground },
 	Leaf = { RGB(94, 113, 71), M.Grass },
 	Brush = { RGB(142, 125, 102), M.Wood },
+	-- 해시계(build_sundial.py 팔레트). 2026-10-24 옛 틀도 이 합본으로 들어온다
+	Granite = { RGB(143, 139, 128), M.Slate },
+	Stone = { RGB(186, 181, 167), M.Limestone },
+	Bronze = { RGB(94, 74, 42), M.Metal },
+	Gilt = { RGB(201, 174, 110), M.Metal },
 }
 local PRECISE = {
 	Wall = true, Lattice = true, Stairs = true, Column = true, Plinth = true,
@@ -48,6 +53,11 @@ local PREFIX = {
 	GateP = "Gate_Palace", GateH = "Gate_Hall", Corr = "Corridor", CorrC = "Corridor_Corner",
 	Nugak = "Pavilion_Nugak", Bell = "Tower_Bell", Chim = "Palace_Chimjeon",
 	Shop5 = "Shop_Row5", Shop3 = "Shop_Row3", Gran = "Granary", HouseLM = "Building_HouseLM",
+	-- 옛 틀(2026-10-24 반짝임 고치려고 합본에 넣음). 이 틀들은 가른 뒤 Kit_MeshSwap 이 옛 틀 + 새 메시로 다시 만든다
+	House = "Building_House", Cottage = "Building_Cottage", AnnexT = "Annex_Tile", AnnexC = "Annex_Thatch",
+	HouseL = "Building_HouseL", Hall = "Building_Hall", Gate = "Gate_Main", Wall = "Wall_Segment", Palace = "Palace_Main",
+	Pavilion = "Pavilion_Jeongja", WallS = "Wall_Stone", Fence = "Fence_Brush", WGate = "Wall_GateTile",
+	FGate = "Fence_Gate", Sun = "Sundial", WallC = "Wall_Corner",
 }
 
 local report = {}

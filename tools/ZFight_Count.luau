@@ -9,9 +9,11 @@ local function ok(p)
 	end
 	return false
 end
+-- 같은 색·재질 쌍은 무늬 없는 재질일 때만 안 보인다(ZFight_Fix 와 같은 기준)
+local FLAT = { [Enum.Material.SmoothPlastic] = true, [Enum.Material.Neon] = true, [Enum.Material.Glass] = true, [Enum.Material.ForceField] = true }
 local mineN, otherN, ex = 0, 0, {}
 for _, q in ipairs(_G.ZFightPairs or {}) do
-	if q.n.Y > -0.5 and q.a.Parent and q.b.Parent and not (q.a.Color == q.b.Color and q.a.Material == q.b.Material) then
+	if q.n.Y > -0.5 and q.a.Parent and q.b.Parent and not (q.a.Color == q.b.Color and q.a.Material == q.b.Material and FLAT[q.a.Material]) then
 		if ok(q.a) or ok(q.b) then
 			mineN += 1
 			if #ex < 12 then

@@ -10,8 +10,10 @@ Studio 3D 가져오기를 열한 번 하지 않으려는 것이다. 모든 모�
 돌리는 법: blender --background --python build_kit2.py [-- 틀이름 ...]
 """
 import os
+import runpy
 import sys
 
+import bmesh
 import bpy
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -27,6 +29,41 @@ SCALE = 0.5
 KIT = [(name, prefix, fn) for name, prefix, fn, _, _ in BP.JOBS]
 KIT += [(name, prefix, fn) for name, prefix, fn, _ in BT.JOBS]
 KIT.append(("Building_HouseLM", "HouseLM", lambda g: BH.house_l(g, -1)))
+# 옛 틀(2026-09 처음 지어 하나씩 가져온 것)도 2026-10-24 반짝임 고치려고 합본에 넣는다
+KIT += [(v["name"], v["prefix"], lambda g, v=v: BH.simple(g, v)) for v in BH.SIMPLE]
+KIT.append(("Building_HouseL", "HouseL", lambda g: BH.house_l(g, 1)))
+OLD = ["build_hall.py", "build_gate.py", "build_palace.py", "build_pavilion.py", "build_fence.py",
+       "build_sundial.py", "build_wall_corner.py"]
+
+
+def captured(files):
+    """그 스크립트들은 맨 위에서 짓고 곧장 내보내므로 clear_scene·export_model 을 잠깐 바꿔 지은 그룹만 받는다.
+    배율이 SCALE 과 다르면(해시계 1.0) 미리 맞춘다. Marker(원점 표지 상자)는 뺀다"""
+    got = []
+
+    def grab(name, g, scale, *a, **k):
+        g.pop("Marker", None)
+        for grp in g.values():
+            bmesh.ops.scale(grp.bm, vec=(scale / SCALE,) * 3, verts=grp.bm.verts)
+        got.append((name, next(iter(g.values())).name.split("_")[0], lambda gg, g=g: gg.update(g)))
+        return None, 0, 0, None
+
+    keep = L.clear_scene, L.export_model
+    L.clear_scene, L.export_model = (lambda: None), grab
+    try:
+        for f in files:
+            runpy.run_path(os.path.join(HERE, f))
+    finally:
+        L.clear_scene, L.export_model = keep
+    return got
+
+
+import zfight_scan as Z  # noqa: E402  (2026-10-24 반짝임: 겹친 면 중 작은 쪽을 앞으로)
+Z.LOOK = Z.looks("Jeolhwa_Kit2.luau")
+Z.STEP = 0.02 / SCALE  # 내보낼 때 SCALE 로 줄이므로 Studio 에서 0.02 가 되게
+
+L.clear_scene()
+KIT += captured(OLD)  # 재질이 지금 장면에 생기도록 clear_scene 뒤에
 
 # "-- 이름 ..." 을 주면 그 틀만 묶는다(바꾼 틀만 Studio 에서 갈아 끼울 때). Jeolhwa_Kit2.luau 는 든 것만 바꾼다
 only = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -36,12 +73,6 @@ if only:
 
 prefixes = [p for _, p, _ in KIT]
 assert len(set(prefixes)) == len(prefixes), "앞머리가 겹친다"
-
-import zfight_scan as Z  # noqa: E402  (2026-10-24 반짝임: 겹친 면 중 작은 쪽을 앞으로)
-Z.LOOK = Z.looks("Jeolhwa_Kit2.luau")
-Z.STEP = 0.02 / SCALE  # 내보낼 때 SCALE 로 줄이므로 Studio 에서 0.02 가 되게
-
-L.clear_scene()
 objs = []
 print("=== JeolhwaKit2 ===")
 for name, prefix, fn in KIT:
@@ -49,7 +80,7 @@ for name, prefix, fn in KIT:
     fn(g)
     zm, zl = Z.fix(g, name)
     tris_total = 0
-    for k in L.PALETTE:
+    for k in list(g):  # 해시계는 제 팔레트(Granite·Gilt …)를 쓴다
         ob = g[k].finish()
         if len(ob.data.polygons) == 0:
             bpy.data.objects.remove(ob, do_unlink=True)

@@ -10,10 +10,15 @@ build_kit_swamp.py — 안개늪 군도(C:/wth/roblox) 에셋 FBX 를 우리 늪
 """
 import math
 import os
+import re
 import sys
 
+import bmesh
 import bpy
 from mathutils import Matrix
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import zfight_scan as Z  # noqa: E402  (2026-10-24 반짝임: 겹친 면 중 작은 쪽을 0.02 앞으로)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = r"C:\wth\roblox\assets\fbx"
@@ -32,6 +37,35 @@ if KIT2:
     SRC = os.path.join(HERE, "swamp_ref", "fbx")
     ASSETS = ["StiltHouseB2", "BoardwalkOpen"]
 
+# 반짝임 검사용 모습 표: Swamp_assets.luau PALETTE(재질, r, g, b)
+PAL = {m.group(1): (m.group(3), m.group(2)) for m in re.finditer(
+    r'^\t(\w+) =\{ "(\w+)", (\d+, \d+, \d+)', open(os.path.join(HERE, "..", "tools", "Swamp_assets.luau"), encoding="utf-8").read(), re.M)}
+
+
+class Mesh:
+    """zfight_scan 이 보는 모양(.bm). 월드 좌표로 고친 뒤 제 오브젝트 좌표로 되돌려 쓴다"""
+
+    def __init__(self, o):
+        self.o, self.bm = o, bmesh.new()
+        self.bm.from_mesh(o.data)
+        self.bm.transform(o.matrix_world)
+
+    def done(self):
+        self.bm.transform(self.o.matrix_world.inverted())
+        self.bm.to_mesh(self.o.data)
+        self.bm.free()
+
+
+def zfix(name, meshes):
+    g = {o.name: Mesh(o) for o in meshes}
+    key = {k: re.sub(r"_\d+$", "", k.split(".")[0].split("__", 1)[1]) for k in g}
+    Z.LOOK = {k: PAL.get(key[k], key[k]) for k in g}
+    zm, zl = Z.fix(g, name)
+    for m in g.values():
+        m.done()
+    return zm, zl
+
+
 bpy.ops.wm.read_factory_settings(use_empty=True)
 objs = []
 turn = Matrix.Rotation(math.pi, 4, "Z")
@@ -48,9 +82,10 @@ for name in ASSETS:
         o.name = o.name.split(".")[0]
         objs.append(o)
         n += 1
+    zm, zl = zfix(name, [o for o in new if o.type == "MESH"])
     tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in new if o.type == "MESH")
     big = max(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in new if o.type == "MESH")
-    print("  %-18s 메시 %2d  삼각형 %6d  (가장 큰 메시 %d)" % (name, n, tris, big))
+    print("  %-18s 메시 %2d  삼각형 %6d  (가장 큰 메시 %d)  반짝임 민 면 %d 남음 %d" % (name, n, tris, big, zm, zl))
 
 bpy.ops.mesh.primitive_cube_add(size=0.8, location=(0, 0, 0))
 m = bpy.context.active_object
