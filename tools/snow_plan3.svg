@@ -295,7 +295,7 @@
 <text x="-4610.0" y="-3603.0" font-size="6.5" fill="#5c4a00" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.8" paint-order="stroke">체스 대전 구경</text>
 <polygon points="-5300.0,-3702.0 -5175.0,-3702.0 -5175.0,-3640.0 -5300.0,-3640.0" fill="#f3d75a" fill-opacity="0.45" stroke="#b8961c" stroke-width="1.20" stroke-dasharray="4 3"/>
 <text x="-5237.5" y="-3673.0" font-size="9.5" fill="#5c4a00" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.7" paint-order="stroke">천문대 정원</text>
-<text x="-5237.5" y="-3662.0" font-size="6.5" fill="#5c4a00" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.8" paint-order="stroke">별 관측·전직 대기</text>
+<text x="-5237.5" y="-3662.0" font-size="6.5" fill="#5c4a00" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.8" paint-order="stroke">별 관측 · 기록관 옆 쉼터</text>
 <polygon points="-4944.1,-3829.1 -4921.9,-3829.1 -4921.9,-3806.9 -4944.1,-3806.9" fill="#6b4aa0" fill-opacity="0.95" stroke="#ffffff" stroke-width="0.80"/>
 <text x="-4933.0" y="-3833.1" font-size="8.5" fill="#4b2f86" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.4" paint-order="stroke">시계탑(광장)</text>
 <polygon points="-4729.3,-4076.1 -4842.0,-4076.1 -4842.0,-4128.4 -4729.3,-4128.4" fill="#6b4aa0" fill-opacity="0.95" stroke="#ffffff" stroke-width="0.80"/>
@@ -307,7 +307,7 @@
 <polygon points="-5229.6,-3942.4 -5229.6,-3901.6 -5270.4,-3901.6 -5270.4,-3942.4" fill="#6b4aa0" fill-opacity="0.95" stroke="#ffffff" stroke-width="0.80"/>
 <text x="-5250.0" y="-3946.4" font-size="8.5" fill="#4b2f86" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.4" paint-order="stroke">감정 변환로</text>
 <polygon points="-5108.4,-3662.0 -5069.8,-3627.2 -5106.4,-3586.6 -5145.0,-3621.4" fill="#6b4aa0" fill-opacity="0.95" stroke="#ffffff" stroke-width="0.80"/>
-<text x="-5108.3" y="-3666.0" font-size="8.5" fill="#4b2f86" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.4" paint-order="stroke">천문대(조율자 전직)</text>
+<text x="-5108.3" y="-3620.3" font-size="8.5" fill="#ffffff" font-weight="700" text-anchor="middle">천문대</text>
 <polygon points="-4589.6,-3618.5 -4589.6,-3701.5 -4514.5,-3701.5 -4514.5,-3618.5" fill="#6b4aa0" fill-opacity="0.95" stroke="#ffffff" stroke-width="0.80"/>
 <text x="-4550.0" y="-3657.0" font-size="8.5" fill="#ffffff" font-weight="700" text-anchor="middle">기물군 본부</text>
 <polygon points="-4679.6,-4088.4 -4679.6,-4111.6 -4656.4,-4111.6 -4656.4,-4088.4" fill="#6b4aa0" fill-opacity="0.95" stroke="#ffffff" stroke-width="0.80"/>
@@ -364,6 +364,8 @@
 <path d="M-4879.2,-3674.7 L-4855.8,-3667.3 M-4862.4,-3682.1 L-4872.6,-3659.9" stroke="#c0392b" stroke-width="0.8" opacity="0.6"/>
 <polygon points="-5026.0,-3696.4 -5010.8,-3686.2 -5019.9,-3672.8 -5035.1,-3683.0" fill="#e9b4b4" fill-opacity="0.55" stroke="#c0392b" stroke-width="0.80" stroke-dasharray="3 2"/>
 <path d="M-5026.0,-3696.4 L-5019.9,-3672.8 M-5010.8,-3686.2 L-5035.1,-3683.0" stroke="#c0392b" stroke-width="0.8" opacity="0.6"/>
+<polygon points="-5083.5,-3789.9 -5079.0,-3772.1 -5094.8,-3768.2 -5099.2,-3785.9" fill="#e9b4b4" fill-opacity="0.55" stroke="#c0392b" stroke-width="0.80" stroke-dasharray="3 2"/>
+<path d="M-5083.5,-3789.9 L-5094.8,-3768.2 M-5079.0,-3772.1 L-5099.2,-3785.9" stroke="#c0392b" stroke-width="0.8" opacity="0.6"/>
 <polygon points="-5083.0,-3848.2 -5085.6,-3830.1 -5101.6,-3832.4 -5099.1,-3850.5" fill="#e9b4b4" fill-opacity="0.55" stroke="#c0392b" stroke-width="0.80" stroke-dasharray="3 2"/>
 <path d="M-5083.0,-3848.2 L-5101.6,-3832.4 M-5085.6,-3830.1 L-5099.1,-3850.5" stroke="#c0392b" stroke-width="0.8" opacity="0.6"/>
 <polygon points="-5073.9,-3880.2 -5080.4,-3862.4 -5094.9,-3867.7 -5088.4,-3885.5" fill="#e9b4b4" fill-opacity="0.55" stroke="#c0392b" stroke-width="0.80" stroke-dasharray="3 2"/>
@@ -621,17 +623,14 @@
 <text x="-4967.9" y="-3631.7" font-size="9.0" fill="#16603f" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">우체국</text>
 <text x="-4967.9" y="-3623.2" font-size="6.0" fill="#16603f" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.7" paint-order="stroke">아이템·편지 보내기</text>
 <polygon points="-4780.3,-3854.0 -4791.6,-3886.1 -4769.0,-3894.1 -4757.6,-3862.1" fill="#2f9e6a" fill-opacity="1.00" stroke="#ffffff" stroke-width="1.00"/>
-<text x="-4748.2" y="-3883.4" font-size="9.0" fill="#16603f" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">무기술 회관</text>
-<text x="-4748.2" y="-3874.9" font-size="6.0" fill="#16603f" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.7" paint-order="stroke">결투사·퀘이사·광전사 수련·전직</text>
+<text x="-4748.2" y="-3883.4" font-size="9.0" fill="#16603f" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">사냥꾼 길드(제안)</text>
+<text x="-4748.2" y="-3874.9" font-size="6.0" fill="#16603f" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.7" paint-order="stroke">보스 현상금·출현 시간표·파티 모집</text>
 <polygon points="-5044.5,-3928.4 -5065.7,-3901.8 -5084.5,-3916.7 -5063.3,-3943.4" fill="#2f9e6a" fill-opacity="1.00" stroke="#ffffff" stroke-width="1.00"/>
-<text x="-5086.4" y="-3940.0" font-size="9.0" fill="#16603f" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">성벽 수도회</text>
-<text x="-5086.4" y="-3931.5" font-size="6.0" fill="#16603f" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.7" paint-order="stroke">월 필그림·메이슨·브레이커</text>
+<text x="-5086.4" y="-3940.0" font-size="9.0" fill="#16603f" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">훈련장(제안)</text>
+<text x="-5086.4" y="-3931.5" font-size="6.0" fill="#16603f" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.7" paint-order="stroke">기계 과녁 — 탑 전 손풀기·빌드 시험</text>
 <polygon points="-5073.1,-3747.3 -5054.6,-3718.8 -5074.7,-3705.7 -5093.2,-3734.2" fill="#2f9e6a" fill-opacity="1.00" stroke="#ffffff" stroke-width="1.00"/>
-<text x="-5097.4" y="-3711.3" font-size="9.0" fill="#16603f" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">예술·별 회관</text>
-<text x="-5097.4" y="-3702.8" font-size="6.0" fill="#16603f" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.7" paint-order="stroke">음악가·펄서</text>
-<polygon points="-5089.0,-3790.4 -5083.6,-3769.1 -5103.1,-3764.3 -5108.4,-3785.6" fill="#2f9e6a" fill-opacity="1.00" stroke="#ffffff" stroke-width="1.00"/>
-<text x="-5123.2" y="-3770.6" font-size="9.0" fill="#16603f" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">연금 실험실</text>
-<text x="-5123.2" y="-3762.1" font-size="6.0" fill="#16603f" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.7" paint-order="stroke">연금술사</text>
+<text x="-5097.4" y="-3711.3" font-size="9.0" fill="#16603f" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">기록관(제안)</text>
+<text x="-5097.4" y="-3702.8" font-size="6.0" fill="#16603f" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.7" paint-order="stroke">명예의 전당 — 탑 최고 층·보스 처치</text>
 <polygon points="-5007.3,-3678.1 -4987.2,-3669.2 -4995.4,-3650.9 -5015.4,-3659.9" fill="#2f9e6a" fill-opacity="1.00" stroke="#ffffff" stroke-width="1.00"/>
 <text x="-5012.7" y="-3638.9" font-size="9.0" fill="#16603f" font-weight="700" text-anchor="middle" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">식당·빵집</text>
 <text x="-5012.7" y="-3630.4" font-size="6.0" fill="#16603f" font-weight="400" text-anchor="middle" stroke="#ffffff" stroke-width="1.7" paint-order="stroke">음식 버프</text>
@@ -657,13 +656,13 @@
 <polygon points="-4430.0,-4118.0 -4416.0,-4118.0 -4416.0,-4108.0 -4430.0,-4108.0" fill="#6b4aa0" fill-opacity="1.00" stroke="none" stroke-width="0.60"/>
 <text x="-4410.0" y="-4110.0" font-size="8.0" fill="#222" font-weight="600" text-anchor="start">큰 시설·랜드마크 (그대로)</text>
 <polygon points="-4430.0,-4103.0 -4416.0,-4103.0 -4416.0,-4093.0 -4430.0,-4093.0" fill="#2f9e6a" fill-opacity="1.00" stroke="none" stroke-width="0.60"/>
-<text x="-4410.0" y="-4095.0" font-size="8.0" fill="#222" font-weight="600" text-anchor="start">새 기능 9곳 (바깥 고리 집 13채 자리)</text>
+<text x="-4410.0" y="-4095.0" font-size="8.0" fill="#222" font-weight="600" text-anchor="start">새 기능 8곳 (바깥 고리 집 12채 자리)</text>
 <polygon points="-4430.0,-4088.0 -4416.0,-4088.0 -4416.0,-4078.0 -4430.0,-4078.0" fill="#e0912f" fill-opacity="1.00" stroke="none" stroke-width="0.60"/>
 <text x="-4410.0" y="-4080.0" font-size="8.0" fill="#222" font-weight="600" text-anchor="start">스토리 주민 집 6 (안은 다음 단계)</text>
 <polygon points="-4430.0,-4073.0 -4416.0,-4073.0 -4416.0,-4063.0 -4430.0,-4063.0" fill="#8d939b" fill-opacity="1.00" stroke="none" stroke-width="0.60"/>
 <text x="-4410.0" y="-4065.0" font-size="8.0" fill="#222" font-weight="600" text-anchor="start">배경 집 27 (문 없앤 판 — 창 불빛·굴뚝만)</text>
 <polygon points="-4430.0,-4058.0 -4416.0,-4058.0 -4416.0,-4048.0 -4430.0,-4048.0" fill="#e9b4b4" fill-opacity="0.60" stroke="#555" stroke-width="0.60"/>
-<text x="-4410.0" y="-4050.0" font-size="8.0" fill="#222" font-weight="600" text-anchor="start">지우는 집 87</text>
+<text x="-4410.0" y="-4050.0" font-size="8.0" fill="#222" font-weight="600" text-anchor="start">지우는 집 88</text>
 <polygon points="-4430.0,-4043.0 -4416.0,-4043.0 -4416.0,-4033.0 -4430.0,-4033.0" fill="#f3d75a" fill-opacity="0.50" stroke="none" stroke-width="0.60"/>
 <text x="-4410.0" y="-4035.0" font-size="8.0" fill="#222" font-weight="600" text-anchor="start">비운 땅의 새 쓰임</text>
 <line x1="-4430.0" y1="-4023.0" x2="-4416.0" y2="-4023.0" stroke="#c0392b" stroke-width="1.4" stroke-dasharray="5 4"/>
@@ -673,21 +672,22 @@
 <line x1="-4430.0" y1="-3993.0" x2="-4416.0" y2="-3993.0" stroke="#5a7fa8" stroke-width="1.2" stroke-dasharray="6 5"/>
 <text x="-4410.0" y="-3990.0" font-size="8.0" fill="#222" font-weight="600" text-anchor="start">광장에서 걷는 시간 (16 스터드/초)</text>
 <text x="-4430.0" y="-3965.0" font-size="10.0" fill="#111" font-weight="800" text-anchor="start">집 133채 →</text>
-<text x="-4418.0" y="-3951.0" font-size="8.5" fill="#222" font-weight="600" text-anchor="start">· 지움 87</text>
-<text x="-4418.0" y="-3938.0" font-size="8.5" fill="#222" font-weight="600" text-anchor="start">· 새 기능 9곳 (집 13채 자리)</text>
+<text x="-4418.0" y="-3951.0" font-size="8.5" fill="#222" font-weight="600" text-anchor="start">· 지움 88</text>
+<text x="-4418.0" y="-3938.0" font-size="8.5" fill="#222" font-weight="600" text-anchor="start">· 새 기능 8곳 (집 12채 자리)</text>
 <text x="-4418.0" y="-3925.0" font-size="8.5" fill="#222" font-weight="600" text-anchor="start">· 주민 집 6</text>
 <text x="-4418.0" y="-3912.0" font-size="8.5" fill="#222" font-weight="600" text-anchor="start">· 배경 집 27</text>
 <text x="-4430.0" y="-3887.0" font-size="11.0" fill="#111" font-weight="800" text-anchor="start">정하실 것</text>
-<text x="-4430.0" y="-3872.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">① 새 기능 9곳 — 목록·자리 괜찮은지</text>
-<text x="-4430.0" y="-3860.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">    (의뢰소·우체국·무기술 회관·성벽 수도회·예술/별 회관·</text>
-<text x="-4430.0" y="-3848.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">     연금 실험실·식당/빵집·지도 제작소·모험가 숙소)</text>
+<text x="-4430.0" y="-3872.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">① 새 기능 8곳 — 목록·자리 괜찮은지</text>
+<text x="-4430.0" y="-3860.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">    (의뢰소·우체국·식당/빵집·지도 제작소·모험가 숙소 +</text>
+<text x="-4430.0" y="-3848.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">     제안: 사냥꾼 길드·훈련장·기록관 — 직업 회관은 뺌)</text>
 <text x="-4430.0" y="-3836.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">② 배경 집 27채 — 남길지, 아예 0채로 할지</text>
 <text x="-4430.0" y="-3824.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">③ 주민 집 6채 — 스토리 모드에 쓸지</text>
 <text x="-4430.0" y="-3812.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">④ 기물군 본부·경매장 — 안쪽으로 당길지(지금 30초 거리)</text>
 <text x="-4430.0" y="-3800.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">⑤ 비운 마당 5곳 — 쓰임 괜찮은지</text>
-<text x="-4430.0" y="-3788.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start"></text>
-<text x="-4430.0" y="-3776.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">승인 뒤 순서: 집 지우기(ServerStorage 보관) → 새 기능 채</text>
-<text x="-4430.0" y="-3764.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">회색 상자로 동선 확인 → 블렌더로 꾸미기 → 마당 만들기</text>
+<text x="-4430.0" y="-3788.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">⑥ 천문대 — '조율자 전직' 설정을 뺀 뒤 쓰임</text>
+<text x="-4430.0" y="-3776.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start"></text>
+<text x="-4430.0" y="-3764.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">승인 뒤 순서: 집 지우기(ServerStorage 보관) → 새 기능 채</text>
+<text x="-4430.0" y="-3752.0" font-size="7.6" fill="#333" font-weight="500" text-anchor="start">회색 상자로 동선 확인 → 블렌더로 꾸미기 → 마당 만들기</text>
 <text x="-4450.0" y="-3572.0" font-size="8.0" fill="#444" font-weight="600" text-anchor="end" stroke="#ffffff" stroke-width="2.2" paint-order="stroke">N ↑   눈금 1 칸 = 50 스터드</text>
 <line x1="-5350" y1="-3566.0" x2="-5350" y2="-3560.0" stroke="#888" stroke-width="0.6"/>
 <line x1="-5300" y1="-3566.0" x2="-5300" y2="-3560.0" stroke="#888" stroke-width="0.6"/>
