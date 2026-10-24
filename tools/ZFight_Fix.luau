@@ -44,9 +44,21 @@ local function nkey(n)
 	return string.format("%d,%d,%d", math.round(n.X * 1000), math.round(n.Y * 1000), math.round(n.Z * 1000))
 end
 
+-- 2026-10-24: 내가 지은 폴더(Surface · 절화 · 슈네라이히) 안 파트만 손본다(Rig · Building_Hall · Fetra 같은 사용자 모델은 건드리지 않는다).
+-- 같은 색·재질끼리 겹친 쌍은 번갈아 비쳐도 보이지 않으니 그대로 둔다
+local ROOTS = { workspace:FindFirstChild("Surface"), workspace:FindFirstChild("Jeolhwa"), workspace:FindFirstChild("Schneereich") }
+local function ok(p)
+	for _, r in ipairs(ROOTS) do
+		if p:IsDescendantOf(r) then
+			return true
+		end
+	end
+	return false
+end
 local list = {}
 for _, q in ipairs(pairsIn) do
-	if q.n.Y > -0.5 and q.a.Parent and q.b.Parent then
+	if q.n.Y > -0.5 and q.a.Parent and q.b.Parent and (ok(q.a) or ok(q.b))
+		and not (q.a.Color == q.b.Color and q.a.Material == q.b.Material) then
 		list[#list + 1] = q
 	end
 end
@@ -74,7 +86,9 @@ for _, q in ipairs(list) do
 	if math.abs(da - db) < 0.012 then
 		local up
 		local ma, mb = mine(q.a), mine(q.b)
-		if ma ~= mb then
+		if ok(q.a) ~= ok(q.b) then
+			up = ok(q.a) and q.a or q.b
+		elseif ma ~= mb then
 			up = ma and q.a or q.b
 		else
 			local axA = axisOf(q.a, q.n)

@@ -116,9 +116,14 @@ if __name__ == "__main__":
     RENDER = "render" in (sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
     L.clear_scene()
     objs, pieces = [], []
+    import zfight_scan as Z     # 2026-10-24 반짝임: 겹친 면 중 작은 쪽을 0.02 앞으로(뜰은 같은 자리 건물 면과도 잰다)
+    svc_faces = {}
     for name, prefix, fn in JOBS:
         g = G(prefix)
         fn(g)
+        zm, zl = Z.fix(g, name, svc_faces.get("Svc_" + name[5:], ()) if name.startswith("Yard_") else ())
+        if name.startswith("Svc_"):
+            svc_faces[name] = Z.collect(g, name, movable=False)
         mine, total = [], 0
         for k in PAL:
             ob = g[k].finish()
@@ -131,7 +136,7 @@ if __name__ == "__main__":
             mine.append(ob)
         objs += mine
         pieces.append((name, mine))
-        print("  %-14s %-7s %6d tri" % (name, prefix, total))
+        print("  %-14s %-7s %6d tri  반짝임 민 면 %d 남음 %d" % (name, prefix, total, zm, zl))
     m = L.Group("SnowTownOrigin_Marker", L.material("Stone", PAL))
     m.box(0, 0, 0, 0.8, 0.8, 0.8)
     marker = m.finish()

@@ -24,9 +24,11 @@ JOBS = S.JOBS + P.JOBS
 prefixes = [p for _, p, _, _ in JOBS]
 assert len(set(prefixes)) == len(prefixes), "앞머리가 겹친다"
 print("=== SnowKit ===")
+import zfight_scan as Z  # noqa: E402  (2026-10-24 반짝임: 겹친 면 중 작은 쪽을 0.02 앞으로)
 for name, prefix, fn, _ in JOBS:
     g = S.G(prefix)
     fn(g)
+    zm, zl = Z.fix(g, name)
     total = 0
     for k in S.PALETTE:
         ob = g[k].finish()
@@ -37,7 +39,7 @@ for name, prefix, fn, _ in JOBS:
         assert tris <= 10000, "%s 가 삼각형 10000 을 넘는다 (%d)" % (ob.name, tris)
         total += tris
         objs.append(ob)
-    print("  %-16s %-7s %6d tri" % (name, prefix, total))
+    print("  %-16s %-7s %6d tri  반짝임 민 면 %d 남음 %d" % (name, prefix, total, zm, zl))
 
 m = L.Group("SnowOrigin_Marker", L.material("Stone", S.PALETTE))
 m.box(0, 0, 0, 0.8, 0.8, 0.8)

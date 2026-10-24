@@ -853,7 +853,9 @@ def bank_walls(g):
     for p_ in parts:
         slab_poly(g, "RoofMetal", p_, H_V - 0.5, H_V)
         slab_poly(g, "Marble", p_, H_V - 0.85, H_V - 0.5)                    # 천장(밝은 판)
-        slab_poly(g, "Marble", p_, 0.0, 0.06)                                # 바닥(마을 땅 위 얇은 대리석)
+    for p_ in parts:                                                         # 바닥(마을 땅 위 얇은 대리석) — 은행 바닥 판(±18.3, 15.3) 밖부터
+        slab_poly(g, "Marble", [(math.copysign(18.3, x) if abs(abs(x) - 18.24) < 0.01 else x, 15.3 if abs(y - 15.0) < 0.01 else y) for x, y in p_],
+                  0.0, 0.06)
     for p_ in parts:                                                         # 지붕 눈(판 전부 — 난간 띠 밑으로 들어간다)
         slab_poly(g, "SnowCap", p_, H_V, H_V + 0.25)
     # 별관 앞벽(광장 쪽) 바깥: 대리석 아치 벽감 + 놋쇠 금화 판 + 벽등
