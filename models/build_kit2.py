@@ -37,12 +37,17 @@ if only:
 prefixes = [p for _, p, _ in KIT]
 assert len(set(prefixes)) == len(prefixes), "앞머리가 겹친다"
 
+import zfight_scan as Z  # noqa: E402  (2026-10-24 반짝임: 겹친 면 중 작은 쪽을 앞으로)
+Z.LOOK = Z.looks("Jeolhwa_Kit2.luau")
+Z.STEP = 0.02 / SCALE  # 내보낼 때 SCALE 로 줄이므로 Studio 에서 0.02 가 되게
+
 L.clear_scene()
 objs = []
 print("=== JeolhwaKit2 ===")
 for name, prefix, fn in KIT:
     g = L.new_groups(prefix)
     fn(g)
+    zm, zl = Z.fix(g, name)
     tris_total = 0
     for k in L.PALETTE:
         ob = g[k].finish()
@@ -53,7 +58,7 @@ for name, prefix, fn in KIT:
         assert tris <= 10000, "%s 가 삼각형 10000 을 넘는다 (%d)" % (ob.name, tris)
         tris_total += tris
         objs.append(ob)
-    print("  %-18s %-8s %6d tri" % (name, prefix, tris_total))
+    print("  %-18s %-8s %6d tri  반짝임 민 면 %d 남음 %d" % (name, prefix, tris_total, zm, zl))
 
 # 원점 표지
 g = {"Marker": L.Group("KitOrigin_Marker", L.material("Stylobate"))}

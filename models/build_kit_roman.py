@@ -27,6 +27,8 @@ objs = []
 prefixes = [p for _, p, _, _ in B.JOBS]
 assert len(set(prefixes)) == len(prefixes), "앞머리가 겹친다"
 print("=== RomanKit ===")
+import zfight_scan as Z  # noqa: E402  (2026-10-24 반짝임: 겹친 면 중 작은 쪽을 0.02 앞으로 — 무너뜨린 뒤에 잰다)
+Z.LOOK = Z.looks("Roman_Kit.luau")
 jobs = []
 for name, prefix, fn, _ in B.JOBS:
     jobs.append((name, prefix, fn, 1))
@@ -38,6 +40,7 @@ for name, prefix, fn, seed in jobs:
     base = name[:-2] if name.endswith("_2") else name
     mode, opts = RU.SPEC.get(base, ("none", {}))
     pressed, removed, rubble = RU.apply(g, mode, seed=seed * 17 + len(base), **opts)
+    zm, zl = Z.fix(g, name)
     total = 0
     for k in R.PALETTE:
         ob = g[k].finish()
@@ -48,7 +51,8 @@ for name, prefix, fn, seed in jobs:
         assert tris <= 10000, "%s 가 삼각형 10000 을 넘는다 (%d)" % (ob.name, tris)
         total += tris
         objs.append(ob)
-    print("  %-16s %-5s %6d tri  폐허 %s 눌림 %d 없앰 %d 받침 잃은 꼭짓점 %d" % (name, prefix, total, mode, pressed, removed, rubble))
+    print("  %-16s %-5s %6d tri  폐허 %s 눌림 %d 없앰 %d 받침 잃은 꼭짓점 %d  반짝임 민 면 %d 남음 %d" % (
+        name, prefix, total, mode, pressed, removed, rubble, zm, zl))
 
 m = L.Group("RomanOrigin_Marker", L.material("Basalt", R.PALETTE))
 m.box(0, 0, 0, 0.8, 0.8, 0.8)

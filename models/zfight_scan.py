@@ -25,14 +25,15 @@ SKIP = {"Cut", "Pane", "LampPt", "Vent"}
 EPS_N, EPS_D, MIN_A, STEP = 0.01, 0.012, 0.03, 0.02
 
 
-def _looks():
-    """Snow_TownKit SKIN: 재질 이름 → (색, Studio 재질). 같은 모습끼리는 반짝여도 보이지 않는다"""
+def looks(skin_file="Snow_TownKit.luau"):
+    """Studio 가르기 스크립트의 SKIN: 재질 이름 → (색, Studio 재질). 같은 모습끼리는 반짝여도 보이지 않는다.
+    다른 키트는 내보내기 전에 Z.LOOK = Z.looks("Roman_Kit.luau") 처럼 제 표로 바꾼다(같은 이름도 키트마다 빛이 다르다)"""
     import re
-    src = open(os.path.join(HERE, "..", "tools", "Snow_TownKit.luau"), encoding="utf-8").read()
+    src = open(os.path.join(HERE, "..", "tools", skin_file), encoding="utf-8").read()
     return {m.group(1): (m.group(2).replace(" ", ""), m.group(3)) for m in re.finditer(r"^\t(\w+) = \{ RGB\(([\d, ]+)\), M\.(\w+) \}", src, re.M)}
 
 
-LOOK = _looks()
+LOOK = looks()
 
 
 def collect(g, tag, movable=True):
@@ -147,10 +148,13 @@ def find_pairs(faces):
 def fix(g, tag, extra=(), passes=12):
     """보이는 쌍마다 작은 쪽 면을 STEP 앞으로(같은 덩이 꼭짓점을 법선마다 한 번씩). 아홉째 번부터는 번갈아 큰 쪽도 민다
     (작은 쪽만 밀면 다른 면과 다시 겹쳐 오가는 곳이 있다). (민 면 수, 남은 쌍 수)"""
+    def mine(faces):    # extra 끼리의 쌍은 여기서 못 고친다(그 틀 차례에 고친다)
+        return [p for p in find_pairs(faces) if faces[p[1]][5] is not None or faces[p[2]][5] is not None]
+
     total = 0
     for ps_i in range(passes):
         faces = collect(g, tag) + list(extra)
-        ps = find_pairs(faces)
+        ps = mine(faces)
         if not ps:
             break
         done = set()
@@ -167,7 +171,7 @@ def fix(g, tag, extra=(), passes=12):
                     vtx.co += n * STEP
                     done.add((vtx, nk))
             total += 1
-    left = len(find_pairs(collect(g, tag) + list(extra)))
+    left = len(mine(collect(g, tag) + list(extra)))
     return total, left
 
 

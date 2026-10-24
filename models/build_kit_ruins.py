@@ -28,7 +28,12 @@ lifts = {}
 print("=== RuinsKit ===")
 
 
-def take(name, g):
+import zfight_scan as Z  # noqa: E402  (2026-10-24 반짝임: 겹친 면 중 작은 쪽을 0.02 앞으로)
+Z.LOOK = Z.looks("Ruins_Kit.luau")
+
+
+def take(name, g, zf=None):
+    zm, zl = zf or Z.fix(g, name)
     total = 0
     for k in R.RPAL:
         ob = g[k].finish()
@@ -39,7 +44,7 @@ def take(name, g):
         assert tris <= 10000, "%s 가 삼각형 10000 을 넘는다 (%d)" % (ob.name, tris)
         total += tris
         objs.append(ob)
-    print("  %-16s %6d tri" % (name, total))
+    print("  %-16s %6d tri  반짝임 민 면 %d 남음 %d" % (name, total, zm, zl))
 
 
 for name, prefix, fn, _, _ in jobs:
@@ -49,8 +54,12 @@ for name, prefix, fn, _, _ in jobs:
     take(name, g)
 
 if not only or "Tower" in only:
-    for k, g in enumerate(R.tower_section_groups()):
-        take("Tower_S%d" % (k + 1), g)
+    gs = R.tower_section_groups()
+    # 토막끼리 맞닿은 면도 재려고 나머지 토막 면을 extra 로 준다. 다 고친 뒤에 마무리(finish 가 bmesh 를 푼다)
+    zfs = [Z.fix(g, "Tower_S%d" % (k + 1), [f for j, o in enumerate(gs) if j != k for f in Z.collect(o, "RTw%d" % (j + 1), movable=False)])
+           for k, g in enumerate(gs)]
+    for k, g in enumerate(gs):
+        take("Tower_S%d" % (k + 1), g, zfs[k])
     with open(os.path.join(HERE, "..", "tools", "Ruins_steps.luau"), "w", encoding="utf-8") as f:
         f.write("-- build_kit_ruins.py 가 적은 탑 계단 윗면 점 {번호, x, y, z, 폭}. 탑 발치 원점, 로블록스 축\nreturn {\n")
         for i, x, y, z, w in R.STEPS_OUT:

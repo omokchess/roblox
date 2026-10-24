@@ -27,9 +27,12 @@ ALL = H.JOBS + P.JOBS
 jobs = [j for j in ALL if not only or j[0] in only]
 assert len(jobs) == (len(only) or len(ALL)), "모르는 소품 이름이 있다 %s" % only
 print("=== JeolhwaProps ===")
+import zfight_scan as Z  # noqa: E402  (2026-10-24 반짝임: 겹친 면 중 작은 쪽을 0.02 앞으로)
+Z.LOOK = Z.looks("Jeolhwa_Props.luau")
 for name, prefix, fn, _, _ in jobs:
     g = H.G(prefix)
     fn(g)
+    zm, zl = Z.fix(g, name)
     total = 0
     for k in H.HPAL:
         ob = g[k].finish()
@@ -40,7 +43,7 @@ for name, prefix, fn, _, _ in jobs:
         assert tris <= 10000, "%s 가 삼각형 10000 을 넘는다 (%d)" % (ob.name, tris)
         total += tris
         objs.append(ob)
-    print("  %-16s %-7s %6d tri" % (name, prefix, total))
+    print("  %-16s %-7s %6d tri  반짝임 민 면 %d 남음 %d" % (name, prefix, total, zm, zl))
 
 m = L.Group("HanokOrigin_Marker", L.material("Stone", H.HPAL))
 m.box(0, 0, 0, 0.8, 0.8, 0.8)
