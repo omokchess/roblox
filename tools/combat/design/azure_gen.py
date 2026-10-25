@@ -20,7 +20,7 @@ KEYS = ["Root", "Torso", "Head", "RArm", "LArm", "RLeg", "LLeg", "W", "O"]
 ORDER = ["STANCE", "THUMB", "CROUCH", "DRAW1", "DRAW2", "DRAW3", "OUT", "KESA", "RISE", "DRAWCUT", "CUTDOWN", "SWEEP", "ZAN", "CHIBURI", "NOTO",
          "PEEK", "FLICK", "LIFT", "STRIKE", "BLOCK", "RECOIL", "STEPBACK", "HANG", "LAND", "BOW", "SLASHR"]
 # 이펙트가 쓰는 자세(잔상 — Fx/AzureBlade 의 Ghost)
-GHOST_POSES = ["STANCE", "DRAW2", "DRAWCUT", "RISE", "CUTDOWN", "KESA", "SWEEP", "OUT", "SLASHR"]
+GHOST_POSES = ["STANCE", "DRAW1", "DRAW2", "DRAWCUT", "RISE", "CUTDOWN", "KESA", "SWEEP", "OUT", "SLASHR", "NOTO"]
 ARMS = {"RArm", "LArm", "W", "O"}
 
 
@@ -258,19 +258,32 @@ text += "\n" + motion("Dodge", "회피 강약중: 낮게 확 비켜서고(선 �
                       [(0, None, "STANCE"), (0.1, "expoOut", "STEPBACK"), (0.42, "sineOut", "STEPBACK", {"Root": (1.3, -0.52, 1.0, 0, 24, -4)}), (0.75, "cubicInOut", "STANCE")],
                       ['{ t = 0.01, k = "Fx", n = "Afterimage" }'], "\t\tBlendIn = 0.02,\n", 1)
 
+def _drift(name, dy=-0.04, dz=-0.02, dry=-2):
+    """센 박 뒤 버티기: 그 자세에서 조금 더 가라앉고 비튼다"""
+    r = list(POSES[name]["Root"])
+    r[1] += dy
+    r[2] += dz
+    r[4] += dry
+    return {"Root": tuple(round(v, 3) for v in r)}
+
+
 S = []
 S.append(motion("ScabbardStrike", "검집 타격 강중약중강: 칼자루를 낚아채고[강] · 검집째 치켜들고[중] · 꼭대기에서 머물다[약] · 내려오며[중] · 내리꽂는다[강] — 약중강약으로 거둔다", 1.95,
                 [(0, None, "STANCE"), (0.12, "expoOut", "CROUCH"), (0.4, "cubicInOut", "LIFT"), (0.62, "sineInOut", "LIFT", {"Root": (0, -0.1, 0.22, 0, 14, 0), "Torso": (14, 0, 0)}),
                  (0.8, "expoIn", "STRIKE"), (1.15, "sineOut", "STRIKE", {"Root": (0, -0.44, -0.34, 0, -6, 0)}), (1.45, "cubicInOut", "CROUCH"), (1.52, "expoIn", "NOTO"), (1.95, "sineInOut", "STANCE")],
                 ['{ t = 0.58, k = "Dash", to = "Target", gap = 6.5, d = 0.2 }', '{ t = 0.8, k = "Hit", i = 1, fx = "SheathHit" }', '{ t = 0.81, k = "Stop", d = 0.08 }',
                  '{ t = 0.82, k = "Shake", a = 0.35, d = 0.25 }', '{ t = 1.15, k = "Dash", to = "Home", d = 0.32 }', '{ t = 1.52, k = "Fx", n = "Click" }']))
-S.append(motion("FocusCut", "집중 베기([집중력]) 강약강약중강약: 낚아채 숙이고 · 숨을 멈춰 · 한순간 뽑아 베고 · 버티고 · 털고 · 딸깍 · 숨", 1.9,
-                [(0, None, "STANCE"), (0.12, "expoOut", "CROUCH"), (0.38, "sineInOut", "CROUCH", {"Root": (0, -0.56, 0.05, 0, 22, 0)}), (0.45, "expoOut", "DRAWCUT"),
-                 (0.85, "sineOut", "DRAWCUT", {"Root": (0, -0.4, -0.12, 0, -58, 0)}), (1.1, "cubicInOut", "CHIBURI"), (1.22, "cubicIn", "OUT"), (1.3, "linear", "DRAW3"),
-                 (1.5, "cubicIn", "NOTO"), (1.9, "sineInOut", "STANCE")],
-                ['{ t = 0.02, k = "Dash", to = "Target", gap = 4.6, d = 0.12 }', '{ t = 0.2, k = "Fx", n = "Glint" }', '{ t = 0.41, k = "Trail", on = true }', '{ t = 0.44, k = "Fx", n = "DrawFlash" }',
-                 '{ t = 0.46, k = "Hit", i = 1, fx = "CutHit" }', '{ t = 0.47, k = "Stop", d = 0.06 }', '{ t = 0.62, k = "Trail", on = false }',
-                 '{ t = 0.9, k = "Dash", to = "Home", d = 0.3 }', '{ t = 1.5, k = "Fx", n = "Click" }']))
+S.append(motion("FocusCut", "집중 베기([집중력]) — 발도술 셋과 같은 결로 작게: 칼자루를 낚아채[강] 조금 뽑다 챙! 멈추고[강] 숨을 고르다[약] "
+                "잔상을 남기고 앞 두 칸을 블링크로 지나 벤 자세로 나타나면 지나간 자리에 작게 기운 검흔이 반짝이며 벤다[강] → 버티고[약] 털고[중] "
+                "딸깍[강] → 잔상을 남기고 제자리로[약]", 2.2,
+                [(0, None, "STANCE"), (0.12, "expoOut", "CROUCH"), (0.32, "sineInOut", "DRAW1"),
+                 (0.36, "expoOut", "DRAW1", {"Root": (0, -0.34, 0.04, 0, 61, 0), "Torso": (-6, 14, 0)}), (0.58, "sineInOut", "DRAW1", {"Root": (0, -0.32, 0.02, 0, 60, 0)}),
+                 (0.62, "linear", "DRAWCUT"), (0.95, "sineOut", "DRAWCUT", _drift("DRAWCUT")), (1.2, "cubicInOut", "CHIBURI"), (1.32, "cubicIn", "OUT"),
+                 (1.4, "linear", "DRAW3"), (1.6, "cubicIn", "NOTO"), (1.66, "linear", "NOTO"), (2.2, "sineInOut", "STANCE")],
+                ['{ t = 0.12, k = "Fx", n = "Glint" }', '{ t = 0.34, k = "Fx", n = "Ching" }', '{ t = 0.59, k = "Fx", n = "Slip", p = "DRAW1" }',
+                 '{ t = 0.59, k = "Dash", to = "Target", n = 2, gap = -2.4, d = 0.04, e = "linear" }', '{ t = 0.65, k = "Fx", n = "SmallCuts" }',
+                 '{ t = 0.7, k = "Hit", i = 1, fx = "CutHit" }', '{ t = 0.71, k = "Stop", d = 0.06 }', '{ t = 0.71, k = "Shake", a = 0.25, d = 0.18 }',
+                 '{ t = 1.6, k = "Fx", n = "Click" }', '{ t = 1.68, k = "Fx", n = "Slip", p = "NOTO" }', '{ t = 1.68, k = "Dash", to = "Home", d = 0.04, e = "linear" }']))
 S.append(motion("TrueIaido", "진 발도술: 칼자루를 쥐고[중] 천천히 뽑아[약약약] 빠지는 순간[강] 숨을 고르다[약] 왼쪽 아래로 사선베기[강] → 몹 앞에 잔상 셋 → 타격마다 하나씩 사라진다[중중강] → 털고[중] 딸깍[강] 숨[약]", 3.75,
                 [(0, None, "STANCE"), (0.2, "cubicOut", "CROUCH"), (0.6, "sineInOut", "DRAW1"), (0.95, "sineInOut", "DRAW2"), (1.25, "sineIn", "DRAW3"), (1.31, "expoOut", "OUT"),
                  (1.45, "sineOut", "OUT", {"Root": (0, -0.3, 0.05, 0, -18, 0)}), (1.52, "expoOut", "KESA"), (1.98, "sineOut", "KESA", {"Root": (0, -0.54, -0.27, 0, 16, 0)}),
@@ -290,15 +303,6 @@ S.append(motion("IaidoPeak", "발도술의 절정: 칼자루를 쥐고[중] 천�
                  '{ t = 1.3, k = "Fx", n = "Vanish" }', '{ t = 1.3, k = "Dash", to = "Far", straight = true, past = 3, d = 0.04, e = "linear" }', '{ t = 1.37, k = "Fx", n = "PeakPath" }',
                  '{ t = 1.58, k = "Hit", i = 1, fx = "RowFlash" }', '{ t = 1.75, k = "Hit", i = 2, fx = "RowFlash" }', '{ t = 2.0, k = "Hit", i = 3, fx = "RowFlash" }',
                  '{ t = 2.01, k = "Stop", d = 0.1 }', '{ t = 2.02, k = "Shake", a = 0.5, d = 0.4 }', '{ t = 2.82, k = "Fx", n = "Click" }', '{ t = 2.9, k = "Dash", to = "Home", d = 0.45 }']))
-def _drift(name, dy=-0.04, dz=-0.02, dry=-2):
-    """센 박 뒤 버티기: 그 자세에서 조금 더 가라앉고 비튼다"""
-    r = list(POSES[name]["Root"])
-    r[1] += dy
-    r[2] += dz
-    r[4] += dry
-    return {"Root": tuple(round(v, 3) for v in r)}
-
-
 # 블링크 다섯: 남은 길의 1/5 · 1/4 · 1/3 · 1/2 · 전부 → 같은 걸음으로 줄 끝까지. 간격이 점점 짧아진다(가속)
 BLINKS = [(0.8, "OUT", "KESA", 0.2), (1.08, "KESA", "RISE", 0.25), (1.32, "RISE", "DRAWCUT", 0.333), (1.52, "DRAWCUT", "CUTDOWN", 0.5), (1.69, "CUTDOWN", "SLASHR", 1)]
 NEXT = [1.06, 1.3, 1.5, 1.67, 1.98]

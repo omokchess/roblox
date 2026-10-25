@@ -2,6 +2,7 @@
 --[[
 	Fx/AzureBlade — 청의 검사 이펙트. 푸른 칼빛·흰 섬광·잔상·물·검로. (2026-10-25, 같은 날 사용자 말 설명으로 다시 짬)
 
+	  집중 베기     조금 뽑다 챙 멈춤(Ching) → 잔상을 남기고(Slip) 앞 두 칸을 블링크로 지나 작게 기운 검흔(SmallCuts) → 딸깍 → 잔상을 남기고 제자리로
 	  진 발도술     천천히 뽑다(DrawGlint) 칼이 빠지는 순간(Release) 왼쪽 아래로 사선베기(KesaArc) →
 	                몹 앞에 서로 다른 베기 자세의 잔상을 타격 수만큼(Ghosts) → 타격마다 잔상이 하나씩 사라지며 벤다(GhostCut)
 	  발도술의 절정 반쯤 뽑다 "챙" 하고 멈춰 드러난 날에 빛(Ching) → 사라져(Vanish) 줄 끝에 이미 벤 자세로 서고,
@@ -197,13 +198,6 @@ function Fx.SheathHit(ctx: any, _ev: any, at: Vector3?)
 	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.4, R1 = 2.4, Color = AZURE, Life = 0.25, Width = 0.2, Facing = true })
 end
 
--- 집중 베기: 한순간 뽑는 섬광 + 앞을 가로지르는 넓은 원호
-function Fx.DrawFlash(ctx: any)
-	local hand = ctx.Hand("R")
-	ctx.Vfx.Flash(hand, { Color = WHITE, Size = 7, Life = 0.2, Brightness = 7 })
-	Common.Arc(ctx, ctx.Root.Position + Vector3.new(0, 0.4, 0), 88, -40, 120, { Radius = 5.6, Width = 0.9, Color = AZURE, Core = WHITE, Sweep = 0.04, Life = 0.28 })
-end
-
 function Fx.CutHit(ctx: any, _ev: any, at: Vector3?)
 	cuts(ctx, at or ctx.Target, 2, 1.8)
 end
@@ -311,12 +305,12 @@ end
 
 --[[
 	줄(a → b, 제 줄을 따라 곧게) 위 한 점을 가운데로, 줄 방향에서 위아래로 ±TILT° 무작위로 기운 곧은 선의 두 끝.
-	선은 땅 위 0.1 ~ 4.5×MARK 안에 든다 — 많이 기운 선은 그 높이만큼 길게 위아래로 뻗고, 가운데 높이를 그에 맞춰 올린다.
+	선은 땅 위 0.1 ~ top(기본 4.5×MARK) 안에 든다 — 많이 기운 선은 그 높이만큼 길게 위아래로 뻗고, 가운데 높이를 그에 맞춰 올린다.
 	side = 줄 옆 방향(가운데를 옆으로 흩뜨린다)
 ]]
-local function tilted(rng: Random, a: Vector3, b: Vector3, ground: number, side: Vector3, longest: number): (Vector3, Vector3)
+local function tilted(rng: Random, a: Vector3, b: Vector3, ground: number, side: Vector3, longest: number, ceiling: number?): (Vector3, Vector3)
 	local d = flat(b - a)
-	local top = 4.5 * MARK
+	local top = ceiling or 4.5 * MARK
 	local th = math.rad(rng:NextNumber(-TILT, TILT))
 	local sin = math.abs(math.sin(th))
 	local len = math.min(longest * rng:NextNumber(0.55, 1), (top - 0.1) / math.max(0.05, sin))
@@ -362,6 +356,38 @@ function Fx.RowFlash(ctx: any, ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	cuts(ctx, p, 2, 2.4 * MARK, 0.35 * MARK)
 	ctx.Vfx.Sparks(p, { Color = ICE, Count = 10, Speed = 20 })
+end
+
+--=== 집중 베기(2026-10-26 — 발도술 셋과 같은 결로 작게) ===--
+
+-- 블링크로 빠지는 순간: 선 자리에 그 자세(ev.p)의 잔상을 남긴다(출발 자리를 적어 둔다 — 작은 검흔이 여기서 시작)
+function Fx.Slip(ctx: any, ev: any)
+	local s = st(ctx)
+	s.slipFrom = ctx.Root.Position
+	local g = Common.Ghost(ctx, pose((ev and ev.p) or "DRAW1"), ctx.Root, { Transparency = 0.55, FadeIn = 0.01 })
+	if g then
+		task.delay(0.15, function()
+			g.Vanish(0.3)
+		end)
+	end
+	ctx.Vfx.Flash(ctx.Root.Position, { Color = ICE, Size = 4, Life = 0.15, Brightness = 4 })
+end
+
+-- 지나간 앞 두 칸에 작게 기운 곧은 검흔 몇 줄이 반짝(발도술의 절정 칼날의 작은 판)
+function Fx.SmallCuts(ctx: any)
+	local s = st(ctx)
+	local a = s.slipFrom or ctx.Actor.Home.Position
+	local b = ctx.Root.Position
+	local side = flat(b - a):Cross(Vector3.yAxis)
+	local rng = Random.new()
+	for k = 1, 4 do
+		local p0, p1 = tilted(rng, a, b, ctx.Ground, side, (b - a).Magnitude * 0.6, 3.4)
+		stroke(p0, p1, { Width = rng:NextNumber(0.08, 0.16), Color = if k % 2 == 0 then ICE else AZURE, Grow = 0.04, Life = 0.35, Delay = (k - 1) * 0.03 })
+	end
+	for _ = 1, 2 do
+		local q = a:Lerp(b, rng:NextNumber(0.3, 0.9))
+		twinkle(ctx, Vector3.new(q.X, ctx.Ground + rng:NextNumber(1, 2.4), q.Z), 0.9)
+	end
 end
 
 --=== 공간의 이해(2026-10-26 다시 — 연속 블링크로 줄 끝까지 → 꽂음 → 격자 검흔이 필드 전체를 벤다) ===--
@@ -421,12 +447,12 @@ function Fx.Blink(ctx: any, ev: any)
 end
 
 --[[
-	격자 칸 경계(전투 공간의 앞 u · 옆 v 좌표). 적 진영 칸(ctx.EnemyTiles — 전투 화면이 넘겨준다)의 가운데들에서
-	겹치지 않는 u·v 값을 모아 그 사이 한가운데와 바깥 가장자리를 경계로 삼는다. 칸을 모르면(전시장) 첫 대상을
-	첫 열 가운데로 6×3 칸을 어림한다.
+	격자 선 자리(전투 공간의 앞 u · 옆 v 좌표)와 칸 간격. 선은 **칸 정중앙**을 지나 교차점이 칸 가운데에 온다
+	(2026-10-26 사용자: 칸 경계에서 0.5칸 옮기기). 적 진영 칸(ctx.EnemyTiles — 전투 화면이 넘겨준다)의 가운데들에서
+	겹치지 않는 u·v 값을 모은다. 칸을 모르면(전시장) 첫 대상을 첫 열 가운데로 6×3 칸을 어림한다.
 ]]
 local PITCH = 6
-local function gridLines(ctx: any): ({ number }, { number })
+local function gridLines(ctx: any): ({ number }, { number }, number, number)
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
 	local origin = ctx.Actor.Home.Position
@@ -456,16 +482,15 @@ local function gridLines(ctx: any): ({ number }, { number })
 		for i = 2, #vals do
 			pitch = math.min(pitch, vals[i] - vals[i - 1])
 		end
-		local out = { vals[1] - pitch / 2 }
-		for i = 1, #vals do
-			table.insert(out, vals[i] + pitch / 2)
-		end
-		return out
+		return vals, pitch
 	end
-	return bounds(f), bounds(r)
+	local us, pu = bounds(f)
+	local vs, pv = bounds(r)
+	return us, vs, pu, pv
 end
 
--- 꽂은 뒤: 필드 전체에 격자로 반듯하게 썰린 검흔 — 바닥과 가슴 높이 두 겹 가로세로 + 교차점마다 세로 선이 앞에서 뒤로 차례로 그어지고 반짝인다
+-- 꽂은 뒤: 필드 전체에 격자로 반듯하게 썰린 검흔 — 칸 정중앙을 지나는 바닥·가슴 높이 두 겹 가로세로(필드 가장자리까지) +
+-- 칸 가운데(교차점)마다 세로 선이 앞에서 뒤로 차례로 그어지고 반짝인다
 function Fx.GridCut(ctx: any)
 	local s = st(ctx)
 	s.grid = {}
@@ -473,11 +498,11 @@ function Fx.GridCut(ctx: any)
 	local r = f:Cross(Vector3.yAxis)
 	local home = ctx.Actor.Home.Position
 	local base = Vector3.new(home.X, ctx.Ground, home.Z)
-	local us, vs = gridLines(ctx)
+	local us, vs, pu, pv = gridLines(ctx)
 	local function at(u: number, v: number, y: number): Vector3
 		return base + f * u + r * v + Vector3.new(0, y, 0)
 	end
-	local u0, u1, v0, v1 = us[1], us[#us], vs[1], vs[#vs]
+	local u0, u1, v0, v1 = us[1] - pu / 2, us[#us] + pu / 2, vs[1] - pv / 2, vs[#vs] + pv / 2
 	local span = math.max(1, u1 - u0)
 	local function delay(u: number): number
 		return 0.3 * (u - u0) / span
