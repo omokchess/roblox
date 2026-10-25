@@ -377,13 +377,30 @@ blade_w(P, (0.86, -0.2, -0.47), (0.4, -0.15, 0.9))
 keep("SLASHR", "강한 베기 끝 — 오른쪽 아래로 아주 조금 기운 가로베기, 깊게 내딛고 몸이 오른쪽으로 감긴다", P)
 
 
+# 공간의 이해 블링크 자세(2026-10-26 사용자: "블링크했을 때 동작이 이전 동작에 비해 크게 달라지도록") —
+# 높이(아주 낮게 ↔ 공중) · 몸 방향(오른쪽으로 크게 틂 ↔ 뒤돌아섬) · 칼 방향을 블링크마다 번갈아 바꾼다. 팔·칼은 원래 자세 그대로
+def variant(src, root, **legs):
+    P = {k: tuple(v) for k, v in POSES[src].items()}
+    P["Root"] = root
+    P.update(legs)
+    return P
+
+
+keep("SKYRISE", "공중 올려베기 — 뛰어올라 공중에서 오른 위로 쳐올린 채(다리를 벌려 뜬다)",
+     variant("RISE", (0, 1.1, 0.05, 0, -34, 0), RLeg=(40, 0, -6), LLeg=(-34, 0, 6)))
+keep("SIDEKESA", "틀어 사선베기 — 몸을 오른쪽으로 크게 틀어 낮게 왼 아래로 갈라 내린 끝",
+     variant("KESA", (0, -0.6, -0.2, 0, -70, 0)))
+keep("BACKSWEEP", "뒤돌아 휩쓸기 — 몸이 거의 반 바퀴 돌아 등을 적 쪽에 두고 크게 휩쓴 끝",
+     variant("SWEEP", (0, -0.5, -0.25, 0, 190, 0)))
+
+
 # 자세마다 칼의 상태(azure_gen 이 키 사이 중간 키를 넣을 때 본다)
 #   back  = 칼이 등 검집에 꽂혀 있다(DEPTH 만큼 뽑힘) · carry = 검집째 손에 든다 · drawn = 뽑아 들었다
 #   hilt  = 두 손이 칼자루·검집을 쥐고 뽑는 중(검집이 등에서 떨어져 있다 — DEPTH 만큼 뽑힘)
 MODE = {name: "back" for name in POSES}
 for name in ("LIFT", "STRIKE", "BLOCK"):
     MODE[name] = "carry"
-for name in ("DRAWCUT", "RAISE", "SWEEP", "CUTDOWN", "CHIBURI", "OUT", "KESA", "RISE", "ZAN", "SLASHR"):
+for name in ("DRAWCUT", "RAISE", "SWEEP", "CUTDOWN", "CHIBURI", "OUT", "KESA", "RISE", "ZAN", "SLASHR", "SKYRISE", "SIDEKESA", "BACKSWEEP"):
     MODE[name] = "drawn"
 for name in ("DRAW1", "DRAW2", "DRAW3"):
     MODE[name] = "hilt"

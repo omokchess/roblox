@@ -18,9 +18,9 @@ POSES, NOTES = A.POSES, A.NOTES
 
 KEYS = ["Root", "Torso", "Head", "RArm", "LArm", "RLeg", "LLeg", "W", "O"]
 ORDER = ["STANCE", "THUMB", "CROUCH", "DRAW1", "DRAW2", "DRAW3", "OUT", "KESA", "RISE", "DRAWCUT", "CUTDOWN", "SWEEP", "ZAN", "CHIBURI", "NOTO",
-         "PEEK", "FLICK", "LIFT", "STRIKE", "BLOCK", "RECOIL", "STEPBACK", "HANG", "LAND", "BOW", "SLASHR"]
+         "PEEK", "FLICK", "LIFT", "STRIKE", "BLOCK", "RECOIL", "STEPBACK", "HANG", "LAND", "BOW", "SLASHR", "SKYRISE", "SIDEKESA", "BACKSWEEP"]
 # 이펙트가 쓰는 자세(잔상 — Fx/AzureBlade 의 Ghost)
-GHOST_POSES = ["STANCE", "DRAW1", "DRAW2", "DRAWCUT", "RISE", "CUTDOWN", "KESA", "SWEEP", "OUT", "SLASHR", "NOTO"]
+GHOST_POSES = ["STANCE", "DRAW1", "DRAW2", "DRAWCUT", "RISE", "CUTDOWN", "KESA", "SWEEP", "OUT", "SLASHR", "NOTO", "ZAN", "SKYRISE", "SIDEKESA", "BACKSWEEP"]
 ARMS = {"RArm", "LArm", "W", "O"}
 
 
@@ -303,8 +303,10 @@ S.append(motion("IaidoPeak", "발도술의 절정: 칼자루를 쥐고[중] 천�
                  '{ t = 1.3, k = "Fx", n = "Vanish" }', '{ t = 1.3, k = "Dash", to = "Far", straight = true, past = 3, d = 0.04, e = "linear" }', '{ t = 1.37, k = "Fx", n = "PeakPath" }',
                  '{ t = 1.58, k = "Hit", i = 1, fx = "RowFlash" }', '{ t = 1.75, k = "Hit", i = 2, fx = "RowFlash" }', '{ t = 2.0, k = "Hit", i = 3, fx = "RowFlash" }',
                  '{ t = 2.01, k = "Stop", d = 0.1 }', '{ t = 2.02, k = "Shake", a = 0.5, d = 0.4 }', '{ t = 2.82, k = "Fx", n = "Click" }', '{ t = 2.9, k = "Dash", to = "Home", d = 0.45 }']))
-# 블링크 다섯: 남은 길의 1/5 · 1/4 · 1/3 · 1/2 · 전부 → 같은 걸음으로 줄 끝까지. 간격이 점점 짧아진다(가속)
-BLINKS = [(0.8, "OUT", "KESA", 0.2), (1.08, "KESA", "RISE", 0.25), (1.32, "RISE", "DRAWCUT", 0.333), (1.52, "DRAWCUT", "CUTDOWN", 0.5), (1.69, "CUTDOWN", "SLASHR", 1)]
+# 블링크 다섯: 남은 길의 1/5 · 1/4 · 1/3 · 1/2 · 전부 → 같은 걸음으로 줄 끝까지. 간격이 점점 짧아진다(가속).
+# 자세는 앞 자세와 크게 다르게(2026-10-26 사용자): 서서 치켜듦 → 바닥까지 낮은 런지 → 공중 올려베기 → 오른쪽으로 틀어 낮은 사선 →
+# 뒤돌아 휩쓸기 → 앞을 보고 강한 가로베기(줄 끝)
+BLINKS = [(0.8, "OUT", "ZAN", 0.2), (1.08, "ZAN", "SKYRISE", 0.25), (1.32, "SKYRISE", "SIDEKESA", 0.333), (1.52, "SIDEKESA", "BACKSWEEP", 0.5), (1.69, "BACKSWEEP", "SLASHR", 1)]
 NEXT = [1.06, 1.3, 1.5, 1.67, 1.98]
 spec = [(0, None, "STANCE"), (0.14, "expoOut", "CROUCH"), (0.36, "sineInOut", "DRAW1"), (0.56, "sineIn", "DRAW3"), (0.61, "expoOut", "OUT"),
         (0.78, "sineOut", "OUT", _drift("OUT"))]
@@ -312,7 +314,8 @@ events = ['{ t = 0, k = "Fx", n = "CamFollow" }', '{ t = 0.14, k = "Fx", n = "Gl
 for (t, before, after, frac), hold in zip(BLINKS, NEXT):
     # 블링크한 한순간 자세가 바뀐다(키 사이 0.03초) — 그 뒤엔 여린 박으로 버틴다
     spec.append((round(t + 0.03, 3), "linear", after))
-    spec.append((hold, "sineOut", after, _drift(after)))
+    # 공중 자세는 버티는 동안 조금 떨어진다
+    spec.append((hold, "sineOut", after, _drift(after, dy=-0.25) if after == "SKYRISE" else _drift(after)))
     events.append('{ t = %s, k = "Fx", n = "Blink", p = "%s" }' % (t, before))
     events.append('{ t = %s, k = "Dash", to = "Far", straight = true, frac = %s, past = 2, d = 0.03, e = "linear" }' % (t, frac))
 spec += [(2.18, "cubicInOut", "OUT"), (2.26, "linear", "DRAW3"), (2.62, "sineIn", "DRAW1"), (2.72, "expoIn", "NOTO"), (4.3, "sineInOut", "STANCE")]
@@ -320,7 +323,7 @@ events += ['{ t = 1.73, k = "Stop", d = 0.05 }', '{ t = 1.73, k = "Shake", a = 0
            '{ t = 2.72, k = "Fx", n = "Click" }', '{ t = 2.8, k = "Fx", n = "GridCut" }', '{ t = 3.25, k = "Fx", n = "GridFlash" }',
            '{ t = 3.27, k = "Hit", i = 1, fx = "GridHit" }', '{ t = 3.28, k = "Stop", d = 0.12 }', '{ t = 3.29, k = "Shake", a = 0.7, d = 0.5 }',
            '{ t = 3.6, k = "Dash", to = "Home", d = 0.5, e = "sineInOut" }']
-S.append(motion("SpaceCut", "공간의 이해([집중력]): 칼자루를 낚아채[강] 뽑아[약중] 빠짐[강] → 베는 자세를 바꿔 가며 블링크 다섯 번으로 적진을 가로질러(간격이 점점 짧아짐) "
+S.append(motion("SpaceCut", "공간의 이해([집중력]): 칼자루를 낚아채[강] 뽑아[약중] 빠짐[강] → 블링크마다 높이·몸 방향·칼 방향이 크게 바뀌며 다섯 번으로 적진을 가로질러(간격이 점점 짧아짐) "
                 "줄 끝에서 거의 가로로 멈춰 서고[강] → 천천히 꽂다[중약] 딸깍[강] → 격자로 반듯하게 썰린 검흔이 반짝이며 필드 전체를 벤다[강] (고정 피해)", 4.4, spec, events))
 S.append(motion("Provoke", "도발 중약강약강약: 엄지로 칼을 한 자 밀어내고 · 턱을 들어 내려다보다 · 왼손 끝을 까딱 · 버티고 · 딸깍 · 숨([집중력])", 1.75,
                 [(0, None, "STANCE"), (0.3, "cubicOut", "PEEK"), (0.72, "sineInOut", "PEEK", {"Head": (18, -20, 6)}), (0.8, "expoOut", "FLICK"),
