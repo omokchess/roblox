@@ -18,9 +18,9 @@ POSES, NOTES = A.POSES, A.NOTES
 
 KEYS = ["Root", "Torso", "Head", "RArm", "LArm", "RLeg", "LLeg", "W", "O"]
 ORDER = ["STANCE", "THUMB", "CROUCH", "DRAW1", "DRAW2", "DRAW3", "OUT", "KESA", "RISE", "DRAWCUT", "CUTDOWN", "SWEEP", "ZAN", "CHIBURI", "NOTO",
-         "PEEK", "FLICK", "LIFT", "STRIKE", "BLOCK", "RECOIL", "STEPBACK", "HANG", "LAND", "BOW", "FOOTLIFT", "FOOTDOWN"]
+         "PEEK", "FLICK", "LIFT", "STRIKE", "BLOCK", "RECOIL", "STEPBACK", "HANG", "LAND", "BOW", "RUSH", "LEAP", "LANDCUT", "SPIN", "COIL", "SLASHR"]
 # 이펙트가 쓰는 자세(잔상 — Fx/AzureBlade 의 Ghost)
-GHOST_POSES = ["STANCE", "DRAW2", "DRAWCUT", "RISE", "CUTDOWN", "KESA", "SWEEP"]
+GHOST_POSES = ["STANCE", "DRAW2", "DRAWCUT", "RISE", "CUTDOWN", "KESA", "SWEEP", "RUSH"]
 ARMS = {"RArm", "LArm", "W", "O"}
 
 
@@ -197,8 +197,8 @@ head = '''--!strict
 	  · 진 발도술 — 천천히 뽑아 왼쪽 아래로 사선베기 → 몹 앞에 다른 베기 자세의 잔상 셋 → 타격마다 하나씩 사라진다.
 	  · 발도술의 절정 — 반쯤 뽑다 "챙" 멈춤(빛) → 줄 끝에 이미 벤 자세로 나타남(사용자 그림, ZAN) → 지나간 자리의 검로 →
 	    줄 전체를 가르는 칼날이 반짝일 때마다 타격.
-	  · 공간의 이해 — 컷신: 물 위에 발을 올림(또옥) → 카메라가 오른쪽 위로 원을 그리며 느려짐 → 물 흐르듯 대상 사이를 지나며
-	    검로 다섯 → 등 검집에 꽂는 순간 한꺼번에 터진다.
+	  · 공간의 이해(2026-10-26 다시, 참고 엘든 링 말레니아) — 뽑아 적진으로 → 살짝 뛰어 오른쪽 아래로 베며 착지 → 오른쪽으로
+	    두 바퀴 돌며 두 발짝 → 뜸 → 거의 가로로 강하게 → 잔상 둘(곧게 · 오른·왼·오른 휘며) → 꽂으며 검로가 터진다. 카메라는 등 뒤에서 따라간다.
 	  · 검집 타격 — 강중약중강: 칼자루를 낚아채고 · 검집째 치켜들고 · 꼭대기에서 머물다 · 내려오며 · 내리꽂는다.
 	칼은 오른팔에 붙어 있어, 등에 꽂힌 자세에서는 키마다 칼을 검집 안에 넣어 두고(azure_poses.place_sword) 칼자루를 잡을 때는
 	오른팔을 칼자루에 정확히 닿게 구한다(grip_hilt). 이펙트는 Fx/AzureBlade, 잔상 자세는 아래 Poses.
@@ -290,23 +290,41 @@ S.append(motion("IaidoPeak", "발도술의 절정: 칼자루를 쥐고[중] 천�
                  '{ t = 1.3, k = "Fx", n = "Vanish" }', '{ t = 1.3, k = "Dash", to = "Far", past = 3, d = 0.04, e = "linear" }', '{ t = 1.37, k = "Fx", n = "PeakPath" }',
                  '{ t = 1.58, k = "Hit", i = 1, fx = "RowFlash" }', '{ t = 1.75, k = "Hit", i = 2, fx = "RowFlash" }', '{ t = 2.0, k = "Hit", i = 3, fx = "RowFlash" }',
                  '{ t = 2.01, k = "Stop", d = 0.1 }', '{ t = 2.02, k = "Shake", a = 0.5, d = 0.4 }', '{ t = 2.82, k = "Fx", n = "Click" }', '{ t = 2.9, k = "Dash", to = "Home", d = 0.45 }']))
-S.append(motion("SpaceCut", "공간의 이해([집중력]) 컷신: 발을 들어[중] 머물다[약] 물 위에 또옥[강] · 고요[약] → 카메라가 오른쪽 위로 원을 그리며 느려지는 동안 천천히 뽑아[중약약약] 빠짐[강] → 끝점에서 물 흐르듯 대상 사이를 다섯 번 지나 검로 다섯 → 집으로 돌아와 천천히 꽂다[중약] 딸깍과 함께 검로가 한꺼번에 터진다[강] (고정 피해)", 6.2,
-                [(0, None, "STANCE"), (0.35, "cubicInOut", "FOOTLIFT"), (0.6, "sineInOut", "FOOTLIFT", {"Root": (0, -0.1, 0, 0, 24, 0)}), (0.68, "quadIn", "FOOTDOWN"),
-                 (1.05, "sineOut", "FOOTDOWN", {"Root": (0, -0.27, -0.08, 0, 24, 0)}), (1.25, "cubicOut", "CROUCH"), (1.65, "sineInOut", "DRAW1"), (2.0, "sineInOut", "DRAW2"),
-                 (2.3, "sineIn", "DRAW3"), (2.36, "expoOut", "OUT"), (2.65, "sineOut", "OUT", {"Root": (0, -0.3, 0.05, 0, -18, 0)}),
-                 (3.0, "sineInOut", "RISE"), (3.32, "sineInOut", "KESA"), (3.7, "sineInOut", "DRAWCUT"), (4.0, "sineInOut", "CUTDOWN"), (4.36, "sineInOut", "SWEEP"),
-                 (4.8, "cubicInOut", "OUT"), (4.88, "linear", "DRAW3"), (5.25, "sineIn", "DRAW1"), (5.35, "expoIn", "NOTO"), (6.2, "sineInOut", "STANCE")],
-                ['{ t = 0, k = "Fx", n = "CamFoot" }', '{ t = 0.68, k = "Fx", n = "WaterStep" }', '{ t = 1.05, k = "Fx", n = "CamOrbit" }', '{ t = 1.25, k = "Fx", n = "Glint" }',
-                 '{ t = 1.6, k = "Fx", n = "DrawGlint" }', '{ t = 2.0, k = "Fx", n = "DrawGlint" }', '{ t = 2.33, k = "Fx", n = "Release" }', '{ t = 2.4, k = "Trail", on = true }',
-                 '{ t = 2.65, k = "Fx", n = "CamHold" }',
-                 '{ t = 2.65, k = "Dash", to = "Target", n = 1, gap = -2.4, side = 1.2, bend = 1.5, face = "move", d = 0.35, e = "sineInOut" }', '{ t = 3.0, k = "Fx", n = "FlowMark", bend = 1.5 }',
-                 '{ t = 3.0, k = "Dash", to = "Target", n = 2, gap = -2.4, side = -1.4, bend = -1.6, face = "move", d = 0.32, e = "sineInOut" }', '{ t = 3.32, k = "Fx", n = "FlowMark", bend = -1.6 }',
-                 '{ t = 3.32, k = "Dash", to = "Target", n = 3, gap = -2.4, side = 1.6, bend = 2, face = "move", d = 0.38, e = "sineInOut" }', '{ t = 3.7, k = "Fx", n = "FlowMark", bend = 2 }',
-                 '{ t = 3.7, k = "Dash", to = "Target", n = 4, gap = -2.4, side = -1.2, bend = -1.4, face = "move", d = 0.3, e = "sineInOut" }', '{ t = 4.0, k = "Fx", n = "FlowMark", bend = -1.4 }',
-                 '{ t = 4.0, k = "Dash", to = "Target", n = 5, gap = -2.4, side = 1, bend = 1.8, face = "move", d = 0.36, e = "sineInOut" }', '{ t = 4.36, k = "Fx", n = "FlowMark", bend = 1.8 }',
-                 '{ t = 4.4, k = "Trail", on = false }', '{ t = 4.4, k = "Dash", to = "Home", d = 0.4, e = "sineInOut", bend = 2 }',
-                 '{ t = 5.35, k = "Fx", n = "Click" }', '{ t = 5.35, k = "Fx", n = "FlowBurst" }', '{ t = 5.37, k = "Hit", i = 1, fx = "BurstHit" }',
-                 '{ t = 5.38, k = "Stop", d = 0.12 }', '{ t = 5.39, k = "Shake", a = 0.7, d = 0.5 }', '{ t = 5.75, k = "Fx", n = "CamFree" }']))
+def _spun(name, dy, **kw):
+    """두 바퀴 돈 뒤의 자세: Root 비틀기에 dy 를 더해(-720) 되감지 않게 이어 간다"""
+    r = list(POSES[name]["Root"])
+    r[4] += dy
+    for k, v in kw.get("root", {}).items():
+        r[k] = v
+    over = {"Root": tuple(r)}
+    over.update({k: v for k, v in kw.items() if k != "root"})
+    return over
+
+
+STEP_A = {"RLeg": (26, 0, -8), "LLeg": (-18, 0, 8)}
+STEP_B = {"RLeg": (-16, 0, -8), "LLeg": (24, 0, 8)}
+S.append(motion("SpaceCut", "공간의 이해([집중력]) — 참고: 엘든 링 말레니아. 칼자루를 낚아채[강] 뽑아[약중] 빠짐[강] → 적진으로 달려들어[중] 살짝 뛰어올라[약] "
+                "오른쪽 아래로 베며 착지[강] → 오른쪽으로 두 바퀴 돌며 베며 두 발짝[중] → 왼쪽으로 감아 뜸[약] → 거의 가로로 강하게[강] → 등 뒤로 잔상 하나가 곧게, "
+                "그 출발점에서 둘째 잔상이 오른쪽·왼쪽·오른쪽으로 휘며 돌아와 몸에 겹친다 → 꽂는 딸깍과 함께 검로가 한꺼번에 터진다[강] (고정 피해). 카메라는 등 뒤에서 따라간다", 5.1,
+                [(0, None, "STANCE"), (0.14, "expoOut", "CROUCH"), (0.38, "sineInOut", "DRAW1"), (0.62, "sineIn", "DRAW3"), (0.67, "expoOut", "OUT"),
+                 (0.8, "sineOut", "OUT", {"Root": (0, -0.3, 0.05, 0, -18, 0)}), (1.0, "quadIn", "RUSH"), (1.18, "quadOut", "LEAP"), (1.32, "sineInOut", "LEAP", {"Torso": (10, 14, 0)}),
+                 (1.38, "expoOut", "LANDCUT"), (1.56, "sineOut", "LANDCUT", {"Root": (0, -0.76, -0.15, 0, -18, 0)}),
+                 (1.64, "cubicOut", "SPIN", _spun("SPIN", -18)), (1.81, "linear", "SPIN", _spun("SPIN", -198, **STEP_A)), (1.98, "linear", "SPIN", _spun("SPIN", -378, **STEP_B)),
+                 (2.15, "linear", "SPIN", _spun("SPIN", -558, **STEP_A)), (2.32, "linear", "SPIN", _spun("SPIN", -738, **STEP_B)),
+                 (2.5, "cubicOut", "COIL", _spun("COIL", -720)), (2.76, "sineInOut", "COIL", _spun("COIL", -716, root={1: -0.66})),
+                 (2.83, "expoOut", "SLASHR", _spun("SLASHR", -720)), (3.3, "sineOut", "SLASHR", _spun("SLASHR", -721, root={1: -0.66, 2: -0.32})),
+                 (3.85, "sineInOut", "SLASHR", _spun("SLASHR", -718, root={1: -0.6})), (3.97, "cubicInOut", "OUT", _spun("OUT", -720)), (4.05, "linear", "DRAW3", _spun("DRAW3", -720)),
+                 (4.2, "cubicIn", "NOTO", _spun("NOTO", -720)), (5.1, "sineInOut", "STANCE", _spun("STANCE", -720))],
+                ['{ t = 0, k = "Fx", n = "CamFollow" }', '{ t = 0.14, k = "Fx", n = "Glint" }', '{ t = 0.4, k = "Fx", n = "DrawGlint" }', '{ t = 0.65, k = "Fx", n = "Release" }',
+                 '{ t = 0.68, k = "Trail", on = true }', '{ t = 0.8, k = "Dash", to = "Target", gap = 6.8, d = 0.22, e = "quadIn" }',
+                 '{ t = 1.02, k = "Dash", to = "Ahead", dist = 1.6, arc = 1.5, d = 0.36, e = "linear" }', '{ t = 1.3, k = "Fx", n = "Carve", d = 0.12 }',
+                 '{ t = 1.39, k = "Stop", d = 0.05 }', '{ t = 1.39, k = "Shake", a = 0.3, d = 0.2 }',
+                 '{ t = 1.6, k = "Dash", to = "Ahead", dist = 2.6, d = 0.72, e = "sineInOut" }', '{ t = 1.62, k = "Fx", n = "Carve", d = 0.72 }',
+                 '{ t = 2.77, k = "Fx", n = "Carve", d = 0.09 }', '{ t = 2.84, k = "Stop", d = 0.08 }', '{ t = 2.85, k = "Shake", a = 0.45, d = 0.3 }', '{ t = 2.95, k = "Trail", on = false }',
+                 '{ t = 3.0, k = "Fx", n = "GhostRush" }', '{ t = 3.3, k = "Fx", n = "GhostWeave" }', '{ t = 3.95, k = "Fx", n = "CamWide" }',
+                 '{ t = 4.2, k = "Fx", n = "Click" }', '{ t = 4.2, k = "Fx", n = "TrailBurst" }', '{ t = 4.22, k = "Hit", i = 1, fx = "BurstHit" }',
+                 '{ t = 4.23, k = "Stop", d = 0.12 }', '{ t = 4.24, k = "Shake", a = 0.7, d = 0.5 }', '{ t = 4.5, k = "Fx", n = "CamFree" }',
+                 '{ t = 4.5, k = "Dash", to = "Home", d = 0.45, e = "sineInOut" }']))
 S.append(motion("Provoke", "도발 중약강약강약: 엄지로 칼을 한 자 밀어내고 · 턱을 들어 내려다보다 · 왼손 끝을 까딱 · 버티고 · 딸깍 · 숨([집중력])", 1.75,
                 [(0, None, "STANCE"), (0.3, "cubicOut", "PEEK"), (0.72, "sineInOut", "PEEK", {"Head": (18, -20, 6)}), (0.8, "expoOut", "FLICK"),
                  (1.05, "sineOut", "FLICK", {"Head": (14, -24, 2)}), (1.12, "expoIn", "NOTO"), (1.75, "sineInOut", "STANCE")],

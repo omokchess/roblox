@@ -4682,3 +4682,15 @@ Moon Animator 2 는 유료(19.99달러)라 사용자가 사지 않기로 하고 
 - 스튜디오 점검 도구: workspace 속성 `CombatTimeScale`(느린 재생) · `CombatShowcaseClass`·`CombatShowcaseOnly`(한 직업·한 스킬만) · `CombatShowcaseZoom`.
 - 고침: `Glint`·`Click` 불꽃 속도가 기본 최소보다 작아 NumberRange 오류, 스튜디오 시험 `PrototypeTests` 로스터 9 → 늘 쓰는 9 + 조건부 2.
 - 점검: run_system_tests · test_motion_math · check_fx · smoke_director(두 직업 통과, 보스 통합 하네스 오류는 예전부터) · selene, 스튜디오 전시장 느린 재생으로 네 스킬 확인.
+
+## 2026-10-26 - 청의 검사: 발도술의 절정 검로 기울기 · 공간의 이해 다시(말레니아 참고)
+
+- **발도술의 절정**: 지나간 자리 검로·줄 칼날이 줄 방향에서 위아래로 **±70°** 안에서 제각각 기운다(`Fx/AzureBlade` TILT). 기울수록 짧게 — 두 끝이 땅 위 0.1~4.5 안.
+- **공간의 이해** 다시(사용자 순서, 참고 엘든 링 말레니아): 칼자루를 낚아채 뽑고 → 적진으로 달려들어(`RUSH`) → 살짝 뛰어(`LEAP`, 돌진 `Ahead`+arc)
+  오른쪽 아래로 베며 착지(`LANDCUT`) → 오른쪽으로 두 바퀴 돌며 두 발짝(`SPIN`, Root 비틀기 -720°, 뒤 키는 -720 을 이어 받아 되감지 않음) →
+  왼쪽으로 감아 뜸(`COIL`) → 거의 가로로 강하게(`SLASHR`) → 잔상 하나가 적진 저편에서 왼쪽을 스쳐 등 뒤로 곧게(`GhostRush`) → 그 출발점에서 둘째 잔상이
+  오른쪽·왼쪽·오른쪽으로 휘며 몸에 겹친다(`GhostWeave`) → 꽂는 딸깍과 함께 검로가 한꺼번에 터진다(`TrailBurst`, 타격 1).
+  검로 = 착지 베기·회전·가로베기의 칼끝 길을 그대로 새긴 것(`Carve`) + 잔상이 지나간 길. 물·원 카메라 컷신은 뺐다.
+- 카메라: 등 뒤 오른쪽 위에서 계속 따라간다(`CamFollow` — 도는 몸 말고 적 쪽 방향 기준, 지금 화면에서 부드럽게 넘어옴), 터지기 전 넓게(`CamWide`).
+  처음엔 적진을 뚫고 지나가 적이 카메라 앞을 가렸다 → 달려드는 거리를 줄여 적 바로 앞에서 끝나게, 카메라를 높이고 오른쪽으로.
+- 엔진: 돌진 `to = "Ahead"`(지금 자리에서 앞으로 dist). 점검: run_system_tests · test_motion_math · check_fx · smoke_director · selene, 스튜디오 전시장 느린 재생.

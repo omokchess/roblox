@@ -18,7 +18,7 @@
 
 	사건(모션 Events 의 k)
 	  Hit    { i = 몇 번째 타격, fx = 이펙트 이름 }  대상 반응·번쩍·피해 숫자
-	  Dash   { to = "Target"|"Home"|"Far", gap = 대상 앞 거리(음수 = 뚫고 지나감), past = Far 일 때 적 진영 끝 너머 거리, d = 걸리는 초,
+	  Dash   { to = "Target"|"Home"|"Far"|"Ahead"(지금 자리에서 앞으로 dist), gap = 대상 앞 거리(음수 = 뚫고 지나감), past = Far 일 때 적 진영 끝 너머 거리, d = 걸리는 초,
 	           n = 몇 번째 대상(대상 수로 감음), side = 진행 방향 오른쪽으로 비켜 감, bend = 길을 옆으로 휘는 높이,
 	           face = "move" 면 가는 쪽을 보고 선다 }
 	  Fx     { n = 이펙트 이름 }                     Fx/<직업>.luau 의 함수
@@ -652,6 +652,12 @@ function CombatDirector:_dash(a: Actor, play: any, ev: any)
 	local to: CFrame
 	if ev.to == "Home" then
 		to = a.Home
+	elseif ev.to == "Ahead" then
+		-- 지금 자리에서 앞(적 쪽)으로 dist 스터드(발짝 · 도약)
+		local forward = flat(a.Home.LookVector)
+		local p = a.Pos.Position + forward * (ev.dist or 3)
+		local at = Vector3.new(p.X, a.Home.Y, p.Z)
+		to = CFrame.lookAt(at, at + forward)
 	elseif ev.to == "Far" then
 		-- 대상을 꿰뚫고 적 진영 맨 끝 칸 너머까지(past 스터드 더) 간다(2026-10-02 사용자: 결투사 강화 스킬)
 		local forward = flat(a.Home.LookVector)
