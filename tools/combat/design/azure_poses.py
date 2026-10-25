@@ -347,8 +347,7 @@ e = grip_hilt(P, 0.22)
 keep("FLICK", "도발 까딱 — 내민 왼손 끝을 위로 튕긴다(덤벼라)", P, e)
 
 
-# ── 2026-10-25 공간의 이해 다시(사용자: 뽑고 → 적진으로 → 살짝 뛰어 오른쪽 아래를 베며 착지 → 오른쪽으로 두 바퀴 돌며 두 발짝 →
-#    뜸 → 거의 가로로 강하게 → 잔상 둘 → 꽂으며 폭발. 참고: 엘든 링 말레니아) ─────────────────────
+# ── 공간의 이해(2026-10-26 사용자: 연속 블링크로 적진을 가로질러 줄 끝에서 꽂고 → 격자 검흔이 필드 전체를 벤다) ─────
 
 
 def blade_w(P, dir_w, edge_w, want=None, pitches=None):
@@ -370,41 +369,6 @@ def blade_w(P, dir_w, edge_w, want=None, pitches=None):
     return best[2]
 
 
-# 돌진: 몸을 앞으로 깊이 숙이고 칼은 오른쪽 뒤 아래로 끌린다(말레니아가 달려들 때처럼), 왼손은 앞으로
-P = base(Root=(0, -0.5, -0.1, 0, 8, 0), Torso=(-30, 0, 0), Head=(4, -8, 0), LArm=(50, 0, -16), RLeg=(42, 0, -4), LLeg=(-44, 0, 6))
-carried(P)
-P["RArm"] = point_arm(P, "R", (1.5, -1.5, 1.4))
-blade_w(P, (0.3, -0.25, 0.92), (0.1, -1, 0.1))
-keep("RUSH", "돌진 — 몸을 깊이 숙이고 칼은 오른쪽 뒤 아래로 끌며 달려든다", P)
-
-# 살짝 뛰어오름: 무릎을 당기고 칼을 왼 어깨 위로 높이(오른쪽 아래로 벨 준비)
-P = base(Root=(0, 0.05, 0, 0, 14, 0), Torso=(6, 12, 0), Head=(4, -16, 0), LArm=(30, 0, -40), RLeg=(64, 0, -6), LLeg=(14, 0, 6))
-carried(P)
-P["RArm"] = point_arm(P, "R", (-0.7, 3.0, -0.2))
-blade_w(P, (-0.5, 0.72, 0.48), (0.5, -0.2, -0.85))
-keep("LEAP", "뛰어오름 — 무릎을 당기고 칼을 왼 어깨 위로 높이 치켜든다", P)
-
-# 착지 베기: 오른쪽 아래로 갈라 내리며 낮게 내려선다
-P = base(Root=(0, -0.72, -0.15, 0, -18, 0), Torso=(-20, -16, 0), Head=(-4, 16, 0), LArm=(20, 0, -52), RLeg=(46, 0, -6), LLeg=(-30, 0, 6))
-carried(P)
-P["RArm"] = point_arm(P, "R", (1.8, -1.5, -1.3))
-pitch = blade_w(P, (0.62, 0, -0.78), (0.55, -0.6, -0.5), want=-2.5)
-keep("LANDCUT", f"착지 베기 — 왼 위에서 오른쪽 아래로 갈라 내리며 낮게 내려선다(기울기 {pitch}°)", P)
-
-# 회전 베기: 칼 든 팔을 오른쪽으로 수평으로 뻗고 왼팔도 벌려 균형(Root 비틀기로 두 바퀴 돈다)
-P = base(Root=(0, -0.32, 0, 0, 0, 0), Torso=(-8, 0, 0), Head=(0, 0, 0), LArm=(0, 0, -84), RLeg=(10, 0, -8), LLeg=(-10, 0, 8))
-carried(P)
-P["RArm"] = point_arm(P, "R", (2.6, 0.35, -0.4))
-blade_w(P, (0.86, -0.06, -0.5), (0.05, -0.15, 1.0))
-keep("SPIN", "회전 베기 — 칼 든 팔을 오른쪽으로 수평으로 뻗어 몸째 돈다(두 바퀴)", P)
-
-# 뜸: 칼을 왼쪽 뒤로 감아 낮게 웅크리고 오른 어깨 너머로 적을 노린다
-P = base(Root=(0, -0.62, 0.05, 0, 40, 0), Torso=(-14, 20, 0), Head=(-2, -40, 0), LArm=(30, 0, -20), RLeg=(30, 0, -6), LLeg=(-26, 0, 6))
-carried(P)
-P["RArm"] = point_arm(P, "R", (-1.3, -0.7, 1.0))
-blade_w(P, (-0.55, -0.12, 0.83), (0.2, -0.1, -1.0))
-keep("COIL", "뜸 — 칼을 왼쪽 뒤로 감아 낮게 웅크리고 오른 어깨 너머로 적을 노린다", P)
-
 # 강한 가로베기 끝: 오른쪽 아래로 아주 조금 기운 가로 — 깊게 내딛고 몸이 오른쪽으로 감긴다
 P = base(Root=(0, -0.62, -0.3, 0, -40, 0), Torso=(-16, -24, 0), Head=(-4, 34, 0), LArm=(20, 0, -60), RLeg=(40, 0, -6), LLeg=(-34, 0, 6))
 carried(P)
@@ -419,7 +383,7 @@ keep("SLASHR", "강한 베기 끝 — 오른쪽 아래로 아주 조금 기운 �
 MODE = {name: "back" for name in POSES}
 for name in ("LIFT", "STRIKE", "BLOCK"):
     MODE[name] = "carry"
-for name in ("DRAWCUT", "RAISE", "SWEEP", "CUTDOWN", "CHIBURI", "OUT", "KESA", "RISE", "ZAN", "RUSH", "LEAP", "LANDCUT", "SPIN", "COIL", "SLASHR"):
+for name in ("DRAWCUT", "RAISE", "SWEEP", "CUTDOWN", "CHIBURI", "OUT", "KESA", "RISE", "ZAN", "SLASHR"):
     MODE[name] = "drawn"
 for name in ("DRAW1", "DRAW2", "DRAW3"):
     MODE[name] = "hilt"

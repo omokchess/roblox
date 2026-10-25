@@ -789,10 +789,11 @@ local focusSkills: { Skill } = {
 	{
 		Id = "SpaceCut",
 		Name = "공간의 이해",
-		Description = "- [집중력] 변형.\n- 칼을 최대한 늘려 공간을 가르듯 큰 범위를 벤다.\n- 적의 방어와 상관없는 고정 피해(트루 데미지).\n- 모든 [집중력]을 소모.",
+		Description = "- [집중력] 변형.\n- 연속으로 블링크해 적진을 가로지르고, 줄 끝에서 칼을 꽂으면 격자로 썰린 검흔이 필드 전체를 벤다.\n- 적의 방어와 상관없는 고정 피해(트루 데미지).\n- 모든 [집중력]을 소모.",
 		Damage = 34,
 		Range = "Melee",
-		Shape = { Kind = "Square", Cells = box(-2, 2, -1, 1) },
+		-- 2026-10-26 사용자: 필드 전체 타격기로(전엔 적 칸 기준 앞뒤 2칸 × 3줄)
+		Shape = { Kind = "All" },
 		Element = "True",
 		Cooldown = 6,
 		Stamina = 20,

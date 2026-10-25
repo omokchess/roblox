@@ -18,7 +18,8 @@
 
 	사건(모션 Events 의 k)
 	  Hit    { i = 몇 번째 타격, fx = 이펙트 이름 }  대상 반응·번쩍·피해 숫자
-	  Dash   { to = "Target"|"Home"|"Far"|"Ahead"(지금 자리에서 앞으로 dist), gap = 대상 앞 거리(음수 = 뚫고 지나감), past = Far 일 때 적 진영 끝 너머 거리, d = 걸리는 초,
+	  Dash   { to = "Target"|"Home"|"Far"|"Ahead"(지금 자리에서 앞으로 dist), straight = Far 를 제 줄 따라 곧게,
+	           frac = Far 까지 남은 길의 이만큼만(연속 블링크), gap = 대상 앞 거리(음수 = 뚫고 지나감), past = Far 일 때 적 진영 끝 너머 거리, d = 걸리는 초,
 	           n = 몇 번째 대상(대상 수로 감음), side = 진행 방향 오른쪽으로 비켜 감, bend = 길을 옆으로 휘는 높이,
 	           face = "move" 면 가는 쪽을 보고 선다 }
 	  Fx     { n = 이펙트 이름 }                     Fx/<직업>.luau 의 함수
@@ -102,6 +103,8 @@ function CombatDirector.new(opts: { Quiet: boolean? }?)
 	self.CameraBase = nil :: CFrame?
 	-- 적 진영 맨 뒷줄 가운데(BattleClient 가 칸을 놓고 정한다). 없으면 가장 먼 배우로 어림한다(돌진 to = "Far")
 	self.FarEnd = nil :: Vector3?
+	-- 적 진영 칸 부품들(BattleClient). 필드 전체를 덮는 이펙트가 칸 경계를 안다(청의 검사 공간의 이해 격자). 없으면 nil
+	self.EnemyTiles = nil :: { BasePart }?
 	-- 피해 숫자를 띄울 때마다 부른다(id, 피해). BattleClient 가 체력바를 그 순간 깎는다
 	self.OnDamage = nil :: ((string, number) -> ())?
 	-- 보스 위성 셋이 함께 도는 바퀴의 각(라디안, _bossHomes)
@@ -462,6 +465,7 @@ function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 		return (weapons and weapons:OrbPosition(i)) or (a.Pos.Position + Vector3.new(0, 3.6, 0))
 	end
 	ctx.EnemyCenter = self:_enemyCenter(a)
+	ctx.EnemyTiles = self.EnemyTiles
 	-- 컷신 카메라: fn(진행도 0~1, 지난 초) → 카메라 CFrame. fn 없이 부르면 전투 카메라로 돌려준다(모션이 끝나도 돌려준다)
 	local director = self
 	function ctx.Shot(d: number?, fn: ((number, number) -> CFrame)?)
@@ -663,7 +667,8 @@ function CombatDirector:_dash(a: Actor, play: any, ev: any)
 		local forward = flat(a.Home.LookVector)
 		local targets = play.Targets[1] or {}
 		local t = targets[1] and self.Actors[targets[1]]
-		local toward = if t then flat(t.Pos.Position - a.Pos.Position) else forward
+		-- straight: 대상 쪽으로 비스듬히 말고 제 줄을 따라 곧게(2026-10-26 청의 검사 — "대각선으로 가지 않게")
+		local toward = if t and not ev.straight then flat(t.Pos.Position - a.Pos.Position) else forward
 		local far = self.FarEnd
 		if not far then
 			local best = -math.huge
@@ -676,6 +681,10 @@ function CombatDirector:_dash(a: Actor, play: any, ev: any)
 		end
 		local reach = (if far then (far - a.Pos.Position):Dot(forward) else 12) + (ev.past or 5)
 		local pos = a.Pos.Position + toward * (reach / math.max(0.3, toward:Dot(forward)))
+		if ev.frac then
+			-- 남은 길의 이만큼만 — 1/5, 1/4, 1/3, 1/2, 1 로 이으면 같은 걸음으로 끝까지(연속 블링크)
+			pos = a.Pos.Position:Lerp(pos, ev.frac)
+		end
 		to = CFrame.lookAt(Vector3.new(pos.X, a.Home.Y, pos.Z), Vector3.new(pos.X, a.Home.Y, pos.Z) + forward)
 	else
 		local targets = play.Targets[1] or {}

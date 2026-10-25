@@ -847,6 +847,13 @@ function BattleClient:_setupBattle()
 		back += self.tiles.Enemy[y][GRID_WIDTH].Position
 	end
 	self.director.FarEnd = back / GRID_HEIGHT
+	local enemyTiles = {}
+	for y = 1, GRID_HEIGHT do
+		for x = 1, GRID_WIDTH do
+			table.insert(enemyTiles, self.tiles.Enemy[y][x])
+		end
+	end
+	self.director.EnemyTiles = enemyTiles
 	-- 새 전투의 사건은 여기부터 센다(이전 전투 번호와 섞이지 않게)
 	self.lastEventSeq = 0
 	self.goneCells = {}

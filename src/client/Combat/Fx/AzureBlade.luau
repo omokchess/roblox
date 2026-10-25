@@ -6,10 +6,10 @@
 	                몹 앞에 서로 다른 베기 자세의 잔상을 타격 수만큼(Ghosts) → 타격마다 잔상이 하나씩 사라지며 벤다(GhostCut)
 	  발도술의 절정 반쯤 뽑다 "챙" 하고 멈춰 드러난 날에 빛(Ching) → 사라져(Vanish) 줄 끝에 이미 벤 자세로 서고,
 	                지나간 자리에 불규칙한 곧은 검로(PeakPath) → 줄 전체를 가르는 곧은 칼날들이 반짝일 때마다 타격(RowFlash).
-	                검로·칼날은 ±TILT° 안에서 제각각 기운다(2026-10-26 사용자)
-	  공간의 이해   (2026-10-26 다시, 참고 엘든 링 말레니아) 카메라가 등 뒤에서 따라간다(CamFollow) — 착지 베기·두 바퀴 회전·강한 가로베기의
-	                칼끝 길이 그대로 검로로 새겨지고(Carve) → 잔상 하나가 곧게 등 뒤로(GhostRush) → 그 출발점에서 둘째 잔상이
-	                오른쪽·왼쪽·오른쪽으로 휘며 돌아와 몸에 겹친다(GhostWeave) → 꽂는 순간 검로가 한꺼번에 터진다(TrailBurst · BurstHit)
+	                (2026-10-26 사용자) 제 줄을 따라 곧게 가고, 검로·칼날은 위아래로 ±TILT° 안에서 제각각 기울며 크기는 MARK 배
+	  공간의 이해   (2026-10-26 다시) 블링크 다섯 번(Blink — 선 자리에 그 자세 잔상)으로 적진을 가로질러 줄 끝에서 꽂으면(카메라는 그동안
+	                등 뒤에서 따라가다 돌아온다: CamFollow · CamFree) → 적 진영 칸 경계마다 격자로 반듯하게 썰린 검흔(GridCut)이
+	                반짝이다 한꺼번에 터지며 필드 전체를 벤다(GridFlash · GridHit)
 	효과음: 로블록스 효과음 모음(ProSoundEffects). 챙 = 칼 뽑는 쇳소리 — 바꾸려면 SOUND 의 숫자만 고친다.
 	잔상 자세는 모션 파일의 Poses(tools/combat/design/azure_gen.py 가 만든다).
 ]]
@@ -66,7 +66,7 @@ end
 
 --[[
 	빛줄 한 획: from → to 로 grow 초에 그어진다. Keep 이면 남겨 두고 { Burst() } 를 돌려준다(검로 — 나중에 한꺼번에 터진다),
-	아니면 Life 초 뒤 사라진다. opts: Width, Color, Grow, Life, Delay, Keep
+	아니면 Life 초 뒤 사라진다. opts: Width, Color, Grow, Life, Delay, Keep, Bits(터질 때 조각 수)
 ]]
 local function stroke(from: Vector3, to: Vector3, opts: { [string]: any }): any
 	local w = opts.Width or 0.12
@@ -115,7 +115,7 @@ local function stroke(from: Vector3, to: Vector3, opts: { [string]: any }): any
 		gone = true
 		set(1, w)
 		local mid = from:Lerp(to, 0.5)
-		CombatVfx.Burst(mid, { Count = 6, Colors = { ICE, WHITE, AZURE }, Size = 0.18, Speed = 14, Gravity = 8, Life = 0.45 })
+		CombatVfx.Burst(mid, { Count = opts.Bits or 6, Colors = { ICE, WHITE, AZURE }, Size = 0.18, Speed = 14, Gravity = 8, Life = 0.45 })
 		CombatVfx.Timed(0.4, function(a)
 			local k = 1 + 5 * a
 			set(1, w * k)
@@ -142,14 +142,14 @@ local function twinkle(ctx: any, at: Vector3, size: number)
 	stroke(at - up * 0.7, at + up * 0.7, { Width = 0.06, Color = ICE, Grow = 0.03, Life = 0.16 })
 end
 
--- 대상 자리에 엇갈린 벤 자국 몇 줄(작은 원호를 여러 기울기로)
-local function cuts(ctx: any, at: Vector3, n: number, radius: number)
+-- 대상 자리에 엇갈린 벤 자국 몇 줄(작은 원호를 여러 기울기로). width = 원호 굵기(기본 0.35)
+local function cuts(ctx: any, at: Vector3, n: number, radius: number, width: number?)
 	local rng = Random.new()
 	for i = 1, n do
 		local tilt = rng:NextNumber(-80, 80)
 		local center = at + Vector3.new(rng:NextNumber(-0.6, 0.6), rng:NextNumber(-0.5, 0.7), rng:NextNumber(-0.6, 0.6))
 		task.delay((i - 1) * 0.025, function()
-			Common.Arc(ctx, center, tilt, -70, 70, { Radius = radius, Width = 0.35, Depth = 0.06, Color = AZURE, Core = WHITE, Sweep = 0.03, Life = 0.22 })
+			Common.Arc(ctx, center, tilt, -70, 70, { Radius = radius, Width = width or 0.35, Depth = 0.06, Color = AZURE, Core = WHITE, Sweep = 0.03, Life = 0.22 })
 		end)
 	end
 	ctx.Vfx.Flash(at, { Color = ICE, Size = 5, Life = 0.18, Brightness = 4 })
@@ -284,6 +284,9 @@ end
 
 --=== 발도술의 절정 ===--
 
+-- 검흔 크기 배율(선 굵기 · 벤 자국 원호 · 위아래로 뻗는 높이) — 2026-10-26 사용자 "3배정도"
+local MARK = 3
+
 -- 반쯤 뽑다 챙! — 드러난 날에 별빛
 function Fx.Ching(ctx: any)
 	ctx.Sound(SOUND.Ching, 0.8)
@@ -307,17 +310,21 @@ function Fx.Vanish(ctx: any)
 end
 
 --[[
-	줄(a → b) 위 한 점을 가운데로, 줄 방향에서 위아래로 ±TILT° 무작위로 기운 곧은 선의 두 끝.
-	기울수록 짧게 — 두 끝이 땅 위 0.1 ~ 4.5 안에 들게 길이를 줄인다. side = 줄 옆 방향(가운데를 옆으로 흩뜨린다)
+	줄(a → b, 제 줄을 따라 곧게) 위 한 점을 가운데로, 줄 방향에서 위아래로 ±TILT° 무작위로 기운 곧은 선의 두 끝.
+	선은 땅 위 0.1 ~ 4.5×MARK 안에 든다 — 많이 기운 선은 그 높이만큼 길게 위아래로 뻗고, 가운데 높이를 그에 맞춰 올린다.
+	side = 줄 옆 방향(가운데를 옆으로 흩뜨린다)
 ]]
 local function tilted(rng: Random, a: Vector3, b: Vector3, ground: number, side: Vector3, longest: number): (Vector3, Vector3)
 	local d = flat(b - a)
-	local mid = a:Lerp(b, rng:NextNumber(0.1, 0.9)) + side * rng:NextNumber(-1.1, 1.1)
-	mid = Vector3.new(mid.X, ground + rng:NextNumber(0.9, 2.3), mid.Z)
+	local top = 4.5 * MARK
 	local th = math.rad(rng:NextNumber(-TILT, TILT))
+	local sin = math.abs(math.sin(th))
+	local len = math.min(longest * rng:NextNumber(0.55, 1), (top - 0.1) / math.max(0.05, sin))
+	local half = len / 2 * sin
+	local mid = a:Lerp(b, rng:NextNumber(0.1, 0.9)) + side * rng:NextNumber(-1.1, 1.1)
+	local lowest = ground + 0.1 + half
+	mid = Vector3.new(mid.X, lowest + rng:NextNumber(0, math.max(0, math.min(2.5, ground + top - half - lowest))), mid.Z)
 	local dir = d * math.cos(th) + Vector3.yAxis * math.sin(th)
-	local room = math.min(mid.Y - ground - 0.1, ground + 4.5 - mid.Y)
-	local len = math.min(longest * rng:NextNumber(0.55, 1), 2 * room / math.max(0.05, math.abs(math.sin(th))))
 	return mid - dir * (len / 2), mid + dir * (len / 2)
 end
 
@@ -330,7 +337,7 @@ function Fx.PeakPath(ctx: any)
 	local rng = Random.new()
 	for k = 1, 7 do
 		local p0, p1 = tilted(rng, a, b, ctx.Ground, side, (b - a).Magnitude * 0.6)
-		stroke(p0, p1, { Width = rng:NextNumber(0.06, 0.18), Grow = 0.05, Life = 1.3, Delay = (k - 1) * 0.015 })
+		stroke(p0, p1, { Width = rng:NextNumber(0.06, 0.18) * MARK, Grow = 0.05, Life = 1.3, Delay = (k - 1) * 0.015 })
 	end
 end
 
@@ -345,22 +352,22 @@ function Fx.RowFlash(ctx: any, ev: any, at: Vector3?)
 		local rng = Random.new()
 		for k = 1, 5 do
 			local p0, p1 = tilted(rng, a, b, ctx.Ground, side, (b - a).Magnitude * 1.1)
-			stroke(p0, p1, { Width = rng:NextNumber(0.07, 0.2), Color = if k % 2 == 0 then ICE else AZURE, Grow = 0.03, Life = 0.16, Delay = (k - 1) * 0.02 })
+			stroke(p0, p1, { Width = rng:NextNumber(0.07, 0.2) * MARK, Color = if k % 2 == 0 then ICE else AZURE, Grow = 0.03, Life = 0.16, Delay = (k - 1) * 0.02 })
 		end
 		for _ = 1, 3 do
 			local q = a:Lerp(b, rng:NextNumber(0.1, 0.9))
-			twinkle(ctx, Vector3.new(q.X, ctx.Ground + rng:NextNumber(0.8, 2.4), q.Z), 1.1)
+			twinkle(ctx, Vector3.new(q.X, ctx.Ground + rng:NextNumber(0.8, 4), q.Z), 1.1 * MARK)
 		end
 	end
 	local p = at or ctx.Target
-	cuts(ctx, p, 2, 2.4)
+	cuts(ctx, p, 2, 2.4 * MARK, 0.35 * MARK)
 	ctx.Vfx.Sparks(p, { Color = ICE, Count = 10, Speed = 20 })
 end
 
---=== 공간의 이해(2026-10-26 다시 — 참고 엘든 링 말레니아) ===--
+--=== 공간의 이해(2026-10-26 다시 — 연속 블링크로 줄 끝까지 → 꽂음 → 격자 검흔이 필드 전체를 벤다) ===--
 
--- 카메라: 등 뒤 오른쪽 위에서 시전자를 따라간다. 도는 몸을 따라 돌지 않게 적 쪽(집의 앞) 방향을 기준으로 하고,
--- 지금 화면에서 부드럽게 넘어온다(앞 카메라 자리를 이어 받는다)
+-- 카메라: 블링크하는 동안 등 뒤 오른쪽 위에서 시전자를 따라간다(적 쪽 방향 기준, 지금 화면에서 부드럽게 넘어온다).
+-- 꽂을 때 놓아(CamFree) 전투 카메라로 돌아와 필드 전체의 격자를 보인다
 local function follow(ctx: any, back: number, right: number, up: number, ahead: number)
 	local s = st(ctx)
 	local actor = ctx.Actor
@@ -384,14 +391,8 @@ end
 
 function Fx.CamFollow(ctx: any)
 	local s = st(ctx)
-	s.camAt, s.camLook, s.marks = nil, nil, {}
-	-- 적이 사이에 끼어 가리지 않게 조금 높고 오른쪽으로(2026-10-26 전시장 확인)
+	s.camAt, s.camLook = nil, nil
 	follow(ctx, 7.5, 4.5, 5.2, 5)
-end
-
--- 검로가 터지기 직전: 조금 물러나 넓게
-function Fx.CamWide(ctx: any)
-	follow(ctx, 11, 7, 8, 3)
 end
 
 function Fx.CamFree(ctx: any)
@@ -400,107 +401,121 @@ function Fx.CamFree(ctx: any)
 	ctx.Shot()
 end
 
--- 칼끝 길을 d 초 동안 그대로 검로로 새긴다(착지 베기 · 두 바퀴 회전 · 강한 가로베기 — 나중에 TrailBurst 로 터진다)
-function Fx.Carve(ctx: any, ev: any)
-	local s = st(ctx)
-	s.marks = s.marks or {}
-	local function point(): Vector3?
-		local b, t = ctx.Base("W"), ctx.Tip("W")
-		return if b and t then b:Lerp(t, 0.85) else nil
+-- 블링크: 선 자리에 그 순간 자세(ev.p)의 잔상을 남기고 사라져 몇 칸 앞에 나타나며, 지나간 길을 가는 빛줄로 벤다
+function Fx.Blink(ctx: any, ev: any)
+	local from = ctx.Root
+	local g = Common.Ghost(ctx, pose((ev and ev.p) or "OUT"), from, { Transparency = 0.5, FadeIn = 0.01 })
+	if g then
+		task.delay(0.12, function()
+			g.Vanish(0.3)
+		end)
 	end
-	local prev = point()
-	CombatVfx.Timed((ev and ev.d) or 0.2, function()
-		local p = point()
-		if p and prev and (p - prev).Magnitude > 0.35 then
-			table.insert(s.marks, stroke(prev, p, { Width = 0.1, Grow = 0.02, Keep = true }))
-			prev = p
-		elseif p and not prev then
-			prev = p
-		end
+	ctx.Vfx.Flash(from.Position, { Color = ICE, Size = 4, Life = 0.15, Brightness = 4 })
+	task.delay(0.05, function()
+		local to = ctx.Actor.Pos.Position
+		local lift = Vector3.new(0, 0.3, 0)
+		stroke(from.Position + lift, to + lift, { Width = 0.07, Color = ICE, Grow = 0.03, Life = 0.25 })
+		ctx.Vfx.Flash(to, { Color = WHITE, Size = 4, Life = 0.15, Brightness = 5 })
+		Common.Arc(ctx, to + Vector3.new(0, 0.4, 0) + ctx.Forward, math.random(-60, 60), -60, 80, { Radius = 3.2, Width = 0.5, Color = AZURE, Core = WHITE, Sweep = 0.04, Life = 0.2 })
 	end)
 end
 
--- 잔상 하나가 적진 저편에서 시전자 왼쪽을 스쳐 등 뒤로 곧게 돌진한다(지나간 길이 검로 — 카메라가 오른쪽 뒤라 왼쪽으로 지나야 보인다)
-function Fx.GhostRush(ctx: any)
-	local s = st(ctx)
-	s.marks = s.marks or {}
-	local actor = ctx.Actor
-	local f = flat(actor.Home.LookVector)
+--[[
+	격자 칸 경계(전투 공간의 앞 u · 옆 v 좌표). 적 진영 칸(ctx.EnemyTiles — 전투 화면이 넘겨준다)의 가운데들에서
+	겹치지 않는 u·v 값을 모아 그 사이 한가운데와 바깥 가장자리를 경계로 삼는다. 칸을 모르면(전시장) 첫 대상을
+	첫 열 가운데로 6×3 칸을 어림한다.
+]]
+local PITCH = 6
+local function gridLines(ctx: any): ({ number }, { number })
+	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
-	local p = actor.Pos.Position
-	local from, to = p + f * 11 - r * 1.4, p - f * 3.5 - r * 1.4
-	s.ghostFrom = from
-	local g = Common.Ghost(ctx, pose("RUSH"), CFrame.lookAt(from, from - f), { Transparency = 0.45, FadeIn = 0.04 })
-	ctx.Vfx.Flash(from, { Color = ICE, Size = 5, Life = 0.2, Brightness = 4 })
-	if not g then
-		return
-	end
-	local root = g.Model:FindFirstChild("HumanoidRootPart") :: BasePart
-	local lift = Vector3.new(0, ctx.Ground + 1.3 - p.Y, 0)
-	local prev = from + lift
-	CombatVfx.Timed(0.28, function(a)
-		local q = from:Lerp(to, a)
-		root.CFrame = CFrame.lookAt(q, q - f)
-		local m = q + lift
-		if (m - prev).Magnitude > 0.6 then
-			table.insert(s.marks, stroke(prev, m, { Width = 0.15, Grow = 0.02, Keep = true }))
-			prev = m
+	local origin = ctx.Actor.Home.Position
+	local centers = {}
+	if ctx.EnemyTiles and #ctx.EnemyTiles > 0 then
+		for _, t in ctx.EnemyTiles do
+			table.insert(centers, t.Position)
 		end
-	end, function()
-		g.Vanish(0.2)
+	else
+		local t0 = ctx.Targets[1] or ctx.Target
+		for x = 0, 5 do
+			for y = -1, 1 do
+				table.insert(centers, t0 + f * (x * PITCH) + r * (y * PITCH))
+			end
+		end
+	end
+	local function bounds(axis: Vector3): { number }
+		local vals = {}
+		for _, center in centers do
+			local x = math.round((center - origin):Dot(axis) * 2) / 2
+			if not table.find(vals, x) then
+				table.insert(vals, x)
+			end
+		end
+		table.sort(vals)
+		local pitch = PITCH
+		for i = 2, #vals do
+			pitch = math.min(pitch, vals[i] - vals[i - 1])
+		end
+		local out = { vals[1] - pitch / 2 }
+		for i = 1, #vals do
+			table.insert(out, vals[i] + pitch / 2)
+		end
+		return out
+	end
+	return bounds(f), bounds(r)
+end
+
+-- 꽂은 뒤: 필드 전체에 격자로 반듯하게 썰린 검흔 — 바닥과 가슴 높이 두 겹 가로세로 + 교차점마다 세로 선이 앞에서 뒤로 차례로 그어지고 반짝인다
+function Fx.GridCut(ctx: any)
+	local s = st(ctx)
+	s.grid = {}
+	local f = ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	local home = ctx.Actor.Home.Position
+	local base = Vector3.new(home.X, ctx.Ground, home.Z)
+	local us, vs = gridLines(ctx)
+	local function at(u: number, v: number, y: number): Vector3
+		return base + f * u + r * v + Vector3.new(0, y, 0)
+	end
+	local u0, u1, v0, v1 = us[1], us[#us], vs[1], vs[#vs]
+	local span = math.max(1, u1 - u0)
+	local function delay(u: number): number
+		return 0.3 * (u - u0) / span
+	end
+	for _, y in { 0.1, 1.6 } do
+		for _, v in vs do
+			table.insert(s.grid, stroke(at(u0, v, y), at(u1, v, y), { Width = 0.1, Color = ICE, Grow = 0.3, Keep = true, Bits = 2 }))
+		end
+		for _, u in us do
+			table.insert(s.grid, stroke(at(u, v0, y), at(u, v1, y), { Width = 0.1, Grow = 0.12, Delay = delay(u), Keep = true, Bits = 2 }))
+		end
+	end
+	for _, u in us do
+		for _, v in vs do
+			table.insert(s.grid, stroke(at(u, v, 0), at(u, v, 3.2), { Width = 0.08, Color = ICE, Grow = 0.1, Delay = delay(u) + 0.05, Keep = true, Bits = 2 }))
+		end
+	end
+	task.delay(0.32, function()
+		for _ = 1, 7 do
+			twinkle(ctx, at(us[math.random(#us)], vs[math.random(#vs)], 1.6), 1.3)
+		end
 	end)
 end
 
--- 첫 잔상이 떠난 자리에서 둘째 잔상이 (가는 쪽 기준) 오른쪽·왼쪽·오른쪽으로 휘며 돌아와 시전자 몸에 겹친다
-function Fx.GhostWeave(ctx: any)
+-- 격자가 한꺼번에 번쩍이며 터진다
+function Fx.GridFlash(ctx: any)
 	local s = st(ctx)
-	s.marks = s.marks or {}
-	local actor = ctx.Actor
-	local from: Vector3 = s.ghostFrom or (actor.Pos.Position + flat(actor.Home.LookVector) * 11)
-	local g = Common.Ghost(ctx, pose("RUSH"), CFrame.new(from), { Transparency = 0.45, FadeIn = 0.04 })
-	ctx.Vfx.Flash(from, { Color = ICE, Size = 5, Life = 0.2, Brightness = 4 })
-	if not g then
-		return
+	for i, m in s.grid or {} do
+		task.delay(math.min(0.08, i * 0.002), m.Burst)
 	end
-	local root = g.Model:FindFirstChild("HumanoidRootPart") :: BasePart
-	local function at(a: number): Vector3
-		local to = actor.Pos.Position
-		local right = flat(to - from):Cross(Vector3.yAxis)
-		return from:Lerp(to, a) + right * (math.sin(a * math.pi * 3) * 2.8)
-	end
-	local lift = Vector3.new(0, ctx.Ground + 1.3 - from.Y, 0)
-	local prev = from + lift
-	CombatVfx.Timed(0.55, function(a)
-		local q = at(a)
-		local nxt = at(math.min(1, a + 0.02))
-		if (nxt - q).Magnitude > 1e-3 then
-			root.CFrame = CFrame.lookAt(q, Vector3.new(nxt.X, q.Y, nxt.Z))
-		end
-		local m = q + lift
-		if (m - prev).Magnitude > 0.5 then
-			table.insert(s.marks, stroke(prev, m, { Width = 0.15, Grow = 0.02, Keep = true }))
-			prev = m
-		end
-	end, function()
-		ctx.Vfx.Flash(actor.Pos.Position, { Color = WHITE, Size = 6, Life = 0.2, Brightness = 5 })
-		g.Vanish(0.12)
-	end)
+	s.grid = {}
+	ctx.Vfx.Flash(ctx.EnemyCenter, { Color = WHITE, Size = 18, Life = 0.35, Brightness = 6 })
 end
 
--- 검집에 꽂는 순간: 새겨 둔 검로가 한꺼번에 터진다
-function Fx.TrailBurst(ctx: any)
-	local s = st(ctx)
-	for i, m in s.marks or {} do
-		task.delay(math.min(0.12, i * 0.003), m.Burst)
-	end
-	s.marks = {}
-	ctx.Vfx.Flash(ctx.EnemyCenter, { Color = WHITE, Size = 16, Life = 0.35, Brightness = 6 })
-end
-
-function Fx.BurstHit(ctx: any, _ev: any, at: Vector3?)
+function Fx.GridHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
-	cuts(ctx, p, 3, 2.6)
-	ctx.Vfx.Burst(p, { Count = 10, Colors = { ICE, AZURE, WHITE }, Size = 0.3, Speed = 16, Gravity = 10, Life = 0.6 })
+	cuts(ctx, p, 2, 2.4)
+	ctx.Vfx.Burst(p, { Count = 8, Colors = { ICE, AZURE, WHITE }, Size = 0.3, Speed = 16, Gravity = 10, Life = 0.6 })
 end
 
 --=== 도발·호흡 ===--
