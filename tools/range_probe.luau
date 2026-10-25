@@ -19,7 +19,7 @@ local OPEN = {
 	Duelist = { ClassResources.READY, 1 },
 }
 
-local classes = { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker" }
+local classes = { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker", "Attuner", "AzureBlade" }
 local only = process.args[1]
 local problems = 0
 

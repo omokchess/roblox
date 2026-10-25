@@ -12,8 +12,14 @@
 	  ctx.Targets  이번 타격 대상들 자리
 	  ctx.Ground   시전자 발밑 높이(y)
 	  ctx.Weapons  CombatWeapons(오브 대형·병 숨기기 등)
+	  ctx.Actor    시전자 배우(Model·Home·Pos …)
+	  ctx.Shot(초, fn)  컷신 카메라 — fn(진행도 0~1, 지난 초) → 카메라 CFrame. Shot() 이면 전투 카메라로 돌려준다
+	  ctx.Sound(id, 크기?, 빠르기?)  효과음 한 번(관전 화면에선 소리 없음)
 	at 은 Hit 사건일 때 맞은 대상 자리다.
 ]]
+local CombatRig = require(script.Parent.Parent.CombatRig)
+local CombatVfx = require(script.Parent.Parent.CombatVfx)
+
 local Common = {}
 
 local function c(r: number, g: number, b: number): Color3
@@ -159,6 +165,112 @@ end
 
 function Common.Feet(ctx: any): Vector3
 	return Vector3.new(ctx.Root.Position.X, ctx.Ground, ctx.Root.Position.Z)
+end
+
+-- 효과음 한 번(rbxassetid 숫자, 짧은 소리). 6초 뒤 지운다
+function Common.Sound(id: number, volume: number?, speed: number?)
+	local s = Instance.new("Sound")
+	s.SoundId = "rbxassetid://" .. tostring(id)
+	s.Volume = volume or 0.6
+	s.PlaybackSpeed = speed or 1
+	s.Parent = game:GetService("SoundService")
+	s:Play()
+	game:GetService("Debris"):AddItem(s, 6)
+end
+
+--[[
+	잔상(분신) — 시전자 모델을 복제해 pose 자세로 cf(HumanoidRootPart 자리)에 세운 빛 몸. (2026-10-25 청의 검사)
+	pose 는 모션 파일의 자세 표(Root·관절·W·O). 돌려주는 것: { Model, Vanish(초?) } — Vanish 하면 그 초에 걸쳐 사라진다.
+	opts: Color, Transparency(보일 때, 기본 0.45), FadeIn(초), Life(안전장치 — 이 초가 지나면 저절로 사라진다, 기본 6)
+	플레이어 캐릭터는 Archivable 이 꺼져 있어 잠깐 켜고 복제한다. 대본·소리·옷·얼굴·Humanoid 는 뺀다(관절 Motor6D 만 남는다).
+]]
+local STRIP = { "LuaSourceContainer", "Sound", "Decal", "Clothing", "ShirtGraphic", "Highlight", "ParticleEmitter", "Trail", "Beam", "Light", "SurfaceAppearance", "BillboardGui", "Humanoid", "BodyColors" }
+function Common.Ghost(ctx: any, pose: any, cf: CFrame, opts: { [string]: any }?): any?
+	local o = opts or {}
+	local src = ctx.Actor and ctx.Actor.Model
+	if not src then
+		return nil
+	end
+	local was = src.Archivable
+	src.Archivable = true
+	local ok, model = pcall(function()
+		return src:Clone()
+	end)
+	src.Archivable = was
+	if not ok or not model then
+		return nil
+	end
+	for _, d in model:GetDescendants() do
+		for _, class in STRIP do
+			if d:IsA(class) then
+				d:Destroy()
+				break
+			end
+		end
+	end
+	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		model:Destroy()
+		return nil
+	end
+	local color = o.Color or Color3.fromRGB(90, 170, 255)
+	local parts: { { Part: BasePart, Base: number } } = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = d == root
+			d.CanCollide, d.CanQuery, d.CanTouch, d.CastShadow = false, false, false, false
+			d.Massless = true
+			if d ~= root then
+				d.Material = Enum.Material.Neon
+				d.Color = color
+				if d:IsA("MeshPart") then
+					d.TextureID = ""
+				end
+				-- 원래 안 보이던 부품(무기 쥐는 점 등)은 그대로 안 보이게
+				table.insert(parts, { Part = d, Base = math.max(o.Transparency or 0.45, d.Transparency) })
+			end
+		elseif d:IsA("SpecialMesh") then
+			d.TextureId = ""
+		end
+	end
+	root.Transparency = 1
+	root.CFrame = cf
+	local rig = CombatRig.new(model)
+	for _, slot in { "W", "O" } do
+		local m = model:FindFirstChild("CombatGrip" .. slot, true)
+		if m and m:IsA("Motor6D") then
+			rig:SetWeaponMotor(slot, m)
+		end
+	end
+	rig:Apply(pose)
+	local function fade(k: number)
+		for _, p in parts do
+			p.Part.Transparency = p.Base + (1 - p.Base) * k
+		end
+	end
+	fade(1)
+	model.Parent = CombatVfx.Folder()
+	local ghost = { Model = model, Gone = false }
+	CombatVfx.Timed(o.FadeIn or 0.08, function(a)
+		if not ghost.Gone then
+			fade(1 - a)
+		end
+	end)
+	function ghost.Vanish(d: number?)
+		if ghost.Gone then
+			return
+		end
+		ghost.Gone = true
+		CombatVfx.Timed(d or 0.25, function(a)
+			fade(a)
+		end, function()
+			model:Destroy()
+		end)
+	end
+	task.delay(o.Life or 6, function()
+		ghost.Vanish(0.3)
+	end)
+	return ghost
 end
 
 return Common

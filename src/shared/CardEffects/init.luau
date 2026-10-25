@@ -32,6 +32,7 @@
 	  Gain(id, amount) / Spend(id, amount)  자원(스택)이 늘거나 줄었을 때 — 앞뒤를 견줘 알아낸다
 	  Status(info{Target, Kind, Amount})    적에게 출혈·독·화상·기름을 새로 걸었을 때
 	  Stance(attack)                        결투사 태세가 바뀌었을 때
+	  MeltBurst(info{Target, Melt, Damage}) 적의 [융해]가 턴 끝에 터졌을 때(조율자)
 
 	규칙 질의(Rules): `CardEffects.Query(runtime, key, base)` — 카드가 base 를 고쳐 돌려준다.
 	  예) NoteCapBonus(음표 상한 +), WallCap, RuinCap, FocusCap, StaminaCost(스킬 스테미나 배율) …
@@ -99,6 +100,8 @@ local CLASS_MODULES = {
 	"WallBreaker",
 	"Alchemist",
 	"Berserker",
+	"Attuner",
+	"AzureBlade",
 }
 
 function CardEffects.Handler(cardId: string): Handler?

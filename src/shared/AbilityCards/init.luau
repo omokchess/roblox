@@ -30,6 +30,8 @@ local modules: { ClassCardModule } = {
 	require(script.WallBreakerCards),
 	require(script.AlchemistCards),
 	require(script.BerserkerCards),
+	require(script.AttunerCards),
+	require(script.AzureBladeCards),
 }
 
 local AbilityCards = {}

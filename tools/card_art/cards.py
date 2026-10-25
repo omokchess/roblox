@@ -24,6 +24,7 @@ AXIS = {
     "Vanguard": "#ff9646", "Sacrifice": "#eb5a5a", "Brink": "#aa3c50",
     "Brew": "#82e696", "Catalyst": "#aa8cff", "Burn": "#ff9646",
     "Rage": "#eb5a5a", "Frenzy": "#ff9646", "Blood": "#aa283c",
+    "Constellation": "#ffe28c", "Iaido": "#5aaaf0",
 }
 BLOOD = "#c8323c"
 

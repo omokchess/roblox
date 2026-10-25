@@ -434,7 +434,7 @@ local ARTWORKS: { [string]: Artwork } = {
 	한 파일이 수백 KB 가 되지 않게 나눴고, 도형은 배열로 줄여 담았다 — 여기서 Shape 로 편다.
 	편집기로 그린 그림(위 ARTWORKS)이 같은 Id 면 그쪽이 이긴다.
 ]]
-local GENERATED = { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker" }
+local GENERATED = { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker", "Attuner", "AzureBlade" }
 for _, name in GENERATED do
 	local ok, pack = pcall(function()
 		return (require :: any)((script.Parent :: any).CardArtworksGen[name])

@@ -81,6 +81,9 @@ function TowerRun.Start(profile: PlayerProfile.Profile): (boolean, string?)
 	if not CharacterDefinitions.IsValid(slot.ClassId) then
 		return false, "직업이 올바르지 않습니다."
 	end
+	if not CharacterDefinitions.IsUnlocked(slot.ClassId, profile) then
+		return false, "아직 얻지 못한 직업입니다(조건부 획득)."
+	end
 
 	local run = PlayerProfile.NewTowerRun()
 	run.Active = true

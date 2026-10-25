@@ -737,6 +737,52 @@ local function construct(color: Color3, dim: Color3, rest: (number) -> number): 
 	return out
 end
 
+--=== 별·검 계열 (2026-10-25 조건부 직업) ===--
+
+-- 두 점을 잇는 막대(세로 막대를 돌려 눕힌다)
+local function bar(out: { Shape }, x1: number, y1: number, x2: number, y2: number, thick: number, color: Color3, zIndex: number)
+	local dx, dy = x2 - x1, y2 - y1
+	local length = math.sqrt(dx * dx + dy * dy)
+	paint(out, (x1 + x2) / 2, (y1 + y2) / 2, thick, length, math.deg(math.atan2(dx, -dy)), color, 0.5, zIndex)
+end
+
+-- 칠성(Constellation): 북두칠성 — 손잡이 셋 + 국자 넷을 잇고 별(마름모)을 얹는다. 메그레즈만 밝게.
+local function constellation(color: Color3, dim: Color3, rest: (number) -> number): { Shape }
+	local out: { Shape } = {}
+	local tilt = rest(1) * 0.05
+	local stars = {
+		{ 0.14, 0.3 + tilt }, -- 알카이드
+		{ 0.29, 0.25 + tilt }, -- 미자르
+		{ 0.42, 0.32 }, -- 알리오스
+		{ 0.53, 0.42 }, -- 메그레즈
+		{ 0.58, 0.66 }, -- 페크다
+		{ 0.83, 0.7 - tilt }, -- 메라크
+		{ 0.86, 0.45 - tilt }, -- 두베
+	}
+	for index = 1, 6 do
+		bar(out, stars[index][1], stars[index][2], stars[index + 1][1], stars[index + 1][2], 0.035, dim, GZ)
+	end
+	bar(out, stars[7][1], stars[7][2], stars[4][1], stars[4][2], 0.035, dim, GZ)
+	for index, star in stars do
+		local size = if index == 4 then 0.17 else 0.12
+		paint(out, star[1], star[2], size, size, 45, if index == 4 then color else dim, 0.08, GZ + 2)
+	end
+	return out
+end
+
+-- 발도(Iaido): 비스듬한 검집 + 반쯤 뽑힌 날 + 코등이.
+local function iaido(color: Color3, dim: Color3, rest: (number) -> number): { Shape }
+	local out: { Shape } = {}
+	local lean = 38 + rest(1) * 8
+	local radians = math.rad(lean)
+	local ux, uy = math.sin(radians), -math.cos(radians)
+	paint(out, 0.5 - ux * 0.16, 0.56 - uy * 0.16, 0.12, 0.58, lean, dim, 0.4, GZ)
+	paint(out, 0.5 + ux * 0.12, 0.56 + uy * 0.12, 0.17, 0.08, lean, color, 0.2, GZ + 2)
+	paint(out, 0.5 + ux * 0.3, 0.56 + uy * 0.3, 0.07, 0.36, lean, color, 0.5, GZ + 3)
+	paint(out, 0.5 + ux * 0.02, 0.56 + uy * 0.02, 0.08, 0.16, lean, dim, 0.3, GZ + 4)
+	return out
+end
+
 --=== 태그 → 문양·색 ===--
 
 type Family = { Glyph: Glyph, Base: Palette }
@@ -800,6 +846,10 @@ local FAMILIES: { [string]: Family } = {
 
 	-- 신앙
 	Faith = { Glyph = faith, Base = GOLD_COLOR },
+
+	-- 별·검(조율자·청의 검사)
+	Constellation = { Glyph = constellation, Base = GOLD_COLOR },
+	Iaido = { Glyph = iaido, Base = AQUA_COLOR },
 
 	-- 음악
 	Melody = { Glyph = melody, Base = ROSE_COLOR },

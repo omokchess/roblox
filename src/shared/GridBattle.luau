@@ -275,6 +275,9 @@ end
 -- 연타 규칙: 한 대상이 n 번(n ≥ 2) 맞으면 한 방 피해 × MULTI_HIT_BONUS / n 씩(합 = 한 방 × 1.2)
 local MULTI_HIT_BONUS = 1.2
 
+-- 조율자(FaithOnlyDamage)가 세는 [가하는 피해량] 출처 — 직업 자체 효과뿐(보정값 Source 이름)
+local FAITH_ONLY_SOURCES = { ["칠성"] = true, ["알카이드"] = true, ["미자르"] = true, ["핵융합 반응"] = true }
+
 local function nextRandom(state: State): number
 	state.RandomState = (state.RandomState * 48271) % 2147483647
 	return state.RandomState / 2147483647
@@ -1588,11 +1591,16 @@ end
 ]]
 function GridBattle.SkillList(state: State): { BattleSkills.Skill }
 	local list: { BattleSkills.Skill } = {}
+	local status = GridBattle.Ally(state).Status
 	for _, skill in BattleSkills.ForClass(state.AllyClassId) do
-		table.insert(list, skill)
+		-- 같은 자리에서 바뀌는 스킬(청의 검사 [집중력])
+		local swapId = BattleSkillEffects.SwapFor(state.AllyClassId, status, skill.Id)
+		table.insert(list, swapId and BattleSkills.ById(swapId) or skill)
 	end
 
-	local upgradeId = BattleSkillEffects.UpgradeFor(state.AllyClassId, GridBattle.Ally(state).Status)
+	local upgradeId = BattleSkillEffects.UpgradeFor(state.AllyClassId, status, function(key, base)
+		return query(state, key, base)
+	end)
 	if upgradeId then
 		local upgrade = BattleSkills.ById(upgradeId)
 		if upgrade then
@@ -1720,6 +1728,9 @@ function GridBattle.MoveAlly(state: State, x: number, y: number): (boolean, stri
 	end
 	if state.Boss and (state.Boss.Locked or 0) > 0 then
 		return false, "검수 준비중 칸에서 턴을 마쳐 이번 턴은 움직일 수 없습니다."
+	end
+	if BattleStatus.Stack(ally.Status, ClassResources.BIND) > 0 then
+		return false, "[묶임] — 이번 턴은 움직일 수 없습니다."
 	end
 	local from = BattleGrid.CellOf(state.Grid, state.AllyId)
 	local ok, reason = BattleGrid.Move(state.Grid, state.AllyId, x, y)
@@ -1913,6 +1924,10 @@ makeEnv = function(state: State): any
 		Pull = function(columns: number, ids: { [string]: boolean }?): number
 			return GridBattle.PullEnemies(state, columns, ids)
 		end,
+		-- 스킬 하나를 공짜로 쓴다(스테미나·재사용 대기·행동 없음, 피해 ×scale — 태우기 위한 별의 두베)
+		CastFree = function(skillId: string, scale: number): boolean
+			return (GridBattle.ResolveSkill(state, 1, "Partial", nil, skillId, { Scale = scale }))
+		end,
 	}
 end
 
@@ -2000,13 +2015,15 @@ function GridBattle.ResolveSkill(
 	skillIndex: any,
 	grade: QteDefinitions.Grade,
 	rng: (() -> number)?,
-	skillId: string?
+	skillId: string?,
+	-- 공짜 시전(카드가 턴 끝에 쓰는 스킬 — 태우기 위한 별의 두베 → 메그레즈): 스테미나·재사용 대기·행동을 쓰지 않고 피해 ×Scale
+	free: { Scale: number }?
 ): (boolean, string?)
 	if state.Outcome ~= "Ongoing" then
 		return false, "전투가 끝났습니다."
 	end
 	local ally = GridBattle.Ally(state)
-	if GroggyGauge.IsStunned(ally.Groggy) then
+	if GroggyGauge.IsStunned(ally.Groggy) and not free then
 		return false, "그로기 상태입니다."
 	end
 	local cell = BattleGrid.CellOf(state.Grid, state.AllyId)
@@ -2031,6 +2048,9 @@ function GridBattle.ResolveSkill(
 			end
 		end
 	end
+	if free and type(skillId) == "string" then
+		skill = BattleSkills.ById(skillId) or skill
+	end
 	for index, candidate in allySkills do
 		if candidate.Id == skill.Id then
 			ally.SkillIndex = index
@@ -2040,7 +2060,7 @@ function GridBattle.ResolveSkill(
 
 	-- 재사용 대기 중이면 아예 못 쓴다. 여기서 막아야 그 뒤의 자원 소모·공명 처리도 같이 막힌다.
 	local cooldownLeft = ally.Cooldowns[skill.Id] or 0
-	if cooldownLeft > 0 then
+	if cooldownLeft > 0 and not free then
 		return false,
 			string.format("%s은(는) 아직 재사용 대기 중입니다 (%d턴 남음).", skill.Name, cooldownLeft)
 	end
@@ -2054,24 +2074,33 @@ function GridBattle.ResolveSkill(
 		return false, "필수 카드 때문에 공격 스킬을 쓸 수 없습니다."
 	end
 
-	local staminaCost = GridBattle.StaminaCost(state, skill)
-	if ally.Stamina < staminaCost and not (state.Debug and state.Debug.NoCooldown) then
+	local staminaCost = if free then 0 else GridBattle.StaminaCost(state, skill)
+	local noCost = state.Debug and state.Debug.NoCooldown
+	-- 셉텐트리오네스(HealthForStamina)는 모자란 스테미나를 체력으로 낸다
+	if ally.Stamina < staminaCost and not noCost and not skill.HealthForStamina then
 		return false, string.format("스테미나가 부족합니다 (%d/%d).", math.floor(ally.Stamina), staminaCost)
 	end
 
-	-- 펄서 [공명]은 자기권·섬광이 쌓고 수렴이 쓴다. 턴마다 줄어드는 것은 펄서 키트(CardEffects/Pulsar)가 한다.
-	state.LastSkillId = skill.Id
-	-- 스킬을 썼다. `행동하지 않고 턴을 마치면` 카드가 이번 턴에는 발동하지 않는다.
-	state.Acted = true
-	if not (state.Debug and state.Debug.NoCooldown) then
-		ally.Stamina = math.max(0, ally.Stamina - staminaCost)
-	end
-	if skill.Damage > 0 then
-		state.Attacked = true
-	end
 	local watch = watchBegin(state)
-	if skill.Cooldown and skill.Cooldown > 0 and not (state.Debug and state.Debug.NoCooldown) then
-		ally.Cooldowns[skill.Id] = skill.Cooldown
+	if not free then
+		-- 펄서 [공명]은 자기권·섬광이 쌓고 수렴이 쓴다. 턴마다 줄어드는 것은 펄서 키트(CardEffects/Pulsar)가 한다.
+		state.LastSkillId = skill.Id
+		-- 스킬을 썼다. `행동하지 않고 턴을 마치면` 카드가 이번 턴에는 발동하지 않는다.
+		state.Acted = true
+		if not noCost then
+			local short = math.max(0, staminaCost - ally.Stamina)
+			ally.Stamina = math.max(0, ally.Stamina - staminaCost)
+			if short > 0 and skill.HealthForStamina then
+				local paid = damageUnit(state, ally, short * query(state, skill.Id .. "HealthCost", 1), "True", false)
+				pushLog(state, string.format("%s — 스테미나 %d 모자라 체력 %d", skill.Name, short, paid))
+			end
+		end
+		if skill.Damage > 0 then
+			state.Attacked = true
+		end
+		if skill.Cooldown and skill.Cooldown > 0 and not noCost then
+			ally.Cooldowns[skill.Id] = skill.Cooldown
+		end
 	end
 
 	local multiplier = QteDefinitions.Multiplier("Skill", grade)
@@ -2101,6 +2130,35 @@ function GridBattle.ResolveSkill(
 			end
 		end
 		table.insert(motionHitUnits, aliveHits)
+	end
+	--[[
+		벨 수 있는 적 수(청의 검사 진 발도술 1 · 발도술의 절정 4): 앞(중앙선 쪽, x 작은 쪽)에 있는 적부터,
+		같으면 내 줄에 가까운 적부터. 모든 모션에 같은 명단을 쓴다.
+	]]
+	if skill.MaxTargets and #hitUnits > skill.MaxTargets then
+		table.sort(hitUnits, function(a, b)
+			local ca, cb = BattleGrid.CellOf(state.Grid, a.Id), BattleGrid.CellOf(state.Grid, b.Id)
+			local ka = if ca then ca.X * 10 + math.abs(ca.Y - cell.Y) else 999
+			local kb = if cb then cb.X * 10 + math.abs(cb.Y - cell.Y) else 999
+			if ka ~= kb then
+				return ka < kb
+			end
+			return a.Id < b.Id
+		end)
+		local keep: { [string]: boolean } = {}
+		for index = 1, skill.MaxTargets do
+			keep[hitUnits[index].Id] = true
+		end
+		for index = #hitUnits, skill.MaxTargets + 1, -1 do
+			table.remove(hitUnits, index)
+		end
+		for _, aliveHits in motionHitUnits do
+			for index = #aliveHits, 1, -1 do
+				if not keep[aliveHits[index].Id] then
+					table.remove(aliveHits, index)
+				end
+			end
+		end
 	end
 
 	local context: BattleSkillEffects.Context = {
@@ -2144,14 +2202,26 @@ function GridBattle.ResolveSkill(
 		Enemies = function()
 			return GridBattle.AliveEnemies(state)
 		end,
+		Turn = state.Turn,
 	}
 
 	local effect = BattleSkillEffects.Get(skill.Id)
 
 	-- 카드: 스킬 직전(주는 피해 +비율·치명 +확률·치명 피해·기본 피해 +)
 	-- Bonus 는 더하는 비율, Mult 는 곱하는 배율(반주자 "기본 피해량 60% 감소" 같은 것)
-	local info = { Skill = skill, Targets = hitUnits, Grade = grade, Bonus = 0, Mult = 1, Crit = 0, CritDamage = 0, Flat = 0 }
+	local info = { Skill = skill, Targets = hitUnits, Grade = grade, Bonus = 0, Mult = 1, Crit = 0, CritDamage = 0, Flat = 0, Free = free ~= nil }
 	fire(state, "BeforeSkill", info)
+	if free then
+		info.Mult *= free.Scale
+	end
+	--[[
+		조율자 알카이드(2026-10-25 사용자: "외부만 막고 신앙심 2%"): 카드·버프의 [가하는 피해량]과 힘·민첩·지력 피해가
+		먹지 않고, 신앙심 1당 +2% 가 대신 붙는다. 직업 자체 효과(칠성·알카이드·미자르·핵융합 반응)는 보정값 출처로 거른다.
+	]]
+	local faithOnly = query(state, "FaithOnlyDamage", 0) >= 1
+	if faithOnly then
+		info.Bonus = 0
+	end
 	-- 검수: 테스터(검은 칸에서 버틴 다음 턴) · 검수 준비중 칸 위
 	if state.Boss and (state.Boss.Tester or 0) > 0 then
 		info.Bonus += TESTER_OUT
@@ -2212,7 +2282,14 @@ function GridBattle.ResolveSkill(
 		local statBonus = if skill.Range == "Ranged"
 			then (stats.Intellect or 0) * 0.07
 			else (stats.Strength or 0) * 0.05 + (stats.Agility or 0) * 0.03
-		local base = BattleStatus.OutgoingDamage(ally.Status, (ally.Power + skill.Damage + info.Flat) * multiplier * skillBonus)
+		if faithOnly then
+			statBonus = ally.Faith * query(state, "FaithDamagePer", 0.02)
+		end
+		local base = BattleStatus.OutgoingDamage(
+			ally.Status,
+			(ally.Power + skill.Damage + info.Flat) * multiplier * skillBonus,
+			if faithOnly then FAITH_ONLY_SOURCES else nil
+		)
 			* math.max(0, 1 + info.Bonus + statBonus)
 			* math.max(0, info.Mult)
 		if state.Debug and state.Debug.AllyDamageScale then
@@ -2234,7 +2311,13 @@ function GridBattle.ResolveSkill(
 		]]
 		-- 연타(2026-10-04): Before 가 context.Repeat 를 정하면 대상마다 그만큼 따로 때린다(펄서 수렴 — [공명] 수만큼).
 		-- 타격마다 치명타를 따로 굴리고 Hit 훅도 타격마다. 연출에는 대상마다 합친 피해 하나로 보낸다
-		local repeats = math.max(1, math.floor(context.Repeat or 1))
+		-- 비율 연타(청의 검사 진 발도술 4/3/3): 대상마다 weights 수만큼, 한 방 × 1.2 × (그 비율 / 합)
+		local weights = skill.HitWeights
+		local weightSum = 0
+		for _, w in weights or {} do
+			weightSum += w
+		end
+		local repeats = if weights then #weights else math.max(1, math.floor(context.Repeat or 1))
 		--[[
 			연타 규칙(2026-10-04 사용자): 한 스킬에서 같은 대상이 여러 번 맞으면(공명 연타·여러 모션이 같은 대상을 다시 때림)
 			한 방의 최종 피해를 연타 수로 나누고 1.2 를 곱한 만큼씩 때린다 — 합은 한 방의 1.2배.
@@ -2252,7 +2335,7 @@ function GridBattle.ResolveSkill(
 					continue
 				end
 				local sum, anyCrit = 0, false
-				for _ = 1, repeats do
+				for hitIndex = 1, repeats do
 					if not target.Alive then
 						break
 					end
@@ -2264,7 +2347,9 @@ function GridBattle.ResolveSkill(
 					end
 					local amount = base * math.max(0, 1 + hitInfo.Bonus)
 					local n = hitsOn[target.Id] or 1
-					if n >= 2 then
+					if weights and weightSum > 0 then
+						amount *= MULTI_HIT_BONUS * weights[hitIndex] / weightSum * repeats / n
+					elseif n >= 2 then
 						amount *= MULTI_HIT_BONUS / n
 					end
 					local roll = if rng then rng() else nextRandom(state)
@@ -2274,7 +2359,7 @@ function GridBattle.ResolveSkill(
 						crits += 1
 						anyCrit = true
 					end
-					local dealt = damageUnit(state, target, amount, "Physical", true)
+					local dealt = damageUnit(state, target, amount, (skill.Element or "Physical") :: any, true)
 					total += dealt
 					sum += dealt
 					hitCount += 1
@@ -2531,6 +2616,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	]]
 	local before = {
 		Attacker = enemy,
+		Skill = skill,
 		Grade = grade,
 		Mult = 1,
 		AutoParry = BattleStatus.Total(ally.Status, "AutoParry"),
@@ -2858,6 +2944,27 @@ function GridBattle.EndTurn(state: State)
 		end
 	end
 
+	--[[
+		[융해](조율자, 특수 화상): (수치 × 3) 화상을 얻고 (수치 × 1000) 고정 피해를 받은 뒤 사라진다.
+		2026-10-25 사용자: ×1000 그대로, 이 효과로는 죽지 않음. 보스 부위는 다른 지속 피해와 같은 BOSS_DOT_CUT(지금 0)을 받는다.
+		먼저 전부 걷고 나서 터뜨린다 — 옮겨 붙는 카드(적색거성)가 남의 융해를 같은 턴에 또 터뜨리지 않게, 순서도 Id 순.
+	]]
+	local melting = {}
+	for _, unit in GridBattle.AliveEnemies(state) do
+		local melt = BattleStatus.SpendAll(unit.Status, ClassResources.MELT)
+		if melt > 0 then
+			table.insert(melting, { Unit = unit, Melt = melt })
+		end
+	end
+	for _, entry in melting do
+		local unit, melt = entry.Unit, entry.Melt
+		BattleStatus.AddBurn(unit.Status, melt * 3)
+		local burst = melt * 1000 * (if unit.Part then 1 - BOSS_DOT_CUT else 1)
+		local dealt = damageUnit(state, unit, burst, "True", false)
+		pushLog(state, string.format("%s — 융해 %d 폭발 (%d 피해 · 화상 +%d)", unit.Name, melt, dealt, melt * 3))
+		fire(state, "MeltBurst", { Target = unit, Melt = melt, Damage = dealt })
+	end
+
 	-- 직업 자원 자동 회복. 아군만 해당한다(적은 직업이 없다).
 	local ally = GridBattle.Ally(state)
 	if ally.Alive then
@@ -3080,6 +3187,8 @@ function GridBattle.Snapshot(state: State): any
 				Locked = query(state, "StanceLocked", 0) >= 1,
 			}
 			else nil,
+		-- 조율자: [칠성]을 준 별(연출이 그 별만 밝게 켠다)
+		AllyStarLit = if state.AllyClassId == "Attuner" then table.clone((ally :: any).StarLit or {}) else nil,
 		-- 아군 그로기(회피 실패로 찬다. 가득 차면 다음 턴을 쉰다)
 		AllyGroggy = ally.Groggy.Value,
 		AllyStunned = GroggyGauge.IsStunned(ally.Groggy),

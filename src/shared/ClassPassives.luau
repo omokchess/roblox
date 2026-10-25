@@ -265,6 +265,64 @@ local KITS: { [string]: ClassKit } = {
 			},
 		},
 	},
+
+	--[[
+		조율자(조건부 획득, 2026-10-25 원안). 패시브가 넷 — 스킬 셋과 합쳐 북두칠성 일곱 별이라 규격(셋)보다 하나 많다.
+		별마다 [칠성]을 `셉텐트리오네스` 전까지 한 번 준다.
+	]]
+	Attuner = {
+		ClassId = "Attuner",
+		StatusKeywords = { "Star", "Melt", "Fusion", "Bind" },
+		Passives = {
+			{
+				Id = "Attuner_Alkaid",
+				Name = "알카이드",
+				Description = "- 자신과 행 또는 열이 같은 모든 아군의 [가하는 피해량] +50%.\n"
+					.. "- 그런 아군이 없으면 [칠성] 1 얻음(`셉텐트리오네스` 전까지 이 효과로 1번).\n"
+					.. "- 이 직업은 `신앙심` 스탯 말고는 [가하는 피해량]을 올릴 수 없음.\n"
+					.. "  - 신앙심 1당 [가하는 피해량] +2%.",
+			},
+			{
+				Id = "Attuner_Mizar",
+				Name = "미자르",
+				Description = "- 턴 시작 시 자신을 포함한 무작위 아군 하나를 지정 → [묶임] 1, [보호막] 49, [가하는 피해량] +50%.\n"
+					.. "- 3턴 동안 자신을 지정하지 않았으면 3턴째엔 반드시 자신을 지정.\n"
+					.. "- 자신을 지정하면 [칠성] 1 얻음(`셉텐트리오네스` 전까지 이 효과로 1번).",
+			},
+			{
+				Id = "Attuner_Phecda",
+				Name = "페크다",
+				Description = "- 자신을 포함한 모든 아군에게 자동 회피 확률 20%.\n"
+					.. "- 자동 회피로 피한 아군이 있으면 [칠성] 1 얻음(`셉텐트리오네스` 전까지 이 효과로 1번).",
+			},
+			{
+				Id = "Attuner_Dubhe",
+				Name = "두베",
+				Description = "- 턴 시작 시 자신을 포함한 모든 아군에게 [보호막] 7.\n"
+					.. "- 아군 중 한 명이라도 14 이상의 피해를 받으면 [칠성] 1 얻음(`셉텐트리오네스` 전까지 이 효과로 1번).",
+			},
+		},
+	},
+
+	-- 청의 검사(조건부 획득). 원안의 패시브 둘 그대로(규격 셋보다 하나 적다).
+	AzureBlade = {
+		ClassId = "AzureBlade",
+		StatusKeywords = { "Concentration" },
+		Passives = {
+			{
+				Id = "AzureBlade_Provoke",
+				Name = "도발",
+				Description = "- 방어와 다른 특별한 스킬 `도발`이 추가된다.\n"
+					.. "- `도발`은 자신에게 [집중력]을 준다.",
+			},
+			{
+				Id = "AzureBlade_Focus",
+				Name = "집중력",
+				Description = "- [집중력]은 몇몇 스킬을 변형시키지만 2턴 뒤 사라진다.\n"
+					.. "  - `검집 타격` → `집중 베기`, `발도술의 절정` → `공간의 이해`.",
+			},
+		},
+	},
 }
 
 function ClassPassives.Get(classId: string): ClassKit?

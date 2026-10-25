@@ -31,6 +31,13 @@ export type CharacterDefinition = {
 	BasicMotionId: string,
 	Skill: SkillDefinition,
 	Color: Color3,
+	--[[
+		조건부 획득 직업(2026-10-25 조율자·청의 검사). 잠겨 있으면 탑 입장·직업 고르기에서 못 고른다.
+		  Hall   특수 전직관(슈네라이히 정리안 tools/snow_plan3.py)
+		획득 조건은 아직 미정 — 정해지면 `CharacterDefinitions.MeetsUnlock` 에 채운다.
+	]]
+	Conditional: boolean?,
+	Hall: string?,
 }
 
 local definitions: { [string]: CharacterDefinition } = {
@@ -223,6 +230,56 @@ local definitions: { [string]: CharacterDefinition } = {
 		},
 		Color = Color3.fromRGB(190, 70, 65),
 	},
+	--[[
+		조건부 획득 직업. 기본 체력은 원안에 없다 — 전투 체력은 레벨·스탯(ProgressionDefinitions)으로 정해지고
+		이 값은 화면 표시용이라 비슷한 역할의 직업 옆에 맞춰 둔다(조율자 = 음악가 결, 청의 검사 = 결투사 결).
+	]]
+	Attuner = {
+		Id = "Attuner",
+		Name = "조율자",
+		Role = "딜러 / 서포터",
+		Description = "북두칠성의 일곱 별을 하나씩 모아 셉텐트리오네스로 터뜨린다. 화상·융해로 태우거나 아군을 지킨다.",
+		MaxHealth = 90,
+		MoveSpeed = 1.0,
+		BasicPower = 13,
+		BasicMotionId = "RangedShot",
+		Skill = {
+			Id = "Septentriones",
+			Name = "셉텐트리오네스",
+			Description = "칠성 7에서 열린다. 상대 진형 전체에 50 피해, 화상 10·융해 5, 핵융합 반응.",
+			Power = 50,
+			CooldownTurns = 0,
+			Target = "Enemy",
+			Effect = "Damage",
+			MotionId = "RangedShot",
+		},
+		Color = Color3.fromRGB(255, 226, 140),
+		Conditional = true,
+		Hall = "슈네라이히 천문대",
+	},
+	AzureBlade = {
+		Id = "AzureBlade",
+		Name = "청의 검사",
+		Role = "메인 딜러",
+		Description = "자기 키만 한 대태도를 검집에 넣고 다니는 방랑 검사. 빠른 재사용과 발도술로 벤다.",
+		MaxHealth = 100,
+		MoveSpeed = 1.1,
+		BasicPower = 17,
+		BasicMotionId = "BasicSlash",
+		Skill = {
+			Id = "TrueIaido",
+			Name = "진 발도술",
+			Description = "엄청난 속도로 검을 뽑아 가장 앞의 적을 4/3/3 으로 벤다.",
+			Power = 22,
+			CooldownTurns = 2,
+			Target = "Enemy",
+			Effect = "Damage",
+			MotionId = "BasicSlash",
+		},
+		Color = Color3.fromRGB(80, 150, 235),
+		Conditional = true,
+		Hall = "슈네라이히 대장간",
+	},
 }
 
 local order = {
@@ -235,6 +292,8 @@ local order = {
 	"WallBreaker",
 	"Alchemist",
 	"Berserker",
+	"Attuner",
+	"AzureBlade",
 }
 
 local CharacterDefinitions = {}
@@ -255,6 +314,27 @@ end
 
 function CharacterDefinitions.IsValid(id: string): boolean
 	return definitions[id] ~= nil
+end
+
+--[[
+	획득 조건을 채웠는지. **조건이 아직 미정**이라 늘 거짓이다 — 정해지면 여기에 채운다
+	(예: 탑 n층 돌파, 천문대·대장간 의뢰 완료). 지금은 디버그로만 연다(계정의 UnlockedClasses).
+]]
+function CharacterDefinitions.MeetsUnlock(_id: string, _profile: any): boolean
+	return false
+end
+
+-- 고를 수 있는지. 조건부 직업은 계정에 열린 기록(UnlockedClasses)이 있거나 조건을 채웠을 때만.
+function CharacterDefinitions.IsUnlocked(id: string, profile: any?): boolean
+	local definition = definitions[id]
+	if not definition then
+		return false
+	end
+	if not definition.Conditional then
+		return true
+	end
+	local unlocked = profile and profile.Account and profile.Account.UnlockedClasses
+	return (unlocked ~= nil and unlocked[id] == true) or CharacterDefinitions.MeetsUnlock(id, profile)
 end
 
 return CharacterDefinitions

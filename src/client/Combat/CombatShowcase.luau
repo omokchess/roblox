@@ -7,6 +7,8 @@
 	  캐릭터를 공중 무대(맵 위 높은 곳)로 옮기고, 전투 카메라와 같은 구도(오른쪽 옆 위)로 비춘다.
 	  직업마다: 대기 → 들림 → 내려놓임 → 피격 → 방어 → 회피 → 스킬 전부 → 슬라임 공격 3등급(회피·막음·맞음)
 	  키: N 다음 직업 · B 이전 직업 · R 이 직업 처음부터 · P 멈춤/계속
+	  속성(2026-10-25): CombatShowcaseClass = 처음 볼 직업 Id · CombatShowcaseOnly = 그 스킬 Id 하나만(대기·반응 건너뜀)
+	                    CombatShowcaseZoom = 카메라 거리 배율 · CombatTimeScale = 느린 재생(CombatDirector)
 	화면 위에 지금 재생 중인 직업·모션 이름을 띄운다.
 ]]
 
@@ -18,7 +20,7 @@ local CombatDirector = require(script.Parent.CombatDirector)
 local WeaponDefinitions = require(ReplicatedStorage.Shared.Combat.WeaponDefinitions)
 local BattleSkills = require(ReplicatedStorage.Shared.BattleSkills)
 
-local CLASSES = { "Duelist", "Musician", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker" }
+local CLASSES = { "Duelist", "Musician", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker", "Attuner", "AzureBlade" }
 local CLASS_NAME = {
 	Duelist = "결투사",
 	Musician = "음악가",
@@ -29,6 +31,8 @@ local CLASS_NAME = {
 	WallBreaker = "월 브레이커",
 	Alchemist = "연금술사",
 	Berserker = "광전사",
+	Attuner = "조율자",
+	AzureBlade = "청의 검사",
 }
 local REACTION_NAME = { Idle = "대기", Held = "들림", Drop = "내려놓임", Hit = "피격", Guard = "방어", Dodge = "회피" }
 
@@ -66,7 +70,9 @@ function CombatShowcase.Start()
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Scriptable
 	local focus = STAGE + Vector3.new(5, 1.5, 0)
-	local camCf = CFrame.lookAt(focus + Vector3.new(0, 15, 22), focus)
+	-- workspace 속성 CombatShowcaseZoom(예: 0.45)이면 그만큼 다가가 자세를 크게 본다
+	local zoom = workspace:GetAttribute("CombatShowcaseZoom")
+	local camCf = CFrame.lookAt(focus + Vector3.new(0, 15, 22) * (if type(zoom) == "number" then zoom else 1), focus)
 	camera.CFrame = camCf
 
 	local gui = Instance.new("ScreenGui")
@@ -85,7 +91,7 @@ function CombatShowcase.Start()
 	local director = CombatDirector.new()
 	director:SetCamera(camCf)
 
-	local classIndex = 1
+	local classIndex = table.find(CLASSES, workspace:GetAttribute("CombatShowcaseClass") :: any) or 1
 	local generation = 0
 	local paused = false
 
@@ -111,6 +117,17 @@ function CombatShowcase.Start()
 		director:AddHumanoid("player", character, classId, allyHome, WeaponDefinitions.ForClass(classId).Id)
 		director:SetHome("player", allyHome, true)
 		director:AddSlime("slime", folder, slimeHome)
+
+		local only = workspace:GetAttribute("CombatShowcaseOnly")
+		if type(only) == "string" and only ~= "" then
+			local skill = BattleSkills.ById(only)
+			show(string.format("스킬: %s", if skill then skill.Name else only))
+			director:PlaySkill("player", only, { { "slime" }, { "slime" }, { "slime" } })
+			if waitIdle(gen, 0.8) then
+				show("끝 — R 로 다시")
+			end
+			return
+		end
 
 		show(REACTION_NAME.Idle)
 		if not waitIdle(gen, 3) then
@@ -148,6 +165,10 @@ function CombatShowcase.Start()
 		end
 		if classId == "Quasar" then
 			table.insert(skills, 1, "CollapseCharge")
+		elseif classId == "AzureBlade" then
+			-- [집중력] 변형 스킬(같은 칸에서 바뀌어 직업 목록에는 없다)
+			table.insert(skills, "FocusCut")
+			table.insert(skills, "SpaceCut")
 		end
 		table.insert(skills, "Guard")
 		table.insert(skills, "Meditate")

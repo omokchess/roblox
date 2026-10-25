@@ -67,6 +67,15 @@ ClassResources.OVERHEAL = "Overheal" -- 과다 회복
 ]]
 ClassResources.RAGE = "Rage"
 
+-- 조율자(조건부 획득, 2026-10-25 `유저 아이디어(직업).md`)
+ClassResources.STAR = "Star" -- 칠성(최대 7, 턴이 지나도 남음)
+ClassResources.MELT = "Melt" -- 융해(적에게, 특수 화상 — 턴 끝에 터진다)
+ClassResources.FUSION = "Fusion" -- 핵융합 반응(최대 1, 남은 세기는 보정값 "핵융합 반응"이 든다)
+ClassResources.BIND = "Bind" -- 묶임(미자르 — 그 턴 움직이지 못한다)
+
+-- 청의 검사(조건부 획득)
+ClassResources.CONCENTRATION = "Concentration" -- 집중력(도발로 얻고, 2턴 뒤 사라진다)
+
 --=== 상한 ===--
 
 --[[
@@ -95,6 +104,11 @@ local CAPS: { [string]: number } = {
 	[ClassResources.OIL_BOTTLE] = 4,
 	[ClassResources.HEAL_BOTTLE] = 4,
 	[ClassResources.OVERHEAL] = 3,
+	[ClassResources.STAR] = 7,
+	[ClassResources.MELT] = 20,
+	[ClassResources.FUSION] = 1,
+	[ClassResources.BIND] = 1,
+	[ClassResources.CONCENTRATION] = 1,
 }
 
 function ClassResources.Cap(id: string): number?
@@ -154,6 +168,11 @@ local LABELS: { [string]: string } = {
 	[ClassResources.OIL_BOTTLE] = "기름 병",
 	[ClassResources.HEAL_BOTTLE] = "회복 병",
 	[ClassResources.OVERHEAL] = "과다 회복",
+	[ClassResources.STAR] = "칠성",
+	[ClassResources.MELT] = "융해",
+	[ClassResources.FUSION] = "핵융합 반응",
+	[ClassResources.BIND] = "묶임",
+	[ClassResources.CONCENTRATION] = "집중력",
 }
 
 function ClassResources.Label(id: string): string
@@ -181,6 +200,8 @@ local BY_CLASS: { [string]: { string } } = {
 		ClassResources.OVERHEAL,
 	},
 	Berserker = { ClassResources.RAGE },
+	Attuner = { ClassResources.STAR, ClassResources.FUSION, ClassResources.BIND },
+	AzureBlade = { ClassResources.CONCENTRATION },
 }
 
 function ClassResources.ForClass(classId: string): { string }

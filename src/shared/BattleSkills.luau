@@ -123,6 +123,19 @@ export type Skill = {
 	NoHealTurns: number?,
 	Release: string?,
 	BreakRatio: number?,
+	--[[
+		2026-10-25 조건부 직업(조율자·청의 검사)이 쓰는 칸.
+		  Stamina           스테미나(비우면 1·2·3번 10·15·20, 강화 25)
+		  HealthForStamina  스테미나가 모자라면 모자란 만큼 체력으로 낸다(이 효과로는 죽지 않음 — 셉텐트리오네스)
+		  HitWeights        한 대상을 이 비율로 나눠 연타(진 발도술 4/3/3). 합은 연타 규칙대로 한 방의 1.2배
+		  MaxTargets        범위 안에서 가까운 적부터 이만큼만 벤다(진 발도술 1, 발도술의 절정 4)
+		  Element           피해 속성. "True" = 받는 피해 보정·저항 무시(공간의 이해)
+	]]
+	Stamina: number?,
+	HealthForStamina: boolean?,
+	HitWeights: { number }?,
+	MaxTargets: number?,
+	Element: string?,
 }
 
 -- 적 전용. 적은 직업이 없으므로 이 중에서 무작위로 고른다. 지금은 슬라임 공격 둘뿐이다.
@@ -402,6 +415,17 @@ local bossSkills: { Skill } = {
 	강화·연계 스킬은 `upgradeSkills`에 따로 있고, 조건이 차면 **3번 오른쪽에 따로**
 	버튼이 하나 더 생긴다(3번을 갈아 끼우지 않는다).
 ]]
+-- 기준점에서 x0~x1 × y0~y1 상자(청의 검사 발도술·공간의 이해)
+local function box(x0: number, x1: number, y0: number, y1: number): { { X: number, Y: number } }
+	local cells = {}
+	for x = x0, x1 do
+		for y = y0, y1 do
+			table.insert(cells, { X = x, Y = y })
+		end
+	end
+	return cells
+end
+
 local classSkills: { [string]: { Skill } } = {
 	Musician = {
 		{
@@ -667,6 +691,113 @@ local classSkills: { [string]: { Skill } } = {
 			Shape = { Kind = "Square", Radius = 1 , Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } },
 		},
 	},
+	--[[
+		조율자(조건부 획득, 2026-10-25 `유저 아이디어(직업).md` 원안 그대로). 별 하나가 스킬 하나.
+		  메그레즈 `대상 열 전체`(Column) · 메라크 `대상 행 전체`(Row) · 알리오스 `상대 진형 전체`(All)
+	]]
+	Attuner = {
+		{
+			Id = "Megrez",
+			Name = "메그레즈",
+			Description = "- 사용 시 [칠성] 1 얻음.\n- 적중 시 [화상] 3, [융해] 1 부여.\n- 이후 `셉텐트리오네스`를 쓰기 전까지 이 스킬로는 [칠성]을 얻을 수 없음.",
+			Damage = 10,
+			Range = "Ranged",
+			Shape = { Kind = "Column" },
+			Cooldown = 0,
+			Stamina = 10,
+		},
+		{
+			Id = "Merak",
+			Name = "메라크",
+			Description = "- 이전 턴에 `메그레즈`를 썼다면 [칠성] 1 얻음.\n  - 그 밖에는 이 스킬로 [칠성]을 얻을 수 없음.\n- 적중 시 [화상] 3, [융해] 2 부여.\n- 이후 `셉텐트리오네스`를 쓰기 전까지 이 스킬로는 [칠성]을 얻을 수 없음.",
+			Damage = 22,
+			Range = "Ranged",
+			Shape = { Kind = "Row" },
+			Cooldown = 3,
+			Stamina = 20,
+		},
+		{
+			Id = "Alioth",
+			Name = "알리오스",
+			Description = "- 사용 시 [칠성] 1 얻음.\n- 적중 시 [화상] 5, [융해] 5 부여.\n- 이후 `셉텐트리오네스`를 쓰기 전까지 이 스킬로는 [칠성]을 얻을 수 없음.",
+			Damage = 30,
+			Range = "Ranged",
+			Shape = { Kind = "All" },
+			Cooldown = 5,
+			Stamina = 15,
+		},
+	},
+	--[[
+		청의 검사(조건부 획득). 피해는 원안(8·10·4/3/3·6/4/4·15)을 같은 비율로 눈금 18~40에 맞췄다(2026-10-25 사용자).
+		범위 `(n+1,n+1)~(n+5,n+1)` 의 n+1 은 위아래 한 줄씩(사용자) — 앞 1~5칸 × 3줄.
+		[집중력]이 있으면 1번·3번이 `집중 베기`·`공간의 이해`로 바뀐다(`focusSkills`, BattleSkillEffects.SwapFor).
+	]]
+	AzureBlade = {
+		{
+			Id = "ScabbardStrike",
+			Name = "검집 타격",
+			Description = "- 검집으로 상대를 친다.\n- [집중력]이 있으면 `집중 베기`로 바뀜.",
+			Damage = 18,
+			Range = "Melee",
+			Shape = { Kind = "Line", Radius = 2, Cells = { { X = 0, Y = 0 }, { X = 1, Y = 0 } } },
+			Cooldown = 1,
+			Stamina = 10,
+		},
+		{
+			Id = "TrueIaido",
+			Name = "진 발도술",
+			Description = "- 엄청난 속도로 검집에서 검을 뽑아 상대를 무자비하게 벤다.\n- 범위 안에서 가장 앞에 있는 적에게만.\n- 4 / 3 / 3 비율로 3연타(합은 한 방의 1.2배).",
+			Damage = 22,
+			Range = "Melee",
+			Shape = { Kind = "Square", Cells = box(0, 4, -1, 1) },
+			HitWeights = { 4, 3, 3 },
+			MaxTargets = 1,
+			Cooldown = 2,
+			Stamina = 15,
+		},
+		{
+			Id = "IaidoPeak",
+			Name = "발도술의 절정",
+			Description = "- `진 발도술`처럼 베지만 벨 수 있는 적이 최대 4명.\n  - 앞에 있는 적부터.\n- 6 / 4 / 4 비율로 3연타(합은 한 방의 1.2배).\n- [집중력]이 있으면 `공간의 이해`로 바뀜.",
+			Damage = 32,
+			Range = "Melee",
+			Shape = { Kind = "Square", Cells = box(0, 4, -1, 1) },
+			HitWeights = { 6, 4, 4 },
+			MaxTargets = 4,
+			Cooldown = 4,
+			Stamina = 20,
+		},
+	},
+}
+
+--[[
+	[집중력] 변형 스킬(청의 검사). 1·3번 자리를 **갈아 끼운다** — 강화 스킬처럼 옆에 버튼이 생기는 것이 아니라
+	원안이 "몇몇 스킬을 변형시킴"이라 같은 자리에서 바뀐다. 재사용 대기는 Id 가 달라 따로 센다.
+]]
+local focusSkills: { Skill } = {
+	{
+		Id = "FocusCut",
+		Name = "집중 베기",
+		Description = "- [집중력] 변형.\n- 앞에 있는 적들을 작게 벤다.",
+		Damage = 22,
+		Range = "Melee",
+		Shape = { Kind = "Line", Radius = 2, Cells = { { X = 0, Y = 0 }, { X = 1, Y = 0 } } },
+		Cooldown = 2,
+		Stamina = 10,
+		ClassId = "AzureBlade",
+	},
+	{
+		Id = "SpaceCut",
+		Name = "공간의 이해",
+		Description = "- [집중력] 변형.\n- 칼을 최대한 늘려 공간을 가르듯 큰 범위를 벤다.\n- 적의 방어와 상관없는 고정 피해(트루 데미지).\n- 모든 [집중력]을 소모.",
+		Damage = 34,
+		Range = "Melee",
+		Shape = { Kind = "Square", Cells = box(-2, 2, -1, 1) },
+		Element = "True",
+		Cooldown = 6,
+		Stamina = 20,
+		ClassId = "AzureBlade",
+	},
 }
 
 --[[
@@ -728,6 +859,31 @@ local upgradeSkills: { Skill } = {
 		Range = "Melee",
 		Shape = { Kind = "Line", Radius = 1 , TargetSide = "Ally" },
 		ClassId = "WallBreaker",
+	},
+	-- 조율자. [칠성] 7에서 열린다(2026-10-25 사용자: 자동 발동이 아니라 버튼).
+	{
+		Id = "Septentriones",
+		Name = "셉텐트리오네스",
+		Description = "- 조건: [칠성] 7.\n- 스테미나 60. 모자라면 모자란 만큼 체력을 깎고 사용(이 효과로는 죽지 않음).\n- 적중 시 (피해량 / 100)만큼 체력 회복(최대 30).\n- 적중 시 [화상] 10, [융해] 5 부여.\n- 적중 시 자신이 [화상] 3을 얻음(이 화상으로는 죽지 않음).\n- 적중 시 [핵융합 반응] 1 얻음.\n- 사용 후 [칠성] 초기화.",
+		Damage = 50,
+		Range = "Ranged",
+		Shape = { Kind = "All" },
+		Cooldown = 0,
+		Stamina = 60,
+		HealthForStamina = true,
+		ClassId = "Attuner",
+	},
+	-- 청의 검사. 방어(가드)와 다른 특별한 스킬 — 늘 열려 있다(패시브 `도발`).
+	{
+		Id = "Provoke",
+		Name = "도발",
+		Description = "- 자신에게 [집중력] 1을 준다.\n  - 얻은 뒤 2턴이 지나면 사라짐.\n- 피해 없음.",
+		Damage = 0,
+		Range = "Melee",
+		Shape = { Kind = "Line", Radius = 1, TargetSide = "Ally" },
+		Cooldown = 2,
+		Stamina = 0,
+		ClassId = "AzureBlade",
 	},
 }
 
@@ -818,7 +974,7 @@ function BattleSkills.ById(id: string): Skill?
 			end
 		end
 	end
-	for _, list in { upgradeSkills, commonSkills, enemySkills, bossSkills } do
+	for _, list in { upgradeSkills, focusSkills, commonSkills, enemySkills, bossSkills } do
 		for _, skill in list do
 			if skill.Id == id then
 				return skill
@@ -907,7 +1063,8 @@ function BattleSkills.Cells(
 		return BattleGrid.CellsInShape(grid, attackerSide, casterX or 1, lane, shape, growCount)
 	end
 	local targetSide = BattleGrid.Opposing(attackerSide)
-	if shape.Kind == "Row" then
+	-- 라인 전체·진형 전체는 x를 쓰지 않으므로 상대가 없어도 그대로 범위다(조율자 알리오스·셉텐트리오네스)
+	if shape.Kind == "Row" or (shape.Kind == "All" and not shape.Cells) then
 		return BattleGrid.CellsInShape(grid, targetSide, 1, lane, shape, growCount)
 	end
 	local anchor = select(1, BattleGrid.FirstOccupiedColumn(grid, targetSide, lane))

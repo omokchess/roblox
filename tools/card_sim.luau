@@ -201,12 +201,19 @@ local function fight(classId: string, cards: { any }, turns: number, policy: str
 	local encounter = {
 		Name = "sim",
 		Enemies = { "Slime", "Slime", "Slime" },
-		HealthScale = if policy == "kill" then 1.5 else 20,
+		-- 조율자는 [융해] 1 이 1000 피해라 체력 20배 슬라임이 첫 턴에 다 녹는다 → 카드 차이를 보려고 크게(kill 은 처치 확인용)
+		HealthScale = if policy == "kill" then (if classId == "Attuner" then 40 else 1.5) elseif classId == "Attuner" then 2500 else 20,
 		PowerScale = 1.5,
 		Cells = { { 1, 2 }, { 2, 2 }, { 1, 1 } },
 	}
 	local stats = { Strength = 5, Intellect = 5, Agility = 5, Vitality = 5, Luck = 5, Faith = if policy == "low" then 45 else 20 }
 	local state = GridBattle.New(1, "sim", 400, 14, classId, stats.Faith, nil, cards, encounter, stats)
+	if classId == "Attuner" then
+		-- 화상은 최대 체력 비례라 체력을 늘려도 금방 녹는다 → 보스처럼 화염 저항 90%(카드 차이가 14턴 안에 보이게)
+		for _, enemy in GridBattle.AliveEnemies(state) do
+			enemy.Resist = { Fire = 0.9 }
+		end
+	end
 	if policy == "low" then
 		GridBattle.Ally(state).Health = 100
 	end
@@ -231,7 +238,8 @@ local function fight(classId: string, cards: { any }, turns: number, policy: str
 		for index = #list, 1, -1 do
 			local skill = list[index]
 			local cost = GridBattle.StaminaCost(state, skill)
-			if skill.Id ~= "Guard" and skill.Id ~= "Meditate" and (ally.Cooldowns[skill.Id] or 0) <= 0 and ally.Stamina >= cost then
+			-- 셉텐트리오네스는 모자란 스테미나를 체력으로 낸다(HealthForStamina)
+			if skill.Id ~= "Guard" and skill.Id ~= "Meditate" and (ally.Cooldowns[skill.Id] or 0) <= 0 and (ally.Stamina >= cost or skill.HealthForStamina) then
 				chosen = index
 				break
 			end
@@ -245,7 +253,7 @@ local function fight(classId: string, cards: { any }, turns: number, policy: str
 			for _, want in prefer(stack) do
 				local found = nil
 				for index, skill in list do
-					if skill.Id == want and (ally.Cooldowns[skill.Id] or 0) <= 0 and ally.Stamina >= GridBattle.StaminaCost(state, skill) then
+					if skill.Id == want and (ally.Cooldowns[skill.Id] or 0) <= 0 and (ally.Stamina >= GridBattle.StaminaCost(state, skill) or skill.HealthForStamina) then
 						found = index
 					end
 				end
@@ -321,6 +329,13 @@ PREFER = {
 		end
 		return { "Grind" }
 	end,
+	-- 청의 검사: 집중력이 있으면 변형 스킬, 없으면 도발로 얻는다
+	AzureBlade = function(stack): { string }
+		if stack("Concentration") > 0 then
+			return { "SpaceCut", "FocusCut", "TrueIaido" }
+		end
+		return { "Provoke", "IaidoPeak", "TrueIaido", "ScabbardStrike" }
+	end,
 	WallBreaker = function(stack): { string }
 		if stack("Ruin") >= 3 then
 			return { "TearDown", "BringDown", "Cleave" }
@@ -343,7 +358,7 @@ COMBOS = {
 
 local only = process.args[1]
 DEBUG_SKILLS = process.args[2] == "debug"
-local classes = { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker" }
+local classes = { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker", "Attuner", "AzureBlade" }
 local totalCards, totalWired, silent, errors = 0, 0, {}, 0
 for _, classId in classes do
 	if only and only ~= classId then

@@ -81,6 +81,8 @@ export type Context = {
 	HitCount: number?,
 	-- 살아 있는 적 전부
 	Enemies: (() -> { any })?,
+	-- 지금 턴 번호(메라크 "이전 턴에 메그레즈", 집중력 지속)
+	Turn: number?,
 }
 
 export type Effect = {
@@ -1249,6 +1251,188 @@ local berserkerEffects: { [string]: Effect } = {
 	},
 }
 
+--=== 조율자 (조건부 획득, 2026-10-25) ===--
+
+--[[
+	[칠성]: 일곱 별(스킬 셋 + 패시브 넷)이 **셉텐트리오네스를 쓰기 전까지 하나씩만** 준다.
+	어느 별이 이미 켜졌는지는 시전자 유닛의 `StarLit` 에 적는다(연금술사 `LastBottle` 처럼 유닛에 붙는 기억).
+	수치 1당 [가하는 피해량] +3% 는 보정값 "칠성"으로 — 별이 바뀔 때마다 다시 건다.
+	[핵융합 반응] 동안은 얻는 양이 2배다(키트의 `StarGain` 규칙 — gainResource 가 묻는다).
+]]
+BattleSkillEffects.STAR_SOURCES = { "Megrez", "Merak", "Alioth", "Alkaid", "Mizar", "Phecda", "Dubhe" }
+
+function BattleSkillEffects.RefreshStars(status: BattleStatus.State)
+	BattleStatus.RemoveBySource(status, "칠성")
+	local stars = BattleStatus.Stack(status, R.STAR)
+	if stars > 0 then
+		BattleStatus.AddModifier(status, "DamageDealt", 0.03 * stars, -1, "칠성")
+	end
+end
+
+-- 별 하나를 켠다. 이미 켜졌으면 0. gain 은 직업 규칙대로 자원을 주는 함수(ctx.Gain · H.Gain)
+function BattleSkillEffects.LightStar(ally: any, source: string, gain: (string, number) -> number): number
+	ally.StarLit = ally.StarLit or {}
+	if ally.StarLit[source] then
+		return 0
+	end
+	ally.StarLit[source] = true
+	local gained = gain(R.STAR, 1)
+	BattleSkillEffects.RefreshStars(ally.Status)
+	return gained
+end
+
+-- 셉텐트리오네스 뒤: 별을 전부 끈다
+function BattleSkillEffects.ResetStars(ally: any)
+	ally.StarLit = {}
+	BattleStatus.SpendAll(ally.Status, R.STAR)
+	BattleSkillEffects.RefreshStars(ally.Status)
+end
+
+--[[
+	[핵융합 반응]: 얻은 뒤 age 턴이 지났을 때의 세기(2026-10-25 사용자: 400 그대로, %p 감소).
+	가하는 피해 +400% 에서 턴마다 10%p, 받는 피해 +400% 에서 턴마다 50%p 씩 줄고 0 에서 멈춘다.
+	다시 얻으면 age 0 으로 새로 고친다.
+]]
+function BattleSkillEffects.ApplyFusion(status: BattleStatus.State, age: number, takenDrop: number?)
+	BattleStatus.RemoveBySource(status, "핵융합 반응")
+	if BattleStatus.Stack(status, R.FUSION) <= 0 then
+		return
+	end
+	local dealt = math.max(0, 4 - 0.1 * age)
+	local taken = math.max(0, 4 - (takenDrop or 0.5) * age)
+	if dealt > 0 then
+		BattleStatus.AddModifier(status, "DamageDealt", dealt, -1, "핵융합 반응")
+	end
+	if taken > 0 then
+		BattleStatus.AddModifier(status, "DamageTaken", taken, -1, "핵융합 반응")
+	end
+end
+
+-- [융해]를 건다(상한 20 — 카드가 늘린다). 실제로 얹힌 양
+function BattleSkillEffects.AddMelt(status: BattleStatus.State, amount: number, cap: number): number
+	local before = BattleStatus.Stack(status, R.MELT)
+	BattleStatus.AddStack(status, R.MELT, amount, cap)
+	return BattleStatus.Stack(status, R.MELT) - before
+end
+
+-- 적중한 적마다 [화상]·[융해]. 태우기 위한 별 같은 카드가 `AttunerBurnBonus`·`AttunerMeltBonus` 로 더한다
+local function scorch(ctx: Context, burn: number, melt: number)
+	burn += math.floor(ctx.Query("AttunerBurnBonus", 0))
+	melt += math.floor(ctx.Query("AttunerMeltBonus", 0))
+	local cap = math.floor(ctx.Query("MeltCap", ClassResources.Cap(R.MELT) or 20))
+	for _, target in ctx.Targets do
+		local status = ctx.StatusOf(target)
+		BattleStatus.AddBurn(status, burn)
+		BattleSkillEffects.AddMelt(status, melt, cap)
+	end
+	if #ctx.Targets > 0 then
+		ctx.Log(string.format("화상 %d · 융해 %d (%d기)", burn, melt, #ctx.Targets))
+	end
+end
+
+local function lightStar(ctx: Context, source: string)
+	local gained = BattleSkillEffects.LightStar(ctx.Ally, source, ctx.Gain)
+	if gained > 0 then
+		ctx.Log(string.format("%s — 칠성 %d", source, BattleStatus.Stack(ctx.Status, R.STAR)))
+	end
+end
+
+local attunerEffects: { [string]: Effect } = {
+	-- 메그레즈: 사용 시 칠성(별마다 한 번). 적중 시 화상 3, 융해 1.
+	Megrez = {
+		Before = function(ctx)
+			lightStar(ctx, "Megrez")
+			-- 메라크가 "이전 턴에 메그레즈를 썼는지" 본다
+			ctx.Ally.LastMegrezTurn = ctx.Turn
+			return 1
+		end,
+		After = function(ctx)
+			scorch(ctx, 3, 1)
+		end,
+	},
+	-- 메라크: 이전 턴에 메그레즈를 썼으면 칠성. 적중 시 화상 3, 융해 2.
+	Merak = {
+		Before = function(ctx)
+			if ctx.Turn and ctx.Ally.LastMegrezTurn == ctx.Turn - 1 then
+				lightStar(ctx, "Merak")
+			end
+			return 1
+		end,
+		After = function(ctx)
+			scorch(ctx, 3, 2)
+		end,
+	},
+	-- 알리오스: 사용 시 칠성. 적중 시 화상 5, 융해 5.
+	Alioth = {
+		Before = function(ctx)
+			lightStar(ctx, "Alioth")
+			return 1
+		end,
+		After = function(ctx)
+			scorch(ctx, 5, 5)
+		end,
+	},
+	--[[
+		셉텐트리오네스(강화, 칠성 7). 스테미나 60 — 모자란 만큼 체력(GridBattle 이 `HealthForStamina` 로 낸다).
+		적중 시 (피해 / 100) 회복(최대 30), 화상 10 · 융해 5, 자신 화상 3, 핵융합 반응. 쓰고 나면 별을 전부 끈다.
+	]]
+	Septentriones = {
+		After = function(ctx)
+			if #ctx.Targets > 0 then
+				local cap = ctx.Query("SeptentrionesHealCap", 30)
+				local healed = ctx.Heal(ctx.Ally, math.min(cap, math.floor((ctx.TotalDealt or 0) / 100)))
+				scorch(ctx, 10, 5)
+				BattleStatus.AddBurn(ctx.Status, 3)
+				if ctx.Query("SeptentrionesNoFusion", 0) < 1 then
+					BattleStatus.SpendAll(ctx.Status, R.FUSION)
+					ctx.Gain(R.FUSION, 1)
+					ctx.Ally.FusionAge = 0
+					BattleSkillEffects.ApplyFusion(ctx.Status, 0, ctx.Query("FusionTakenDrop", 0.5))
+				end
+				ctx.Log(string.format("셉텐트리오네스 — 체력 %d 회복 · 핵융합 반응", healed))
+			end
+			BattleSkillEffects.ResetStars(ctx.Ally)
+		end,
+	},
+}
+
+--=== 청의 검사 (조건부 획득, 2026-10-25) ===--
+
+--[[
+	[집중력](상한 1)은 `도발`로 얻고 **얻은 뒤 2턴**(혼신의 도발 +)이 지나면 사라진다 — 얻은 턴 끝은 세지 않는다.
+	남은 턴은 유닛의 `ConcentrationLeft`, 얻은 턴은 `ConcentrationTurn`. 줄이는 것은 청의 검사 키트(TurnEnd).
+]]
+function BattleSkillEffects.GrantConcentration(ally: any, turn: number, turns: number, gain: (string, number) -> number): number
+	local gained = gain(R.CONCENTRATION, 1)
+	if BattleStatus.Stack(ally.Status, R.CONCENTRATION) > 0 then
+		ally.ConcentrationLeft = turns
+		ally.ConcentrationTurn = turn
+	end
+	return gained
+end
+
+local azureBladeEffects: { [string]: Effect } = {
+	Provoke = {
+		After = function(ctx)
+			-- 무념무상: 도발로는 집중력을 얻지 못한다(진 발도술 치명타로 얻는다)
+			if ctx.Query("ProvokeNoConcentration", 0) >= 1 then
+				ctx.Log("도발")
+				return
+			end
+			BattleSkillEffects.GrantConcentration(ctx.Ally, ctx.Turn or 0, math.floor(ctx.Query("ConcentrationTurns", 2)), ctx.Gain)
+			ctx.Log(string.format("도발 — 집중력 (%d턴)", ctx.Ally.ConcentrationLeft or 0))
+		end,
+	},
+	-- 공간의 이해: 모든 집중력을 소모한다(피해 속성 True 는 스킬 표의 Element)
+	SpaceCut = {
+		Before = function(ctx)
+			BattleStatus.SpendAll(ctx.Status, R.CONCENTRATION)
+			ctx.Ally.ConcentrationLeft = 0
+			return 1
+		end,
+	},
+}
+
 --=== 공용 (모든 직업) ===--
 
 --[[
@@ -1295,6 +1479,8 @@ register(wallMasonEffects)
 register(wallBreakerEffects)
 register(alchemistEffects)
 register(berserkerEffects)
+register(attunerEffects)
+register(azureBladeEffects)
 register(commonEffects)
 
 function BattleSkillEffects.Get(skillId: string): Effect?
@@ -1307,8 +1493,15 @@ end
 	3번을 갈아 끼우지 않고, 3번 오른쪽에 버튼이 하나 더 생긴다(요청). 그래서
 	"바꿔치기"가 아니라 "추가로 열린다"는 뜻의 이름을 쓴다.
 ]]
-function BattleSkillEffects.UpgradeFor(classId: string, status: BattleStatus.State): string?
-	if classId == "Duelist" then
+function BattleSkillEffects.UpgradeFor(classId: string, status: BattleStatus.State, query: ((string, number) -> number)?): string?
+	if classId == "Attuner" then
+		-- 칠성이 상한(7, 알코르 카드면 8)에 닿으면
+		local need = if query then query(R.STAR .. "Cap", ClassResources.Cap(R.STAR) or 7) else ClassResources.Cap(R.STAR) or 7
+		return if BattleStatus.Stack(status, R.STAR) >= need then "Septentriones" else nil
+	elseif classId == "AzureBlade" then
+		-- 도발은 방어와 다른 특별한 스킬 — 늘 열려 있다
+		return "Provoke"
+	elseif classId == "Duelist" then
 		-- 준비 자세를 잡은 다음 턴에만 연계가 열린다.
 		return if BattleStatus.Stack(status, R.READY) >= 1 then "PointBlank" else nil
 	elseif classId == "Musician" then
@@ -1334,6 +1527,19 @@ end
 	같은 슬롯에서 **모드만** 달라지는 것에 쓴다. 지금은 퀘이사 붕괴뿐이다
 	(차징 중인지 발동 차례인지 버튼에 보여야 한다).
 ]]
+--[[
+	같은 자리에서 **다른 스킬로 바뀌는** 것(청의 검사 [집중력]: 1번 → 집중 베기, 3번 → 공간의 이해).
+	바뀔 게 없으면 nil. 표시 이름만 바뀌는 `DisplayName` 과 달리 판정·재사용 대기가 통째로 그 스킬 것이 된다.
+]]
+local FOCUS_SWAPS: { [string]: string } = { ScabbardStrike = "FocusCut", IaidoPeak = "SpaceCut" }
+
+function BattleSkillEffects.SwapFor(classId: string, status: BattleStatus.State, skillId: string): string?
+	if classId == "AzureBlade" and BattleStatus.Stack(status, R.CONCENTRATION) > 0 then
+		return FOCUS_SWAPS[skillId]
+	end
+	return nil
+end
+
 function BattleSkillEffects.DisplayName(skillId: string, status: BattleStatus.State): string?
 	if skillId == "Collapse" and BattleStatus.Stack(status, R.CHARGE) > 0 then
 		return string.format("붕괴 발동 (차징 %d)", BattleStatus.Stack(status, R.CHARGE))

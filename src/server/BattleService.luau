@@ -39,6 +39,7 @@ local BattleGrid = require(ReplicatedStorage.Shared.BattleGrid)
 local BattleArena = require(ReplicatedStorage.Shared.BattleArena)
 local BattleStatus = require(ReplicatedStorage.Shared.BattleStatus)
 local CardDraft = require(ReplicatedStorage.Shared.CardDraft)
+local CardEffects = require(ReplicatedStorage.Shared.CardEffects)
 local CharacterDefinitions = require(ReplicatedStorage.Shared.CharacterDefinitions)
 local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
 local EnemyDefinitions = require(ReplicatedStorage.Shared.EnemyDefinitions)
@@ -338,10 +339,32 @@ end
 
 --=== 보내기 ===--
 
+--[[
+	필드 걷기 속도(2026-10-25 청의 검사 `민첩성` — 사용자: 필드에선 속도가 빨라지게). 카드 규칙 `FieldMoveSpeed` 를
+	전투 밖에서 묻는다. 플레이어 속성 FieldSpeed 로 두면 전투가 끝날 때 클라이언트(BattleClient)·광장(PlazaService)이
+	16 대신 이 값으로 되돌린다.
+]]
+local BASE_WALK = 16
+
+function BattleService:_applyFieldSpeed(player: Player)
+	local session = self:_session(player)
+	local runtime = CardEffects.NewRuntime(nil, session.Run.Cards, nil, nil)
+	local speed = BASE_WALK * (1 + CardEffects.Query(runtime, "FieldMoveSpeed", 0))
+	if player:GetAttribute("FieldSpeed") ~= speed then
+		player:SetAttribute("FieldSpeed", speed)
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid and not session.Battle and humanoid.WalkSpeed > 0 then
+			humanoid.WalkSpeed = speed
+		end
+	end
+end
+
 function BattleService:_publish(player: Player, message: string?)
 	local session = self:_session(player)
 	local run = session.Run
 	local config = session.Config
+	self:_applyFieldSpeed(player)
 
 	local owned = {}
 	for _, progress in run.Cards do
@@ -373,6 +396,9 @@ function BattleService:_publish(player: Player, message: string?)
 			Role = definition.Role,
 			Color = definition.Color,
 			BasicPower = definition.BasicPower,
+			-- 조건부 획득(조율자·청의 검사): 디버그 패널에 자물쇠를 그린다. 디버그 권한이 있으면 그대로 고를 수 있다
+			Conditional = definition.Conditional == true,
+			Hall = definition.Hall,
 		})
 	end
 	local class = CharacterDefinitions.Get(config.ClassId)
@@ -504,6 +530,10 @@ function BattleService:_applyConfig(player: Player, patch: any): string?
 	local config = session.Config
 	local note: string? = nil
 
+	-- 조건부 획득 직업은 아직 조건이 없어 디버그로만 연다(SetConfig 는 디버그 권한 없이도 오므로 여기서 막는다)
+	if type(patch.ClassId) == "string" and CharacterDefinitions.Get(patch.ClassId).Conditional and not self:CanDebug(player) then
+		return string.format("%s — 아직 얻지 못한 직업입니다(조건부 획득).", CharacterDefinitions.Get(patch.ClassId).Name)
+	end
 	if type(patch.ClassId) == "string" and CharacterDefinitions.IsValid(patch.ClassId) and patch.ClassId ~= config.ClassId then
 		config.ClassId = patch.ClassId
 		-- 카드는 직업 것이다. 직업을 바꾸면 빌드를 새로 시작한다.

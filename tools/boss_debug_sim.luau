@@ -14,7 +14,7 @@ local function rng(): number
 	return seed / 2147483647
 end
 
-for _, classId in { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker" } do
+for _, classId in { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker", "Attuner", "AzureBlade" } do
 	if only and only ~= classId then
 		continue
 	end

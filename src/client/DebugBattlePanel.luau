@@ -504,14 +504,15 @@ function DebugBattlePanel:_setupTab(section: (string?, number?) -> Frame)
 		send({ Kind = "ClearEncounters" })
 	end, 3)
 
-	-- 직업 3×3
-	local classes = section("직업  <font color=\"rgb(150,154,170)\" size=\"12\">바꾸면 카드 빌드가 비워진다</font>")
-	local grid = make("Frame", { Size = UDim2.new(1, 0, 0, 3 * 46 + 2 * 5), BackgroundTransparency = 1, LayoutOrder = 1 }, classes)
+	-- 직업 세 칸씩(조건부 획득 직업은 자물쇠 — 디버그로는 고를 수 있다)
+	local classes = section("직업  <font color=\"rgb(150,154,170)\" size=\"12\">바꾸면 카드 빌드가 비워진다 · 🔒 조건부 획득(디버그로 열림)</font>")
+	local rows = math.ceil(#(state.Classes or {}) / 3)
+	local grid = make("Frame", { Size = UDim2.new(1, 0, 0, rows * 46 + (rows - 1) * 5), BackgroundTransparency = 1, LayoutOrder = 1 }, classes)
 	make("UIGridLayout", { CellSize = UDim2.new(1 / 3, -4, 0, 46), CellPadding = UDim2.fromOffset(5, 5), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
 	for index, entry in state.Classes or {} do
 		local picked = entry.Id == config.ClassId
 		-- 고른 직업은 어두운 바탕에 직업색을 조금 섞고 테두리를 직업색으로(밝은 직업색 위 흰 글자는 안 읽힌다)
-		local b = button(grid, string.format('%s\n<font size="11" color="rgb(170,174,190)">%s</font>', entry.Name, entry.Role or ""), 0, if picked then CARD:Lerp(entry.Color, 0.28) else nil, function()
+		local b = button(grid, string.format('%s%s\n<font size="11" color="rgb(170,174,190)">%s</font>', if entry.Conditional then "🔒 " else "", entry.Name, if entry.Conditional then (entry.Hall or "조건부 획득") else (entry.Role or "")), 0, if picked then CARD:Lerp(entry.Color, 0.28) else nil, function()
 			patch({ ClassId = entry.Id })
 		end, index)
 		if picked then

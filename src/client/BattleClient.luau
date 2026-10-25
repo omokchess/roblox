@@ -984,6 +984,10 @@ function BattleClient:_renderUnits()
 		elseif not director:IsHeld("player") then
 			director:SetHome("player", home)
 		end
+		-- 조율자: [칠성]을 준 별만 밝게(셉텐트리오네스로 꺼지면 다시 흐려진다)
+		if snapshot.AllyClassId == "Attuner" then
+			director:SetLit("player", snapshot.AllyStarLit or {})
+		end
 	end
 
 	local seen: { [string]: boolean } = {}
@@ -1069,7 +1073,8 @@ function BattleClient:_setBattlePose(enabled: boolean)
 	if not humanoid or not root then
 		return
 	end
-	humanoid.WalkSpeed = if enabled then 0 else 16
+	-- 전투 밖 걷기 속도는 서버가 카드(민첩성)로 정해 둔 FieldSpeed
+	humanoid.WalkSpeed = if enabled then 0 else (self.player:GetAttribute("FieldSpeed") or 16)
 	humanoid.JumpPower = if enabled then 0 else 50
 	for _, stateType in { Enum.HumanoidStateType.Jumping, Enum.HumanoidStateType.Freefall } do
 		humanoid:SetStateEnabled(stateType, not enabled)

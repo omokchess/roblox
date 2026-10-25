@@ -30,6 +30,8 @@ CombatMotions.Sets = {
 	WallBreaker = require(Motions.WallBreaker),
 	Alchemist = require(Motions.Alchemist),
 	Berserker = require(Motions.Berserker),
+	Attuner = require(Motions.Attuner),
+	AzureBlade = require(Motions.AzureBlade),
 }
 -- 무기 종류별 묶음(직업과 다른 종류의 무기를 들었을 때)
 CombatMotions.ByType = {}

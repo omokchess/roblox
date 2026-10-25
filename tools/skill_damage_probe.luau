@@ -12,7 +12,7 @@ local BattleStatus = loadShared("BattleStatus")
 local ClassResources = loadShared("ClassResources")
 loadShared("AbilityCards/init").Register()
 
-local CLASSES = { "Duelist", "Musician", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker" }
+local CLASSES = { "Duelist", "Musician", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker", "Attuner", "AzureBlade" }
 local FULL = {
 	Duelist = { [ClassResources.FOCUS] = 10, [ClassResources.READY] = 1 },
 	Musician = { [ClassResources.METER] = 3, [ClassResources.SIXTEENTH] = 16, [ClassResources.BRILLANTE] = 5 },

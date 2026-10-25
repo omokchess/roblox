@@ -294,6 +294,9 @@ def solve(pose):
 
 
 def weapon_cf(world, hand, w):
+    if hand == "Back":
+        # 등에 멘 것(청의 검사 검집): 몸통 가운데에서 몸통 공간 그대로 — CombatWeapons 의 C0 = identity
+        return world["Torso"] * angles(w[3], w[4], w[5]) * cfp(w[0], w[1], w[2])
     arm = world["RArm" if hand == "Right" else "LArm"]
     grip = cfp(0, -1, 0) * angles(-90, 0, 0)
     # 무기 회전은 CFrame.Angles 순서(숙임 X · 날 비틀기 Y · 기울기 Z) — CombatRig 와 같다
@@ -426,6 +429,10 @@ def build(pose, offset, weapon, yaw=90):
                 a = 2 * PI * i / orbit["Count"]
                 oc = base * world["Torso"].rot() * cfp(math.cos(a) * orbit["Radius"], orbit["Height"] - 1, math.sin(a) * orbit["Radius"])
                 oc = CF(None, (base * cfp(0, 0, 0)).p + (world["Torso"].p + Vector((math.cos(a) * orbit["Radius"], orbit["Height"] - 1, math.sin(a) * orbit["Radius"]))))
+                # 별자리 대형(조율자 일곱 별): 쉴 때 자리(캐릭터 공간, HRP 기준 — CombatWeapons 와 같다)
+                if orbit.get("Points"):
+                    q = orbit["Points"][i]
+                    oc = CF(None, (base * cfp(q[0], q[1], q[2])).p)
                 for part in main["Parts"]:
                     at = part["At"]
                     pc = oc * cfp(at[0], at[1], at[2]) * orient(at[3], at[4], at[5])

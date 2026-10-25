@@ -47,8 +47,14 @@ function PrototypeTests.Run()
 	)
 	testRig:Destroy()
 	local characters = CharacterDefinitions.All()
-	-- 직업은 9개다(카드 파일 9개와 같은 로스터 — `AbilityCards` 머리 주석)
-	expect(#characters == 9, "fixed character roster must contain 9 classes")
+	-- 직업은 늘 쓰는 9개 + 조건부 획득 2개(조율자·청의 검사, 2026-10-25) — 카드 파일과 같은 로스터
+	local fixedCount = 0
+	for _, character in characters do
+		if not character.Conditional then
+			fixedCount += 1
+		end
+	end
+	expect(fixedCount == 9 and #characters == 11, "roster must contain 9 fixed classes and 2 conditional classes")
 	local characterIds: { [string]: boolean } = {}
 	for _, character in characters do
 		expect(not characterIds[character.Id], "character ids must be unique")
@@ -2121,6 +2127,8 @@ function PrototypeTests.RunSystems()
 			"WallBreaker",
 			"Alchemist",
 			"Berserker",
+			"Attuner",
+			"AzureBlade",
 		}
 		local seenSkillSets: { [string]: string } = {}
 		for _, classId in skillClassIds do
@@ -2355,6 +2363,8 @@ function PrototypeTests.RunSystems()
 			"WallBreaker",
 			"Alchemist",
 			"Berserker",
+			"Attuner",
+			"AzureBlade",
 		}
 		for _, classId in artClassIds do
 			for _, grade in { "Essential", "Rare", "Common" } do
@@ -2418,7 +2428,8 @@ function PrototypeTests.RunSystems()
 			)
 			glyphSeen[signature] = tag
 		end
-		expect(#tagList == 32, "the 32 card tags must each have their own glyph, got " .. #tagList)
+		-- 2026-10-25 조건부 직업이 칠성(Constellation)·발도(Iaido)를 더했다
+		expect(#tagList == 34, "the 34 card tags must each have their own glyph, got " .. #tagList)
 
 		--[[
 			**카드 이름은 전 직업에서 유일해야 한다** (요청: "해당 카드 이름에 맞게 짜줘").

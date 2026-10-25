@@ -18,12 +18,14 @@
 
 	사건(모션 Events 의 k)
 	  Hit    { i = 몇 번째 타격, fx = 이펙트 이름 }  대상 반응·번쩍·피해 숫자
-	  Dash   { to = "Target"|"Home"|"Far", gap = 대상 앞 거리(음수 = 뚫고 지나감), past = Far 일 때 적 진영 끝 너머 거리, d = 걸리는 초 }
+	  Dash   { to = "Target"|"Home"|"Far", gap = 대상 앞 거리(음수 = 뚫고 지나감), past = Far 일 때 적 진영 끝 너머 거리, d = 걸리는 초,
+	           n = 몇 번째 대상(대상 수로 감음), side = 진행 방향 오른쪽으로 비켜 감, bend = 길을 옆으로 휘는 높이,
+	           face = "move" 면 가는 쪽을 보고 선다 }
 	  Fx     { n = 이펙트 이름 }                     Fx/<직업>.luau 의 함수
 	  Trail  { on = true/false, slot = "W"|"O"|nil } 무기 궤적
 	  Shake  { a = 세기, d = 초 }
 	  Stop   { d = 초 }                              타격 정지
-	  Orbs   { mode = "Orbit"|"Gather"|"Shield"|"Spread"|"Crown" }
+	  Orbs   { mode = "Orbit"|"Gather"|"Shield"|"Spread"|"Crown"|"Sky", at = "Target"|"Enemies" }
 	  Hide   { slot = "W", on = true/false }         손에 든 것 숨기기(던진 병)
 ]]
 
@@ -104,6 +106,8 @@ function CombatDirector.new(opts: { Quiet: boolean? }?)
 	self.OnDamage = nil :: ((string, number) -> ())?
 	-- 보스 위성 셋이 함께 도는 바퀴의 각(라디안, _bossHomes)
 	self.BossOrbit = 0
+	-- 컷신 카메라(ctx.Shot — 스킬 연출이 잠시 카메라를 가져간다). { Fn, T, D, Actor, Release? }
+	self.Shot = nil :: any
 	-- PreSimulation: 애니메이션 단계(Animator 가 관절 Transform 을 다시 쓴다) 다음, 물리 단계 전.
 	-- RenderStepped 에서 넣으면 Animator 가 덮어써 몸이 차렷 그대로 보였다.
 	self.Connection = RunService.PreSimulation:Connect(function(dt)
@@ -396,6 +400,21 @@ end
 
 --=== 이펙트 ===--
 
+-- 적 진영 가운데(살아 있는 적들의 평균, 없으면 앞 12칸). 진형 전체를 덮는 스킬 연출이 쓴다
+function CombatDirector:_enemyCenter(a: Actor): Vector3
+	local sum, n = Vector3.zero, 0
+	for _, o in self.Actors do
+		if o.Kind ~= "Humanoid" and not o.Dying then
+			sum += o.Home.Position
+			n += 1
+		end
+	end
+	if n == 0 then
+		return a.Pos.Position + flat(a.Home.LookVector) * 12
+	end
+	return sum / n
+end
+
 function CombatDirector:_targetPoint(id: string): Vector3?
 	local t = self.Actors[id]
 	if not t then
@@ -438,6 +457,28 @@ function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 		local arm = a.Model:FindFirstChild(if side == "L" then "Left Arm" else "Right Arm") :: BasePart?
 		return if arm then (arm.CFrame * CFrame.new(0, -1, 0)).Position else a.Pos.Position
 	end
+	-- 떠 있는 별 i 의 자리(조율자 — STAR_SOURCES 순서). 없으면 머리 위
+	function ctx.Star(i: number): Vector3
+		return (weapons and weapons:OrbPosition(i)) or (a.Pos.Position + Vector3.new(0, 3.6, 0))
+	end
+	ctx.EnemyCenter = self:_enemyCenter(a)
+	-- 컷신 카메라: fn(진행도 0~1, 지난 초) → 카메라 CFrame. fn 없이 부르면 전투 카메라로 돌려준다(모션이 끝나도 돌려준다)
+	local director = self
+	function ctx.Shot(d: number?, fn: ((number, number) -> CFrame)?)
+		if director.Quiet then
+			return
+		end
+		if fn then
+			director.Shot = { Fn = fn, T = 0, D = math.max(0.01, d or 1), Actor = a }
+		elseif director.Shot then
+			director.Shot.Release = director.Shot.Release or 0
+		end
+	end
+	function ctx.Sound(id: number, volume: number?, speed: number?)
+		if not director.Quiet then
+			FxCommon.Sound(id, volume, speed)
+		end
+	end
 	return ctx
 end
 
@@ -459,6 +500,12 @@ end
 
 --=== 재생 ===--
 
+-- 스튜디오 점검용 느린 재생 배율(workspace 속성 CombatTimeScale, 0~1). 없으면 1
+local function slowScale(): number
+	local scale = workspace:GetAttribute("CombatTimeScale")
+	return if type(scale) == "number" and scale > 0 then math.min(scale, 1) else 1
+end
+
 --[[
 	한 배우의 동작 하나를 재생한다. targetsByHit[i] = i번째 Hit 사건이 맞히는 배우 Id 목록.
 	돌려주는 play 로 서버 결과를 나중에 붙인다: play:SetResult({ Hits = { { {Id=, Damage=, Killed=} … } … } })
@@ -478,8 +525,8 @@ function CombatDirector:_play(a: Actor, motion: any, targetsByHit: { { string } 
 		OnDone = o.OnDone,
 		NumberStyle = o.NumberStyle,
 		Stage = o.Stage or 1,
-		-- 안전장치: 모션 길이 + 2초가 지나도 안 끝나면 끝난 것으로 본다(연출이 멈춰 턴이 막히지 않게)
-		Deadline = os.clock() + (motion.Duration or 1) + 2,
+		-- 안전장치: 모션 길이 + 2초가 지나도 안 끝나면 끝난 것으로 본다(연출이 멈춰 턴이 막히지 않게). 느린 재생이면 그만큼 늘린다
+		Deadline = os.clock() + ((motion.Duration or 1) + 2) / slowScale(),
 	}
 	for _, ev in motion.Events or {} do
 		if ev.k == "Hit" then
@@ -573,6 +620,9 @@ function CombatDirector:_event(play: any, ev: any)
 			local aim = nil
 			if ev.at == "Target" then
 				aim = self:_ctx(a, play.Targets[1]).Target
+			elseif ev.at == "Enemies" then
+				-- 적 진영 가운데(셉텐트리오네스 — 별자리를 적 위에 펼친다)
+				aim = self:_enemyCenter(a)
 			end
 			a.Weapons:SetOrbMode(ev.mode or "Orbit", aim)
 		end
@@ -623,20 +673,26 @@ function CombatDirector:_dash(a: Actor, play: any, ev: any)
 		to = CFrame.lookAt(Vector3.new(pos.X, a.Home.Y, pos.Z), Vector3.new(pos.X, a.Home.Y, pos.Z) + forward)
 	else
 		local targets = play.Targets[1] or {}
-		local t = targets[1] and self.Actors[targets[1]]
+		local id = if #targets > 0 then targets[((ev.n or 1) - 1) % #targets + 1] else nil
+		local t = id and self.Actors[id]
 		local forward = flat(a.Home.LookVector)
 		if t then
 			local toward = flat(t.Pos.Position - a.Pos.Position)
 			-- 큰 몸(보스 다면체)은 몸 반지름만큼 앞에서 멈추고, 뚫고 지나가는 돌진(gap < 0)은 그만큼 더 지나간다
 			local gap = ev.gap or 3
 			local pos = t.Pos.Position - toward * (gap + (if gap >= 0 then 1 else -1) * (t.Reach or 0))
-			to = CFrame.lookAt(Vector3.new(pos.X, a.Home.Y, pos.Z), Vector3.new(pos.X, a.Home.Y, pos.Z) + forward)
+			if ev.side then
+				pos += toward:Cross(Vector3.yAxis) * ev.side
+			end
+			local at = Vector3.new(pos.X, a.Home.Y, pos.Z)
+			local look = if ev.face == "move" then flat(at - a.Pos.Position) else forward
+			to = CFrame.lookAt(at, at + look)
 		else
 			to = a.Home + forward * (ev.dist or 6)
 		end
 	end
-	-- arc = 포물선 높이(도약해서 내려찍기)
-	a.Dash = { From = a.Pos, To = to, T = 0, D = math.max(0.02, ev.d or 0.15), Ease = ev.e or "quadOut", Arc = ev.arc }
+	-- arc = 포물선 높이(도약해서 내려찍기), bend = 옆으로 휘는 높이(물 흐르듯 비켜 가기)
+	a.Dash = { From = a.Pos, To = to, T = 0, D = math.max(0.02, ev.d or 0.15), Ease = ev.e or "quadOut", Arc = ev.arc, Bend = ev.bend }
 	a.Away = if ev.to == "Home" then nil else { Cf = to, Play = play }
 end
 
@@ -799,6 +855,14 @@ function CombatDirector:Drop(id: string, home: CFrame)
 	end
 end
 
+-- 떠 있는 별 무기(조율자): 켜진 별 이름 표(nil = 전부)
+function CombatDirector:SetLit(id: string, lit: { [string]: boolean }?)
+	local a = self.Actors[id]
+	if a and a.Weapons then
+		a.Weapons:SetLit(lit)
+	end
+end
+
 function CombatDirector:IsHeld(id: string): boolean
 	local a = self.Actors[id]
 	return a ~= nil and a.Held
@@ -877,6 +941,8 @@ end
 local EASE = require(Shared.MotionMath).Ease
 
 function CombatDirector:_step(realDt: number)
+	-- 스튜디오 점검용 느린 재생: workspace 속성 CombatTimeScale(예: 0.25)
+	realDt *= slowScale()
 	local dt = realDt
 	if self.StopLeft > 0 then
 		self.StopLeft -= realDt
@@ -893,6 +959,9 @@ function CombatDirector:_step(realDt: number)
 			a.Pos = d.From:Lerp(d.To, e)
 			if d.Arc then
 				a.Pos += Vector3.new(0, math.sin(alpha * math.pi) * d.Arc, 0)
+			end
+			if d.Bend then
+				a.Pos += flat(d.To.Position - d.From.Position):Cross(Vector3.yAxis) * (math.sin(alpha * math.pi) * d.Bend)
 			end
 			if alpha >= 1 then
 				a.Dash = nil
@@ -948,19 +1017,44 @@ function CombatDirector:_step(realDt: number)
 		end
 	end
 	CombatVfx.Step(dt)
-	-- 화면 흔들림
+	-- 화면 흔들림(컷신 카메라 위에도 더한다)
 	local camera = workspace.CurrentCamera
-	if camera and self.CameraBase and camera.CameraType == Enum.CameraType.Scriptable then
+	local base = self:_shotCamera(dt, realDt)
+	if camera and base and camera.CameraType == Enum.CameraType.Scriptable then
 		local amp = CombatVfx.ShakeAmp
 		if amp > 0.001 then
 			local t = os.clock() * 40
-			camera.CFrame = self.CameraBase
+			camera.CFrame = base
 				* CFrame.new(math.noise(t, 0.3) * amp, math.noise(0.7, t) * amp, 0)
 				* CFrame.Angles(0, 0, math.noise(t, t * 0.5) * amp * 0.02)
 		else
-			camera.CFrame = self.CameraBase
+			camera.CFrame = base
 		end
 	end
+end
+
+-- 컷신 카메라(ctx.Shot). 놓으면(Shot() · 그 배우의 모션이 끝남) 0.45초에 걸쳐 전투 카메라로 돌아온다
+function CombatDirector:_shotCamera(dt: number, realDt: number): CFrame?
+	local base = self.CameraBase
+	local s = self.Shot
+	if not s or not base then
+		return base
+	end
+	s.T += dt
+	local cf = s.Fn(math.clamp(s.T / s.D, 0, 1), s.T)
+	local a = s.Actor
+	if not s.Release and (self.Actors[a.Id] ~= a or a.Dying or not a.Animator:IsBusy()) then
+		s.Release = 0
+	end
+	if s.Release then
+		s.Release += realDt
+		local w = math.clamp(s.Release / 0.45, 0, 1)
+		cf = cf:Lerp(base, EASE.sineInOut(w))
+		if w >= 1 then
+			self.Shot = nil
+		end
+	end
+	return cf
 end
 
 return CombatDirector

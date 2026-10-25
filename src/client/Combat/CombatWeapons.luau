@@ -7,6 +7,7 @@
 	모터의 Transform 이 된다(CombatRig:SetWeaponMotor).
 	  모터 C0 = 팔 끝 (0,-1,0) · X -90°  (팔을 내리면 무기가 앞을 본다)
 	떠 있는 무기(Hand = "Float", 펄서 오브)는 손에 안 붙이고 매 프레임 자리를 옮긴다(`Update`).
+	등에 멘 무기(Hand = "Back", 청의 검사 검집)는 몸통에 붙인다 — 모터 C0 = 몸통 가운데, 모션의 O 값이 몸통 공간 자리·회전.
 
 	새 무기를 표에 더하면 여기는 손대지 않아도 된다 — 모양·쥐는 점·궤적 점이 모두 표에 있다.
 
@@ -148,7 +149,7 @@ local function buildPiece(piece: WeaponDefinitions.Piece, name: string, anchored
 	return model
 end
 
-export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown"
+export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown" | "Sky"
 
 --[[
 	character 에 weaponId(없으면 직업 기본 무기)를 붙인다. rig 에 모터를 등록한다.
@@ -191,8 +192,9 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 			end
 			continue
 		end
-		local armName = if piece.Hand == "Left" then "Left Arm" else "Right Arm"
-		local arm = character:FindFirstChild(armName) or character:FindFirstChild(if piece.Hand == "Left" then "LeftHand" else "RightHand")
+		local armName = if piece.Hand == "Left" then "Left Arm" elseif piece.Hand == "Back" then "Torso" else "Right Arm"
+		local arm = character:FindFirstChild(armName)
+			or character:FindFirstChild(if piece.Hand == "Left" then "LeftHand" elseif piece.Hand == "Back" then "UpperTorso" else "RightHand")
 		if not arm or not arm:IsA("BasePart") then
 			continue
 		end
@@ -201,9 +203,9 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 		motor.Name = "CombatGrip" .. slot
 		motor.Part0 = arm
 		motor.Part1 = model.PrimaryPart
-		-- R15 는 손 부품 끝에서 쥔다
-		motor.C0 = if arm.Name:find("Hand")
-			then CFrame.new(0, -arm.Size.Y / 2, 0) * CFrame.Angles(-math.pi / 2, 0, 0)
+		-- R15 는 손 부품 끝에서 쥔다. 등에 멘 것(Hand = Back, 청의 검사 검집)은 몸통 가운데에서 몸통 공간 그대로(모션 O 값)
+		motor.C0 = if piece.Hand == "Back" then CFrame.identity
+			elseif arm.Name:find("Hand") then CFrame.new(0, -arm.Size.Y / 2, 0) * CFrame.Angles(-math.pi / 2, 0, 0)
 			else (gripOverride(classId, slot) or GRIP_C0)
 		motor.Parent = model.PrimaryPart
 		model.Parent = folder
@@ -286,10 +288,38 @@ end
 	  Orbit  몸 둘레를 돈다(기본)             Gather 앞으로 뻗은 손 앞에 모인다(빔 모으기)
 	  Shield 앞에 세모 방패                   Spread 넓게 퍼져 빠르게 돈다(자기권)
 	  Crown  머리 위 작은 원(명상·들림)
+  Sky    (별자리 무기) 겨눈 자리(적 진영) 위에 별자리를 크게 펼친다(셉텐트리오네스)
+  별자리 무기(Orbit.Points — 조율자 일곱 별)는 Orbit 일 때 둘레를 돌지 않고 그 자리에 떠서 숨 쉬듯 흔들린다.
 ]]
 function CombatWeapons:SetOrbMode(mode: OrbMode, aim: Vector3?)
 	self.OrbMode = mode
 	self.OrbAim = aim
+end
+
+-- 별 하나의 지금 자리(이펙트가 그 별에서 빛을 쏜다). 없으면 nil
+function CombatWeapons:OrbPosition(i: number): Vector3?
+	return self.OrbPos[i]
+end
+
+--[[
+	켜진 별(조율자 [칠성]을 준 별 — Orbit.Points 순서와 같은 BattleSkillEffects.STAR_SOURCES 이름 표)만 밝게.
+	lit 가 nil 이면 전부 켠다(전시장·관전). 꺼진 별은 흐리게만(없애지 않는다 — 별자리 꼴은 늘 보인다).
+]]
+local STAR_NAMES = { "Megrez", "Merak", "Alioth", "Alkaid", "Mizar", "Phecda", "Dubhe" }
+function CombatWeapons:SetLit(lit: { [string]: boolean }?)
+	for i, orb in self.Orbs do
+		local on = lit == nil or lit[STAR_NAMES[i] or ""] == true
+		for _, d in orb:GetDescendants() do
+			if d:IsA("BasePart") and d.Name ~= "Grip" then
+				local base = d:GetAttribute("LitAlpha")
+				if base == nil then
+					base = d.Transparency
+					d:SetAttribute("LitAlpha", base)
+				end
+				d.Transparency = if on then base else 1 - (1 - base) * 0.3
+			end
+		end
+	end
 end
 
 function CombatWeapons:Update(dt: number)
@@ -309,7 +339,19 @@ function CombatWeapons:Update(dt: number)
 	for i, orb in self.Orbs do
 		local phase = self.OrbT * math.pi * 2 / 3 + (i - 1) / n * math.pi * 2
 		local target: Vector3
-		if mode == "Gather" then
+		local point = orbit.Points and orbit.Points[i]
+		if point and mode == "Orbit" then
+			-- 별자리: 제자리에 떠서 별마다 다른 박자로 숨 쉬듯 흔들린다
+			local bob = math.sin(self.OrbT * 2.2 + i * 1.7) * 0.12
+			local sway = math.cos(self.OrbT * 1.6 + i * 2.3) * 0.08
+			target = (cf * CFrame.new(point[1], point[2] + bob, point[3] + sway)).Position
+		elseif point and mode == "Sky" then
+			-- 겨눈 자리(적 진영 가운데) 위에 별자리를 세 배로 펼친다 — 오른쪽 옆 카메라에 보이게 YZ 판 그대로
+			local center = self.OrbAim or (cf * CFrame.new(0, 3, -12)).Position
+			local mid = Vector3.new(0.45, 3.4, 0.85)
+			local d = (Vector3.new(point[1], point[2], point[3]) - mid) * 3
+			target = center + Vector3.new(0, 6, 0) + cf.RightVector * d.X + cf.UpVector * d.Y + cf.LookVector * -d.Z
+		elseif mode == "Gather" then
 			local hand = self.Character:FindFirstChild("Right Arm") :: BasePart?
 			local center = if hand then (hand.CFrame * CFrame.new(0, -1.6, 0)).Position else (cf * CFrame.new(0, 0.5, -2.5)).Position
 			if self.OrbAim then
@@ -330,7 +372,12 @@ function CombatWeapons:Update(dt: number)
 		local k = 1 - math.exp(-dt * (if mode == "Gather" then 18 else 10))
 		current = current:Lerp(target, k)
 		self.OrbPos[i] = current
-		orb:PivotTo(CFrame.new(current) * CFrame.Angles(0, self.OrbT * 3 + i, self.OrbT * 2))
+		if point then
+			-- 별은 얼굴(-Z)이 카메라 쪽(캐릭터 오른쪽)을 보고 제 판 안에서 천천히 돈다
+			orb:PivotTo(CFrame.lookAt(current, current + cf.RightVector) * CFrame.Angles(0, 0, self.OrbT * 0.8 + i))
+		else
+			orb:PivotTo(CFrame.new(current) * CFrame.Angles(0, self.OrbT * 3 + i, self.OrbT * 2))
+		end
 	end
 end
 

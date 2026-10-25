@@ -97,7 +97,7 @@ function PlazaService:PlacePlayer(player: Player)
 		end
 	end
 	root.Anchored = false
-	humanoid.WalkSpeed = 16
+	humanoid.WalkSpeed = player:GetAttribute("FieldSpeed") or 16
 	humanoid.JumpPower = 50
 	humanoid.AutoRotate = true
 	character:PivotTo(CFrame.lookAt(target, Vector3.new(LOOK_AT.X, target.Y, LOOK_AT.Z)))

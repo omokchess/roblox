@@ -103,6 +103,8 @@ export type Account = {
 	Packs: { [string]: any },
 	Equipped: { [string]: string },
 	SelectedCharacterId: string,
+	-- 조건부 획득 직업 중 연 것(조율자·청의 검사). 조건이 정해지기 전에는 디버그로만 채워진다
+	UnlockedClasses: { [string]: boolean },
 }
 
 export type Profile = {
@@ -158,6 +160,7 @@ function PlayerProfile.New(): Profile
 			Packs = {},
 			Equipped = {},
 			SelectedCharacterId = "Berserker",
+			UnlockedClasses = {},
 		},
 		Slots = { PlayerProfile.NewSlot("1번 프리셋", "Berserker", "Human") },
 		ActiveSlot = 1,
@@ -241,6 +244,13 @@ function PlayerProfile.Sanitize(raw: any): Profile
 	profile.Account.SelectedCharacterId = if type(account.SelectedCharacterId) == "string"
 		then account.SelectedCharacterId
 		else "Berserker"
+	if type(account.UnlockedClasses) == "table" then
+		for id, open in account.UnlockedClasses do
+			if type(id) == "string" and open == true then
+				profile.Account.UnlockedClasses[id] = true
+			end
+		end
+	end
 
 	-- 슬롯
 	local slots: { Slot } = {}

@@ -137,6 +137,7 @@ roblox.implementMethod("Model", "PivotTo", function(m, cf)
 	end
 end)
 roblox.implementMethod("ParticleEmitter", "Emit", function() end)
+roblox.implementMethod("Sound", "Play", function() end)
 roblox.implementProperty("Animator", "AnimationPlayed", function()
 	return Signal()
 end)
@@ -347,7 +348,7 @@ local slimeHome = CFrame.lookAt(Vector3.new(10, 0, 0), Vector3.new(0, 0, 0))
 local director = CombatDirector.new()
 director:SetCamera(CFrame.new())
 
-local CLASSES = { "Duelist", "Musician", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker" }
+local CLASSES = { "Duelist", "Musician", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker", "Attuner", "AzureBlade" }
 local played = 0
 for _, classId in CLASSES do
 	local before = #failures

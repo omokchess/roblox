@@ -36,7 +36,8 @@ export type Part = {
 -- 블렌더 메시 묶음 하나의 겉(models/weapons/build_weapons.py 의 묶음 이름과 같다)
 export type Skin = { Color: { number }, Material: string, Transparency: number? }
 export type Piece = {
-	Hand: "Right" | "Left" | "Float",
+	-- Back = 몸통(등)에 붙인다(모션 O 값이 몸통 공간 자리·회전 — 청의 검사 검집)
+	Hand: "Right" | "Left" | "Float" | "Back",
 	Parts: { Part },
 	-- 블렌더 메시가 있을 때(ReplicatedStorage.WeaponMeshes.<무기Id>.<Main|Off>) 묶음마다 입힐 색·재질. 없으면 Parts 로 짓는다
 	Skins: { [string]: Skin }?,
@@ -52,8 +53,8 @@ export type Weapon = {
 	Type: string,
 	Main: Piece,
 	Off: Piece?,
-	-- Float 무기(오브)의 개수·궤도
-	Orbit: { Count: number, Radius: number, Height: number, Speed: number }?,
+	-- Float 무기(오브)의 개수·궤도. Points 가 있으면 쉴 때 둘레를 돌지 않고 그 자리(캐릭터 공간)에 떠 있다(일곱 별)
+	Orbit: { Count: number, Radius: number, Height: number, Speed: number, Points: { { number } }? }?,
 }
 
 local STEEL = { 196, 202, 212 }
@@ -75,6 +76,15 @@ end
 
 local function S(color: { number }, material: string, transparency: number?): Skin
 	return { Color = color, Material = material, Transparency = transparency }
+end
+
+-- 대태도(청의 검사)는 설계 치수(아래 Odachi 주석)에 이 배율을 곱한다 — 손잡이:날 비율을 지킨 채 크기만(2026-10-25 사용자)
+local ODACHI = 1.3
+local function PK(name: string, shape: any, size: { number }, at: { number }, color: { number }, material: string, transparency: number?): Part
+	return P(name, shape, { size[1] * ODACHI, size[2] * ODACHI, size[3] * ODACHI }, { at[1] * ODACHI, at[2] * ODACHI, at[3] * ODACHI, at[4], at[5], at[6] }, color, material, transparency)
+end
+local function KV(v: { number }): { number }
+	return { v[1] * ODACHI, v[2] * ODACHI, v[3] * ODACHI }
 end
 
 local weapons: { [string]: Weapon } = {
@@ -374,6 +384,106 @@ local weapons: { [string]: Weapon } = {
 			Trail = { 255, 70, 50 },
 		},
 	},
+	--[[
+		조율자(조건부 획득, 2026-10-25 사용자: "떠 있는 일곱 별"): 머리 위 뒤쪽에 북두칠성 꼴로 떠 있는 별 일곱.
+		손에 쥐지 않는다(Hand = Float). Orbit.Points = 쉴 때 별 자리(캐릭터 공간 x 오른쪽 · y 위 · z 뒤) —
+		BattleSkillEffects.STAR_SOURCES 순서(메그레즈·메라크·알리오스·알카이드·미자르·페크다·두베)라
+		[칠성]을 준 별만 밝게 켤 수 있다(CombatWeapons:SetLit). 전투 카메라가 오른쪽 옆이라 별자리는 YZ 판에 눕힌다.
+	]]
+	SevenStars = {
+		Id = "SevenStars",
+		Name = "북두의 일곱 별",
+		Type = "Stars",
+		Main = {
+			Hand = "Float",
+			Parts = {
+				P("Core", "Ball", { 0.34, 0.34, 0.34 }, { 0, 0, 0, 0, 0, 0 }, { 255, 236, 170 }, "Neon"),
+				P("RayA", "Block", { 0.86, 0.1, 0.06 }, { 0, 0, 0, 0, 0, 45 }, { 255, 246, 214 }, "Neon", 0.2),
+				P("RayB", "Block", { 0.86, 0.1, 0.06 }, { 0, 0, 0, 0, 0, -45 }, { 255, 246, 214 }, "Neon", 0.2),
+				P("RayC", "Block", { 0.1, 0.78, 0.06 }, { 0, 0, 0, 0, 0, 0 }, { 255, 246, 214 }, "Neon", 0.1),
+			},
+			Sockets = { Base = { 0, 0, 0 }, Tip = { 0, 0, 0 } },
+			Skins = { Star = S({ 255, 230, 150 }, "Neon"), Glow = S({ 255, 244, 205 }, "Glass", 0.55) },
+			Trail = { 255, 226, 140 },
+		},
+		Orbit = {
+			Count = 7,
+			Radius = 2.2,
+			Height = 2.4,
+			Speed = 0.35,
+			Points = {
+				{ 0.45, 3.75, 1.35 }, -- 메그레즈(국자와 손잡이가 만나는 별)
+				{ 0.45, 2.7, 2.55 }, -- 메라크
+				{ 0.45, 4.05, 0.7 }, -- 알리오스
+				{ 0.45, 3.9, -0.95 }, -- 알카이드(손잡이 끝)
+				{ 0.45, 4.15, -0.12 }, -- 미자르
+				{ 0.45, 2.92, 1.55 }, -- 페크다
+				{ 0.45, 3.6, 2.62 }, -- 두베
+			},
+		},
+	},
+	--[[
+		청의 검사(조건부 획득): 자기 키만 한 대태도 + 왼손 검집. 발도술 — 칼은 대개 검집에 꽂혀 있다
+		(모션 생성기 tools/combat/design/azure_gen.py 가 키마다 검집(O)과 칼(W)을 맞춰 겹친다).
+		2026-10-25 사용자: "대태도처럼 보이진 않는데?" → 카타나 비율(날 3.6·폭 0.2·짧은 자루)을 대태도 비율로 키움:
+		  전체 5.55(R6 키 5보다 조금 큼), 손잡이 −1.05~0.3(날의 약 1/3 — 사용자: "손잡이 비율을 조금 더 줄이자"), 코등이 반지름 0.3,
+		  날 0.44~4.45(폭 0.27 → 0.22, 두께 0.065), 등(+Z) 쪽으로 깊게 휨(끝 0.34), 긴 칼끝(오키사키 4.05~4.45), 날등 쪽 홈(보히).
+		  날이 향하는 쪽 -Z(약속 그대로), 날선은 밝은 띠.
+		검집: 기준점 = 입 바로 아래, 입 −0.35 ~ 끝 3.78, 칼과 같은 휨 — 칼 쥔 점에서 0.79 위가 검집 기준점.
+		이어서 "대태도가 좀 많이 작은 것 같은데 … 등에 매게 하고 크기를 더 키울까?" → 위 치수 전부 ×1.3(ODACHI, 비율은 그대로 —
+		전체 약 7.2, R6 키의 1.45배), 검집은 등에 멘다(Hand = "Back": 몸통에 붙고 모션 O 값이 몸통 공간 자리 — 칼자루가 오른 어깨 위로 솟는다).
+	]]
+	Odachi = {
+		Id = "Odachi",
+		Name = "푸른 대태도",
+		Type = "Odachi",
+		Main = {
+			Hand = "Right",
+			Parts = {
+				PK("Tsuka", "Block", { 0.17, 1.3, 0.23 }, { 0, -0.37, 0, 0, 0, 0 }, { 30, 44, 92 }, "Fabric"),
+				PK("Kashira", "Block", { 0.19, 0.09, 0.25 }, { 0, -1.06, 0, 0, 0, 0 }, { 176, 184, 204 }, "Metal"),
+				PK("Fuchi", "Block", { 0.19, 0.08, 0.25 }, { 0, 0.31, 0, 0, 0, 0 }, { 176, 184, 204 }, "Metal"),
+				PK("Tsuba", "Cylinder", { 0.07, 0.6, 0.6 }, { 0, 0.38, 0, 0, 0, 90 }, { 40, 46, 70 }, "Metal"),
+				PK("Habaki", "Block", { 0.1, 0.14, 0.29 }, { 0, 0.49, 0, 0, 0, 0 }, { 176, 184, 204 }, "Metal"),
+				PK("Blade1", "Block", { 0.065, 1.02, 0.27 }, { 0, 0.94, 0.005, 1.21, 0, 0 }, { 196, 204, 218 }, "Metal"),
+				PK("Edge1", "Block", { 0.04, 1.02, 0.06 }, { 0, 0.94, -0.1, 1.21, 0, 0 }, { 214, 232, 255 }, "Metal"),
+				PK("Blade2", "Block", { 0.065, 1.02, 0.255 }, { 0, 1.94, 0.048, 3.63, 0, 0 }, { 196, 204, 218 }, "Metal"),
+				PK("Edge2", "Block", { 0.04, 1.02, 0.06 }, { 0, 1.94, -0.05, 3.63, 0, 0 }, { 214, 232, 255 }, "Metal"),
+				PK("Blade3", "Block", { 0.065, 1.02, 0.24 }, { 0, 2.94, 0.132, 6.03, 0, 0 }, { 196, 204, 218 }, "Metal"),
+				PK("Edge3", "Block", { 0.04, 1.02, 0.06 }, { 0, 2.94, 0.042, 6.03, 0, 0 }, { 214, 232, 255 }, "Metal"),
+				PK("Blade4", "Block", { 0.065, 0.63, 0.22 }, { 0, 3.745, 0.231, 7.96, 0, 0 }, { 196, 204, 218 }, "Metal"),
+				PK("Edge4", "Block", { 0.04, 0.63, 0.06 }, { 0, 3.745, 0.151, 7.96, 0, 0 }, { 214, 232, 255 }, "Metal"),
+				PK("Kissaki", "Wedge", { 0.065, 0.42, 0.22 }, { 0, 4.25, 0.307, 9.15, 0, 0 }, { 214, 232, 255 }, "Metal"),
+			},
+			Sockets = { Base = KV({ 0, 1.0, 0 }), Tip = KV({ 0, 4.4, 0.33 }) },
+			Skins = {
+				Wrap = S({ 30, 44, 92 }, "Fabric"),
+				Same = S({ 226, 222, 208 }, "SmoothPlastic"),
+				Fittings = S({ 176, 184, 204 }, "Metal"),
+				Tsuba = S({ 40, 46, 70 }, "Metal"),
+				Blade = S({ 196, 204, 218 }, "Metal"),
+				Edge = S({ 214, 232, 255 }, "Metal"),
+				Hi = S({ 120, 128, 146 }, "Metal"),
+			},
+			Trail = { 140, 200, 255 },
+		},
+		Off = {
+			Hand = "Back",
+			Parts = {
+				PK("Saya1", "Block", { 0.15, 1.08, 0.34 }, { 0, 0.175, 0.003, 0.42, 0, 0 }, { 34, 74, 168 }, "SmoothPlastic"),
+				PK("Saya2", "Block", { 0.15, 1.08, 0.34 }, { 0, 1.225, 0.05, 2.96, 0, 0 }, { 34, 74, 168 }, "SmoothPlastic"),
+				PK("Saya3", "Block", { 0.15, 1.08, 0.34 }, { 0, 2.275, 0.143, 5.49, 0, 0 }, { 34, 74, 168 }, "SmoothPlastic"),
+				PK("Saya4", "Block", { 0.15, 1.01, 0.34 }, { 0, 3.29, 0.278, 7.9, 0, 0 }, { 34, 74, 168 }, "SmoothPlastic"),
+				PK("Koiguchi", "Block", { 0.17, 0.09, 0.36 }, { 0, -0.33, 0, 0, 0, 0 }, { 176, 184, 204 }, "Metal"),
+				PK("Kurikata", "Block", { 0.07, 0.14, 0.09 }, { 0.1, 0.34, 0.02, 0, 0, 0 }, { 176, 184, 204 }, "Metal"),
+				PK("Sageo", "Block", { 0.05, 1.0, 0.07 }, { 0.11, 0.0, 0.06, 0, 0, -6 }, { 96, 176, 255 }, "Fabric"),
+				PK("Kojiri", "Block", { 0.16, 0.14, 0.35 }, { 0, 3.74, 0.353, 8.99, 0, 0 }, { 176, 184, 204 }, "Metal"),
+			},
+			Sockets = { Base = KV({ 0, -0.35, 0 }), Tip = KV({ 0, 3.78, 0.36 }) },
+			-- 검집은 검은 아바타와도 갈리게 밝은 청색(2026-10-25 전시장 확인 뒤 22,36,84 → 34,74,168)
+			Skins = { Saya = S({ 34, 74, 168 }, "SmoothPlastic"), Fittings = S({ 176, 184, 204 }, "Metal"), Sageo = S({ 96, 176, 255 }, "Fabric") },
+		},
+	},
 }
 
 -- 직업 → 기본 무기(탑에서는 이것을 자동으로 든다: 추가&수정.md `#### 탑 시스템`)
@@ -387,6 +497,8 @@ local classWeapon: { [string]: string } = {
 	WallBreaker = "PickStaff",
 	Alchemist = "Flask",
 	Berserker = "Greataxe",
+	Attuner = "SevenStars",
+	AzureBlade = "Odachi",
 }
 
 local WeaponDefinitions = {}

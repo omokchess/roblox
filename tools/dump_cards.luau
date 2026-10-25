@@ -132,7 +132,7 @@ local CardEffects = loadShared("CardEffects/init")
 loadShared("AbilityCards/init").Register()
 local serde = require("@lune/serde")
 local out = {}
-for _, classId in { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker" } do
+for _, classId in { "Musician", "Duelist", "Quasar", "Pulsar", "WallPilgrim", "WallMason", "WallBreaker", "Alchemist", "Berserker", "Attuner", "AzureBlade" } do
 	for _, grade in { "Essential", "Rare", "Common" } do
 		for _, card in AbilityCardDefinitions.GetPool(classId, grade) do
 			local max = AbilityCardDefinitions.MaxLevelFor(card)

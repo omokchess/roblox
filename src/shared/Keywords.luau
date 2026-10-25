@@ -631,6 +631,69 @@ local LIST: { Keyword } = {
 		Unit = "",
 		Color = "#b8a860",
 	},
+
+	--=== 조율자 (조건부 획득, 2026-10-25) ===--
+	{
+		Id = "Star",
+		Name = "칠성",
+		Kind = "Resource",
+		Description = "- 최대 7스택. 턴이 지나도 사라지지 않음.\n"
+			.. "- 수치 1당 [가하는 피해량] +3%.\n"
+			.. "- 일곱 별(메그레즈·메라크·알리오스·알카이드·미자르·페크다·두베)이 하나씩 준다.\n"
+			.. "  - 별마다 `셉텐트리오네스`를 쓰기 전까지 한 번만.\n"
+			.. "- 7스택이면 `셉텐트리오네스`가 열림. 쓰면 초기화.",
+		Scalable = true,
+		Unit = "",
+		Color = "#ffe9a8",
+	},
+	{
+		Id = "Melt",
+		Name = "융해",
+		Kind = "Debuff",
+		Description = "- 최대 20스택. 특수 화상.\n"
+			.. "- 턴 종료 시 (융해 수치 × 3)만큼 [화상]을 얻음.\n"
+			.. "- 턴 종료 시 (융해 수치 × 1000)만큼 고정 피해를 받고 사라짐.\n"
+			.. "  - 해당 효과로 사망할 수 없음.",
+		Scalable = true,
+		Unit = "",
+		Color = "#ff4fa0",
+	},
+	{
+		Id = "Fusion",
+		Name = "핵융합 반응",
+		Kind = "Neutral",
+		Description = "- 최대 1스택. 턴이 지나도 사라지지 않음.\n"
+			.. "- [가하는 피해량] +400%, [받는 피해량] +400%.\n"
+			.. "- 턴이 지날 때마다 [받는 피해량] 증가가 50%p, [가하는 피해량] 증가가 10%p씩 줄어듦.\n"
+			.. "- [칠성] 획득 효율 2배.\n"
+			.. "- 다시 얻으면 처음 세기로 돌아감.",
+		Scalable = false,
+		Unit = "",
+		Color = "#9fd8ff",
+	},
+	{
+		Id = "Bind",
+		Name = "묶임",
+		Kind = "Debuff",
+		Description = "그 턴 동안 칸을 옮길 수 없음.",
+		Scalable = false,
+		Unit = "",
+		Color = "#b7a4d6",
+	},
+
+	--=== 청의 검사 (조건부 획득, 2026-10-25) ===--
+	{
+		Id = "Concentration",
+		Name = "집중력",
+		Kind = "Resource",
+		Description = "- 최대 1스택. `도발`로 얻음.\n"
+			.. "- 몇몇 스킬을 다른 기술로 바꿈.\n"
+			.. "  - `검집 타격` → `집중 베기`, `발도술의 절정` → `공간의 이해`.\n"
+			.. "- 얻은 뒤 2턴이 지나면 사라짐.",
+		Scalable = true,
+		Unit = "",
+		Color = "#5aa8ff",
+	},
 }
 
 local byId: { [string]: Keyword } = {}

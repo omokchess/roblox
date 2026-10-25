@@ -41,11 +41,12 @@ IRON = rgb(92, 86, 82)
 
 
 class Piece:
-    """무기 조각 하나(Main/Off) — 묶음 이름 → Group"""
+    """무기 조각 하나(Main/Off) — 묶음 이름 → Group. scale = 다 지은 뒤 원점(쥔 점) 기준으로 통째로 키우는 배율"""
 
-    def __init__(self, wid, slot):
+    def __init__(self, wid, slot, scale=1.0):
         self.prefix = "%s_%s_" % (wid, slot)
         self.groups = {}
+        self.scale = scale
 
     turn = 0.0
 
@@ -56,6 +57,10 @@ class Piece:
         return self.groups[name]
 
     def finish(self):
+        if self.scale != 1.0:
+            for grp in self.groups.values():
+                for v in grp.bm.verts:
+                    v.co *= self.scale
         return [grp.finish() for grp in self.groups.values()]
 
 
@@ -470,13 +475,143 @@ def greataxe():
     return [p]
 
 
+# ── 조율자: 북두의 일곱 별(떠 있음) ─────────────────────
+# 별 하나 = 다섯 꼭지 입체 별(앞뒤로 볼록한 면 별) + 속 빛. 일곱 개를 CombatWeapons 가 같은 메시로 복제한다.
+
+
+def seven_stars():
+    p = Piece("SevenStars", "Main")
+    star, glow = p.g("Star", rgb(255, 230, 150), None), p.g("Glow", rgb(255, 244, 205), 80, 0.45)
+    R, r, t = 0.4, 0.17, 0.13
+    outer = []
+    for i in range(10):
+        a = math.pi / 2 + math.pi * i / 5
+        rad = R if i % 2 == 0 else r
+        outer.append((rad * math.cos(a), rad * math.sin(a), 0.0))
+    verts = outer + [(0, 0, -t), (0, 0, t)]
+    front, back = 10, 11
+    faces = [(i, (i + 1) % 10, front) for i in range(10)] + [((i + 1) % 10, i, back) for i in range(10)]
+    star.add(verts, faces)
+    L.ball(glow, (0, 0, 0), 0.11, 14, 7)
+    return [p]
+
+
+# ── 청의 검사: 푸른 대태도 + 검집 ─────────────────────
+# 2026-10-25 사용자: "대태도처럼 보이진 않는데?" → 카타나 비율을 대태도 비율로, 이어서 "손잡이 비율을 조금 더 줄이자" → 손잡이 = 날의 약 1/3.
+# 칼: 쥔 점(원점) = 오른손, 손잡이 −1.05~0.3, 날 0.44~4.45 · 등(+Z) 쪽으로 깊게 휨 z = 0.34·s², 긴 칼끝(오키사키 4.05~4.45),
+#     날선(-Z)은 밝은 띠(하몬 자리), 날등 쪽 양면에 홈(보히).
+# 검집: 쥔 점 = 왼손(입 바로 아래), 입 −0.35 ~ 끝 3.78, 칼과 같은 휨(칼 y = 검집 y + 0.79 일 때 겹친다).
+Y0, BL, SORI = 0.44, 4.01, 0.34
+SAYA_AT = 0.79
+# 설계 치수 ×1.3 (WeaponDefinitions 의 ODACHI 와 같다 — "크기를 더 키울까?")
+ODACHI = 1.3
+
+
+def _sori(y, y0=Y0, length=BL, k=SORI):
+    s = max(0.0, (y - y0) / length)
+    return k * s * s
+
+
+def _ellipse_helix(y0, y1, rx, rz, turns, phase=0.0, steps=18, cz=0.0):
+    n = max(2, int(abs(turns) * steps))
+    pts = []
+    for i in range(n + 1):
+        u = i / n
+        a = phase + 2 * math.pi * turns * u
+        pts.append((rx * math.cos(a), y0 + (y1 - y0) * u, cz + rz * math.sin(a)))
+    return pts
+
+
+def _section(w, th):
+    """시노기즈쿠리 단면 반쪽들: (몸 고리, 날선 고리). 날선 E(-Z) · 하몬 끝 H · 시노기 S · 등 M · 등마루 T"""
+    e, h = (0.0, -w / 2), (th / 4, -w / 2 + 0.35 * w)
+    s, m, top = (th / 2, w / 2 - 0.3 * w), (th * 0.38, w / 2), (0.0, w / 2 + 0.01)
+    body = [h, s, m, top, (-m[0], m[1]), (-s[0], s[1]), (-h[0], h[1])]
+    return body, [e, h, (-h[0], h[1])]
+
+
+def odachi():
+    main = Piece("Odachi", "Main", ODACHI)
+    wrap, same, fit = main.g("Wrap", rgb(30, 44, 92)), main.g("Same", rgb(226, 222, 208)), main.g("Fittings", rgb(176, 184, 204), 30)
+    tsuba, blade, edge = main.g("Tsuba", rgb(40, 46, 70), 30), main.g("Blade", rgb(196, 204, 218), 25), main.g("Edge", rgb(214, 232, 255), 25)
+    hi = main.g("Hi", rgb(120, 128, 146), 25)
+    body_loops, edge_loops = [], []
+    tip_y = 4.45
+    ys = [Y0 + (4.05 - Y0) * i / 16 for i in range(17)]
+    for y in ys:
+        f = (y - Y0) / (4.05 - Y0)
+        b, e = _section(0.27 - 0.05 * f, 0.068 - 0.018 * f)
+        body_loops.append(L.section_y(y, b, 0, _sori(y)))
+        edge_loops.append(L.section_y(y, e, 0, _sori(y)))
+    # 오키사키(긴 칼끝): 날선이 등 쪽으로 크게 휘어 올라가 끝점에서 모인다
+    for y, k, lift in ((4.15, 0.9, 0.012), (4.25, 0.74, 0.03), (4.33, 0.54, 0.055), (4.4, 0.3, 0.08)):
+        b, e = _section(0.22 * k, 0.05 * k)
+        body_loops.append(L.section_y(y, b, 0, _sori(y) + lift))
+        edge_loops.append(L.section_y(y, e, 0, _sori(y) + lift))
+    tip = (0.0, tip_y, _sori(tip_y) + 0.1)
+    L.loft(blade, body_loops + [[tip]])
+    L.loft(edge, edge_loops + [[tip]])
+    # 보히(날등 쪽 홈): 시노기 바로 아래 양면에 어두운 줄
+    for sx in (1, -1):
+        hl = []
+        for i in range(12):
+            y = 0.62 + (3.7 - 0.62) * i / 11
+            f = (y - Y0) / (4.05 - Y0)
+            w, th = 0.27 - 0.05 * f, 0.068 - 0.018 * f
+            zc = _sori(y) + w / 2 - 0.42 * w
+            x = sx * (th * 0.47)
+            hl.append([(x + sx * 0.004, y, zc - 0.022), (x + sx * 0.004, y, zc + 0.022), (x - sx * 0.006, y, zc + 0.022), (x - sx * 0.006, y, zc - 0.022)])
+        L.loft(hi, hl)
+    # 하바키 · 셋파 둘 · 코등이(둥근 판 + 테)
+    L.loft(fit, [L.section_y(0.42, L.rrect(0.06, 0.15, 0.025, 2)), L.section_y(0.56, L.rrect(0.05, 0.14, 0.025, 2))])
+    for y in (0.335, 0.425):
+        L.loft(fit, [L.section_y(y - 0.013, L.rrect(0.1, 0.17, 0.07, 3)), L.section_y(y + 0.013, L.rrect(0.1, 0.17, 0.07, 3))])
+    L.lathe(tsuba, [(0.0, 0.345), (0.29, 0.345), (0.305, 0.362), (0.305, 0.398), (0.29, 0.415), (0.0, 0.415)], 36, scale_xz=(0.9, 1.0))
+    L.ring(fit, (0, 0.38, 0), 0.295, 0.018, (0, 1, 0), 44, 6)
+    # 손잡이: 상어 가죽 심(가운데 살짝 잘록) + 엇갈려 감은 끈(마름모 무늬) + 메누키 · 후치 · 가시라
+    core = []
+    for i in range(11):
+        y = -0.98 + 1.25 * i / 10
+        pinch = 1.0 - 0.06 * math.sin(math.pi * i / 10)
+        core.append(L.section_y(y, L.rrect(0.08 * pinch, 0.112 * pinch, 0.05, 2)))
+    L.loft(same, core)
+    for phase in (0.0, math.pi):
+        L.tube(wrap, _ellipse_helix(-0.95, 0.24, 0.089, 0.121, 3.5, phase), 0.023, 5)
+        L.tube(wrap, _ellipse_helix(-0.95, 0.24, 0.089, 0.121, -3.5, phase + math.pi / 2), 0.023, 5)
+    for sx in (1, -1):
+        L.bbox(fit, (sx * 0.086, -0.4, 0.0), (0.034, 0.22, 0.09), 0.012)
+    L.loft(fit, [L.section_y(0.25, L.rrect(0.09, 0.123, 0.055, 2)), L.section_y(0.33, L.rrect(0.095, 0.127, 0.055, 2))])
+    L.loft(fit, [L.section_y(-1.1, L.rrect(0.08, 0.11, 0.055, 2)), L.section_y(-1.05, L.rrect(0.093, 0.124, 0.055, 2)), L.section_y(-0.97, L.rrect(0.09, 0.122, 0.055, 2))])
+
+    off = Piece("Odachi", "Off", ODACHI)
+    saya, sfit, cord = off.g("Saya", rgb(34, 74, 168), 50), off.g("Fittings", rgb(176, 184, 204), 30), off.g("Sageo", rgb(96, 176, 255))
+    sz = lambda y: _sori(y + SAYA_AT) - _sori(SAYA_AT)
+    loops = []
+    for i in range(18):
+        y = -0.3 + (3.71 + 0.3) * i / 17
+        k = 1.0 - 0.12 * i / 17
+        loops.append(L.section_y(y, L.rrect(0.075 * k, 0.17 * k, 0.065 * k, 3), 0, sz(y)))
+    L.loft(saya, loops)
+    L.loft(sfit, [L.section_y(-0.37, L.rrect(0.08, 0.176, 0.065, 3)), L.section_y(-0.29, L.rrect(0.082, 0.178, 0.065, 3))])
+    L.loft(sfit, [L.section_y(y, L.rrect(0.068, 0.152, 0.058, 3), 0, sz(y)) for y in (3.66, 3.73)] + [L.section_y(3.8, L.rrect(0.052, 0.125, 0.045, 3), 0, sz(3.8))])
+    L.bbox(sfit, (0.085, 0.34, sz(0.34)), (0.04, 0.16, 0.08), 0.014)
+    L.tube(cord, _ellipse_helix(0.22, 1.0, 0.093, 0.186, 2.5, 0.0, 18, sz(0.6)), 0.018, 5)
+    L.tube(cord, [(0.095, 0.98, sz(0.98) + 0.05), (0.12, 1.1, sz(1.1) + 0.09), (0.13, 1.26, sz(1.26) + 0.11)], [0.018, 0.015, 0.0], 5)
+    return [main, off]
+
+
 BUILDERS = {
     "Rapier": rapier, "Violin": violin, "Greatsword": greatsword, "Orbs": orbs, "PilgrimNails": pilgrim,
     "MasonHammer": mason, "PickStaff": pickstaff, "Flask": flasks, "Greataxe": greataxe,
+    "SevenStars": seven_stars, "Odachi": odachi,
 }
 
 
 # ── 렌더(확인용) ─────────────────────────────────
+
+
+# 렌더에 R6 몸을 함께 세울 무기(칼 옆 거리) — 길이를 몸과 견줘 보려고
+SCALE_FIGURE = {"Odachi": 3.0}
 
 
 def render_weapon(wid, objs, out_dir):
@@ -504,7 +639,17 @@ def render_weapon(wid, objs, out_dir):
         for ob in offs:
             ob.location.y += hi_m - lo_o + 0.5
         bpy.context.view_layer.update()
-    pts = [ob.matrix_world @ Vector(c) for ob in objs for c in ob.bound_box]
+    figure = []
+    if wid in SCALE_FIGURE:
+        # R6 몸(다리 −3~−1 · 몸통 −1~1 · 머리 1~2): 발을 칼 맨 아래에 맞춰 칼 옆(무기 −X = 블렌더 +x)에 세운다
+        lo_y = min((ob.matrix_world @ Vector(c)).z for ob in objs for c in ob.bound_box)
+        fg = L.Group(wid + "_ScaleFigure", (0.55, 0.62, 0.7), None)
+        for cx, cy, sx, sy in ((-0.5, -2, 1, 2), (0.5, -2, 1, 2), (0, 0, 2, 2), (0, 1.5, 1.2, 1.0), (-1.5, 0, 1, 2), (1.5, 0, 1, 2)):
+            # 몸 판(어깨 폭)은 무기 Z 쪽에 눕혀 옆 카메라에서 정면이 보이게, 칼에서 SCALE_FIGURE 만큼 -Z 로 비킨다
+            L.bbox(fg, (0.0, cy + 3 + lo_y, cx - SCALE_FIGURE[wid]), (1.0, sy, sx))
+        fob = fg.finish()
+        figure = [fob]
+    pts = [ob.matrix_world @ Vector(c) for ob in objs + figure for c in ob.bound_box]
     lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
     hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
     mid, size = (lo + hi) / 2, (hi - lo).length
@@ -526,6 +671,8 @@ def render_weapon(wid, objs, out_dir):
         paths.append(path)
     for ob in offs:
         ob.location.y = 0.0
+    for ob in figure:
+        bpy.data.objects.remove(ob)
     bpy.context.view_layer.update()
     return paths
 

@@ -310,10 +310,17 @@ end
 	`DamageDealt`만 본다. 치명타는 부르는 쪽이 따로 굴린다 — 굴림 결과를 로그에
 	남겨야 해서 여기서 숨기면 안 된다.
 ]]
-function BattleStatus.OutgoingDamage(attacker: State, base: number): number
+-- allow: 이 출처의 [가하는 피해량]만 센다(조율자 알카이드 — "신앙심 말고는 가하는 피해량을 올릴 수 없음")
+function BattleStatus.OutgoingDamage(attacker: State, base: number, allow: { [string]: boolean }?): number
 	-- [파상풍] 수치 1당 주는 피해 ×0.8(곱연산, 2026-10-04 월 필그림 리워크)
 	local tetanus = attacker.Stacks.Tetanus or 0
-	return base * (1 + BattleStatus.Total(attacker, "DamageDealt")) * (0.8 ^ tetanus)
+	local dealt = 0
+	for _, modifier in attacker.Modifiers do
+		if modifier.Kind == "DamageDealt" and (allow == nil or allow[modifier.Source]) then
+			dealt += modifier.Value
+		end
+	end
+	return base * (1 + dealt) * (0.8 ^ tetanus)
 end
 
 --[[

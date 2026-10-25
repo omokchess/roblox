@@ -620,5 +620,7 @@ end
 -- 이 모듈 밖에서 부품이 필요할 때(무기 복제 날리기 등)
 CombatVfx.Part = part
 CombatVfx.Folder = root
+-- 이 모듈 밖에서 시간에 따라 바뀌는 효과(Stop 동안 함께 멈춘다): Timed(초, function(진행도 0~1, dt), 끝날 때?)
+CombatVfx.Timed = add
 
 return CombatVfx
