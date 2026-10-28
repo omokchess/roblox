@@ -466,6 +466,8 @@ function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 	end
 	ctx.EnemyCenter = self:_enemyCenter(a)
 	ctx.EnemyTiles = self.EnemyTiles
+	-- 관전 화면(남의 전투) — 화면 색·소리·카메라 같은 내 화면 효과는 하지 않는다
+	ctx.Quiet = self.Quiet
 	-- 컷신 카메라: fn(진행도 0~1, 지난 초) → 카메라 CFrame. fn 없이 부르면 전투 카메라로 돌려준다(모션이 끝나도 돌려준다)
 	local director = self
 	function ctx.Shot(d: number?, fn: ((number, number) -> CFrame)?)
