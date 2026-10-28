@@ -11,8 +11,9 @@
 	--------------------------------------------------------------------------
 	고칠 수 있는 것
 
-	  카드 306장   이름 · 설명 · **레벨별 수치**(사다리를 칸마다 직접 입력)
-	  직업 9종     이름 · 역할 · 설명 · 최대 체력 · 이동속도 · 평타 위력
+	  카드 전부    이름 · 설명 · **레벨별 수치**(사다리를 칸마다 직접 입력, 카드별 최대 레벨)
+	  직업 전부    이름 · 역할 · 설명 · 최대 체력 · 이동속도 · 평타 위력
+	               (직업 목록은 `CharacterDefinitions.All()` 그대로 — 2026-10-28 기준 11종 · 카드 374장)
 	               + 대표 스킬(이름 · 설명 · 위력 · 재사용 대기)
 	  전투 스킬    직업별 1·2·3 스킬의 이름 · 피해량 · 근접/원거리
 
@@ -108,7 +109,7 @@ function loadShared(name: string): any
 end
 
 local CardArt = loadShared("CardArt")
-local CardEffects = loadShared("CardEffects")
+local CardEffects = loadShared("CardEffects/init")   -- 2026-09-28 카드 엔진 2판부터 폴더(init + 직업별)
 local AbilityCardDefinitions = loadShared("AbilityCardDefinitions")
 local CharacterDefinitions = loadShared("CharacterDefinitions")
 local BattleSkills = loadShared("BattleSkills")
@@ -323,17 +324,11 @@ end
 
 --=== 카드 ===--
 
-local CLASSES = {
-	{ Id = "Musician", Name = "음악가" },
-	{ Id = "Duelist", Name = "결투사" },
-	{ Id = "Berserker", Name = "광전사" },
-	{ Id = "Quasar", Name = "퀘이사" },
-	{ Id = "Pulsar", Name = "펄서" },
-	{ Id = "WallPilgrim", Name = "월 필그림" },
-	{ Id = "WallMason", Name = "월 메이슨" },
-	{ Id = "WallBreaker", Name = "월 브레이커" },
-	{ Id = "Alchemist", Name = "연금술사" },
-}
+-- 게임 직업 목록을 그대로 따른다(손으로 적어 두었다가 조율자·청의 검사가 빠졌었다 — 2026-10-28)
+local CLASSES = {}
+for _, def in CharacterDefinitions.All() do
+	table.insert(CLASSES, { Id = def.Id, Name = def.Name })
+end
 
 local GRADE_LABEL = { Essential = "필수", Rare = "희귀", Common = "일반" }
 
@@ -345,6 +340,16 @@ local GRADE_LABEL = { Essential = "필수", Rare = "희귀", Common = "일반" }
 	범위 종류·범위 크기(`BattleGrid.ShapeKind`·`Radius`)를 고르는 칸은 뺐다
 	(요청) — 격자에서 찍는 지정 범위가 있는데 굳이 둘 다 있을 필요가 없었다.
 ]]
+local SHAPE_KIND_LABEL = {
+	Single = "한 칸",
+	Row = "대상 행 전체",
+	Column = "대상 열 전체",
+	Cross = "십자",
+	Square = "사각",
+	All = "진형 전체",
+	Line = "직선",
+}
+
 local RANGE_OPTIONS = {
 	{ "Melee", "근거리" },
 	{ "Ranged", "원거리" },
@@ -379,7 +384,7 @@ for _, class in CLASSES do
 				고친다. 설명의 `{1}`이 이 줄의 값을, `{2}`가 다음 줄의 값을 쓴다.
 			]]
 			local ladders = {}
-			local maxLevel = AbilityCardDefinitions.MaxLevel(grade)
+			local maxLevel = AbilityCardDefinitions.MaxLevelFor(card)   -- 카드별 MaxLevel(124장)을 따른다 — 등급표만 보면 빈 칸이 0으로 찼다
 			if card.Levels then
 				for slot, values in card.Levels do
 					local boxes = {}
@@ -412,10 +417,11 @@ for _, class in CLASSES do
 					table.insert(
 						ladders,
 						string.format(
-							'<div class="ladder"><b>{%d}</b>'
+							'<div class="ladder" data-slot="%d"><b>{%d}</b>'
 								.. '<input type="hidden" class="f" data-scope="cardKeywords"'
 								.. ' data-key="%s#%d" data-field="Keyword" data-orig="%s" value="%s">'
 								.. "%s</div>",
+							slot,
 							slot,
 							escape(card.Id),
 							slot,
@@ -437,7 +443,7 @@ for _, class in CLASSES do
 				**레벨 미리보기**는 접어 둔다(요청) — 306장이 한 화면에 있어
 				펼쳐 둔 글이 전부 차지하면 카드가 다시 커진다.
 			]]
-			local maxLevel = AbilityCardDefinitions.MaxLevel(grade)
+			local maxLevel = AbilityCardDefinitions.MaxLevelFor(card)   -- 카드별 MaxLevel(124장)을 따른다 — 등급표만 보면 빈 칸이 0으로 찼다
 			local levelOptions = {}
 			for level = 1, maxLevel do
 				table.insert(levelOptions, string.format('<option value="%d">Lv%d</option>', level, level))
@@ -538,9 +544,14 @@ for _, class in CLASSES do
 			자원이 쌓일수록 범위가 넓어지는 것(한 번의 타격)이고, `Motions`는
 			몇 번 · 어디를 차례로 때리는가(여러 번의 타격)다.
 		]]
+		-- 칸을 안 찍은 스킬은 소스의 모양(Kind)대로 맞는다 — 단추에 그 모양을 적어 "범위 없음"으로 안 보이게(조율자 열·행·진형 전체 등)
+		local kindLabel = SHAPE_KIND_LABEL[skill.Shape.Kind] or ""
+		if kindLabel ~= "" and skill.Shape.Radius and skill.Shape.Kind ~= "All" then
+			kindLabel ..= " " .. tostring(skill.Shape.Radius)
+		end
 		local buttonLabel
 		if not skill.Shape.Cells then
-			buttonLabel = "격자에서 찍기"
+			buttonLabel = (if kindLabel ~= "" then kindLabel .. " · " else "") .. "격자에서 찍기"
 		else
 			buttonLabel = string.format("%d칸", #skill.Shape.Cells)
 			if skill.Shape.Stages and #skill.Shape.Stages > 0 then
@@ -559,7 +570,7 @@ for _, class in CLASSES do
 		end
 		local pickButton = string.format(
 			'<label class="fld"><span>지정 범위</span>'
-				.. '<button class="pick" type="button" data-pick="%s">%s</button>'
+				.. '<button class="pick" type="button" data-pick="%s" data-kind="%s">%s</button>'
 				.. '<input type="hidden" class="f cells" data-scope="skillShape" data-key="%s"'
 				.. ' data-field="Cells" data-orig="%s" value="%s">'
 				.. '<input type="hidden" class="f" data-scope="skillShape" data-key="%s"'
@@ -569,6 +580,7 @@ for _, class in CLASSES do
 				.. '<input type="hidden" class="f" data-scope="skills" data-key="%s"'
 				.. ' data-field="Motions" data-orig="%s" value="%s"></label>',
 			escape(skill.Id),
+			escape(kindLabel),
 			buttonLabel,
 			escape(skill.Id),
 			escape(cellsJson(skill.Shape.Cells)),
@@ -1279,30 +1291,136 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
 .handle.rotate { cursor: grab; }
 .handle-line { stroke: #ffd166; stroke-width: 1; pointer-events: none; }
 .hidden { display: none !important; }
+
+/*
+  2026-10-28 새 단장(요청: "UI랑 버그 수정해서 리뉴얼"). 위 규칙은 기능마다 요청을 받아 다듬은 것이라
+  그대로 두고, 여기서 색·자리만 덮는다.
+  - 카드 그림을 큰 정사각형 → 이름 옆 썸네일(누르면 그림 고르기). 카드 키가 절반으로 줄어 한 화면에 두세 배가 보인다.
+  - `{n}` 숫자와 그 레벨 사다리 줄을 같은 색으로 잇는다(글자 폭은 그대로 — 색만).
+  - 글 아래 슬롯 칩(Lv 고르기 + 값)은 바로 아래 사다리와 같은 값을 두 번 보여 줘 숨겼다.
+  - 화면 밖 카드·패널은 그리지 않는다(content-visibility). 374장·입력 6천여 칸이라 탭을 바꿀 때 멈췄다.
+*/
+:root { --bg: #101117; --surf: #181a22; --surf2: #1f222c; --line: #2a2e3b; --line2: #3a3f50;
+        --text: #e9eaf2; --dim: #9096a8; --faint: #6c7286; --acc: #5b8cff; --acc2: #2f5fd0;
+        --ok: #8fe0a6; --warn: #e8c070; --bad: #e39a9a; }
+body { background: var(--bg); color: var(--text); font-size: 12.5px; }
+header.top { padding: 10px 18px 8px; background: rgba(16,17,23,.94); border-bottom-color: var(--line); }
+.toprow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+header.top h1 { margin: 0; font-size: 15px; letter-spacing: -.01em; white-space: nowrap; }
+header.top h1 small { font-size: 11.5px; color: var(--faint); }
+.grow { flex: 1; }
+.sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.bar { margin-bottom: 0; }
+header.top > .bar { margin-top: 6px; }
+.filters { gap: 6px 14px; }
+.filters > .bar { gap: 5px; }
+#gradeBar { flex: 1; min-width: 320px; }
+#tabBar { gap: 2px; background: var(--surf); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+#tabBar .chip { border: 0; background: transparent; border-radius: 7px; padding: 5px 13px; font-weight: 600; }
+#tabBar .chip:hover { background: var(--surf2); }
+#tabBar .chip.on { background: var(--acc2); color: #fff; }
+.chip { background: var(--surf); border-color: var(--line); color: #c3c7d6; padding: 4px 11px; }
+.chip:hover { border-color: var(--line2); }
+.chip.on { background: var(--acc2); border-color: var(--acc2); }
+#q { background: var(--surf); border-color: var(--line); border-radius: 999px; padding: 5px 12px; }
+#q:focus { outline: none; border-color: var(--acc); }
+#dirty { padding: 3px 9px; border-radius: 999px; background: var(--surf); border: 1px solid var(--line); }
+#dirty.some { color: var(--warn); border-color: #5a4a26; background: #241f12; }
+#live { margin-left: 0; padding: 3px 9px; border-radius: 999px; background: var(--surf); border: 1px solid var(--line); }
+#live:empty { display: none; }
+#live.off { border-color: #5a2f2f; background: #241515; }
+#live.offline { border-color: #5a4a26; background: #241f12; }
+#live.offline b, #live.offline .why { color: var(--warn); }
+main { padding: 12px 18px 70px; }
+.klass h2 { display: flex; align-items: baseline; gap: 8px; font-size: 15px; margin: 22px 0 10px;
+            padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+
+.grid { gap: 12px; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); align-items: start; }
+.card { position: relative; background: var(--surf); border-color: var(--line); border-radius: 14px;
+        content-visibility: auto; contain-intrinsic-size: auto 330px; }
+.card.essential { border-color: #5d3d8f; }
+.card.rare { border-color: #33558f; }
+.card.dirty { border-color: #d0a24a; box-shadow: 0 0 0 1px #d0a24a55; }
+.card .art { position: absolute; top: 10px; left: 10px; width: 66px; height: 66px; border-radius: 12px;
+             overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.1); }
+.card .art svg { width: 66px; height: 66px; }
+.artpick { inset: 0; top: 0; right: 0; width: auto; height: auto; border: 0; border-radius: 0;
+           background: rgba(10,10,16,.55); font-size: 18px; opacity: 0; transition: opacity .12s; }
+.art:hover .artpick, .artpick:focus-visible { opacity: 1; }
+.card .body { padding: 10px 11px 11px; gap: 8px; }
+.card .row { flex-direction: column; align-items: stretch; gap: 6px; padding-left: 76px;
+             min-height: 66px; justify-content: center; }
+.card .row .fld { flex: none; }
+.card .row .fld > span { display: none; }
+.card .row .f { font-size: 13.5px; font-weight: 700; padding: 5px 8px; }
+.grade { margin-top: 0; align-self: flex-start; font-weight: 600; letter-spacing: .02em; }
+.f, .lv { background: #12131a; border-color: var(--line); }
+.f:focus, .lv:focus { border-color: var(--acc); }
+.hlback { background: #12131a; border-color: var(--line); }
+.hl:focus-within .hlback { border-color: var(--acc); }
+.hlback, .hltext { font-size: 12.5px; }
+.hl textarea.hltext, textarea.f { field-sizing: content; }
+.kwchip.slot { display: none; }
+.kwbar:empty { display: none; }
+.ladders { gap: 4px; padding: 7px 8px; border-radius: 8px; background: #14151c; border: 1px solid var(--line); }
+.ladders:empty { display: none; }
+.ladder b { width: 26px; font-size: 10.5px; font-weight: 700; }
+.lv { padding: 4px 2px; font-size: 11.5px; }
+.lvprev-wrap { border-style: solid; border-color: var(--line); background: #14151c; }
+.hlback .slotmark { border-radius: 3px; }
+.slotmark.s1, .ladder[data-slot="1"] b { color: #ffcd5a; }
+.slotmark.s2, .ladder[data-slot="2"] b { color: #6fd3ff; }
+.slotmark.s3, .ladder[data-slot="3"] b { color: #ff8fb1; }
+.slotmark.s4, .ladder[data-slot="4"] b { color: #9be38b; }
+.slotmark.s5, .ladder[data-slot="5"] b { color: #c7a2ff; }
+.slotmark.s6, .ladder[data-slot="6"] b { color: #ffb36b; }
+.slotmark { background: #ffffff10; }
+footer { padding-top: 2px; }
+
+.panel { background: var(--surf); border-color: var(--line); border-radius: 14px; }
+.panel.klass, .panel.icon { content-visibility: auto; contain-intrinsic-size: auto 900px; }
+.kw { border-color: var(--line); background: #15161d; content-visibility: auto; contain-intrinsic-size: auto 110px; }
+.skill { border-color: var(--line); background: #15161d; }
+#drawer, #sheet, #artPickSheet { background: var(--surf); border-color: var(--line2); }
+@media (max-width: 720px) {
+  header.top { padding: 8px 12px; position: static; }
+  main { padding: 10px 12px 60px; }
+  .grid { grid-template-columns: 1fr; }
+  #gradeBar { min-width: 0; }
+  .zoom { display: none; }
+}
 </style></head><body>
 <header class="top">
-<h1>게임 설정 편집기<small>]] .. string.format("카드 %d장 · 전투 반영 %d장", totalCards, wiredCards) .. [[</small></h1>
-<div class="bar" id="tabBar">
+<div class="toprow">
+<h1>게임 설정 편집기<small>]] .. string.format("직업 %d · 카드 %d장 · 전투 반영 %d장", #CLASSES, totalCards, wiredCards) .. [[</small></h1>
+<nav class="bar" id="tabBar">
 <button class="chip on" data-tab="cards">카드</button>
 <button class="chip" data-tab="classes">직업 · 능력</button>
 <button class="chip" data-tab="keywords">키워드</button>
 <button class="chip" data-tab="icons">아이콘</button>
 <button class="chip" data-tab="draw">그림 그리기</button>
+</nav>
+<span class="grow"></span>
+<span id="dirty">수정 없음</span>
+<span id="live"></span>
 </div>
+<div class="bar filters">
 <div class="bar" id="classBar">]] .. table.concat(classChips) .. [[</div>
 <div class="bar" id="gradeBar">]] .. table.concat(gradeChips) .. [[
 <input id="q" type="search" placeholder="이름·설명·태그 검색"></div>
-<div class="bar">
+</div>
+<div class="bar tools">
 <button class="chip" id="onlyDirty">수정한 것만</button>
+<i class="sep"></i>
 <button class="chip act" id="save">수정본 내려받기</button>
 <button class="chip" id="load">수정본 불러오기</button>
 <button class="chip" id="revert">전부 되돌리기</button>
 <input id="file" type="file" accept="application/json" hidden>
-<span id="dirty">수정 없음</span>
-<span id="live"></span>
-<label class="zoom">확대 <input id="zoom" type="range" min="60" max="180" step="5" value="100"><b id="zoomv">100%</b></label>
+<i class="sep"></i>
 <button class="chip" id="histBtn">변경 이력</button>
 <button class="chip" id="snapBtn">스냅샷</button>
+<span class="grow"></span>
+<label class="zoom">확대 <input id="zoom" type="range" min="60" max="180" step="5" value="100"><b id="zoomv">100%</b></label>
 </div>
 </header>
 <main>
@@ -1433,6 +1551,12 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
 <script>
 (function () {
   var STORE = "porcelain.configEdits.v2";
+  /*
+    글 칸 높이를 브라우저가 맞춰 줄 수 있으면(`field-sizing: content`, 크롬·엣지 123+) JS로 재지 않는다.
+    예전엔 탭·거르기를 바꿀 때마다 보이는 글 칸 수백 개를 하나씩 재며(높이 비우기 → scrollHeight 읽기)
+    레이아웃을 수백 번 다시 계산해 1~2초 멈췄다. 안 되는 브라우저는 예전 방식 그대로.
+  */
+  var NATIVE_GROW = !!(window.CSS && CSS.supports && CSS.supports("field-sizing", "content"));
   var state = { tab: "cards", klass: "all", grade: "all", q: "", dirtyOnly: false };
 
   /*
@@ -1678,7 +1802,7 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
       3줄 높이로 찌그러뜨려 놓는다(요청한 버그: "클릭해야 반영, 새로고침하면
       다시 3줄"). 탭·필터가 바뀌어 칸이 실제로 보이게 될 때마다 다시 잰다.
     */
-    document.querySelectorAll('textarea.hltext[data-painted="1"]').forEach(function (area) {
+    if (!NATIVE_GROW) document.querySelectorAll('textarea.hltext[data-painted="1"]').forEach(function (area) {
       if (area.offsetParent !== null) autoGrowTextarea(area);
     });
   }
@@ -2274,7 +2398,7 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
     var motionCount = countOf("Motions");
     var ally = valueOf("TargetSide") === "Ally";
     if (cells === 0 && stageCount === 0 && motionCount === 0 && !ally) {
-      button.textContent = "격자에서 찍기";
+      button.textContent = (button.dataset.kind ? button.dataset.kind + " · " : "") + "격자에서 찍기";
       button.classList.remove("set");
       return;
     }
@@ -2554,6 +2678,13 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
       return '<span class="kwmark" style="color:' + keyword.color + ';background:'
         + keyword.color + '22">[' + esc(name) + "]</span>";
     });
+    if (area.closest(".card")) {
+      var slotNo = 0;
+      html = html.replace(/\{[0-9.\-]+\}/g, function (brace) {
+        slotNo++;
+        return '<span class="slotmark s' + (((slotNo - 1) % 6) + 1) + '">' + brace + "</span>";
+      });
+    }
     // 마지막 줄이 개행이면 높이가 한 줄 모자라 보인다.
     back.innerHTML = html + "\n";
     syncScroll(area);
@@ -2863,7 +2994,11 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
         + ' data-level="' + i + '" data-orig="' + esc(String(seedValue)) + '" title="레벨 ' + i + '">';
     }
     row.innerHTML = cells;
-    host.appendChild(row);
+    // 슬롯 순서대로 끼운다 — 글 앞쪽에 {n}을 새로 치면 이 줄이 맨 아래에 붙어 순서가 뒤집혔다.
+    var nextRow = Array.prototype.find.call(host.querySelectorAll(".ladder"), function (other) {
+      return Number(other.dataset.slot) > slot;
+    });
+    host.insertBefore(row, nextRow || null);
     return levelBoxes(cardId, slot);
   }
 
@@ -3023,6 +3158,7 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
     지워도 이전의 큰 높이가 그대로 남아 줄어들지 않는다.
   */
   function autoGrowTextarea(area) {
+    if (NATIVE_GROW) return;
     area.style.height = "auto";
     area.style.height = area.scrollHeight + "px";
   }
@@ -4409,7 +4545,10 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
       return "표가 없습니다. Supabase SQL Editor에서 supabase/schema.sql을 실행하세요.";
     }
     if (/JWT|apikey|Invalid API key/i.test(text)) return "키가 올바르지 않습니다. anon key를 확인하세요.";
-    if (/Failed to fetch|NetworkError|network/i.test(text)) return "인터넷 연결을 확인하세요.";
+    if (/Failed to fetch|NetworkError|network/i.test(text)) {
+      return "Supabase 서버에 닿지 않습니다(인터넷이 끊겼거나 프로젝트가 일시정지·삭제됨 — supabase.com 대시보드 확인). "
+        + "고친 값은 이 브라우저에 저장되고, 내려받기로 옮길 수 있습니다.";
+    }
     if (/row-level security|permission denied/i.test(text)) {
       return "권한이 막혀 있습니다. schema.sql의 정책 부분을 다시 실행하세요.";
     }
@@ -4417,6 +4556,8 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
   }
 
   function noteFailure(err, what) {
+    var raw = err && (err.message || err.hint || String(err));
+    lastOffline = /Failed to fetch|NetworkError|network/i.test(raw || "");
     lastErrorText = (what ? what + ": " : "") + describeError(err);
     try { console.error("[porcelain]", what || "", err); } catch (e) {}
     setLive(false);
@@ -4599,6 +4740,7 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
   var lastPeople = [];
   var saveBroken = false;
   var lastErrorText = "";
+  var lastOffline = false;
   // 클라우드 값을 한 번이라도 제대로 받았는지. 남의 수정을 지우기 전에 이걸 본다.
   var cloudLoaded = false;
 
@@ -4610,14 +4752,19 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
     if (!ok) saveBroken = true;
     else if (ok === true && arguments.length === 1) { saveBroken = false; lastErrorText = ""; }
 
-    box.classList.toggle("off", saveBroken);
+    box.classList.toggle("off", saveBroken && !lastOffline);
+    box.classList.toggle("offline", saveBroken && lastOffline);
     if (saveBroken) {
       // 무엇이 잘못됐는지 말해 준다 — "연결 끊김"만 띄우면 고칠 방법이 안 보인다.
-      box.innerHTML = '<b>저장 실패</b> <span class="why"></span> · <a href="#" id="retryLive">다시 시도</a>';
+      // 서버에 아예 못 닿으면 값은 이 브라우저에 남으므로 "실패"가 아니라 "온라인 저장 꺼짐"이다(자세한 건 마우스를 올려).
+      box.innerHTML = (lastOffline ? "<b>온라인 저장 꺼짐</b> · 이 브라우저에 저장 중" : '<b>저장 실패</b> <span class="why"></span>')
+        + ' · <a href="#" id="retryLive">다시 시도</a>';
+      box.title = lastErrorText || "";
       var why = box.querySelector(".why");
       if (why) why.textContent = lastErrorText || "";
       return;
     }
+    box.title = "";
     var names = lastPeople.map(function (person) { return person.who; });
     box.innerHTML = "<b>함께 보는 중</b> " + (names.length ? names.join(", ") : me)
       + ' · <a href="#" id="rename">이름 바꾸기</a>';
@@ -4788,6 +4935,11 @@ svg.prev { width: 150px; height: 150px; border-radius: 12px; display: block; }
         var tab = document.querySelector("#tabBar .chip.on");
         channel.track({ who: me, where: tab ? tab.textContent : "" });
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        // 실시간 줄만 끊긴 것 — 저장(REST)이 실패한 게 아니라 이유 없는 빨간 "저장 실패"를 띄우지 않는다.
+        if (!lastErrorText) {
+          lastOffline = true;
+          lastErrorText = "실시간 연결이 끊겼습니다(남의 수정이 바로 안 보임). 고친 값은 이 브라우저에 저장됩니다.";
+        }
         setLive(false);
       }
     });
