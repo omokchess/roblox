@@ -454,8 +454,9 @@ local function poseCut(ctx: any, sweep: number)
 	local s = st(ctx)
 	s.marks = s.marks or {}
 	-- 한순간 굵게 번쩍이며 그어지고(지나가는 칼빛), 가는 선이 남는다
-	stroke(mid - dir * (CUT_LENGTH * 0.6), mid + dir * (CUT_LENGTH * 0.6), { Width = 0.5, Color = AZURE, Grow = 0.04, Life = 0.12 })
-	table.insert(s.marks, stroke(mid - dir * (CUT_LENGTH / 2), mid + dir * (CUT_LENGTH / 2), { Width = 0.1, Color = ICE, Grow = 0.05, Keep = true, Bits = 3 }))
+	-- 애니의 베임처럼 아주 가늘게(전시장 확인: 굵으면 빛 기둥처럼 보였다)
+	stroke(mid - dir * (CUT_LENGTH * 0.6), mid + dir * (CUT_LENGTH * 0.6), { Width = 0.22, Color = AZURE, Grow = 0.04, Life = 0.12 })
+	table.insert(s.marks, stroke(mid - dir * (CUT_LENGTH / 2), mid + dir * (CUT_LENGTH / 2), { Width = 0.05, Color = ICE, Grow = 0.05, Keep = true, Bits = 3 }))
 	ctx.Vfx.Flash(mid, { Color = WHITE, Size = 3.5, Life = 0.15, Brightness = 5 })
 end
 
@@ -603,7 +604,7 @@ function Fx.CutsExtend(ctx: any)
 			a, b = m.From - d * 12, m.To + d * 12
 		end
 		table.insert(s.extended, { a, b })
-		table.insert(s.cuts, stroke(a, b, { Width = 0.09, Color = ICE, Grow = 0.07, Delay = (i - 1) * 0.04, Keep = true, Bits = 2 }))
+		table.insert(s.cuts, stroke(a, b, { Width = 0.05, Color = ICE, Grow = 0.07, Delay = (i - 1) * 0.04, Keep = true, Bits = 2 }))
 	end
 end
 
@@ -622,7 +623,7 @@ function Fx.CutsEcho(ctx: any)
 			for _, sign in { 1, -1 } do
 				local p0, p1 = clip(box, mid + side * (sign * k * 2.4), d)
 				if p0 and p1 then
-					table.insert(s.cuts, stroke(p0, p1, { Width = math.max(0.035, 0.08 - k * 0.008), Color = ICE, Grow = 0.06, Delay = k * 0.035, Keep = true, Bits = 1 }))
+					table.insert(s.cuts, stroke(p0, p1, { Width = math.max(0.022, 0.045 - k * 0.004), Color = ICE, Grow = 0.06, Delay = k * 0.035, Keep = true, Bits = 1 }))
 				end
 			end
 		end
@@ -648,7 +649,7 @@ function Fx.CutsFill(ctx: any)
 		local axis = seeds[rng:NextInteger(1, #seeds)]
 		local d = (CFrame.fromAxisAngle(Vector3.yAxis, math.rad(rng:NextNumber(-25, 25))) * CFrame.fromAxisAngle(box.R, math.rad(rng:NextNumber(-20, 20)))):VectorToWorldSpace(axis)
 		local half = rng:NextNumber(1.2, 2.6)
-		table.insert(s.cuts, stroke(p - d * half, p + d * half, { Width = rng:NextNumber(0.04, 0.09), Color = if rng:NextNumber() < 0.5 then WHITE else ICE, Grow = 0.03, Delay = rng:NextNumber(0, 0.15), Keep = true, Bits = 1 }))
+		table.insert(s.cuts, stroke(p - d * half, p + d * half, { Width = rng:NextNumber(0.025, 0.05), Color = if rng:NextNumber() < 0.5 then WHITE else ICE, Grow = 0.03, Delay = rng:NextNumber(0, 0.15), Keep = true, Bits = 1 }))
 	end
 	task.delay(0.12, function()
 		for _ = 1, 6 do
