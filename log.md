@@ -4721,3 +4721,9 @@ Moon Animator 2 는 유료(19.99달러)라 사용자가 사지 않기로 하고 
   거의 반 바퀴 뒤돌아 휩쓸기(`BACKSWEEP`) → 앞을 보고 강한 가로베기(SLASHR, 줄 끝). 새 셋은 원래 자세(RISE·KESA·SWEEP)의 팔·칼에 Root·다리만 바꾼 것이라
   잔상도 같은 자세로 남는다(공중 잔상 · 뒤돌아선 잔상).
 - 점검: run_system_tests · test_motion_math · check_fx · smoke_director, 스튜디오 전시장 느린 재생.
+
+## 2026-10-28 - 결투사 강화 스킬 피해 96 → 45
+
+- 사용자: "탱커를 겸하는 서브딜러인데 피해량이 너무 높은 듯" — `PointBlank`(마지막까지 빛나는 점을 향해 검 끝을 쏘아라) 기본 피해 96 → **45**
+  (`BattleSkills` · `CharacterDefinitions` 설명). 측정(skill_damage_probe, 집중 가득): 대상 하나당 93(2명 186). 같은 직업 앞뒤관통 45 · 3연 찌르기 72.
+- 점검: run_system_tests · selene.
