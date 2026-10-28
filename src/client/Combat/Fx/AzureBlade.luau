@@ -8,10 +8,11 @@
 	  발도술의 절정 반쯤 뽑다 "챙" 하고 멈춰 드러난 날에 빛(Ching) → 사라져(Vanish) 줄 끝에 이미 벤 자세로 서고,
 	                지나간 자리에 불규칙한 곧은 검로(PeakPath) → 줄 전체를 가르는 곧은 칼날들이 반짝일 때마다 타격(RowFlash).
 	                (2026-10-26 사용자) 제 줄을 따라 곧게 가고, 검로·칼날은 위아래로 ±TILT° 안에서 제각각 기울며 크기는 MARK 배
-	  공간의 이해   (2026-10-26 다시) 블링크 다섯 번(Blink — 선 자리에 그 자세 잔상)으로
-	                적진을 가로질러 줄 끝에서 꽂으면(검로는 휘두른 방향의 긴 곧은 선으로 남는다. 카메라는 그동안 등 뒤에서 따라가다 돌아온다: CamFollow · CamFree) →
-	                (2026-10-28 애니 연출) 딸깍과 함께 세상이 멎고(CutClick) 칸 정중앙을 지나는 가는 격자 선이 그어져(GridCut) →
-	                임팩트 프레임 · 흰 번쩍 · 선과 검로가 유리 조각처럼 부서지며 필드 전체를 벤다(GridFlash · GridHit)
+	  공간의 이해   (2026-10-26 다시) 블링크 다섯 번(Blink — 선 자리에 그 자세 잔상, 휘두른 방향의 긴 곧은 검로가 남는다)으로 적진을
+	                가로질러 줄 끝에서 꽂으면(카메라는 그동안 등 뒤에서 따라가다 돌아온다: CamFollow · CamFree) →
+	                (2026-10-28, 사용자가 고른 안 1+2+3 — 격자는 뺐다) 딸깍과 함께 세상이 멎고(CutClick) ① 다섯 검로가 필드를 가로질러
+	                뻗고(CutsExtend) ② 나란한 복제 줄이 물결처럼 퍼지고(CutsEcho) ③ 짧은 곧은 선 수십 개가 공간을 채운다(CutsFill) →
+	                ④ 임팩트 프레임 · 화면이 검로를 따라 금 가고 · 모든 선이 유리 조각처럼 부서지며 필드 전체를 벤다(SpaceBreak · BreakHit)
 	효과음: 로블록스 효과음 모음(ProSoundEffects). 챙 = 칼 뽑는 쇳소리 — 바꾸려면 SOUND 의 숫자만 고친다.
 	잔상 자세는 모션 파일의 Poses(tools/combat/design/azure_gen.py 가 만든다).
 ]]
@@ -478,15 +479,16 @@ function Fx.Blink(ctx: any, ev: any)
 end
 
 --[[
-	격자 선 자리(전투 공간의 앞 u · 옆 v 좌표)와 칸 간격. 선은 **칸 정중앙**을 지나 교차점이 칸 가운데에 온다
-	(2026-10-26 사용자: 칸 경계에서 0.5칸 옮기기). 적 진영 칸(ctx.EnemyTiles — 전투 화면이 넘겨준다)의 가운데들에서
-	겹치지 않는 u·v 값을 모은다. 칸을 모르면(전시장) 첫 대상을 첫 열 가운데로 6×3 칸을 어림한다.
+	필드 상자(전투 공간의 앞 u · 옆 v · 높이 y). 적 진영 칸(ctx.EnemyTiles — 전투 화면이 넘겨준다)의 가운데들에서 u·v 범위를 잡고
+	칸 반 칸만큼 넓힌다. 칸을 모르면(전시장) 첫 대상을 첫 열 가운데로 6×3 칸을 어림한다.
+	돌려주는 것: { Base, F, R, U0, U1, V0, V1, Y0, Y1 } — 월드 점 = Base + F·u + R·v + (0, y, 0)
 ]]
 local PITCH = 6
-local function gridLines(ctx: any): ({ number }, { number }, number, number)
+local function fieldBox(ctx: any): any
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
-	local origin = ctx.Actor.Home.Position
+	local home = ctx.Actor.Home.Position
+	local base = Vector3.new(home.X, ctx.Ground, home.Z)
 	local centers = {}
 	if ctx.EnemyTiles and #ctx.EnemyTiles > 0 then
 		for _, t in ctx.EnemyTiles do
@@ -500,28 +502,52 @@ local function gridLines(ctx: any): ({ number }, { number }, number, number)
 			end
 		end
 	end
-	local function bounds(axis: Vector3): ({ number }, number)
-		local vals = {}
-		for _, center in centers do
-			local x = math.round((center - origin):Dot(axis) * 2) / 2
-			if not table.find(vals, x) then
-				table.insert(vals, x)
-			end
-		end
-		table.sort(vals)
-		local pitch = PITCH
-		for i = 2, #vals do
-			pitch = math.min(pitch, vals[i] - vals[i - 1])
-		end
-		return vals, pitch
+	local u0, u1, v0, v1 = math.huge, -math.huge, math.huge, -math.huge
+	for _, center in centers do
+		local d = center - base
+		u0, u1 = math.min(u0, d:Dot(f)), math.max(u1, d:Dot(f))
+		v0, v1 = math.min(v0, d:Dot(r)), math.max(v1, d:Dot(r))
 	end
-	local us, pu = bounds(f)
-	local vs, pv = bounds(r)
-	return us, vs, pu, pv
+	local m = PITCH / 2 + 1
+	return { Base = base, F = f, R = r, U0 = u0 - m, U1 = u1 + m, V0 = v0 - m, V1 = v1 + m, Y0 = 0.15, Y1 = 5 }
+end
+
+local function boxLocal(box: any, p: Vector3): Vector3
+	local d = p - box.Base
+	return Vector3.new(d:Dot(box.F), d:Dot(box.R), p.Y - box.Base.Y)
+end
+
+local function boxWorld(box: any, l: Vector3): Vector3
+	return box.Base + box.F * l.X + box.R * l.Y + Vector3.new(0, l.Z, 0)
+end
+
+-- 점 p 를 지나 방향 d 인 끝없는 선을 필드 상자 안으로 자른 두 끝(상자를 지나지 않으면 nil)
+local function clip(box: any, p: Vector3, d: Vector3): (Vector3?, Vector3?)
+	local lp = boxLocal(box, p)
+	local ld = Vector3.new(d:Dot(box.F), d:Dot(box.R), d.Y)
+	local t0, t1 = -math.huge, math.huge
+	local lo = { box.U0, box.V0, box.Y0 }
+	local hi = { box.U1, box.V1, box.Y1 }
+	local pp = { lp.X, lp.Y, lp.Z }
+	local dd = { ld.X, ld.Y, ld.Z }
+	for i = 1, 3 do
+		if math.abs(dd[i]) < 1e-6 then
+			if pp[i] < lo[i] or pp[i] > hi[i] then
+				return nil, nil
+			end
+		else
+			local a, b = (lo[i] - pp[i]) / dd[i], (hi[i] - pp[i]) / dd[i]
+			t0, t1 = math.max(t0, math.min(a, b)), math.min(t1, math.max(a, b))
+		end
+	end
+	if t1 - t0 < 0.5 then
+		return nil, nil
+	end
+	return p + d * t0, p + d * t1
 end
 
 --[[
-	화면 색(애니 연출): 시간이 멎은 듯 빛이 빠지고(Freeze) → 한 프레임 흑백 대비(임팩트 프레임) → 하얗게 번쩍였다 돌아온다(Impact).
+	화면 색(애니 연출): 시간이 멎은 듯 빛이 빠지고(CutClick) → 한 프레임 흑백 대비(임팩트 프레임) → 하얗게 번쩍였다 돌아온다(SpaceBreak).
 	Lighting 의 ColorCorrectionEffect 하나를 배우마다 돌려 쓴다. 관전 화면(ctx.Quiet)은 손대지 않는다.
 ]]
 local function grading(ctx: any): ColorCorrectionEffect?
@@ -548,6 +574,8 @@ end
 function Fx.CutClick(ctx: any)
 	Fx.Click(ctx)
 	ctx.Sound(SOUND.Ching, 0.55, 1.6)
+	local s = st(ctx)
+	s.cuts, s.extended = {}, {}
 	local cc = grading(ctx)
 	if cc then
 		CombatVfx.Timed(0.12, function(a)
@@ -559,71 +587,142 @@ function Fx.CutClick(ctx: any)
 	end
 end
 
--- 멎은 세상에 필드 전체를 가로세로로 베는 아주 가는 선(필드 밖까지 뻗는다) — 칸 정중앙을 지나는 바닥·가슴 높이 두 겹 +
--- 칸 가운데(교차점)마다 세로 선. 앞에서 뒤로 순식간에 그어지고, 빛이 선을 따라 달린다
-function Fx.GridCut(ctx: any)
+-- ① 연장: 블링크 검로 다섯 줄이 양쪽으로 쭉 뻗어 필드를 가로지른다(필드 상자 안까지, 서로 엇갈린다)
+function Fx.CutsExtend(ctx: any)
 	local s = st(ctx)
-	s.grid = {}
-	local f = ctx.Forward
-	local r = f:Cross(Vector3.yAxis)
-	local home = ctx.Actor.Home.Position
-	local base = Vector3.new(home.X, ctx.Ground, home.Z)
-	local us, vs, pu, pv = gridLines(ctx)
-	local function at(u: number, v: number, y: number): Vector3
-		return base + f * u + r * v + Vector3.new(0, y, 0)
-	end
-	local reach = 3 -- 필드 밖으로 더 뻗는 길이(공간째 가른 느낌)
-	local u0, u1 = us[1] - pu / 2 - reach, us[#us] + pu / 2 + reach
-	local v0, v1 = vs[1] - pv / 2 - reach, vs[#vs] + pv / 2 + reach
-	local span = math.max(1, u1 - u0)
-	local function delay(u: number): number
-		return 0.22 * (u - u0) / span
-	end
-	local lines = {}
-	local function line(a: Vector3, b: Vector3, opts: { [string]: any })
-		local mark = stroke(a, b, opts)
-		table.insert(s.grid, mark)
-		table.insert(lines, { a, b, opts.Delay or 0 })
-	end
-	for _, y in { 0.1, 1.6 } do
-		for _, v in vs do
-			line(at(u0, v, y), at(u1, v, y), { Width = 0.06, Color = ICE, Grow = 0.08, Keep = true, Bits = 0 })
+	s.cuts = s.cuts or {}
+	s.extended = {}
+	local box = fieldBox(ctx)
+	for i, m in s.marks or {} do
+		if not m.From then
+			continue
 		end
-		for _, u in us do
-			line(at(u, v0, y), at(u, v1, y), { Width = 0.06, Color = ICE, Grow = 0.05, Delay = delay(u), Keep = true, Bits = 0 })
+		local d = (m.To - m.From).Unit
+		local a, b = clip(box, m.From:Lerp(m.To, 0.5), d)
+		if not a or not b then
+			a, b = m.From - d * 12, m.To + d * 12
+		end
+		table.insert(s.extended, { a, b })
+		table.insert(s.cuts, stroke(a, b, { Width = 0.09, Color = ICE, Grow = 0.07, Delay = (i - 1) * 0.04, Keep = true, Bits = 2 }))
+	end
+end
+
+-- ② 증식: 뻗은 줄마다 나란한 복제 줄이 물결처럼 바깥으로 퍼져 필드를 덮는다(바깥일수록 가늘게)
+function Fx.CutsEcho(ctx: any)
+	local s = st(ctx)
+	s.cuts = s.cuts or {}
+	local box = fieldBox(ctx)
+	for _, line in s.extended or {} do
+		local a, b = line[1], line[2]
+		local d = (b - a).Unit
+		local side = d:Cross(Vector3.yAxis)
+		side = if side.Magnitude > 0.2 then side.Unit else box.R
+		local mid = a:Lerp(b, 0.5)
+		for k = 1, 6 do
+			for _, sign in { 1, -1 } do
+				local p0, p1 = clip(box, mid + side * (sign * k * 2.4), d)
+				if p0 and p1 then
+					table.insert(s.cuts, stroke(p0, p1, { Width = math.max(0.035, 0.08 - k * 0.008), Color = ICE, Grow = 0.06, Delay = k * 0.035, Keep = true, Bits = 1 }))
+				end
+			end
 		end
 	end
-	for _, u in us do
-		for _, v in vs do
-			line(at(u, v, 0), at(u, v, 3.4), { Width = 0.05, Color = ICE, Grow = 0.05, Delay = delay(u) + 0.04, Keep = true, Bits = 0 })
-		end
+end
+
+-- ③ 채움: 다섯 검로 방향을 따르되 조금씩 비튼 짧은 곧은 선 수십 개가 적진 공간을 순식간에 채운다(저지먼트 컷 엔드 느낌)
+function Fx.CutsFill(ctx: any)
+	local s = st(ctx)
+	s.cuts = s.cuts or {}
+	local box = fieldBox(ctx)
+	local seeds = {}
+	for _, line in s.extended or {} do
+		table.insert(seeds, (line[2] - line[1]).Unit)
 	end
-	-- 빛이 선을 따라 달린다(몇 줄)
+	if #seeds == 0 then
+		seeds = { box.F, box.R }
+	end
 	local rng = Random.new()
-	for _ = 1, 10 do
-		local l = lines[rng:NextInteger(1, #lines)]
-		task.delay(l[3] + rng:NextNumber(0.05, 0.25), function()
-			local spark = CombatVfx.Part(Vector3.new(0.35, 0.35, 0.35), CFrame.new(l[1]), WHITE, Enum.Material.Neon, Enum.PartType.Ball)
-			CombatVfx.Timed(0.22, function(a)
-				spark.CFrame = CFrame.new(l[1]:Lerp(l[2], a))
-				spark.Transparency = a * a
-			end, function()
-				spark:Destroy()
-			end)
-		end)
+	for _ = 1, 36 do
+		local l = Vector3.new(rng:NextNumber(box.U0, box.U1), rng:NextNumber(box.V0, box.V1), rng:NextNumber(0.4, 4))
+		local p = boxWorld(box, l)
+		local axis = seeds[rng:NextInteger(1, #seeds)]
+		local d = (CFrame.fromAxisAngle(Vector3.yAxis, math.rad(rng:NextNumber(-25, 25))) * CFrame.fromAxisAngle(box.R, math.rad(rng:NextNumber(-20, 20)))):VectorToWorldSpace(axis)
+		local half = rng:NextNumber(1.2, 2.6)
+		table.insert(s.cuts, stroke(p - d * half, p + d * half, { Width = rng:NextNumber(0.04, 0.09), Color = if rng:NextNumber() < 0.5 then WHITE else ICE, Grow = 0.03, Delay = rng:NextNumber(0, 0.15), Keep = true, Bits = 1 }))
 	end
-	task.delay(0.28, function()
+	task.delay(0.12, function()
 		for _ = 1, 6 do
-			twinkle(ctx, at(us[rng:NextInteger(1, #us)], vs[rng:NextInteger(1, #vs)], 1.6), 1.4)
+			twinkle(ctx, boxWorld(box, Vector3.new(rng:NextNumber(box.U0, box.U1), rng:NextNumber(box.V0, box.V1), rng:NextNumber(0.8, 3))), 1.3)
 		end
 	end)
 end
 
--- 깨짐: 임팩트 프레임(흑백 대비 한순간) → 흰 번쩍 → 격자·블링크 검로가 유리 조각처럼 부서져 흩어지고 바닥에 충격파 → 색이 돌아온다
-function Fx.GridFlash(ctx: any)
+-- 화면에 비친 검로를 따라 화면이 금 간다(곁가지 금 몇 개) — 짧게 보였다가 넓어지며 사라진다. 관전 화면은 없음
+local function screenCracks(ctx: any, lines: { { Vector3 } })
+	if ctx.Quiet then
+		return
+	end
+	local camera = workspace.CurrentCamera
+	local player = game:GetService("Players").LocalPlayer
+	local playerGui = player and player:FindFirstChildOfClass("PlayerGui")
+	if not camera or not playerGui then
+		return
+	end
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "AzureBladeCracks"
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 50
+	gui.Parent = playerGui
+	local frames: { Frame } = {}
+	local function crack(a: Vector2, b: Vector2, thick: number)
+		local d = b - a
+		local f = Instance.new("Frame")
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.Position = UDim2.fromOffset((a.X + b.X) / 2, (a.Y + b.Y) / 2)
+		f.Size = UDim2.fromOffset(d.Magnitude, thick)
+		f.Rotation = math.deg(math.atan2(d.Y, d.X))
+		f.BorderSizePixel = 0
+		f.BackgroundColor3 = WHITE
+		f.Parent = gui
+		table.insert(frames, f)
+	end
+	local rng = Random.new()
+	for _, line in lines do
+		local a, onA = camera:WorldToViewportPoint(line[1])
+		local b, onB = camera:WorldToViewportPoint(line[2])
+		if a.Z > 0 and b.Z > 0 and (onA or onB) then
+			local pa, pb = Vector2.new(a.X, a.Y), Vector2.new(b.X, b.Y)
+			crack(pa, pb, 3)
+			for _ = 1, 3 do
+				local from = pa:Lerp(pb, rng:NextNumber(0.15, 0.85))
+				local dir = (pb - pa).Unit
+				local ang = math.rad(rng:NextNumber(30, 70)) * (if rng:NextNumber() < 0.5 then 1 else -1)
+				local branch = Vector2.new(dir.X * math.cos(ang) - dir.Y * math.sin(ang), dir.X * math.sin(ang) + dir.Y * math.cos(ang))
+				crack(from, from + branch * rng:NextNumber(40, 120), 2)
+			end
+		end
+	end
+	CombatVfx.Timed(0.32, function(a)
+		for _, f in frames do
+			f.BackgroundTransparency = a ^ 0.7
+			f.Size = UDim2.fromOffset(f.Size.X.Offset, f.Size.Y.Offset + 0.6)
+		end
+	end, function()
+		gui:Destroy()
+	end)
+	task.delay(3, function()
+		if gui.Parent then
+			gui:Destroy()
+		end
+	end)
+end
+
+-- ④ 깨짐: 임팩트 프레임(흑백 강한 대비) · 화면이 검로를 따라 금 감 → 흰 번쩍 · 모든 선이 유리 조각처럼 부서져 흩어지고 바닥 충격파 → 색이 돌아온다
+function Fx.SpaceBreak(ctx: any)
 	local s = st(ctx)
 	local rng = Random.new()
 	local field = ctx.EnemyCenter
+	screenCracks(ctx, s.extended or {})
 	local function shards(mark: any, count: number)
 		if not mark.From then
 			return
@@ -631,12 +730,13 @@ function Fx.GridFlash(ctx: any)
 		for _ = 1, count do
 			local p = mark.From:Lerp(mark.To, rng:NextNumber())
 			local bit = CombatVfx.Part(Vector3.new(0.05, rng:NextNumber(0.4, 1.3), rng:NextNumber(0.03, 0.12)), CFrame.new(p) * CFrame.Angles(rng:NextNumber(0, 6.3), rng:NextNumber(0, 6.3), 0), if rng:NextNumber() < 0.5 then WHITE else ICE)
-			local vel = (Vector3.new(p.X - field.X, 0, p.Z - field.Z).Unit * rng:NextNumber(4, 14)) + Vector3.new(0, rng:NextNumber(6, 16), 0)
+			local flat2 = Vector3.new(p.X - field.X, 0, p.Z - field.Z)
+			local vel = (if flat2.Magnitude > 0.1 then flat2.Unit else Vector3.xAxis) * rng:NextNumber(4, 14) + Vector3.new(0, rng:NextNumber(6, 16), 0)
 			local spin = CFrame.Angles(rng:NextNumber(-8, 8), rng:NextNumber(-8, 8), rng:NextNumber(-8, 8))
 			local cf = bit.CFrame
 			CombatVfx.Timed(0.7, function(a, dt)
 				vel += Vector3.new(0, -40 * dt, 0)
-				cf = (cf + vel * dt) * spin:Lerp(CFrame.identity, 1 - dt)
+				cf = (cf + vel * dt) * CFrame.identity:Lerp(spin, math.min(1, dt))
 				bit.CFrame = cf
 				bit.Transparency = a ^ 1.5
 			end, function()
@@ -644,15 +744,18 @@ function Fx.GridFlash(ctx: any)
 			end)
 		end
 	end
-	for i, m in s.grid or {} do
-		shards(m, 2)
-		task.delay(math.min(0.06, i * 0.0015), m.Burst)
+	local all = {}
+	for _, m in s.cuts or {} do
+		table.insert(all, m)
 	end
 	for _, m in s.marks or {} do
-		shards(m, 1)
-		m.Burst()
+		table.insert(all, m)
 	end
-	s.grid, s.marks = {}, {}
+	for i, m in all do
+		shards(m, if i % 2 == 0 then 1 else 2)
+		task.delay(math.min(0.06, i * 0.0008), m.Burst)
+	end
+	s.cuts, s.marks, s.extended = {}, {}, {}
 	ctx.Vfx.Flash(field, { Color = WHITE, Size = 22, Life = 0.4, Brightness = 7 })
 	ctx.Vfx.Shockwave(Vector3.new(field.X, ctx.Ground + 0.1, field.Z), { Color = ICE, Radius = 16, Life = 0.55 })
 	local cc = grading(ctx)
@@ -675,7 +778,7 @@ function Fx.GridFlash(ctx: any)
 	end
 end
 
-function Fx.GridHit(ctx: any, _ev: any, at: Vector3?)
+function Fx.BreakHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	cuts(ctx, p, 2, 2.4)
 	ctx.Vfx.Burst(p, { Count = 8, Colors = { ICE, AZURE, WHITE }, Size = 0.3, Speed = 16, Gravity = 10, Life = 0.6 })
