@@ -8,8 +8,8 @@
 	  발도술의 절정 반쯤 뽑다 "챙" 하고 멈춰 드러난 날에 빛(Ching) → 사라져(Vanish) 줄 끝에 이미 벤 자세로 서고,
 	                지나간 자리에 불규칙한 곧은 검로(PeakPath) → 줄 전체를 가르는 곧은 칼날들이 반짝일 때마다 타격(RowFlash).
 	                (2026-10-26 사용자) 제 줄을 따라 곧게 가고, 검로·칼날은 위아래로 ±TILT° 안에서 제각각 기울며 크기는 MARK 배
-	  공간의 이해   (2026-10-26 다시) 블링크 다섯 번(Blink — 선 자리에 그 자세 잔상, 나타난 자세대로 베어 들어온 초승달 검로)으로
-	                적진을 가로질러 줄 끝에서 꽂으면(카메라는 그동안 등 뒤에서 따라가다 돌아온다: CamFollow · CamFree) →
+	  공간의 이해   (2026-10-26 다시) 블링크 다섯 번(Blink — 선 자리에 그 자세 잔상)으로
+	                적진을 가로질러 줄 끝에서 꽂으면(검로는 휘두른 방향의 긴 곧은 선으로 남는다. 카메라는 그동안 등 뒤에서 따라가다 돌아온다: CamFollow · CamFree) →
 	                (2026-10-28 애니 연출) 딸깍과 함께 세상이 멎고(CutClick) 칸 정중앙을 지나는 가는 격자 선이 그어져(GridCut) →
 	                임팩트 프레임 · 흰 번쩍 · 선과 검로가 유리 조각처럼 부서지며 필드 전체를 벤다(GridFlash · GridHit)
 	효과음: 로블록스 효과음 모음(ProSoundEffects). 챙 = 칼 뽑는 쇳소리 — 바꾸려면 SOUND 의 숫자만 고친다.
@@ -429,11 +429,13 @@ function Fx.CamFree(ctx: any)
 end
 
 --[[
-	자세에 맞는 검로(2026-10-28 사용자: "블링크하면서 나오는 모션에 맞게 검로를"). 지금 칼(W)이 멈춘 방향으로 **베어 들어온**
-	초승달을 긋는다 — 칼 무기 축은 날 길이 = +Y, 날이 향하는 쪽 = -Z(LookVector), 칼등 = +Z 라 칼은 칼등 쪽에서 날 쪽으로 왔다.
-	손(쥔 점)을 가운데로 칼등 쪽 sweep° 에서 지금 칼 방향까지. keep 이면 흐릿한 자국을 남겨 두었다가 격자와 함께 터진다.
+	자세에 맞는 검로(2026-10-28 사용자: "블링크하면서 나오는 모션에 맞게 검로를" → "초승달 말고 오래 남는 직선으로").
+	지금 칼(W)이 멈춘 자세로 베어 들어온 휘두름의 **시작 칼끝 → 끝 칼끝** 방향으로, 그 가운데를 지나 공간을 가르는 긴 곧은 선 하나.
+	칼 무기 축은 날 길이 = +Y, 날이 향하는 쪽 = -Z(LookVector), 칼등 = +Z — 칼은 칼등 쪽 sweep° 에서 지금 칼 방향으로 왔다.
+	선은 마지막(격자가 터질 때)까지 남는다.
 ]]
-local function poseArc(ctx: any, sweep: number, keep: boolean)
+local CUT_LENGTH = 13
+local function poseCut(ctx: any, sweep: number)
 	local piece = ctx.Weapons and ctx.Weapons.Pieces and ctx.Weapons.Pieces.W
 	local grip = piece and piece.PrimaryPart
 	local tip = ctx.Tip("W")
@@ -442,28 +444,21 @@ local function poseArc(ctx: any, sweep: number, keep: boolean)
 	end
 	local g = grip.CFrame
 	local blade, spine = g.UpVector, -g.LookVector
-	local radius = (tip - g.Position).Magnitude * 0.95
-	-- 번쩍 긋는 초승달(칼 방향 = 0°, 칼등 쪽 = 90°)
-	ctx.Vfx.Slash(CFrame.fromMatrix(g.Position, blade, spine), { Radius = radius, From = sweep, To = -8, Width = 1.1, Depth = 0.1, Color = AZURE, Core = WHITE, Sweep = 0.05, Life = 0.32 })
-	if not keep then
-		return
-	end
+	local radius = (tip - g.Position).Magnitude
+	local a = math.rad(sweep)
+	local p0 = g.Position + (blade * math.cos(a) + spine * math.sin(a)) * radius
+	local p1 = g.Position + blade * radius
+	local dir = (p1 - p0).Unit
+	local mid = p0:Lerp(p1, 0.5)
 	local s = st(ctx)
 	s.marks = s.marks or {}
-	local n = 9
-	local prev: Vector3? = nil
-	for k = 0, n do
-		local a = math.rad(sweep * (1 - k / n))
-		local p = g.Position + (blade * math.cos(a) + spine * math.sin(a)) * (radius * 0.92)
-		if prev then
-			-- 가운데가 굵고 끝이 가는 자국
-			table.insert(s.marks, stroke(prev, p, { Width = 0.05 + 0.12 * math.sin(math.pi * k / n), Color = ICE, Grow = 0.02, Delay = 0.04, Keep = true, Bits = 2 }))
-		end
-		prev = p
-	end
+	-- 한순간 굵게 번쩍이며 그어지고(지나가는 칼빛), 가는 선이 남는다
+	stroke(mid - dir * (CUT_LENGTH * 0.6), mid + dir * (CUT_LENGTH * 0.6), { Width = 0.5, Color = AZURE, Grow = 0.04, Life = 0.12 })
+	table.insert(s.marks, stroke(mid - dir * (CUT_LENGTH / 2), mid + dir * (CUT_LENGTH / 2), { Width = 0.1, Color = ICE, Grow = 0.05, Keep = true, Bits = 3 }))
+	ctx.Vfx.Flash(mid, { Color = WHITE, Size = 3.5, Life = 0.15, Brightness = 5 })
 end
 
--- 블링크: 선 자리에 그 순간 자세(ev.p)의 잔상을 남기고 사라져 몇 칸 앞에 나타난다 — 나타난 자세대로 베어 들어온 초승달 검로(ev.sweep°)가 남는다
+-- 블링크: 선 자리에 그 순간 자세(ev.p)의 잔상을 남기고 사라져 몇 칸 앞에 나타난다 — 나타난 자세대로 벤 방향의 긴 곧은 검로(ev.sweep°)가 남는다
 function Fx.Blink(ctx: any, ev: any)
 	local from = ctx.Root
 	local g = Common.Ghost(ctx, pose((ev and ev.p) or "OUT"), from, { Transparency = 0.5, FadeIn = 0.01 })
@@ -478,7 +473,7 @@ function Fx.Blink(ctx: any, ev: any)
 		local lift = Vector3.new(0, 0.3, 0)
 		stroke(from.Position + lift, to + lift, { Width = 0.06, Color = ICE, Grow = 0.03, Life = 0.25 })
 		ctx.Vfx.Flash(to, { Color = WHITE, Size = 4, Life = 0.15, Brightness = 5 })
-		poseArc(ctx, (ev and ev.sweep) or 150, true)
+		poseCut(ctx, (ev and ev.sweep) or 150)
 	end)
 end
 
