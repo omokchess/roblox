@@ -96,13 +96,25 @@ M.AzureBlade_Kit = {
 
 --=== 필수 ===--
 
--- 도발: `도발`은 다른 스킬로 바뀔 수 없다(무념무상·역수 발도와 함께 가질 수 없다 — 그 둘이 도발을 바꾼다)
-M.AzureBlade_E_Provoke = {}
+-- 도발: `도발`은 다른 스킬로 바뀔 수 없다(무념무상·역수 발도와 함께 가질 수 없다 — 그 둘이 도발을 바꾼다).
+-- 대신 재사용 대기 −1턴, 쓸 때마다 [도발] 4(파티에서 공격을 끌어옴 — 상한은 GridBattle.TAUNT_MAX 20)
+M.AzureBlade_E_Provoke = {
+	AfterSkill = function(c: Card, info: any)
+		if not isSkill(info, "Provoke") then
+			return false
+		end
+		local ally = H.Ally(c)
+		ally.Cooldowns.Provoke = math.max(0, (ally.Cooldowns.Provoke or 0) - 1)
+		ally.Taunt = math.min(20, math.max(ally.Taunt or 0, 0) + c.V(1))
+		return true
+	end,
+}
 
--- 치우쳐진 검: 받는 피해 +2.5%
+-- 치우쳐진 검: 받는 피해 +2.5%, 대신 주는 피해 +10%
 M.AzureBlade_E_Biased = {
 	BattleStart = function(c: Card)
 		H.Mod(c, "DamageTaken", c.P(1), -1)
+		H.Mod(c, "DamageDealt", c.P(2), -1)
 		return true
 	end,
 }
@@ -150,13 +162,21 @@ M.AzureBlade_E_Riposte = {
 
 --=== 희귀 ===--
 
--- 혼신의 도발: 집중력 유지 +1턴
+-- 혼신의 도발: 집중력 유지 +1턴, 집중력이 있을 때 주는 피해 +6%
+local function refreshAllOut(c: Card)
+	H.Clear(c)
+	if focused(c) then
+		H.Mod(c, "DamageDealt", c.P(1), 1)
+	end
+end
 M.AzureBlade_R_AllOut = {
 	Rules = {
-		ConcentrationTurns = function(c: Card, value: number): number
-			return value + c.V(1)
+		ConcentrationTurns = function(_c: Card, value: number): number
+			return value + 1
 		end,
 	},
+	TurnStart = refreshAllOut,
+	AfterSkill = refreshAllOut,
 }
 
 -- 방어 태도: 집중력이 있을 때 받는 피해 −10%, 주는 피해 −2.5%
@@ -175,9 +195,9 @@ M.AzureBlade_R_Stance = {
 -- 검풍: 발도술의 절정이 3명 이상 베면 진 발도술 재사용 대기 끝 + 스테미나 5
 M.AzureBlade_R_SwordWind = {
 	AfterSkill = function(c: Card, info: any)
-		if isSkill(info, "IaidoPeak") and hitCount(info) >= c.V(1) then
+		if isSkill(info, "IaidoPeak") and hitCount(info) >= 3 then
 			H.Ally(c).Cooldowns.TrueIaido = 0
-			restoreStamina(c, c.V(2))
+			restoreStamina(c, c.V(1))
 			H.Log(c, "진 발도술이 다시 선다")
 			return true
 		end
@@ -466,8 +486,8 @@ M.AzureBlade_C_Whet = {
 -- 방랑 검객: 적이 3기 이상이면 발도술의 절정 피해 +10%
 M.AzureBlade_C_Wanderer = {
 	BeforeSkill = function(c: Card, info: any)
-		if isSkill(info, "IaidoPeak") and #H.Enemies(c) >= c.V(1) then
-			info.Bonus += c.P(2)
+		if isSkill(info, "IaidoPeak") and #H.Enemies(c) >= 3 then
+			info.Bonus += c.P(1)
 			return true
 		end
 		return false

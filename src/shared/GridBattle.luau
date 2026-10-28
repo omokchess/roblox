@@ -2945,8 +2945,8 @@ function GridBattle.EndTurn(state: State)
 	end
 
 	--[[
-		[융해](조율자, 특수 화상): (수치 × 3) 화상을 얻고 (수치 × 1000) 고정 피해를 받은 뒤 사라진다.
-		2026-10-25 사용자: ×1000 그대로, 이 효과로는 죽지 않음. 보스 부위는 다른 지속 피해와 같은 BOSS_DOT_CUT(지금 0)을 받는다.
+		[융해](조율자, 특수 화상): (수치 × 3) 화상을 얻고 (수치 × 100) 고정 피해를 받은 뒤 사라진다.
+		2026-10-25 사용자: ×1000 그대로, 이 효과로는 죽지 않음 → 2026-10-28 사용자: ×100 으로 너프. 보스 부위는 다른 지속 피해와 같은 BOSS_DOT_CUT(지금 0)을 받는다.
 		먼저 전부 걷고 나서 터뜨린다 — 옮겨 붙는 카드(적색거성)가 남의 융해를 같은 턴에 또 터뜨리지 않게, 순서도 Id 순.
 	]]
 	local melting = {}
@@ -2959,7 +2959,7 @@ function GridBattle.EndTurn(state: State)
 	for _, entry in melting do
 		local unit, melt = entry.Unit, entry.Melt
 		BattleStatus.AddBurn(unit.Status, melt * 3)
-		local burst = melt * 1000 * (if unit.Part then 1 - BOSS_DOT_CUT else 1)
+		local burst = melt * 100 * (if unit.Part then 1 - BOSS_DOT_CUT else 1)
 		local dealt = damageUnit(state, unit, burst, "True", false)
 		pushLog(state, string.format("%s — 융해 %d 폭발 (%d 피해 · 화상 +%d)", unit.Name, melt, dealt, melt * 3))
 		fire(state, "MeltBurst", { Target = unit, Melt = melt, Damage = dealt })

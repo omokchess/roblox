@@ -6,6 +6,9 @@
 	`집중력의 향상`·`바람의 검`, 희귀 `혼신의 도발`·`방어 태도`)은 원안 그대로 1레벨에 두고, 나머지 스물일곱 장은
 	2026-10-25 사용자 지시("나머지를 제가 채움")로 같은 축에 맞춰 채웠다(문서에 '제안'으로 표시).
 	`민첩성`은 사용자 지시대로 필드에서는 걷는 속도, 전투에서는 민첩 스탯을 올린다.
+	2026-10-28 밸런스(사용자: "미완성이거나 중복 값이 들어 있어 만들다 만 느낌"): 효과가 비었던 필수 `도발`, 손해만 있던
+	`치우쳐진 검`, 혼자 2레벨이던 `혼신의 도발`을 채우고, 레벨마다 값이 같거나 되돌아가던 `방어 태도`·`검풍`·`방랑 검객`을 고쳤다.
+	원안 값(도발은 바뀌지 않음 · 방어력 2.5% · 집중력 +1턴 · 방어력 +10% · 공격력 −2.5%)은 1레벨에 그대로 두고 더했다.
 
 	수치 앵커
 	  검집 타격 18(재사용 1) · 집중 베기 22(2) · 진 발도술 22 = 4/3/3(2) · 발도술의 절정 32 = 6/4/4(4) · 공간의 이해 34 고정(6)
@@ -36,7 +39,8 @@ local cards: { Card } = {
 		Id = "AzureBlade_E_Provoke",
 		Art = "AzureBlade_E_Provoke",
 		Name = "도발",
-		Description = "`도발`은 다른 스킬로 바뀔 수 없다.",
+		Description = "`도발`은 다른 스킬로 바뀔 수 없다.\n대신 `도발`의 재사용 대기가 1턴 줄고, 쓸 때마다 [도발] {4}를 얻는다(파티에서 적의 공격을 끌어온다).",
+		Levels = { { 4, 6 } },
 		Excludes = { "AzureBlade_E_Mushin", "AzureBlade_E_Riposte" },
 		Grade = "Essential",
 		ClassId = CLASS_ID,
@@ -46,8 +50,8 @@ local cards: { Card } = {
 		Id = "AzureBlade_E_Biased",
 		Art = "AzureBlade_E_Biased",
 		Name = "치우쳐진 검",
-		Description = "검술만 단련해 방어력이 {2.5}% 낮아진다([받는 피해량] 증가).",
-		Levels = { { 2.5, 2 } },
+		Description = "검술만 단련해 방어력이 {2.5}% 낮아진다([받는 피해량] 증가).\n대신 [가하는 피해량]이 {10}% 오른다.",
+		Levels = { { 2.5, 2 }, { 10, 15 } },
 		Grade = "Essential",
 		ClassId = CLASS_ID,
 		Tags = { "Guard" },
@@ -78,11 +82,10 @@ local cards: { Card } = {
 	--=== 희귀 (10) ===--
 	{
 		Id = "AzureBlade_R_AllOut",
-		MaxLevel = 2,
 		Art = "AzureBlade_R_AllOut",
 		Name = "혼신의 도발",
-		Description = "[집중력]을 유지하는 턴이 {1} 늘어난다.",
-		Levels = { { 1, 2 } },
+		Description = "[집중력]을 유지하는 턴이 1 늘어나고, [집중력]이 있을 때 [가하는 피해량]이 {6}% 오른다.",
+		Levels = { { 6, 8, 10, 12, 14, 17 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,
 		Tags = { "Taunt", "Precision" },
@@ -92,7 +95,7 @@ local cards: { Card } = {
 		Art = "AzureBlade_R_Stance",
 		Name = "방어 태도",
 		Description = "[집중력]이 있을 때 방어력이 {10}% 오르는 대신 공격력이 {2.5}% 낮아진다.",
-		Levels = { { 10, 12, 14, 16, 18, 20 }, { 2.5, 2.5, 2.5, 2.5, 2.5, 2.5 } },
+		Levels = { { 10, 12, 14, 16, 18, 20 }, { 2.5, 2.2, 1.9, 1.6, 1.3, 1 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,
 		Tags = { "Guard", "Precision" },
@@ -101,8 +104,8 @@ local cards: { Card } = {
 		Id = "AzureBlade_R_SwordWind",
 		Art = "AzureBlade_R_SwordWind",
 		Name = "검풍",
-		Description = "`발도술의 절정`이 적을 {3}명 이상 베면 `진 발도술`의 재사용 대기가 끝나고 스테미나를 {5} 회복한다.",
-		Levels = { { 3, 3, 3, 2, 2, 2 }, { 5, 7, 9, 5, 7, 10 } },
+		Description = "`발도술의 절정`이 적을 3명 이상 베면 `진 발도술`의 재사용 대기가 끝나고 스테미나를 {5} 회복한다.",
+		Levels = { { 5, 6, 7, 8, 9, 11 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,
 		Tags = { "Iaido" },
@@ -353,8 +356,8 @@ local cards: { Card } = {
 		Id = "AzureBlade_C_Wanderer",
 		Art = "AzureBlade_C_Wanderer",
 		Name = "방랑 검객",
-		Description = "적이 {3}기 이상이면 `발도술의 절정`의 [가하는 피해량]이 {10}% 오른다.",
-		Levels = { { 3, 3, 3, 2, 2, 2 }, { 10, 12, 14, 12, 14, 17 } },
+		Description = "적이 3기 이상이면 `발도술의 절정`의 [가하는 피해량]이 {10}% 오른다.",
+		Levels = { { 10, 12, 14, 16, 18, 21 } },
 		Grade = "Common",
 		ClassId = CLASS_ID,
 		Tags = { "Iaido" },

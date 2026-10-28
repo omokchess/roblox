@@ -201,8 +201,8 @@ local function fight(classId: string, cards: { any }, turns: number, policy: str
 	local encounter = {
 		Name = "sim",
 		Enemies = { "Slime", "Slime", "Slime" },
-		-- 조율자는 [융해] 1 이 1000 피해라 체력 20배 슬라임이 첫 턴에 다 녹는다 → 카드 차이를 보려고 크게(kill 은 처치 확인용)
-		HealthScale = if policy == "kill" then (if classId == "Attuner" then 40 else 1.5) elseif classId == "Attuner" then 2500 else 20,
+		-- 조율자는 [융해] 1 이 100 피해(2026-10-28 ×1000 → ×100)라 체력 20배 슬라임이 금방 녹는다 → 카드 차이를 보려고 크게(kill 은 처치 확인용)
+		HealthScale = if policy == "kill" then (if classId == "Attuner" then 4 else 1.5) elseif classId == "Attuner" then 250 else 20,
 		PowerScale = 1.5,
 		Cells = { { 1, 2 }, { 2, 2 }, { 1, 1 } },
 	}
