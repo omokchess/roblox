@@ -13,9 +13,10 @@
 	                 그 선이 네 번 부분부분 터지고 다섯 번째에 통째로 터진다(MerakBurst — 비율 10 · 2 · 2 · 2 · 2 · 4)
 	  알리오스       별을 적 진영 위로 띄우고(AliothLaunch) 허공에 팔을 휘두를 때마다 별이 진형을 곧게 가로지른다(AliothStrike 10타,
 	                 0.5 · 0.45 · 0.2 · 0.15 … 초 간격으로 빨라짐 — 사용자 원안의 두 배 빠르기) → 손으로 돌아온다(AliothReturn)
-	  셉텐트리오네스 컷신 — 왼 허리로 손을 모았다 치켜들면 별 일곱이 하늘 높이 오르고 카메라가 따라간다(SeptRise) → 별이 하나씩 적 진영으로
-	                 레이저(SeptLaser — 별 이름이 화면 가운데, 매번 다른 화면 색, 카메라는 별을 보다 레이저 끝을 따라 아래로) → 일곱 발이 떨어진 자리
-	                 (북두칠성 꼴)가 이어지며 진형 전체를 강타(SeptSlam — 화면 효과 · 가운데 "SEPTENTRIONES" · 별을 잇는 선 자국이 남는다)
+	  셉텐트리오네스 컷신 — 왼 허리로 손을 모았다 치켜들면 별 일곱이 하늘 높이 오르고 카메라가 따라간다(SeptRise — 레터박스 · 밤하늘 화면 ·
+	                 하늘 성반) → 별이 하나씩 적 진영으로 레이저(SeptLaser — 별 이름표, 매번 다른 화면 색, 카메라는 별을 보다 레이저 끝을 따라 아래로,
+	                 떨어진 자리에 룬 · 하늘과 바닥에 별자리 선이 한 줄씩) → 모으기(SeptGather) → 일곱 빛줄기가 한꺼번에 내리꽂혀 진형 전체를 강타
+	                 (SeptSlam — 화면 효과 · 제목 카드 "SEPTENTRIONES" · 별을 잇는 선 자국이 남는다)
 ]]
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -213,63 +214,149 @@ local function glowLine(a: Vector3, b: Vector3, width: number, grow: number): an
 	return obj
 end
 
--- 화면 가운데 글(별 이름 · 셉텐트리오네스): 크게 번졌다 자리 잡고 dur 초 뒤 사라진다. 관전 화면(Quiet)엔 안 띄운다
-local function caption(ctx: any, big: string, small: string?, dur: number)
+-- 화면 위 GUI(제목 카드 · 레터박스) 바탕. 관전 화면(Quiet)이나 PlayerGui 가 없으면 nil
+local function screen(ctx: any, name: string, order: number): ScreenGui?
 	if ctx.Quiet then
-		return
+		return nil
 	end
 	local player = Players.LocalPlayer
 	local playerGui = player and player:FindFirstChildOfClass("PlayerGui")
 	if not playerGui then
-		return
+		return nil
 	end
 	local gui = Instance.new("ScreenGui")
-	gui.Name = "AttunerCaption"
+	gui.Name = name
 	gui.IgnoreGuiInset = true
 	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 60
+	gui.DisplayOrder = order
+	gui.Parent = playerGui
+	return gui
+end
+
+local function spaced(s: string): string
+	return (s:gsub(".", "%0 "):sub(1, -2))
+end
+
+--[[
+	제목 카드(별 이름 · SEPTENTRIONES) — 극장판 필살기 이름표처럼: 가로 빛줄이 화면을 왼쪽에서 긋고, 오른쪽에서 미끄러져 들어온 큰 이름이
+	빨강 · 청록으로 갈라졌다가(색수차) 하나로 모인다. 위엔 작은 머리글(로마 숫자 등), 아래엔 바이어 이름 · 한글.
+	opts: Top · Big · Sub · Dur(초) · Y(화면 세로 자리) · Height(화면 세로 비율)
+]]
+local function titleCard(ctx: any, opts: { [string]: any })
+	local gui = screen(ctx, "AttunerTitle", 61)
+	if not gui then
+		return
+	end
+	local dur, y = opts.Dur or 0.85, opts.Y or 0.4
 	local holder = Instance.new("Frame")
 	holder.BackgroundTransparency = 1
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, 0.42)
-	holder.Size = UDim2.fromScale(0.7, 0.18)
+	holder.Size = UDim2.fromScale(0.8, opts.Height or 0.2)
 	holder.Parent = gui
-	local scale = Instance.new("UIScale")
-	scale.Parent = holder
-	local function label(text: string, y: number, h: number, font: Enum.Font): TextLabel
+	local function label(text: string, top: number, h: number, font: Enum.Font, color: Color3): TextLabel
 		local l = Instance.new("TextLabel")
 		l.BackgroundTransparency = 1
-		l.Position = UDim2.fromScale(0, y)
+		l.AnchorPoint = Vector2.new(0.5, 0)
+		l.Position = UDim2.fromScale(0.5, top)
 		l.Size = UDim2.fromScale(1, h)
 		l.Font = font
 		l.Text = text
 		l.TextScaled = true
-		l.TextColor3 = Color3.fromRGB(240, 248, 255)
-		l.TextStrokeColor3 = Color3.fromRGB(60, 130, 255)
+		l.TextColor3 = color
 		l.TextTransparency = 1
+		l.TextStrokeColor3 = Color3.fromRGB(40, 110, 255)
 		l.TextStrokeTransparency = 1
 		l.Parent = holder
 		return l
 	end
-	local title = label(big, 0, 0.68, Enum.Font.Garamond)
-	local sub = if small then label(small, 0.7, 0.26, Enum.Font.GothamMedium) else nil
-	gui.Parent = playerGui
+	local head = label(opts.Top or "", 0, 0.16, Enum.Font.GothamMedium, Color3.fromRGB(170, 205, 255))
+	local red = label(opts.Big, 0.18, 0.56, Enum.Font.Garamond, Color3.fromRGB(255, 70, 110))
+	local cyan = label(opts.Big, 0.18, 0.56, Enum.Font.Garamond, Color3.fromRGB(70, 230, 255))
+	local main = label(opts.Big, 0.18, 0.56, Enum.Font.Garamond, Color3.fromRGB(245, 250, 255))
+	local sub = label(opts.Sub or "", 0.78, 0.2, Enum.Font.GothamMedium, Color3.fromRGB(200, 220, 255))
+	local bar = Instance.new("Frame")
+	bar.BorderSizePixel = 0
+	bar.BackgroundColor3 = Color3.new(1, 1, 1)
+	bar.AnchorPoint = Vector2.new(0, 0.5)
+	bar.Position = UDim2.fromScale(0, y)
+	bar.Size = UDim2.fromScale(0, 0)
+	bar.Parent = gui
+	local fadeEnds = Instance.new("UIGradient")
+	fadeEnds.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.5, 0),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	fadeEnds.Parent = bar
 	CombatVfx.Timed(dur, function(t)
 		local a = dur * t
-		local shown = math.min(1, a / 0.12) * (1 - math.clamp((a - (dur - 0.3)) / 0.3, 0, 1))
-		title.TextTransparency = 1 - shown
-		title.TextStrokeTransparency = 1 - 0.65 * shown
-		if sub then
-			sub.TextTransparency = 1 - 0.85 * shown
-		end
-		scale.Scale = 1 + 0.3 * (1 - math.min(1, a / 0.25)) ^ 2
+		local come = 1 - (1 - math.min(1, a / 0.22)) ^ 4
+		local leave = math.clamp((a - (dur - 0.25)) / 0.25, 0, 1)
+		local shown = math.min(1, a / 0.1) * (1 - leave)
+		holder.Position = UDim2.fromScale(0.5 + 0.07 * (1 - come) - 0.04 * leave, y)
+		local split = 0.018 * (1 - come) + 0.003 * math.sin(a * 60) * (1 - 0.7 * come)
+		red.Position = UDim2.fromScale(0.5 - split, 0.18)
+		cyan.Position = UDim2.fromScale(0.5 + split, 0.18)
+		main.TextTransparency = 1 - shown
+		main.TextStrokeTransparency = 1 - 0.7 * shown
+		red.TextTransparency = 1 - 0.55 * shown
+		cyan.TextTransparency = 1 - 0.55 * shown
+		head.TextTransparency = 1 - 0.85 * shown
+		sub.TextTransparency = 1 - 0.85 * shown
+		local sweep = math.min(1, a / 0.3)
+		bar.Size = UDim2.new(sweep, 0, 0, 2 + 4 * (1 - sweep))
+		bar.BackgroundTransparency = 0.1 + 0.9 * math.clamp((a - 0.3) / 0.35, 0, 1)
 	end, function()
 		gui:Destroy()
 	end)
 end
 
-local function spaced(s: string): string
-	return (s:gsub(".", "%0 "):sub(1, -2))
+-- 레터박스: 위아래 검은 띠가 0.35초에 들어와 total 초 끝 0.4초에 걸쳐 빠진다(극장판 컷신 화면비)
+local function letterbox(ctx: any, total: number)
+	local gui = screen(ctx, "AttunerLetterbox", 59)
+	if not gui then
+		return
+	end
+	local bars = {}
+	for _, edge in { 0, 1 } do
+		local bar = Instance.new("Frame")
+		bar.BorderSizePixel = 0
+		bar.BackgroundColor3 = Color3.new(0, 0, 0)
+		bar.AnchorPoint = Vector2.new(0, edge)
+		bar.Position = UDim2.fromScale(0, edge)
+		bar.Size = UDim2.fromScale(1, 0)
+		bar.Parent = gui
+		table.insert(bars, bar)
+	end
+	CombatVfx.Timed(total, function(t)
+		local a = total * t
+		local k = sine(a / 0.35) * (1 - sine((a - (total - 0.4)) / 0.4))
+		for _, bar in bars do
+			bar.Size = UDim2.fromScale(1, 0.11 * k)
+		end
+	end, function()
+		gui:Destroy()
+	end)
+end
+
+-- 밤하늘: 컷신 동안 화면을 푸르게 어둡게(AttunerNight — 레이저마다 바뀌는 화면 색 AttunerGrade 와 따로 겹친다)
+local function night(ctx: any, total: number)
+	if ctx.Quiet then
+		return
+	end
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "AttunerNight"
+	cc.Parent = Lighting
+	CombatVfx.Timed(total, function(t)
+		local a = total * t
+		local k = sine(a / 0.6) * (1 - sine((a - (total - 0.6)) / 0.6))
+		cc.Brightness = -0.14 * k
+		cc.Contrast = 0.18 * k
+		cc.Saturation = -0.35 * k
+		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(175, 195, 255), k)
+	end, function()
+		cc:Destroy()
+	end)
 end
 
 --[[
@@ -500,6 +587,12 @@ function Fx.AliothReturn(ctx: any)
 end
 
 --=== 셉텐트리오네스(컷신) ===--
+--[[
+	2026-10-31 사용자: "전체적으로 셉텐트리오네스의 이팩트가 심심해. 이미지 레퍼런스랑 글자 레퍼런스 등등 여러개 참고해서 화려하게" →
+	극장판 필살기 컷신의 문법을 빌렸다 — 레터박스 · 푸르게 어두운 밤하늘 화면 · 별자리 뒤에 도는 성반(아스트롤라베) · 별마다 이름표
+	(로마 숫자 머리글 · 색수차로 갈라졌다 모이는 큰 이름 · 바이어 이름) · 별이 떨어질 때마다 하늘(별 사이)과 바닥(떨어진 자리 사이)에
+	별자리 선이 한 줄씩 그어지고 떨어진 자리엔 룬이 돈다 → 강타 직전 모으기(SeptGather) → 일곱 빛줄기가 한꺼번에 내리꽂혀 선 자국이 타오른다.
+]]
 
 -- 일곱 별이 레이저로 떨어질 자리: 북두칠성 꼴을 적 진영 바닥에 펼친다(화면 가로 = 앞 F 로 −z, 화면 세로 = 카메라에서 먼 쪽 −R 로 y)
 local function dipperGround(ctx: any): { Vector3 }
@@ -521,11 +614,182 @@ local function camNow(s: any): CFrame
 	return s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.new()
 end
 
--- 치켜든 손을 따라 별 일곱이 하늘로(Orbs Sky): 별마다 번쩍 · 손끝 파문, 카메라가 오르는 별자리를 따라 올라간다(ev.d 초)
+local function septOf(ctx: any): any
+	local s = st(ctx)
+	s.sept = s.sept or { Points = dipperGround(ctx), Slammed = false, Fired = {} }
+	return s.sept
+end
+
+--[[
+	강타 때까지 남는 것(성반 · 룬 · 별자리 선): update(지난 초, 모으기 0~1, 거두기 0~1, dt) 를 매 프레임 부른다.
+	sept.Gather 면 모으기가 0.3초에 1 로, 강타하면(sept.Slammed) 거두기가 0.35초에 1 로. 안전장치로 12초 뒤 지운다.
+]]
+local function held(sept: any, parts: { BasePart }, update: (number, number, number, number) -> ())
+	local t, gk = 0, 0
+	local slamAt: number? = nil
+	CombatVfx.Timed(12, function(_, dt)
+		t += dt
+		if sept.Gather then
+			gk = math.min(1, gk + dt / 0.3)
+		end
+		if sept.Slammed and not slamAt then
+			slamAt = t
+		end
+		update(t, gk, if slamAt then math.min(1, (t - slamAt) / 0.35) else 0, dt)
+	end, function()
+		for _, p in parts do
+			p:Destroy()
+		end
+	end)
+end
+
+-- 남는 빛줄: ends() 의 두 끝 사이(매 프레임 다시 읽어 별을 따라간다) — 0.25초에 앞 끝에서 뒤 끝으로 자라고, 모으면 굵어지고, 강타하면 사라진다.
+-- flat 이면 바닥에 납작하게
+local function heldLine(sept: any, ends: () -> (Vector3, Vector3), width: number, color: Color3, flat: boolean)
+	local core = CombatVfx.Part(Vector3.new(width, width, 0.05), CFrame.new(), WHITE)
+	local glow = CombatVfx.Part(Vector3.new(width, width, 0.05), CFrame.new(), color)
+	core.Transparency, glow.Transparency = 1, 1
+	held(sept, { core, glow }, function(t, gk, gone)
+		local a, b = ends()
+		local head = a:Lerp(b, sine(t / 0.25))
+		local len = math.max(0.05, (head - a).Magnitude)
+		local cf = CFrame.lookAt(a, if len > 0.06 then head else b) * CFrame.new(0, 0, -len / 2)
+		local w = width * (1 + 2 * gk) * (1 + 2 * gone)
+		core.Size, core.CFrame = Vector3.new(w, if flat then 0.04 else w, len), cf
+		glow.Size, glow.CFrame = Vector3.new(w * 3, if flat then 0.03 else w * 3, len), cf
+		core.Transparency = 0.1 + 0.9 * gone
+		local base = 0.7 - 0.3 * gk
+		glow.Transparency = base + (1 - base) * gone
+	end)
+end
+
+-- 떨어진 자리의 바닥 룬: 두 겹 원(바깥 열여섯 마디 · 안 일곱 마디)이 서로 반대로 돌며 강타 때까지 남는다
+local RUNE: { { any } } = { { 16, 2.2, 0.6, STAR }, { 7, 1.3, -1, WHITE } } -- 마디 · 반지름 · 도는 빠르기(라디안/초) · 빛
+local function groundRune(ctx: any, sept: any, g: Vector3)
+	local at = Vector3.new(g.X, ctx.Ground + 0.06, g.Z)
+	local parts, segs = {}, {}
+	for ri, spec in RUNE do
+		segs[ri] = {}
+		for _ = 1, spec[1] do
+			local p = CombatVfx.Part(Vector3.new(0.1, 0.04, 0.1), CFrame.new(at), spec[4])
+			p.Transparency = 1
+			table.insert(parts, p)
+			table.insert(segs[ri], p)
+		end
+	end
+	held(sept, parts, function(t, gk, gone)
+		local open = 1 - (1 - math.min(1, t / 0.3)) ^ 3
+		for ri, spec in RUNE do
+			local n = spec[1]
+			local R = spec[2] * open * (1 + 0.6 * gone)
+			for k, p in segs[ri] do
+				local a = k / n * math.pi * 2 + t * spec[3] * (1 + 3 * gk)
+				p.CFrame = CFrame.new(at) * CFrame.Angles(0, -a, 0) * CFrame.new(R, 0, 0)
+				p.Size = Vector3.new(0.1 + 0.08 * gk, 0.04, math.max(0.05, 2 * math.pi * R / n * 0.6))
+				p.Transparency = 1 - (0.6 + 0.4 * gk) * (1 - gone)
+			end
+		end
+	end)
+end
+
+--[[
+	하늘 성반(아스트롤라베): 별자리 뒤(카메라 반대쪽)에 세 겹 고리가 서로 반대로 돈다 — 바깥 눈금 고리 · 가운데 끊긴 고리 · 안쪽 일곱 마디,
+	바깥으로 열두 눈금. 자리는 매 프레임 별 일곱의 가운데, 크기는 별자리 폭을 따른다. 모으면 빨리 돌며 조여 들고, 강타하면 번쩍 커지며 사라진다.
+]]
+local ASTRO: { { any } } = { -- 반지름 비 · 마디 수 · 굵기 · 빛 · 도는 빠르기(바퀴/초) · 마디가 채우는 몫
+	{ 1, 48, 0.1, STAR, 0.05, 0.8 },
+	{ 0.84, 24, 0.07, PALE, -0.09, 0.45 },
+	{ 0.58, 7, 0.2, WHITE, 0.14, 0.3 },
+}
+local function astrolabe(ctx: any, sept: any)
+	local r = ctx.Forward:Cross(Vector3.yAxis)
+	local parts, rings, ticks = {}, {}, {}
+	local function piece(color: Color3): Part
+		local p = CombatVfx.Part(Vector3.new(0.1, 0.1, 0.05), CFrame.new(ctx.EnemyCenter), color)
+		p.Transparency = 1
+		table.insert(parts, p)
+		return p
+	end
+	for _, spec in ASTRO do
+		local segs = {}
+		for _ = 1, spec[2] do
+			table.insert(segs, piece(spec[4]))
+		end
+		table.insert(rings, { Spec = spec, Segs = segs, Turn = 0 })
+	end
+	for _ = 1, 12 do
+		table.insert(ticks, piece(PALE))
+	end
+	local radius: number? = nil
+	held(sept, parts, function(t, gk, gone, dt)
+		local sum = Vector3.zero
+		for i = 1, 7 do
+			sum += ctx.Star(i)
+		end
+		local mid = sum / 7
+		local spread = 0
+		for i = 1, 7 do
+			spread = math.max(spread, (ctx.Star(i) - mid).Magnitude)
+		end
+		local cur = radius or spread + 3
+		cur += (spread + 3 - cur) * math.min(1, dt * 4)
+		radius = cur
+		local appear = sine(t / 0.7)
+		local size = cur * (0.4 + 0.6 * appear) * (1 - 0.45 * gk) * (1 + 1.4 * gone)
+		local seen = appear * (1 - gone)
+		local center = CFrame.lookAt(mid - r * 1.2, mid - r * 2.2)
+		for _, ring in rings do
+			local spec = ring.Spec
+			ring.Turn += dt * spec[5] * (1 + 6 * gk)
+			local n = #ring.Segs
+			local R = size * spec[1]
+			local chord = math.max(0.05, 2 * math.pi * R / n * spec[6])
+			for k, seg in ring.Segs do
+				local a = (k / n + ring.Turn) * math.pi * 2
+				seg.CFrame = center * CFrame.new(math.cos(a) * R, math.sin(a) * R, 0) * CFrame.Angles(0, 0, a + math.pi / 2)
+				seg.Size = Vector3.new(chord, spec[3] * (1 + 1.5 * gk), 0.05)
+				seg.Transparency = 1 - (0.7 + 0.3 * gk) * seen
+			end
+		end
+		for k, tick in ticks do
+			local a = (k / 12 + rings[1].Turn) * math.pi * 2
+			local long = size * (if k % 3 == 0 then 0.16 else 0.08)
+			local R = size * 1.08 + long / 2
+			tick.CFrame = center * CFrame.new(math.cos(a) * R, math.sin(a) * R, 0) * CFrame.Angles(0, 0, a)
+			tick.Size = Vector3.new(long, 0.06, 0.05)
+			tick.Transparency = 1 - 0.6 * seen
+		end
+	end)
+end
+
+-- 별 i 가 떨어지면: 둘 다 떨어진 별자리 선을 하늘(별 사이 — 별을 따라간다)과 바닥(떨어진 자리 사이 — 강타 때 선 자국이 이어받는 밑그림)에 긋는다
+local function linkLines(ctx: any, sept: any, i: number)
+	sept.Fired[i] = true
+	for _, pair in LINES do
+		local other = if pair[1] == i then pair[2] elseif pair[2] == i then pair[1] else nil
+		if other and sept.Fired[other] then
+			heldLine(sept, function()
+				return ctx.Star(other), ctx.Star(i)
+			end, 0.1, STAR, false)
+			local lift = Vector3.new(0, 0.03, 0)
+			local ga, gb = sept.Points[other] + lift, sept.Points[i] + lift
+			heldLine(sept, function()
+				return ga, gb
+			end, 0.12, PALE, true)
+		end
+	end
+end
+
+-- 치켜든 손을 따라 별 일곱이 하늘로(Orbs Sky): 레터박스 · 밤하늘 화면 · 하늘 성반이 켜지고(ev.total 초 — 컷신 끝까지),
+-- 별마다 번쩍 · 손끝 파문, 카메라가 오르는 별자리를 따라 올라간다(ev.d 초)
 function Fx.SeptRise(ctx: any, ev: any)
 	local s = st(ctx)
 	s.cam = nil
-	s.sept = { Points = dipperGround(ctx), Slammed = false }
+	s.sept = { Points = dipperGround(ctx), Slammed = false, Fired = {} }
+	local total = (ev and ev.total) or 9.5
+	letterbox(ctx, total)
+	night(ctx, total)
+	astrolabe(ctx, s.sept)
 	ripple(ctx, ctx.Hand("R"), 2)
 	for i = 1, 7 do
 		ctx.Vfx.Flash(ctx.Star(i), { Color = STAR, Size = 1.6, Life = 0.3, Brightness = 4 })
@@ -549,47 +813,93 @@ function Fx.SeptRise(ctx: any, ev: any)
 end
 
 --[[
-	레이저 한 발(ev.star = 별 번호, ev.nth = 몇 번째): 그 별을 올려다보며 이름이 화면 가운데에 뜨고(0.25) → 레이저가 바닥 자리로 GROW 초에 뻗어
-	내려가며 화면 색이 바뀌고 카메라가 레이저 끝을 따라 내려간다 → 떨어진 자리를 본다. 다음 레이저가 다시 별을 올려다본다.
+	레이저 한 줄기: 세 겹(넓은 푸른 겉 · 흰 청 · 흰 심)이 별 i 에서 바닥 g 로 grow 초에 뻗어 life 초 머물다 가늘어지고,
+	뻗는 동안 빛고리 셋이 줄기를 감아 내려간다. 닿으면 번쩍 · 충격파 · 파편. size = 굵기 배(강타 땐 크게)
 ]]
 local AIM, GROW = 0.25, 0.22
-local function laser(ctx: any, i: number, g: Vector3)
-	local outer = CombatVfx.Part(Vector3.new(0.5, 0.5, 0.05), CFrame.new(g), STAR)
-	local core = CombatVfx.Part(Vector3.new(0.18, 0.18, 0.05), CFrame.new(g), WHITE)
-	local LIFE = 0.35
-	CombatVfx.Timed(GROW + LIFE, function(t)
-		local a = t * (GROW + LIFE)
+local LAYERS: { { any } } = { { STAR, 1.4, 0.55 }, { PALE, 0.7, 0.3 }, { WHITE, 0.26, 0 } } -- 빛 · 굵기 · 투명도
+local function laser(ctx: any, i: number, g: Vector3, size: number, grow: number, life: number)
+	local parts: { Part } = {}
+	for k, layer in LAYERS do
+		parts[k] = CombatVfx.Part(Vector3.new(0.1, 0.1, 0.05), CFrame.new(g), layer[1])
+		parts[k].Transparency = 1
+	end
+	CombatVfx.Timed(grow + life, function(t)
+		local a = t * (grow + life)
 		local top = ctx.Star(i)
-		local head = top:Lerp(g, math.min(1, a / GROW))
+		local head = top:Lerp(g, math.min(1, a / grow))
 		local len = math.max(0.05, (head - top).Magnitude)
-		local dir = if len > 0.06 then head else top - Vector3.new(0, 0.1, 0)
-		local cf = CFrame.lookAt(top, dir) * CFrame.new(0, 0, -len / 2)
-		local fade = math.clamp((a - GROW) / LIFE, 0, 1)
-		outer.Size, outer.CFrame = Vector3.new(0.05 + 0.6 * (1 - fade), 0.05 + 0.6 * (1 - fade), len), cf
-		core.Size, core.CFrame = Vector3.new(0.02 + 0.22 * (1 - fade), 0.02 + 0.22 * (1 - fade), len), cf
-		outer.Transparency, core.Transparency = 0.25 + 0.75 * fade, fade
+		local cf = CFrame.lookAt(top, if len > 0.06 then head else top - Vector3.new(0, 0.1, 0)) * CFrame.new(0, 0, -len / 2)
+		local fade = math.clamp((a - grow) / life, 0, 1)
+		local w = size * (1 - fade) * (1 + 0.15 * math.sin(a * 50))
+		for k, layer in LAYERS do
+			local d = 0.03 + layer[2] * w
+			parts[k].Size, parts[k].CFrame = Vector3.new(d, d, len), cf
+			parts[k].Transparency = layer[3] + (1 - layer[3]) * fade
+		end
 	end, function()
-		outer:Destroy()
-		core:Destroy()
+		for _, p in parts do
+			p:Destroy()
+		end
 	end)
-	task.delay(GROW, function()
-		ctx.Vfx.Flash(g, { Color = WHITE, Size = 6, Life = 0.3, Brightness = 6 })
-		ctx.Vfx.Shockwave(Vector3.new(g.X, ctx.Ground + 0.1, g.Z), { Color = STAR, Radius = 5, Life = 0.45 })
+	for k = 1, 3 do
+		task.delay(grow * k / 3, function()
+			local top = ctx.Star(i)
+			local p = top:Lerp(g, k / 3)
+			ctx.Vfx.Ring(CFrame.lookAt(p, p + (g - top).Unit), {
+				R0 = 0.4 * size,
+				R1 = 2.2 * size,
+				Color = PALE,
+				Life = 0.35,
+				Width = 0.1 * size,
+				Facing = true,
+				Segments = 16,
+			})
+		end)
+	end
+	task.delay(grow, function()
+		ctx.Vfx.Flash(g, { Color = WHITE, Size = 6 * size, Life = 0.3, Brightness = 6 })
+		ctx.Vfx.Shockwave(Vector3.new(g.X, ctx.Ground + 0.1, g.Z), { Color = STAR, Radius = 5 * size, Life = 0.45 })
+		ctx.Vfx.Burst(g, { Count = 8, Colors = { STAR, WHITE }, Size = 0.2, Speed = 14, Gravity = 20, Life = 0.5 })
 	end)
 end
 
+--[[
+	한 발(ev.star = 별 번호, ev.nth = 몇 번째): 그 별을 올려다보며 이름표가 뜨고 별로 빛이 빨려 든다(AIM) → 레이저가 바닥 자리로 뻗어
+	내려가며 화면 색이 바뀌고 카메라가 레이저 끝을 따라 내려간다 → 떨어진 자리에 룬, 하늘 · 바닥에 별자리 선. 다음 레이저가 다시 별을 올려다본다.
+]]
+local ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII" }
+local BAYER = { "DELTA", "BETA", "EPSILON", "ETA", "ZETA", "GAMMA", "ALPHA" } -- 큰곰자리 바이어 이름(메그레즈 δ … 두베 α)
 function Fx.SeptLaser(ctx: any, ev: any)
 	local s = st(ctx)
-	local sept = s.sept or { Points = dipperGround(ctx), Slammed = false }
-	s.sept = sept
+	local sept = septOf(ctx)
 	local i, k = (ev and ev.star) or 1, (ev and ev.nth) or 1
 	local g = sept.Points[i]
-	local name = NAMES[i]
-	caption(ctx, spaced(name[1]), name[2], 0.85)
+	titleCard(ctx, {
+		Top = (ROMAN[k] or "I") .. "  /  VII",
+		Big = spaced(NAMES[i][1]),
+		Sub = BAYER[i] .. " URSAE MAJORIS  ·  " .. NAMES[i][2],
+		Dur = 0.85,
+	})
+	local star = ctx.Star(i)
+	local cam = workspace.CurrentCamera
+	ctx.Vfx.Implode(star, { Color = PALE, Radius = 4, Count = 10, Life = AIM })
+	ctx.Vfx.Ring(CFrame.lookAt(star, if cam then cam.CFrame.Position else star + ctx.Forward), {
+		R0 = 3,
+		R1 = 0.3,
+		Color = WHITE,
+		Life = AIM,
+		Width = 0.08,
+		Facing = true,
+	})
 	task.delay(AIM, function()
-		laser(ctx, i, g)
+		laser(ctx, i, g, 1, GROW, 0.35)
 		grade(ctx, LASER_GRADE[k] or LASER_GRADE[1], 0.7)
 		ctx.Vfx.Flash(ctx.Star(i), { Color = WHITE, Size = 2.4, Life = 0.25, Brightness = 6 })
+	end)
+	task.delay(AIM + GROW, function()
+		groundRune(ctx, sept, g)
+		linkLines(ctx, sept, i)
 	end)
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
@@ -618,6 +928,35 @@ function Fx.SeptLaserHit(ctx: any, _ev: any, at: Vector3?)
 	end
 end
 
+-- 모으기(강타 직전, 팔을 내리치기 시작할 때): 별자리 선이 굵게 타오르고 성반이 빨리 돌며 조여 들고 별 일곱에 빛이 빨려 든다.
+-- 카메라는 진형 옆 낮은 데서 하늘의 별자리를 올려다본다
+function Fx.SeptGather(ctx: any)
+	local s = st(ctx)
+	local sept = s.sept
+	if not sept then
+		return
+	end
+	sept.Gather = true
+	local sum = Vector3.zero
+	for i = 1, 7 do
+		local p = ctx.Star(i)
+		sum += p
+		ctx.Vfx.Implode(p, { Color = WHITE, Radius = 5, Count = 8, Life = 0.35 })
+		ctx.Vfx.Flash(p, { Color = PALE, Size = 3, Life = 0.35, Brightness = 6 })
+	end
+	grade(ctx, { Saturation = -0.7, Contrast = 0.6, Brightness = -0.05 }, 0.4)
+	local f = ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	local center = ctx.EnemyCenter
+	local from = camNow(s)
+	local goal = CFrame.lookAt(center + r * 22 - f * 6 + Vector3.new(0, 1.5, 0), center:Lerp(sum / 7, 0.6))
+	ctx.Shot(0.4, function(_, t)
+		local cf = from:Lerp(goal, sine(t / 0.4))
+		s.cam = cf
+		return cf
+	end)
+end
+
 -- 별을 잇는 선이 진형 바닥을 가르며 타오르고(0.3) 자국으로 남았다가(3.5) 천천히 사라진다(1.2)
 local function scar(a: Vector3, b: Vector3)
 	local len = math.max(0.05, (b - a).Magnitude)
@@ -639,25 +978,47 @@ local function scar(a: Vector3, b: Vector3)
 	end)
 end
 
--- 마지막: 일곱 자리가 북두칠성 꼴로 이어지며 진형 전체를 강타 — 흑백 임팩트 → 흰 번쩍 → 색이 돌아옴 · 가운데 SEPTENTRIONES · 선 자국이 남는다.
--- 카메라는 진형 위 넓은 구도로 옮겨(선 자국이 다 보이게) 모션이 끝날 때까지 머문다. 큰 연출은 한 번(맞은 적마다 불린다)
+--[[
+	마지막: 별 일곱이 한꺼번에 굵은 빛줄기로 내리꽂히고(북두칠성 꼴) 바닥 밑그림이 선 자국으로 타오르며 진형 전체를 강타 —
+	흑백 임팩트 → 푸른 빛으로 번짐 · 진형 가운데서 큰 충격파 두 겹과 고리 · 제목 카드 SEPTENTRIONES. 성반 · 룬 · 하늘 선은 거둔다.
+	카메라는 진형 위 넓은 구도로 옮겨(선 자국이 다 보이게) 모션이 끝날 때까지 머문다. 큰 연출은 한 번(맞은 적마다 불린다)
+]]
 function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 	local s = st(ctx)
 	local sept = s.sept
 	if sept and not sept.Slammed then
 		sept.Slammed = true
 		local P = sept.Points
-		caption(ctx, spaced("SEPTENTRIONES"), "셉텐트리오네스", 1.7)
+		titleCard(ctx, {
+			Top = "U R S A   M A J O R",
+			Big = spaced("SEPTENTRIONES"),
+			Sub = "SEPTEM TRIONES  ·  일곱 마리의 소, 북두칠성",
+			Dur = 1.7,
+			Y = 0.42,
+			Height = 0.26,
+		})
 		grade(ctx, { Saturation = -1, Contrast = 1.2, Brightness = 0.25 }, 0.9)
+		task.delay(0.18, function()
+			grade(ctx, { Tint = c(150, 200, 255), Contrast = 0.35, Brightness = 0.12, Saturation = 0.2 }, 1.3)
+		end)
 		for i = 1, 7 do
-			ctx.Vfx.Pillar(P[i], { Height = 14, Width = 2.2, Color = STAR, Life = 0.5 })
+			laser(ctx, i, P[i], 2.4, 0.08, 0.5)
+			ctx.Vfx.Flash(ctx.Star(i), { Color = WHITE, Size = 4, Life = 0.3, Brightness = 8 })
+			ctx.Vfx.Pillar(P[i], { Height = 18, Width = 2.6, Color = STAR, Life = 0.6 })
 			ctx.Vfx.Shockwave(P[i] + Vector3.new(0, 0.05, 0), { Color = WHITE, Radius = 7, Life = 0.6 })
 		end
 		for _, pair in LINES do
 			scar(P[pair[1]], P[pair[2]])
 		end
 		local center = ctx.EnemyCenter
+		local floor = Vector3.new(center.X, ctx.Ground + 0.1, center.Z)
 		ctx.Vfx.Flash(center + Vector3.new(0, 3, 0), { Color = FUSION, Size = 30, Life = 0.6, Brightness = 10 })
+		ctx.Vfx.Shockwave(floor, { Color = FUSION, Radius = 22, Life = 0.9 })
+		task.delay(0.12, function()
+			ctx.Vfx.Shockwave(floor, { Color = STAR, Radius = 30, Life = 1.1 })
+		end)
+		ctx.Vfx.Ring(CFrame.new(floor + Vector3.new(0, 0.2, 0)), { R0 = 4, R1 = 26, Color = WHITE, Life = 1.2, Width = 0.6, Height = 0.3, Segments = 40 })
+		ctx.Vfx.Burst(floor + Vector3.new(0, 1, 0), { Count = 24, Colors = { STAR, WHITE, MELT }, Size = 0.3, Speed = 30, Gravity = 30, Life = 0.9 })
 		local f = ctx.Forward
 		local r = f:Cross(Vector3.yAxis)
 		local from = camNow(s)

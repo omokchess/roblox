@@ -288,7 +288,7 @@ return {
 			},
 			Events = {
 				{ t = 0.95, k = "Orbs", mode = "Sky", at = "Enemies" },
-				{ t = 0.95, k = "Fx", n = "SeptRise", d = 1.1 },
+				{ t = 0.95, k = "Fx", n = "SeptRise", d = 1.1, total = 9.5 },
 				{ t = 2.1, k = "Fx", n = "SeptLaser", star = 4, nth = 1 },
 				{ t = 2.57, k = "Hit", i = 1, fx = "SeptLaserHit" },
 				{ t = 2.57, k = "Shake", a = 0.3, d = 0.2 },
@@ -310,6 +310,7 @@ return {
 				{ t = 7.8, k = "Fx", n = "SeptLaser", star = 7, nth = 7 },
 				{ t = 8.27, k = "Hit", i = 7, fx = "SeptLaserHit" },
 				{ t = 8.27, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 8.62, k = "Fx", n = "SeptGather" },
 				{ t = 9.05, k = "Hit", i = 8, fx = "SeptSlam" },
 				{ t = 9.06, k = "Stop", d = 0.12 },
 				{ t = 9.07, k = "Shake", a = 0.9, d = 0.7 },

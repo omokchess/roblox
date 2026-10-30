@@ -238,12 +238,12 @@ skills.append(motion("Alioth", "알리오스: 알리오스를 꺼내 적 진영 
 # 북두칠성 꼴로 진형 전체를 강타. 카메라는 Fx 가 잡는다(SeptRise → SeptLaser ×7 → SeptSlam), 모션이 끝나면 감독이 놓는다.
 TRACE = [4, 5, 3, 1, 6, 2, 7]
 LASERS = [round(2.1 + 0.95 * k, 2) for k in range(7)]
-sept_events = ['{ t = 0.95, k = "Orbs", mode = "Sky", at = "Enemies" }', '{ t = 0.95, k = "Fx", n = "SeptRise", d = 1.1 }']
+sept_events = ['{ t = 0.95, k = "Orbs", mode = "Sky", at = "Enemies" }', '{ t = 0.95, k = "Fx", n = "SeptRise", d = 1.1, total = 9.5 }']
 for k, t in enumerate(LASERS):
     sept_events += ['{ t = %s, k = "Fx", n = "SeptLaser", star = %d, nth = %d }' % (t, TRACE[k], k + 1),
                     '{ t = %s, k = "Hit", i = %d, fx = "SeptLaserHit" }' % (round(t + 0.47, 2), k + 1),
                     '{ t = %s, k = "Shake", a = 0.3, d = 0.2 }' % round(t + 0.47, 2)]
-sept_events += ['{ t = 9.05, k = "Hit", i = 8, fx = "SeptSlam" }', '{ t = 9.06, k = "Stop", d = 0.12 }', '{ t = 9.07, k = "Shake", a = 0.9, d = 0.7 }',
+sept_events += ['{ t = 8.62, k = "Fx", n = "SeptGather" }', '{ t = 9.05, k = "Hit", i = 8, fx = "SeptSlam" }', '{ t = 9.06, k = "Stop", d = 0.12 }', '{ t = 9.07, k = "Shake", a = 0.9, d = 0.7 }',
                 '{ t = 9.9, k = "Orbs", mode = "Orbit" }']
 skills.append(motion("Septentriones", "셉텐트리오네스(컷신): 오른손을 왼 허리로 모았다가[중] 하늘로 치켜들면[강] 별 일곱이 하늘 높이 오르고 → 별이 하나씩 적 진영으로 레이저"
                      "(별 이름 · 화면 색 · 카메라가 별 → 레이저를 따라 아래로) → 팔을 내리치면[강] 북두칠성 꼴로 진형 전체를 강타하고 선 자국이 남는다", 10.8,
