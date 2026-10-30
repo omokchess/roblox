@@ -1377,6 +1377,10 @@ local attunerEffects: { [string]: Effect } = {
 		적중 시 (피해 / 100) 회복(최대 30), 화상 10 · 융해 5, 자신 화상 3, 핵융합 반응. 쓰고 나면 별을 전부 끈다.
 	]]
 	Septentriones = {
+		-- 2026-10-31 사용자: "대상의 화상 1당 이 스킬의 피해량 +10%(최대 400%)"
+		TargetBonus = function(ctx, target)
+			return math.min(4, 0.1 * (ctx.StatusOf(target).Burn or 0))
+		end,
 		After = function(ctx)
 			if #ctx.Targets > 0 then
 				local cap = ctx.Query("SeptentrionesHealCap", 30)

@@ -11,7 +11,8 @@
 	  알카이드  같은 행·열 아군 [가하는 피해량] +50%, 없으면 칠성. **신앙심 말고는 피해% 가 안 먹는다**(FaithOnlyDamage)
 	  미자르    턴 시작 시 한 아군(솔로면 자신) 지정 → 묶임 1 · 보호막 49 · 가하는 +50%. 자신이면 칠성
 	  페크다    아군 자동 회피 20%. 공격을 피하면(자동 회피 · QTE 회피 · 자동 패링) 칠성
-	  두베      턴 시작 시 아군 보호막 7. 아군이 14 이상 맞거나, 위력 14 이상인 공격을 받으면(피하거나 막았어도) 칠성
+	  두베      턴 시작 시 아군 보호막 7. 체력이 최대의 14% 이상 줄어 있으면 칠성 — 디버그 무적·자동 회피(자동 QTE)가 켜져 있으면 늘
+	            (2026-10-31 사용자: "두베 조건을 HP의 14%가 줄어들었을 때 발동하도록 바꾸고, 무적모드거나 자동회피 켜져있을 땐 항상 발동")
 	  2026-10-31 사용자: "특정 이유때문에 일정량의 칠성을 얻지 못하는 경우가 있어" — 페크다는 자동 회피만, 두베는 실제로 깎인 양만 세어
 	  QTE 를 잘 피하면(디버그 자동 QTE 성공·무적이면 늘) 두 별이 안 켜져 칠성이 5 에서 멈췄다 → 위처럼 넓혔다.
 
@@ -220,8 +221,17 @@ M.Attuner_Phecda = {
 	end,
 }
 
+local function dubheCheck(c: Card)
+	local ally = H.Ally(c)
+	local debug = H.State(c).Debug
+	if (debug and (debug.God or debug.AutoDodge)) or ally.Health <= ally.MaxHealth * 0.86 then
+		light(c, "Dubhe")
+	end
+end
+
 M.Attuner_Dubhe = {
 	TurnStart = function(c: Card)
+		dubheCheck(c)
 		if mode(c, "DubheMegrez") then
 			return
 		end
@@ -230,23 +240,12 @@ M.Attuner_Dubhe = {
 			BattleStatus.AddShield(ally.Status, shield)
 		end
 	end,
-	-- "14 이상의 피해를 받으면": 보호막이 먹은 양까지 센다(미자르 보호막 49 가 늘 덮어 체력은 거의 안 깎인다)
-	BeforeTaken = function(c: Card)
-		local ally = H.Ally(c)
-		c.Mem.before = ally.Status.Shield + ally.Health
+	-- 체력이 최대의 14% 이상 줄어 있으면(또는 디버그 무적·자동 회피면) 칠성 — 맞을 때·턴 시작 때 본다
+	Defend = function(c: Card)
+		dubheCheck(c)
 	end,
-	-- 위력 14 이상인 공격을 받으면 피하거나 막았어도(무적이어도) 센다(info.Raw — 회피·막기·보호막 전의 위력, 2026-10-31)
-	Defend = function(c: Card, info: any)
-		local ally = H.Ally(c)
-		if (info.Raw or 0) >= 14 or (c.Mem.before and c.Mem.before - (ally.Status.Shield + ally.Health) >= 14) then
-			light(c, "Dubhe")
-		end
-		c.Mem.before = nil
-	end,
-	Damaged = function(c: Card, info: any)
-		if (info.Amount or 0) >= 14 then
-			light(c, "Dubhe")
-		end
+	Damaged = function(c: Card)
+		dubheCheck(c)
 	end,
 	-- 태우기 위한 별: 자신의 턴이 끝난 뒤 메그레즈(쓸 때마다 기본 피해량 감소 — 카드가 Flat 으로 깎는다)
 	TurnEnd = function(c: Card)

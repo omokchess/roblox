@@ -608,6 +608,7 @@ function BattleService:_applyConfig(player: Player, patch: any): string?
 			God = config.God,
 			AllyDamageScale = config.AllyDamageScale,
 			NoCooldown = config.NoCooldown,
+			AutoDodge = config.AutoQte ~= "Off",
 		}
 	end
 	return note
@@ -693,7 +694,7 @@ function BattleService:StartBattle(player: Player, fieldAt: CFrame?): (boolean, 
 		},
 		allyStats
 	)
-	battle.Debug = { God = config.God, AllyDamageScale = config.AllyDamageScale, NoCooldown = config.NoCooldown }
+	battle.Debug = { God = config.God, AllyDamageScale = config.AllyDamageScale, NoCooldown = config.NoCooldown, AutoDodge = config.AutoQte ~= "Off" }
 	session.Battle = battle
 	session.Threats = {}
 	session.BattleSeq += 1

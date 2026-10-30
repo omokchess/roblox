@@ -458,7 +458,12 @@ local function runCardEffects()
 	local starFoe = GridBattle.AliveEnemies(stars)[1]
 	GridBattle.ResolveDodge(stars, starFoe.Id, "Success")
 	expect((starAlly :: any).StarLit and (starAlly :: any).StarLit.Phecda == true, "페크다 must light when the ally dodges by QTE")
-	expect((starAlly :: any).StarLit.Dubhe == true, "두베 must light on a dodged attack of 14+ power (slime 6 + 12)")
+	expect((starAlly :: any).StarLit.Dubhe == true, "두베 must always light in debug god / auto-dodge mode")
+	local hurt = battleWith("Attuner", {})
+	local hurtAlly = GridBattle.Ally(hurt)
+	hurtAlly.Health = math.floor(hurtAlly.MaxHealth * 0.8)
+	GridBattle.ResolveDodge(hurt, GridBattle.AliveEnemies(hurt)[1].Id, "Success")
+	expect((hurtAlly :: any).StarLit and (hurtAlly :: any).StarLit.Dubhe == true, "두베 must light once health is 14%+ down")
 
 	--=== 피격 → 분노(다혈질 + 격노) ===--
 
