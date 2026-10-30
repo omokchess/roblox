@@ -211,26 +211,28 @@ skills.append(motion("Merak", "메라크: 메라크를 꺼내[약] 왼쪽 아래
                      + ['{ t = 1.96, k = "Shake", a = 0.5, d = 0.35 }', '{ t = 2.05, k = "Orbs", mode = "Orbit" }']))
 
 # 알리오스: "한 대 - 1초 쉼 - 한 대 - 0.9초 쉼 - 한 대 - 0.4초 쉼 - 한 대 - 0.3초 쉼 - (그 후 0.3초씩 반복)" — 10타
+# 2026-10-31 사용자: "알리오스 속도를 전체적으로 두 배 올리자" — 모든 시각을 AL 배(0.5)로(간격 0.5 · 0.45 · 0.2 · 0.15 …, 6초 → 3초)
+AL = 0.5
 GAPS = [1.0, 0.9, 0.4] + [0.3] * 6
-ALIOTH_HITS = [0.75]
+ALIOTH_HITS = [round(0.75 * AL, 3)]
 for g in GAPS:
-    ALIOTH_HITS.append(round(ALIOTH_HITS[-1] + g, 2))
+    ALIOTH_HITS.append(round(ALIOTH_HITS[-1] + g * AL, 3))
 SWIPES = ["AL_A", "AL_B", "AL_C", "AL_D"]
-al_keys = [(0, None, "STANCE"), (0.3, "cubicOut", "AL_READY")]
+al_keys = [(0, None, "STANCE"), (round(0.3 * AL, 3), "cubicOut", "AL_READY")]
 prev = "AL_READY"
 for k, th in enumerate(ALIOTH_HITS):
-    # 손짓은 타격 바로 앞 0.12초에 휙 — 그 전까지는 앞 손짓에 머문다
-    if th - 0.12 > al_keys[-1][0] + 0.01:
-        al_keys.append((round(th - 0.12, 2), "sineInOut", prev))
+    # 손짓은 타격 바로 앞 0.12 × AL 초에 휙 — 그 전까지는 앞 손짓에 머문다
+    if th - 0.12 * AL > al_keys[-1][0] + 0.01:
+        al_keys.append((round(th - 0.12 * AL, 3), "sineInOut", prev))
     prev = SWIPES[k % 4]
     al_keys.append((th, "expoOut", prev))
-al_keys += [(round(ALIOTH_HITS[-1] + 0.4, 2), "sineOut", prev), (5.9, "cubicInOut", "STANCE")]
-al_events = ['{ t = 0.08, k = "Orbs", mode = "Pick", star = 3 }', '{ t = 0.1, k = "Fx", n = "TeleGrab", star = 3 }', '{ t = 0.35, k = "Fx", n = "AliothLaunch" }']
+al_keys += [(round(ALIOTH_HITS[-1] + 0.4 * AL, 3), "sineOut", prev), (round(5.9 * AL, 3), "cubicInOut", "STANCE")]
+al_events = ['{ t = 0.06, k = "Orbs", mode = "Pick", star = 3 }', '{ t = 0.07, k = "Fx", n = "TeleGrab", star = 3 }', '{ t = %s, k = "Fx", n = "AliothLaunch" }' % round(0.35 * AL, 3)]
 al_events += ['{ t = %s, k = "Hit", i = %d, fx = "AliothStrike" }' % (th, k + 1) for k, th in enumerate(ALIOTH_HITS)]
 al_events += ['{ t = %s, k = "Shake", a = 0.15, d = 0.1 }' % th for th in ALIOTH_HITS]
-al_events += ['{ t = 5.0, k = "Fx", n = "AliothReturn" }', '{ t = 5.4, k = "Orbs", mode = "Orbit" }']
+al_events += ['{ t = %s, k = "Fx", n = "AliothReturn" }' % round(5.0 * AL, 3), '{ t = %s, k = "Orbs", mode = "Orbit" }' % round(5.4 * AL, 3)]
 skills.append(motion("Alioth", "알리오스: 알리오스를 꺼내 적 진영 위로 띄우고[약] 허공에 팔을 자유자재로 휘두를 때마다[강] 별이 진형을 곧게 가로지른다 — "
-                     "10타가 1 · 0.9 · 0.4 · 0.3 … 초 간격으로 점점 빨라진다 → 별이 손끝으로 돌아온다", 6.0, al_keys, al_events))
+                     "10타가 0.5 · 0.45 · 0.2 · 0.15 … 초 간격으로 점점 빨라진다(사용자 원안의 두 배 빠르기) → 별이 손끝으로 돌아온다", round(6.0 * AL, 3), al_keys, al_events))
 
 # 셉텐트리오네스(컷신): 왼 허리로 손을 모았다 치켜들면 별 일곱이 하늘 높이(Orbs Sky) → 별이 하나씩 레이저(국자를 따라 알카이드부터) →
 # 북두칠성 꼴로 진형 전체를 강타. 카메라는 Fx 가 잡는다(SeptRise → SeptLaser ×7 → SeptSlam), 모션이 끝나면 감독이 놓는다.

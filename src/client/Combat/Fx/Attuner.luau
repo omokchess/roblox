@@ -12,7 +12,7 @@
 	  메라크         별을 왼쪽 아래로 옮겼다가 팔을 오른쪽 위로 휘두르면 별이 내 행을 꿰뚫고 달리며 흰 선을 남기고(MerakDash · 1타 MerakPass),
 	                 그 선이 네 번 부분부분 터지고 다섯 번째에 통째로 터진다(MerakBurst — 비율 10 · 2 · 2 · 2 · 2 · 4)
 	  알리오스       별을 적 진영 위로 띄우고(AliothLaunch) 허공에 팔을 휘두를 때마다 별이 진형을 곧게 가로지른다(AliothStrike 10타,
-	                 1 · 0.9 · 0.4 · 0.3 … 초 간격으로 빨라짐) → 손으로 돌아온다(AliothReturn)
+	                 0.5 · 0.45 · 0.2 · 0.15 … 초 간격으로 빨라짐 — 사용자 원안의 두 배 빠르기) → 손으로 돌아온다(AliothReturn)
 	  셉텐트리오네스 컷신 — 왼 허리로 손을 모았다 치켜들면 별 일곱이 하늘 높이 오르고 카메라가 따라간다(SeptRise) → 별이 하나씩 적 진영으로
 	                 레이저(SeptLaser — 별 이름이 화면 가운데, 매번 다른 화면 색, 카메라는 별을 보다 레이저 끝을 따라 아래로) → 일곱 발이 떨어진 자리
 	                 (북두칠성 꼴)가 이어지며 진형 전체를 강타(SeptSlam — 화면 효과 · 가운데 "SEPTENTRIONES" · 별을 잇는 선 자국이 남는다)
@@ -439,7 +439,8 @@ end
 
 --=== 알리오스 ===--
 
--- 별을 적 진영 위로 띄운다(0.3초) — 그 뒤 손짓마다 AliothStrike 가 새 길을 준다. 별의 길 = { From, To(자리 또는 함수), T, D, Last? }
+-- 별을 적 진영 위로 띄운다(0.15초) — 그 뒤 손짓마다 AliothStrike 가 새 길을 준다. 별의 길 = { From, To(자리 또는 함수), T, D, Last? }
+-- (2026-10-31 사용자: "알리오스 속도를 전체적으로 두 배" — 별이 나는 시간도 모두 절반)
 function Fx.AliothLaunch(ctx: any)
 	local s = st(ctx)
 	local weapons = ctx.Weapons
@@ -448,7 +449,7 @@ function Fx.AliothLaunch(ctx: any)
 	end
 	s.aliothDone = {}
 	local last = ctx.Star(3)
-	s.aliothPath = { From = last, To = ctx.EnemyCenter + Vector3.new(0, 4.5, 0), T = 0, D = 0.3 }
+	s.aliothPath = { From = last, To = ctx.EnemyCenter + Vector3.new(0, 4.5, 0), T = 0, D = 0.15 }
 	ripple(ctx, ctx.Hand("R"), 1.4)
 	weapons:Drive(3, function(dt: number): Vector3?
 		local p = s.aliothPath
@@ -477,7 +478,7 @@ function Fx.AliothStrike(ctx: any, ev: any, at: Vector3?)
 		local box = Common.FieldBox(ctx)
 		local rng = Random.new()
 		local to = Common.BoxWorld(box, Vector3.new(rng:NextNumber(box.U0 + 1, box.U1 - 1), rng:NextNumber(box.V0 + 1, box.V1 - 1), rng:NextNumber(0.8, 3.2)))
-		local d = if i <= 3 then 0.22 else 0.12
+		local d = if i <= 3 then 0.11 else 0.06
 		s.aliothPath = { From = ctx.Star(3), To = to, T = 0, D = d }
 		task.delay(d, function()
 			ctx.Vfx.Flash(to, { Color = STAR, Size = 3, Life = 0.2, Brightness = 5 })
@@ -494,7 +495,7 @@ function Fx.AliothReturn(ctx: any)
 	if s.aliothPath then
 		s.aliothPath = { From = ctx.Star(3), To = function()
 			return fingertip(ctx)
-		end, T = 0, D = 0.4, Last = true }
+		end, T = 0, D = 0.2, Last = true }
 	end
 end
 

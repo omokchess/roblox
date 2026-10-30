@@ -4921,3 +4921,5 @@ Moon Animator 2 는 유료(19.99달러)라 사용자가 사지 않기로 하고 
 - 고침: 2026-10-30 HOVER 를 자세에만 더해 스킬 키의 뿌리 덮어쓰기에선 캐릭터가 땅으로 떨어졌다 → attuner_gen K() 도 뿌리에 HOVER.
 - 필드 상자(fieldBox·boxWorld)를 Fx/Common 으로 옮겨 청의 검사·조율자가 같이 쓴다. 옛 스킬 자세 여덟(READY·POINT·FLING·RAISE·CAST·OPEN·CLOSE)과 옛 이펙트는 지움.
 - 점검: selene · check_fx · test_motion_math · run_system_tests · smoke_director 전 직업 통과(스킬 연출 기다림 6 → 12초 — 셉텐트리오네스가 10.8초, 보스 통합 실패는 전부터).
+- 사용자: "알리오스 속도를 전체적으로 두 배 올리자" → 모든 시각 × 0.5(attuner_gen AL): 타격 0.375 · 0.875 · 1.325 · 1.525 · … · 2.425, 모션 6 → 3초,
+  별이 나는 시간도 절반(띄우기 0.15 · 내리긋기 0.11/0.06 · 돌아오기 0.2).
