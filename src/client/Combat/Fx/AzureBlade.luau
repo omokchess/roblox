@@ -3,16 +3,15 @@
 	Fx/AzureBlade — 청의 검사 이펙트. 푸른 칼빛·흰 섬광·잔상·물·검로. (2026-10-25, 같은 날 사용자 말 설명으로 다시 짬)
 
 	  집중 베기     조금 뽑다 챙 멈춤(Ching) → 잔상을 남기고(Slip) 앞 두 칸을 블링크로 지나 작게 기운 검흔(SmallCuts) → 딸깍 → 잔상을 남기고 제자리로
-	  진 발도술     천천히 뽑다(DrawGlint) 칼이 빠지는 순간(Release) 왼쪽 아래로 사선베기(KesaArc) →
-	                몹 앞에 서로 다른 베기 자세의 잔상을 타격 수만큼(Ghosts) → 타격마다 잔상이 하나씩 사라지며 벤다(GhostCut)
+	  진 발도술     (2026-10-30 다시) 등에서 뽑아(DrawGlint · Release) 강하게 세로로 내리베면 세로 초승달 검기가 대상 열까지 날아가고
+	                그 뒤를 선이 따라간다(WaveLaunch) → 열 전체 1타(WaveHit) → 칼을 꽂을 때 선에 빛이 달리며 2타(LineStrike)
 	  발도술의 절정 반쯤 뽑다 "챙" 하고 멈춰 드러난 날에 빛(Ching) → 사라져(Vanish) 줄 끝에 이미 벤 자세로 서고,
 	                지나간 자리에 불규칙한 곧은 검로(PeakPath) → 줄 전체를 가르는 곧은 칼날들이 반짝일 때마다 타격(RowFlash).
 	                (2026-10-26 사용자) 제 줄을 따라 곧게 가고, 검로·칼날은 위아래로 ±TILT° 안에서 제각각 기울며 크기는 MARK 배
-	  공간의 이해   (2026-10-26 다시) 블링크 다섯 번(Blink — 선 자리에 그 자세 잔상, 휘두른 방향의 긴 곧은 검로가 남는다)으로 적진을
-	                가로질러 줄 끝에서 꽂으면(카메라는 그동안 등 뒤에서 따라가다 돌아온다: CamFollow · CamFree) →
-	                (2026-10-28, 사용자가 고른 안 1+2+3 — 격자는 뺐다) 딸깍과 함께 세상이 멎고(CutClick) ① 다섯 검로가 필드를 가로질러
-	                뻗고(CutsExtend) ② 나란한 복제 줄이 물결처럼 퍼지고(CutsEcho) ③ 짧은 곧은 선 수십 개가 공간을 채운다(CutsFill) →
-	                ④ 임팩트 프레임 · 화면이 검로를 따라 금 가고 · 모든 선이 유리 조각처럼 부서지며 필드 전체를 벤다(SpaceBreak · BreakHit)
+	  공간의 이해   (2026-10-30 다시, 컷신) 발치 확대(CamFoot) · 내딛기(StepDust) → 오른쪽 등 뒤에서 달리기 준비(CamShoulder) →
+	                박차는 순간 사라져(Disappear) 보이지 않게 블링크 17번 — 무작위 자리·잔상·검흔(Phantom), 카메라는 오른쪽 위로 올라
+	                적 진영을 점점 빠르게 한 바퀴 돌다 멈춘다(CamOrbit) → 제자리에 나타나(Return) 꽂으면 흑백(CutClick) →
+	                검흔이 하나씩 파바바박 터지는 17연타(MarkHit) → 임팩트 프레임(FinalBreak) → 카메라를 돌려준다(CamFree)
 	효과음: 로블록스 효과음 모음(ProSoundEffects). 챙 = 칼 뽑는 쇳소리 — 바꾸려면 SOUND 의 숫자만 고친다.
 	잔상 자세는 모션 파일의 Poses(tools/combat/design/azure_gen.py 가 만든다).
 ]]
@@ -131,7 +130,7 @@ local function stroke(from: Vector3, to: Vector3, opts: { [string]: any }): any
 	end
 	if opts.Keep then
 		-- 안전장치: 스킬이 끊겨 터지지 않으면 저절로 사라진다
-		task.delay(10, mark.Burst)
+		task.delay(30, mark.Burst)
 	end
 	return mark
 end
@@ -224,58 +223,107 @@ function Fx.Release(ctx: any)
 	ctx.Vfx.Sparks(p, { Color = ICE, Count = 8, Speed = 10 })
 end
 
---=== 진 발도술 ===--
+--=== 진 발도술(2026-10-30 다시 — 강한 세로베기로 검기를 날려 대상 열을 벤다) ===--
 
--- 오른 어깨 위에서 왼쪽 아래로 크게 가르는 사선
-function Fx.KesaArc(ctx: any)
-	local center = ctx.Root.Position + Vector3.new(0, 0.5, 0) + ctx.Forward * 0.6
-	Common.Arc(ctx, center, 40, 115, -75, { Radius = 5.4, Width = 1.0, Depth = 0.1, Color = AZURE, Core = WHITE, Sweep = 0.05, Life = 0.32 })
-	ctx.Vfx.Flash(ctx.Hand("R"), { Color = WHITE, Size = 5, Life = 0.18, Brightness = 6 })
-end
-
--- 몹 앞에 서로 다른 베기 자세의 잔상(타격 수만큼 — 사건의 c, 기본 3). 몹을 둘러 반원으로 서서 몹을 본다
-local GHOST_POSES = { "DRAWCUT", "RISE", "CUTDOWN", "KESA", "SWEEP" }
-function Fx.Ghosts(ctx: any, ev: any)
-	local s = st(ctx)
-	for _, g in s.ghosts or {} do
-		g.Vanish(0.1)
-	end
-	s.ghosts = {}
-	local n = (ev and ev.c) or 3
-	local t = ctx.Target
-	local toMe = flat(ctx.Root.Position - t)
-	local y = ctx.Root.Position.Y
-	for i = 1, n do
-		task.delay((i - 1) * 0.1, function()
-			local ang = if n == 1 then 0 else -60 + 120 * (i - 1) / (n - 1)
-			local dir = CFrame.Angles(0, math.rad(ang), 0) * toMe
-			local pos = Vector3.new(t.X, y, t.Z) + dir * 2.9
-			local cf = CFrame.lookAt(pos, Vector3.new(t.X, y, t.Z))
-			local g = Common.Ghost(ctx, pose(GHOST_POSES[(i - 1) % #GHOST_POSES + 1]), cf, { Transparency = 0.5 })
-			if g then
-				table.insert(s.ghosts, g)
-			end
-			ctx.Vfx.Flash(pos, { Color = ICE, Size = 4, Life = 0.18, Brightness = 4 })
-			ctx.Vfx.Sparks(pos, { Color = ICE, Count = 6, Speed = 8 })
-		end)
-	end
-end
-
--- 타격마다 잔상 하나가 번쩍이며 사라지고 몹에 벤 자국(한 사건에 대상이 여럿이어도 잔상은 하나)
-function Fx.GhostCut(ctx: any, ev: any, at: Vector3?)
-	local s = st(ctx)
-	if s.cutEv ~= ev then
-		s.cutEv = ev
-		local g = s.ghosts and table.remove(s.ghosts, 1)
-		if g then
-			local p = g.Model:GetPivot().Position
-			ctx.Vfx.Flash(p, { Color = WHITE, Size = 6, Life = 0.16, Brightness = 6 })
-			g.Vanish(0.18)
+--[[
+	대상 열(첫 대상이 선 열)을 옆으로 가로지르는 두 끝(바닥 높이). 적 칸 중 앞 거리가 같은 칸들의 옆 범위 + 반 칸.
+	칸을 모르면(전시장) 대상 둘레 ±9.
+]]
+local function columnSpan(ctx: any, at: Vector3): (Vector3, Vector3)
+	local f = ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	local home = ctx.Actor.Home.Position
+	local along = (at - home):Dot(f)
+	local v0, v1 = math.huge, -math.huge
+	for _, t in ctx.EnemyTiles or {} do
+		local d = t.Position - home
+		if math.abs(d:Dot(f) - along) < 2 then
+			v0, v1 = math.min(v0, d:Dot(r)), math.max(v1, d:Dot(r))
 		end
 	end
+	if v0 > v1 then
+		local v = (at - home):Dot(r)
+		v0, v1 = v - 6, v + 6
+	end
+	local base = Vector3.new(home.X, ctx.Ground, home.Z) + f * along
+	return base + r * (v0 - 3), base + r * (v1 + 3)
+end
+
+--[[
+	강한 세로베기 → 검기: 앞으로 볼록한 세로 초승달이 WAVE_TIME 초에 대상 열까지 날아가고(그 뒤를 선이 따라 자란다 —
+	stroke 의 Grow 곡선 1-(1-a)^3 와 같은 곡선으로 움직인다), 닿으면 열 전체를 세로로 가르는 빛 벽이 서고 열을 가로지르는 선이 남는다.
+	선들은 칼을 꽂을 때(LineStrike) 다시 벤다.
+]]
+local WAVE_TIME = 0.22
+function Fx.WaveLaunch(ctx: any)
+	local s = st(ctx)
+	local f = ctx.Forward
+	local start = ctx.Root.Position + f * 1.6 + Vector3.new(0, 0.7, 0)
+	local target = ctx.Targets[1] or (start + f * 14)
+	local finish = start + f * math.max(4, (target - start):Dot(f))
+	s.waveLines = {}
+	table.insert(s.waveLines, stroke(start, finish, { Width = 0.06, Color = ICE, Grow = WAVE_TIME, Keep = true, Bits = 3 }))
+	ctx.Vfx.Flash(start, { Color = WHITE, Size = 5, Life = 0.18, Brightness = 6 })
+	local n, radius = 10, 2.7
+	local segs = {}
+	for i = 1, n do
+		table.insert(segs, CombatVfx.Part(Vector3.new(0.1, 0.1, 0.5), CFrame.new(start), if i == n / 2 or i == n / 2 + 1 then WHITE else AZURE))
+	end
+	local function arcPoint(center: Vector3, k: number, grow: number): Vector3
+		local th = math.rad(-75 + 150 * k)
+		return center + (Vector3.yAxis * math.sin(th) + f * ((math.cos(th) - 1) * 0.55)) * (radius * grow)
+	end
+	CombatVfx.Timed(WAVE_TIME, function(a)
+		local center = start:Lerp(finish, 1 - (1 - a) ^ 3)
+		local grow = 0.85 + 0.35 * a
+		for i, seg in segs do
+			local p0, p1 = arcPoint(center, (i - 1) / n, grow), arcPoint(center, i / n, grow)
+			local w = 0.08 + 0.42 * math.sin(math.pi * (i - 0.5) / n)
+			seg.Size = Vector3.new(w * 0.35, w, (p1 - p0).Magnitude + 0.05)
+			seg.CFrame = CFrame.lookAt(p0:Lerp(p1, 0.5), p1)
+		end
+	end, function()
+		for _, seg in segs do
+			seg:Destroy()
+		end
+		-- 열 전체를 세로로 가르는 빛 벽(잠깐) + 열을 가로지르는 선 두 줄(남는다)
+		local a0, a1 = columnSpan(ctx, finish)
+		local width = (a1 - a0).Magnitude
+		local wall = CombatVfx.Part(Vector3.new(0.06, 4.4, width), CFrame.lookAt(a0:Lerp(a1, 0.5), a1) * CFrame.new(0, 2.2, 0), WHITE)
+		CombatVfx.Timed(0.3, function(t)
+			wall.Transparency = t
+			wall.Size = Vector3.new(0.06 + 0.5 * t, 4.4 + 1.2 * t, width)
+		end, function()
+			wall:Destroy()
+		end)
+		table.insert(s.waveLines, stroke(a0 + Vector3.new(0, 1.5, 0), a1 + Vector3.new(0, 1.5, 0), { Width = 0.06, Color = ICE, Grow = 0.06, Keep = true, Bits = 3 }))
+		table.insert(s.waveLines, stroke(a0 + Vector3.new(0, 0.1, 0), a1 + Vector3.new(0, 0.1, 0), { Width = 0.05, Color = ICE, Grow = 0.06, Keep = true, Bits = 2 }))
+		ctx.Vfx.Flash(finish, { Color = ICE, Size = 7, Life = 0.2, Brightness = 5 })
+	end)
+end
+
+-- 1타: 검기가 대상 열의 적들을 세로로 벤다
+function Fx.WaveHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
-	cuts(ctx, p, 3, 2.2)
-	ctx.Vfx.Sparks(p, { Color = WHITE, Count = 10, Speed = 20 })
+	Common.Arc(ctx, p, 0, 70, -70, { Radius = 2.4, Width = 0.5, Color = AZURE, Core = WHITE, Sweep = 0.03, Life = 0.2 })
+	ctx.Vfx.Sparks(p, { Color = WHITE, Count = 10, Speed = 18 })
+end
+
+-- 2타(칼을 꽂는 순간): 검기를 따라간 선과 열을 가로지르는 선에 번개처럼 빛이 달리고 터진다
+-- (대상이 여럿이어도 선은 첫 대상 때 한 번 — 목록을 비워 둔다. 사건 표는 쓸 때마다 같은 표라 그것으로 가리면 두 번째 사용부터 안 터진다)
+function Fx.LineStrike(ctx: any, _ev: any, at: Vector3?)
+	local s = st(ctx)
+	local lines = s.waveLines or {}
+	s.waveLines = {}
+	for _, m in lines do
+		if m.From then
+			ctx.Vfx.Lightning(m.From, m.To, { Color = ICE })
+		end
+		m.Burst()
+	end
+	local p = at or ctx.Target
+	cuts(ctx, p, 2, 2.4)
+	ctx.Vfx.Sparks(p, { Color = ICE, Count = 10, Speed = 20 })
 end
 
 --=== 발도술의 절정 ===--
@@ -392,92 +440,7 @@ function Fx.SmallCuts(ctx: any)
 	end
 end
 
---=== 공간의 이해(2026-10-26 다시 — 연속 블링크로 줄 끝까지 → 꽂음 → 격자 검흔이 필드 전체를 벤다) ===--
-
--- 카메라: 블링크하는 동안 등 뒤 오른쪽 위에서 시전자를 따라간다(적 쪽 방향 기준, 지금 화면에서 부드럽게 넘어온다).
--- 꽂을 때 놓아(CamFree) 전투 카메라로 돌아와 필드 전체의 격자를 보인다
-local function follow(ctx: any, back: number, right: number, up: number, ahead: number)
-	local s = st(ctx)
-	local actor = ctx.Actor
-	local f = flat(actor.Home.LookVector)
-	local r = f:Cross(Vector3.yAxis)
-	local cam = workspace.CurrentCamera
-	local at: Vector3 = s.camAt or (if cam then cam.CFrame.Position else actor.Pos.Position - f * back)
-	local look: Vector3 = s.camLook or (actor.Pos.Position + f * ahead)
-	local last = 0
-	ctx.Shot(10, function(_, t)
-		local dt = math.max(0, t - last)
-		last = t
-		local p = actor.Pos.Position
-		local k = 1 - math.exp(-dt * 7)
-		at = at:Lerp(p - f * back + r * right + Vector3.yAxis * up, k)
-		look = look:Lerp(p + f * ahead + Vector3.yAxis * 0.6, k)
-		s.camAt, s.camLook = at, look
-		return CFrame.lookAt(at, look)
-	end)
-end
-
-function Fx.CamFollow(ctx: any)
-	local s = st(ctx)
-	s.camAt, s.camLook = nil, nil
-	follow(ctx, 7.5, 4.5, 5.2, 5)
-end
-
-function Fx.CamFree(ctx: any)
-	local s = st(ctx)
-	s.camAt, s.camLook = nil, nil
-	ctx.Shot()
-end
-
---[[
-	자세에 맞는 검로(2026-10-28 사용자: "블링크하면서 나오는 모션에 맞게 검로를" → "초승달 말고 오래 남는 직선으로").
-	지금 칼(W)이 멈춘 자세로 베어 들어온 휘두름의 **시작 칼끝 → 끝 칼끝** 방향으로, 그 가운데를 지나 공간을 가르는 긴 곧은 선 하나.
-	칼 무기 축은 날 길이 = +Y, 날이 향하는 쪽 = -Z(LookVector), 칼등 = +Z — 칼은 칼등 쪽 sweep° 에서 지금 칼 방향으로 왔다.
-	선은 마지막(격자가 터질 때)까지 남는다.
-]]
-local CUT_LENGTH = 13
-local function poseCut(ctx: any, sweep: number)
-	local piece = ctx.Weapons and ctx.Weapons.Pieces and ctx.Weapons.Pieces.W
-	local grip = piece and piece.PrimaryPart
-	local tip = ctx.Tip("W")
-	if not grip or not tip then
-		return
-	end
-	local g = grip.CFrame
-	local blade, spine = g.UpVector, -g.LookVector
-	local radius = (tip - g.Position).Magnitude
-	local a = math.rad(sweep)
-	local p0 = g.Position + (blade * math.cos(a) + spine * math.sin(a)) * radius
-	local p1 = g.Position + blade * radius
-	local dir = (p1 - p0).Unit
-	local mid = p0:Lerp(p1, 0.5)
-	local s = st(ctx)
-	s.marks = s.marks or {}
-	-- 한순간 굵게 번쩍이며 그어지고(지나가는 칼빛), 가는 선이 남는다
-	-- 애니의 베임처럼 아주 가늘게(전시장 확인: 굵으면 빛 기둥처럼 보였다)
-	stroke(mid - dir * (CUT_LENGTH * 0.6), mid + dir * (CUT_LENGTH * 0.6), { Width = 0.22, Color = AZURE, Grow = 0.04, Life = 0.12 })
-	table.insert(s.marks, stroke(mid - dir * (CUT_LENGTH / 2), mid + dir * (CUT_LENGTH / 2), { Width = 0.05, Color = ICE, Grow = 0.05, Keep = true, Bits = 3 }))
-	ctx.Vfx.Flash(mid, { Color = WHITE, Size = 3.5, Life = 0.15, Brightness = 5 })
-end
-
--- 블링크: 선 자리에 그 순간 자세(ev.p)의 잔상을 남기고 사라져 몇 칸 앞에 나타난다 — 나타난 자세대로 벤 방향의 긴 곧은 검로(ev.sweep°)가 남는다
-function Fx.Blink(ctx: any, ev: any)
-	local from = ctx.Root
-	local g = Common.Ghost(ctx, pose((ev and ev.p) or "OUT"), from, { Transparency = 0.5, FadeIn = 0.01 })
-	if g then
-		task.delay(0.12, function()
-			g.Vanish(0.3)
-		end)
-	end
-	ctx.Vfx.Flash(from.Position, { Color = ICE, Size = 4, Life = 0.15, Brightness = 4 })
-	task.delay(0.05, function()
-		local to = ctx.Actor.Pos.Position
-		local lift = Vector3.new(0, 0.3, 0)
-		stroke(from.Position + lift, to + lift, { Width = 0.06, Color = ICE, Grow = 0.03, Life = 0.25 })
-		ctx.Vfx.Flash(to, { Color = WHITE, Size = 4, Life = 0.15, Brightness = 5 })
-		poseCut(ctx, (ev and ev.sweep) or 150)
-	end)
-end
+--=== 공간의 이해(2026-10-30 다시 — 컷신: 발 디딤 → 달리기 준비 → 보이지 않게 블링크 17번 → 제자리에서 납도 → 검흔 17개가 하나씩 터짐) ===--
 
 --[[
 	필드 상자(전투 공간의 앞 u · 옆 v · 높이 y). 적 진영 칸(ctx.EnemyTiles — 전투 화면이 넘겨준다)의 가운데들에서 u·v 범위를 잡고
@@ -513,38 +476,8 @@ local function fieldBox(ctx: any): any
 	return { Base = base, F = f, R = r, U0 = u0 - m, U1 = u1 + m, V0 = v0 - m, V1 = v1 + m, Y0 = 0.15, Y1 = 5 }
 end
 
-local function boxLocal(box: any, p: Vector3): Vector3
-	local d = p - box.Base
-	return Vector3.new(d:Dot(box.F), d:Dot(box.R), p.Y - box.Base.Y)
-end
-
 local function boxWorld(box: any, l: Vector3): Vector3
 	return box.Base + box.F * l.X + box.R * l.Y + Vector3.new(0, l.Z, 0)
-end
-
--- 점 p 를 지나 방향 d 인 끝없는 선을 필드 상자 안으로 자른 두 끝(상자를 지나지 않으면 nil)
-local function clip(box: any, p: Vector3, d: Vector3): (Vector3?, Vector3?)
-	local lp = boxLocal(box, p)
-	local ld = Vector3.new(d:Dot(box.F), d:Dot(box.R), d.Y)
-	local t0, t1 = -math.huge, math.huge
-	local lo = { box.U0, box.V0, box.Y0 }
-	local hi = { box.U1, box.V1, box.Y1 }
-	local pp = { lp.X, lp.Y, lp.Z }
-	local dd = { ld.X, ld.Y, ld.Z }
-	for i = 1, 3 do
-		if math.abs(dd[i]) < 1e-6 then
-			if pp[i] < lo[i] or pp[i] > hi[i] then
-				return nil, nil
-			end
-		else
-			local a, b = (lo[i] - pp[i]) / dd[i], (hi[i] - pp[i]) / dd[i]
-			t0, t1 = math.max(t0, math.min(a, b)), math.min(t1, math.max(a, b))
-		end
-	end
-	if t1 - t0 < 0.5 then
-		return nil, nil
-	end
-	return p + d * t0, p + d * t1
 end
 
 --[[
@@ -571,12 +504,205 @@ local function grading(ctx: any): ColorCorrectionEffect?
 	return s.cc
 end
 
--- 딸깍: 칼을 꽂는 소리와 함께 세상이 멎는다(빛이 빠지고 차가운 빛)
+local function sineInOut(x: number): number
+	return -(math.cos(math.pi * x) - 1) / 2
+end
+
+-- 들머리: 내딛는 오른발을 무릎 높이에서 내려다보며 확대(조금씩 다가간다 — 발과 발밑 땅이 화면 가운데)
+function Fx.CamFoot(ctx: any)
+	local s = st(ctx)
+	local home = ctx.Actor.Home
+	local g = ctx.Ground - home.Y
+	local look = home * Vector3.new(0.5, g + 0.25, -0.8)
+	local a0, a1 = home * Vector3.new(2.7, g + 1.6, -3.7), home * Vector3.new(2.1, g + 1.25, -2.9)
+	ctx.Shot(0.5, function(u)
+		local cf = CFrame.lookAt(a0:Lerp(a1, 1 - (1 - u) ^ 2), look)
+		s.cam = cf
+		return cf
+	end)
+end
+
+-- 달리기 준비: 시전자의 오른쪽 등 뒤(어깨 너머로 적 진영을 본다). 발치에서 부드럽게 넘어온다
+function Fx.CamShoulder(ctx: any)
+	local s = st(ctx)
+	local home = ctx.Actor.Home
+	local from: CFrame = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or home
+	local goal = CFrame.lookAt(home * Vector3.new(3.1, 1.9, 6.6), home * Vector3.new(-0.6, 0, -12))
+	ctx.Shot(0.3, function(u)
+		local cf = from:Lerp(goal, sineInOut(u))
+		s.cam = cf
+		return cf
+	end)
+end
+
+--[[
+	블링크 동안: 오른쪽 위로 천천히 올라 적 진영(필드 상자 — 잔상이 흩어지는 곳)을 비추고(RISE 초) → 진영 가운데를 점점 빠르게 돌며 넓어지다 →
+	ev.d 초(시전자가 제자리에 나타나는 순간)에 **전투 카메라 자리에 딱** 멈춘다(그 구도가 시전자와 진영을 다 담고, CamFree 때 흔들림이 없다).
+	각 φ 는 진영 가운데에서 본 수평 방향(월드 x·z). 오른쪽에서 한 바퀴 넘게 돌아 전투 카메라의 각에서 끝난다(가까운 돌기 방향으로).
+]]
+function Fx.CamOrbit(ctx: any, ev: any)
+	local s = st(ctx)
+	local total = (ev and ev.d) or 2.4
+	local RISE = 0.75
+	local box = fieldBox(ctx)
+	local center = boxWorld(box, Vector3.new((box.U0 + box.U1) / 2, (box.V0 + box.V1) / 2, 1))
+	local r0 = math.max(box.U1 - box.U0, box.V1 - box.V0) / 2 + 4
+	local h0 = 10
+	local base: CFrame = ctx.CameraBase or CFrame.lookAt(center + box.R * (r0 + 8) + Vector3.new(0, 16, 0), center)
+	local off = base.Position - center
+	local r1, h1 = math.max(8, Vector3.new(off.X, 0, off.Z).Magnitude), off.Y
+	local phiEnd = math.atan2(off.Z, off.X)
+	local right = box.R - box.F * 0.35
+	local phi0 = math.atan2(right.Z, right.X)
+	-- 돌 각: 한 바퀴 + 오른쪽 → 전투 카메라 각(두 방향 중 덜 도는 쪽)
+	local gap = (phiEnd - phi0) % (2 * math.pi)
+	local dir = if gap <= math.pi then 1 else -1
+	local sweep = 2 * math.pi + (if dir == 1 then gap else 2 * math.pi - gap)
+	local tb = math.max(0.1, total - RISE)
+	local w0 = math.rad(30) -- 처음 빠르기(나머지는 가속)
+	local acc = 2 * (sweep - w0 * tb) / (tb * tb)
+	local function at(a: number, k: number): Vector3
+		local rad = r0 + (r1 - r0) * k * k
+		return center + Vector3.new(math.cos(a) * rad, h0 + (h1 - h0) * k * k, math.sin(a) * rad)
+	end
+	local from: CFrame = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.lookAt(at(phi0, 0), center)
+	local look0 = from.Position + from.LookVector * 10
+	ctx.Shot(total, function(_, t)
+		local tt = math.min(t, total)
+		local cf
+		if tt < RISE then
+			local k = sineInOut(tt / RISE)
+			cf = CFrame.lookAt(from.Position:Lerp(at(phi0, 0), k), look0:Lerp(center, k))
+		else
+			local tau = tt - RISE
+			local swept = math.min(sweep, w0 * tau + 0.5 * acc * tau * tau)
+			local k = swept / sweep
+			local pos = at(phi0 + dir * swept, k)
+			-- 끝 20% 동안 바라보는 방향을 전투 카메라의 방향으로 맞춘다(끝에서 자리·방향이 전투 카메라와 같다)
+			local w = sineInOut(math.clamp((k - 0.8) / 0.2, 0, 1))
+			cf = CFrame.new(pos) * CFrame.lookAt(pos, center).Rotation:Lerp(base.Rotation, w)
+		end
+		s.cam = cf
+		return cf
+	end)
+end
+
+function Fx.CamFree(ctx: any)
+	local s = st(ctx)
+	s.cam = nil
+	ctx.Shot()
+end
+
+-- 발을 내딛는 순간 발치에 먼지·고리
+function Fx.StepDust(ctx: any)
+	local feet = Common.Feet(ctx)
+	Common.Land(ctx.Vfx, feet, 0.45)
+	ctx.Vfx.Ring(CFrame.new(feet + Vector3.new(0, 0.1, 0)), { R0 = 0.3, R1 = 2.2, Color = ICE, Life = 0.35, Width = 0.08, Height = 0.03 })
+end
+
+-- 시전자 몸(무기까지)을 내 화면에서만 숨긴다/보인다(LocalTransparencyModifier — 원래 투명도는 건드리지 않는다)
+local function setHidden(model: Instance, hidden: boolean)
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") or d:IsA("Decal") then
+			d.LocalTransparencyModifier = if hidden then 1 else 0
+		elseif d:IsA("Humanoid") then
+			d.DisplayDistanceType = if hidden then Enum.HumanoidDisplayDistanceType.None else Enum.HumanoidDisplayDistanceType.Viewer
+		end
+	end
+end
+
+-- 박차는 순간 사라진다(블링크 동안 보이지 않는다). 안전장치: 모션이 끊기면 다시 보인다
+function Fx.Disappear(ctx: any)
+	local s = st(ctx)
+	local actor = ctx.Actor
+	s.hidden = true
+	s.phantoms = {}
+	s.markEv = nil
+	ctx.Vfx.Flash(ctx.Root.Position, { Color = WHITE, Size = 6, Life = 0.18, Brightness = 6 })
+	ctx.Vfx.Dust(Common.Feet(ctx), { Color = ICE, Count = 12 })
+	stroke(ctx.Root.Position, ctx.Root.Position + ctx.Forward * 9, { Width = 0.06, Color = ICE, Grow = 0.05, Life = 0.25 })
+	setHidden(actor.Model, true)
+	task.spawn(function()
+		repeat
+			task.wait(0.25)
+		until not s.hidden or not actor.Model.Parent or not actor.Animator:IsBusy()
+		if s.hidden then
+			s.hidden = false
+			setHidden(actor.Model, false)
+		end
+	end)
+end
+
+--[[
+	잔상 자세마다 그 베기가 지나간 곧은 검로(시작 → 끝, 몸 공간 — 오른쪽 x · 위 y · 앞 −z, 뿌리 기준. 땅은 y −3).
+	베고 난 끝 자세만 쓴다 — 2026-10-30 사용자: "매 동작은 항상 베는 동작이어야 해. 검을 들고서 있는 동작은 없애"(OUT·ZAN 뺌),
+	"검로들은 다 직선으로".
+]]
+local PHANTOM_CUTS = {
+	DRAWCUT = { Vector3.new(-4, 0.5, -2.5), Vector3.new(4.5, 0.3, -1.5) }, -- 뽑으며 수평으로 오른쪽까지
+	SWEEP = { Vector3.new(4.5, 0.2, -2), Vector3.new(-4.5, 0.4, -2.5) }, -- 오른쪽 → 왼쪽 크게
+	CUTDOWN = { Vector3.new(0.3, 4.5, -2.5), Vector3.new(0.2, -2.8, -3.2) }, -- 위 → 앞 아래
+	KESA = { Vector3.new(3, 4, -2), Vector3.new(-3, -2.8, -2.8) }, -- 오른 어깨 위 → 왼 아래
+	RISE = { Vector3.new(-2.5, -2.6, -2.5), Vector3.new(3, 4.5, -1.5) }, -- 왼 아래 → 오른 위
+	SLASHR = { Vector3.new(-4.5, 0.8, -2.5), Vector3.new(4.5, -0.3, -2) }, -- 오른쪽 아래로 조금 기운 가로베기
+	SKYRISE = { Vector3.new(-2, -2, -2), Vector3.new(2.5, 5.5, -1.5) }, -- 뛰어올라 오른 위로
+	SIDEKESA = { Vector3.new(3.5, 2.5, -1), Vector3.new(-3, -2.8, -2.5) }, -- 틀어 낮게 왼 아래로
+	BACKSWEEP = { Vector3.new(-4, 0.5, -1.5), Vector3.new(4, 0.2, 2.5) }, -- 뒤돌며 휩쓸기
+}
+local PHANTOM_POSES = { "DRAWCUT", "SWEEP", "CUTDOWN", "KESA", "RISE", "SLASHR", "SKYRISE", "SIDEKESA", "BACKSWEEP" }
+
+-- cf(뿌리) 둘레에 name 자세의 곧은 검로 두 끝(조금씩 흔들고 늘인다 — 땅 밑으로는 내려가지 않는다)
+local function cutLine(ctx: any, rng: Random, name: string, cf: CFrame): (Vector3, Vector3)
+	local cut = PHANTOM_CUTS[name]
+	local function jitter(v: Vector3): Vector3
+		return cf * (v + Vector3.new(rng:NextNumber(-0.4, 0.4), rng:NextNumber(-0.4, 0.4), rng:NextNumber(-0.4, 0.4)))
+	end
+	local a, b = jitter(cut[1]), jitter(cut[2])
+	local mid, half = a:Lerp(b, 0.5), (b - a) * (rng:NextNumber(0.9, 1.2) / 2)
+	local floor = ctx.Ground + 0.1
+	a, b = mid - half, mid + half
+	return Vector3.new(a.X, math.max(a.Y, floor), a.Z), Vector3.new(b.X, math.max(b.Y, floor), b.Z)
+end
+
+--[[
+	블링크 한 번: 적 진영 안 무작위 자리에, 무작위로 돈 베기 자세(바로 앞 잔상과는 다른 자세)의 잔상 하나 + 그 베기가 지나간 곧은 검흔 하나.
+	잔상·검흔은 칼을 꽂은 뒤 MarkHit 가 하나씩 터뜨린다.
+]]
+function Fx.Phantom(ctx: any)
+	local s = st(ctx)
+	s.phantoms = s.phantoms or {}
+	local box = fieldBox(ctx)
+	local rng = Random.new()
+	local foot = boxWorld(box, Vector3.new(rng:NextNumber(box.U0 + 1, box.U1 - 1), rng:NextNumber(box.V0 + 1, box.V1 - 1), 0))
+	local at = Vector3.new(foot.X, ctx.Actor.Home.Y, foot.Z)
+	local cf = CFrame.new(at) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+	local name
+	repeat
+		name = PHANTOM_POSES[rng:NextInteger(1, #PHANTOM_POSES)]
+	until name ~= s.lastPhantom
+	s.lastPhantom = name
+	local ghost = Common.Ghost(ctx, pose(name), cf, { Transparency = 0.5, FadeIn = 0.03, Life = 30 })
+	local a, b = cutLine(ctx, rng, name, cf)
+	local mark = stroke(a, b, { Width = 0.05, Color = ICE, Grow = 0.05, Keep = true, Bits = 3 })
+	table.insert(s.phantoms, { Ghost = ghost, Mark = mark, At = a:Lerp(b, 0.5) })
+	ctx.Vfx.Flash(at, { Color = ICE, Size = 4, Life = 0.15, Brightness = 4 })
+end
+
+-- 제자리를 가로로 베며 나타난다(SLASHR 의 곧은 검로가 한 번 번쩍)
+function Fx.Return(ctx: any)
+	local s = st(ctx)
+	s.hidden = false
+	setHidden(ctx.Actor.Model, false)
+	local a, b = cutLine(ctx, Random.new(), "SLASHR", ctx.Actor.Home)
+	stroke(a, b, { Width = 0.07, Color = ICE, Grow = 0.04, Life = 0.35 })
+	ctx.Vfx.Flash(ctx.Root.Position, { Color = WHITE, Size = 6, Life = 0.2, Brightness = 6 })
+	ctx.Vfx.Dust(Common.Feet(ctx), { Color = ICE, Count = 10 })
+end
+
+-- 딸깍: 칼을 꽂는 소리와 함께 세상이 멎는다(빛이 빠지고 차가운 빛 — 사용자가 좋다고 한 흑백)
 function Fx.CutClick(ctx: any)
 	Fx.Click(ctx)
 	ctx.Sound(SOUND.Ching, 0.55, 1.6)
-	local s = st(ctx)
-	s.cuts, s.extended = {}, {}
 	local cc = grading(ctx)
 	if cc then
 		CombatVfx.Timed(0.12, function(a)
@@ -588,182 +714,46 @@ function Fx.CutClick(ctx: any)
 	end
 end
 
--- ① 연장: 블링크 검로 다섯 줄이 양쪽으로 쭉 뻗어 필드를 가로지른다(필드 상자 안까지, 서로 엇갈린다)
-function Fx.CutsExtend(ctx: any)
+-- 17연타 한 번: 남은 잔상·검흔 중 무작위 하나가 번쩍이며 터진다(파바바박 — 대상이 여럿이어도 터지는 검흔은 한 사건에 하나).
+-- 터질 때도 곧게: 같은 줄을 따라 양 끝으로 조금 더 뻗는 흰 획(원호 없음)
+function Fx.MarkHit(ctx: any, ev: any, at: Vector3?)
 	local s = st(ctx)
-	s.cuts = s.cuts or {}
-	s.extended = {}
-	local box = fieldBox(ctx)
-	for i, m in s.marks or {} do
-		if not m.From then
-			continue
-		end
-		local d = (m.To - m.From).Unit
-		local a, b = clip(box, m.From:Lerp(m.To, 0.5), d)
-		if not a or not b then
-			a, b = m.From - d * 12, m.To + d * 12
-		end
-		table.insert(s.extended, { a, b })
-		table.insert(s.cuts, stroke(a, b, { Width = 0.05, Color = ICE, Grow = 0.07, Delay = (i - 1) * 0.04, Keep = true, Bits = 2 }))
-	end
-end
-
--- ② 증식: 뻗은 줄마다 나란한 복제 줄이 물결처럼 바깥으로 퍼져 필드를 덮는다(바깥일수록 가늘게)
-function Fx.CutsEcho(ctx: any)
-	local s = st(ctx)
-	s.cuts = s.cuts or {}
-	local box = fieldBox(ctx)
-	for _, line in s.extended or {} do
-		local a, b = line[1], line[2]
-		local d = (b - a).Unit
-		local side = d:Cross(Vector3.yAxis)
-		side = if side.Magnitude > 0.2 then side.Unit else box.R
-		local mid = a:Lerp(b, 0.5)
-		for k = 1, 6 do
-			for _, sign in { 1, -1 } do
-				local p0, p1 = clip(box, mid + side * (sign * k * 2.4), d)
-				if p0 and p1 then
-					table.insert(s.cuts, stroke(p0, p1, { Width = math.max(0.022, 0.045 - k * 0.004), Color = ICE, Grow = 0.06, Delay = k * 0.035, Keep = true, Bits = 1 }))
-				end
+	if s.markEv ~= ev then
+		s.markEv = ev
+		local list = s.phantoms or {}
+		if #list > 0 then
+			local p = table.remove(list, math.random(#list))
+			p.Mark.Burst()
+			if p.Ghost then
+				p.Ghost.Vanish(0.15)
 			end
+			ctx.Vfx.Flash(p.At, { Color = WHITE, Size = 5, Life = 0.12, Brightness = 6 })
+			local d = (p.Mark.To - p.Mark.From).Unit
+			stroke(p.Mark.From - d, p.Mark.To + d, { Width = 0.1, Color = WHITE, Grow = 0.03, Life = 0.12 })
 		end
+	end
+	if at then
+		ctx.Vfx.Sparks(at, { Color = ICE, Count = 4, Speed = 14 })
 	end
 end
 
--- ③ 채움: 다섯 검로 방향을 따르되 조금씩 비튼 짧은 곧은 선 수십 개가 적진 공간을 순식간에 채운다(저지먼트 컷 엔드 느낌)
-function Fx.CutsFill(ctx: any)
+-- 마지막: 임팩트 프레임(흑백 강한 대비) · 흰 번쩍 · 남은 잔상·검흔 정리 → 색이 돌아온다
+function Fx.FinalBreak(ctx: any)
 	local s = st(ctx)
-	s.cuts = s.cuts or {}
-	local box = fieldBox(ctx)
-	local seeds = {}
-	for _, line in s.extended or {} do
-		table.insert(seeds, (line[2] - line[1]).Unit)
-	end
-	if #seeds == 0 then
-		seeds = { box.F, box.R }
-	end
-	local rng = Random.new()
-	for _ = 1, 36 do
-		local l = Vector3.new(rng:NextNumber(box.U0, box.U1), rng:NextNumber(box.V0, box.V1), rng:NextNumber(0.4, 4))
-		local p = boxWorld(box, l)
-		local axis = seeds[rng:NextInteger(1, #seeds)]
-		local d = (CFrame.fromAxisAngle(Vector3.yAxis, math.rad(rng:NextNumber(-25, 25))) * CFrame.fromAxisAngle(box.R, math.rad(rng:NextNumber(-20, 20)))):VectorToWorldSpace(axis)
-		local half = rng:NextNumber(1.2, 2.6)
-		table.insert(s.cuts, stroke(p - d * half, p + d * half, { Width = rng:NextNumber(0.025, 0.05), Color = if rng:NextNumber() < 0.5 then WHITE else ICE, Grow = 0.03, Delay = rng:NextNumber(0, 0.15), Keep = true, Bits = 1 }))
-	end
-	task.delay(0.12, function()
-		for _ = 1, 6 do
-			twinkle(ctx, boxWorld(box, Vector3.new(rng:NextNumber(box.U0, box.U1), rng:NextNumber(box.V0, box.V1), rng:NextNumber(0.8, 3))), 1.3)
-		end
-	end)
-end
-
--- 화면에 비친 검로를 따라 화면이 금 간다(곁가지 금 몇 개) — 짧게 보였다가 넓어지며 사라진다. 관전 화면은 없음
-local function screenCracks(ctx: any, lines: { { Vector3 } })
-	if ctx.Quiet then
-		return
-	end
-	local camera = workspace.CurrentCamera
-	local player = game:GetService("Players").LocalPlayer
-	local playerGui = player and player:FindFirstChildOfClass("PlayerGui")
-	if not camera or not playerGui then
-		return
-	end
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "AzureBladeCracks"
-	gui.IgnoreGuiInset = true
-	gui.DisplayOrder = 50
-	gui.Parent = playerGui
-	local frames: { Frame } = {}
-	local function crack(a: Vector2, b: Vector2, thick: number)
-		local d = b - a
-		local f = Instance.new("Frame")
-		f.AnchorPoint = Vector2.new(0.5, 0.5)
-		f.Position = UDim2.fromOffset((a.X + b.X) / 2, (a.Y + b.Y) / 2)
-		f.Size = UDim2.fromOffset(d.Magnitude, thick)
-		f.Rotation = math.deg(math.atan2(d.Y, d.X))
-		f.BorderSizePixel = 0
-		f.BackgroundColor3 = WHITE
-		f.Parent = gui
-		table.insert(frames, f)
-	end
-	local rng = Random.new()
-	for _, line in lines do
-		local a, onA = camera:WorldToViewportPoint(line[1])
-		local b, onB = camera:WorldToViewportPoint(line[2])
-		if a.Z > 0 and b.Z > 0 and (onA or onB) then
-			local pa, pb = Vector2.new(a.X, a.Y), Vector2.new(b.X, b.Y)
-			crack(pa, pb, 3)
-			for _ = 1, 3 do
-				local from = pa:Lerp(pb, rng:NextNumber(0.15, 0.85))
-				local dir = (pb - pa).Unit
-				local ang = math.rad(rng:NextNumber(30, 70)) * (if rng:NextNumber() < 0.5 then 1 else -1)
-				local branch = Vector2.new(dir.X * math.cos(ang) - dir.Y * math.sin(ang), dir.X * math.sin(ang) + dir.Y * math.cos(ang))
-				crack(from, from + branch * rng:NextNumber(40, 120), 2)
-			end
+	for _, p in s.phantoms or {} do
+		p.Mark.Burst()
+		if p.Ghost then
+			p.Ghost.Vanish(0.2)
 		end
 	end
-	CombatVfx.Timed(0.32, function(a)
-		for _, f in frames do
-			f.BackgroundTransparency = a ^ 0.7
-			f.Size = UDim2.fromOffset(f.Size.X.Offset, f.Size.Y.Offset + 0.6)
-		end
-	end, function()
-		gui:Destroy()
-	end)
-	task.delay(3, function()
-		if gui.Parent then
-			gui:Destroy()
-		end
-	end)
-end
-
--- ④ 깨짐: 임팩트 프레임(흑백 강한 대비) · 화면이 검로를 따라 금 감 → 흰 번쩍 · 모든 선이 유리 조각처럼 부서져 흩어지고 바닥 충격파 → 색이 돌아온다
-function Fx.SpaceBreak(ctx: any)
-	local s = st(ctx)
-	local rng = Random.new()
+	s.phantoms = {}
 	local field = ctx.EnemyCenter
-	screenCracks(ctx, s.extended or {})
-	local function shards(mark: any, count: number)
-		if not mark.From then
-			return
-		end
-		for _ = 1, count do
-			local p = mark.From:Lerp(mark.To, rng:NextNumber())
-			local bit = CombatVfx.Part(Vector3.new(0.05, rng:NextNumber(0.4, 1.3), rng:NextNumber(0.03, 0.12)), CFrame.new(p) * CFrame.Angles(rng:NextNumber(0, 6.3), rng:NextNumber(0, 6.3), 0), if rng:NextNumber() < 0.5 then WHITE else ICE)
-			local flat2 = Vector3.new(p.X - field.X, 0, p.Z - field.Z)
-			local vel = (if flat2.Magnitude > 0.1 then flat2.Unit else Vector3.xAxis) * rng:NextNumber(4, 14) + Vector3.new(0, rng:NextNumber(6, 16), 0)
-			local spin = CFrame.Angles(rng:NextNumber(-8, 8), rng:NextNumber(-8, 8), rng:NextNumber(-8, 8))
-			local cf = bit.CFrame
-			CombatVfx.Timed(0.7, function(a, dt)
-				vel += Vector3.new(0, -40 * dt, 0)
-				cf = (cf + vel * dt) * CFrame.identity:Lerp(spin, math.min(1, dt))
-				bit.CFrame = cf
-				bit.Transparency = a ^ 1.5
-			end, function()
-				bit:Destroy()
-			end)
-		end
-	end
-	local all = {}
-	for _, m in s.cuts or {} do
-		table.insert(all, m)
-	end
-	for _, m in s.marks or {} do
-		table.insert(all, m)
-	end
-	for i, m in all do
-		shards(m, if i % 2 == 0 then 1 else 2)
-		task.delay(math.min(0.06, i * 0.0008), m.Burst)
-	end
-	s.cuts, s.marks, s.extended = {}, {}, {}
 	ctx.Vfx.Flash(field, { Color = WHITE, Size = 22, Life = 0.4, Brightness = 7 })
 	ctx.Vfx.Shockwave(Vector3.new(field.X, ctx.Ground + 0.1, field.Z), { Color = ICE, Radius = 16, Life = 0.55 })
 	local cc = grading(ctx)
 	if cc then
 		CombatVfx.Timed(0.6, function(a)
 			if a < 0.12 then
-				-- 임팩트 프레임: 흑백 강한 대비
 				cc.Saturation, cc.Contrast, cc.Brightness = -1, 1.4, 0.05
 				cc.TintColor = Color3.new(1, 1, 1)
 			else
@@ -777,12 +767,6 @@ function Fx.SpaceBreak(ctx: any)
 			s.cc = nil
 		end)
 	end
-end
-
-function Fx.BreakHit(ctx: any, _ev: any, at: Vector3?)
-	local p = at or ctx.Target
-	cuts(ctx, p, 2, 2.4)
-	ctx.Vfx.Burst(p, { Count = 8, Colors = { ICE, AZURE, WHITE }, Size = 0.3, Speed = 16, Gravity = 10, Life = 0.6 })
 end
 
 --=== 도발·호흡 ===--

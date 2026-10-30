@@ -394,6 +394,19 @@ keep("BACKSWEEP", "뒤돌아 휩쓸기 — 몸이 거의 반 바퀴 돌아 등�
      variant("SWEEP", (0, -0.5, -0.25, 0, 190, 0)))
 
 
+# 공간의 이해 준비(2026-10-30 사용자: "내딛고 준비자세를 할 땐 달리기 준비자세랑 비슷하게 하면서 오른손으론 검 손잡이를 잡고")
+P = base(Root=(0, -0.72, -0.1, 0, 10, 0), Torso=(-32, 6, 0), Head=(10, -30, 0), RArm=(160, 10, 10), RLeg=(-46, 0, -6), LLeg=(44, 0, 6))
+carried(P)
+e = grip_hilt(P)
+P["LArm"] = point_arm(P, "L", (-0.7, -2.6, -1.7))
+keep("SET", "달리기 준비 — 앞발을 굽히고 뒷발을 뒤로 뻗어 몸을 낮게 숙이고, 오른손은 어깨 너머 칼자루, 왼손은 앞 땅 가까이", P, e)
+
+P = base(Root=(0, -0.5, -0.35, 0, 8, 0), Torso=(-38, 4, 0), Head=(16, -6, 0), RArm=(160, 10, 10), LArm=(-40, 0, -20), RLeg=(60, 0, -6), LLeg=(-50, 0, 6))
+carried(P)
+e = grip_hilt(P)
+keep("RUNOFF", "박차고 나감 — 오른 무릎을 앞으로 끌어올리며 몸을 던진다(이 순간 사라진다), 오른손은 칼자루", P, e)
+
+
 # 자세마다 칼의 상태(azure_gen 이 키 사이 중간 키를 넣을 때 본다)
 #   back  = 칼이 등 검집에 꽂혀 있다(DEPTH 만큼 뽑힘) · carry = 검집째 손에 든다 · drawn = 뽑아 들었다
 #   hilt  = 두 손이 칼자루·검집을 쥐고 뽑는 중(검집이 등에서 떨어져 있다 — DEPTH 만큼 뽑힘)
@@ -406,7 +419,7 @@ for name in ("DRAW1", "DRAW2", "DRAW3"):
     MODE[name] = "hilt"
 DEPTH.update({"THUMB": 0.1, "PEEK": 0.22, "FLICK": 0.22})
 # 오른손이 칼자루를 잡고 있는 꽂힌 자세(검집째 들기·뽑기와 이어질 수 있다)
-ON_HILT = {"THUMB", "CROUCH", "NOTO", "PEEK", "FLICK"}
+ON_HILT = {"THUMB", "CROUCH", "NOTO", "PEEK", "FLICK", "SET", "RUNOFF"}
 
 
 if __name__ == "__main__":

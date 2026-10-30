@@ -18,7 +18,7 @@ POSES, NOTES = A.POSES, A.NOTES
 
 KEYS = ["Root", "Torso", "Head", "RArm", "LArm", "RLeg", "LLeg", "W", "O"]
 ORDER = ["STANCE", "THUMB", "CROUCH", "DRAW1", "DRAW2", "DRAW3", "OUT", "KESA", "RISE", "DRAWCUT", "CUTDOWN", "SWEEP", "ZAN", "CHIBURI", "NOTO",
-         "PEEK", "FLICK", "LIFT", "STRIKE", "BLOCK", "RECOIL", "STEPBACK", "HANG", "LAND", "BOW", "SLASHR", "SKYRISE", "SIDEKESA", "BACKSWEEP"]
+         "PEEK", "FLICK", "LIFT", "STRIKE", "BLOCK", "RECOIL", "STEPBACK", "HANG", "LAND", "BOW", "SLASHR", "SKYRISE", "SIDEKESA", "BACKSWEEP", "FOOTLIFT", "FOOTDOWN", "SET", "RUNOFF", "RAISE"]
 # 이펙트가 쓰는 자세(잔상 — Fx/AzureBlade 의 Ghost)
 GHOST_POSES = ["STANCE", "DRAW1", "DRAW2", "DRAWCUT", "RISE", "CUTDOWN", "KESA", "SWEEP", "OUT", "SLASHR", "NOTO", "ZAN", "SKYRISE", "SIDEKESA", "BACKSWEEP"]
 ARMS = {"RArm", "LArm", "W", "O"}
@@ -194,11 +194,11 @@ head = '''--!strict
 	  · 박자 — "강중약중강, 강약중강약이 없어 부자연스럽다": 센 박(짧고 크게 · expoOut + 멈춤) · 중간 박 · 여린 박(느리고 작게,
 	    sineInOut 으로 버티기)을 섞는다. 키 줄 옆 주석의 [강]/[중]/[약]이 그 박이다.
 	  · 천천히 뽑기 — 오른손은 칼자루를, 왼손은 검집 입을 쥐고 두 팔을 벌려 검집을 등에서 끌어낸다(DRAW1~3).
-	  · 진 발도술 — 천천히 뽑아 왼쪽 아래로 사선베기 → 몹 앞에 다른 베기 자세의 잔상 셋 → 타격마다 하나씩 사라진다.
+	  · 진 발도술(2026-10-30 다시) — 등에서 뽑아 강하게 세로로 내리베어 검기를 날린다(선이 따라감) → 검기가 대상 열 전체를 1타 → 꽂을 때 선이 2타.
 	  · 발도술의 절정 — 반쯤 뽑다 "챙" 멈춤(빛) → 줄 끝에 이미 벤 자세로 나타남(사용자 그림, ZAN) → 지나간 자리의 검로 →
 	    줄 전체를 가르는 칼날이 반짝일 때마다 타격.
-	  · 공간의 이해(2026-10-26 다시) — 뽑아 연속 블링크로 적진을 가로질러(블링크마다 휘두른 방향의 긴 곧은 검로) 줄 끝에서 꽂으면
-	    검로가 필드를 가로질러 뻗고·퍼지고·공간을 채운 뒤 유리처럼 깨지며 필드 전체를 벤다(2026-10-28). 블링크하는 동안 카메라는 등 뒤에서 따라간다.
+	  · 공간의 이해(2026-10-30 다시, 컷신) — 발 확대·내딛기 → 달리기 준비(칼자루) → 사라져 보이지 않게 블링크 17번(무작위 자리·잔상·검흔,
+	    카메라는 오른쪽 위로 올라 적 진영을 점점 빠르게 돈다) → 제자리에 나타나 꽂으면 흑백 → 검흔 17개가 하나씩 터지는 17연타.
 	  · 검집 타격 — 강중약중강: 칼자루를 낚아채고 · 검집째 치켜들고 · 꼭대기에서 머물다 · 내려오며 · 내리꽂는다.
 	칼은 오른팔에 붙어 있어, 등에 꽂힌 자세에서는 키마다 칼을 검집 안에 넣어 두고(azure_poses.place_sword) 칼자루를 잡을 때는
 	오른팔을 칼자루에 정확히 닿게 구한다(grip_hilt). 이펙트는 Fx/AzureBlade, 잔상 자세는 아래 Poses.
@@ -284,16 +284,17 @@ S.append(motion("FocusCut", "집중 베기([집중력]) — 발도술 셋과 같
                  '{ t = 0.59, k = "Dash", to = "Target", n = 2, gap = -2.4, d = 0.04, e = "linear" }', '{ t = 0.65, k = "Fx", n = "SmallCuts" }',
                  '{ t = 0.7, k = "Hit", i = 1, fx = "CutHit" }', '{ t = 0.71, k = "Stop", d = 0.06 }', '{ t = 0.71, k = "Shake", a = 0.25, d = 0.18 }',
                  '{ t = 1.6, k = "Fx", n = "Click" }', '{ t = 1.68, k = "Fx", n = "Slip", p = "NOTO" }', '{ t = 1.68, k = "Dash", to = "Home", d = 0.04, e = "linear" }']))
-S.append(motion("TrueIaido", "진 발도술: 칼자루를 쥐고[중] 천천히 뽑아[약약약] 빠지는 순간[강] 숨을 고르다[약] 왼쪽 아래로 사선베기[강] → 몹 앞에 잔상 셋 → 타격마다 하나씩 사라진다[중중강] → 털고[중] 딸깍[강] 숨[약]", 3.75,
-                [(0, None, "STANCE"), (0.2, "cubicOut", "CROUCH"), (0.6, "sineInOut", "DRAW1"), (0.95, "sineInOut", "DRAW2"), (1.25, "sineIn", "DRAW3"), (1.31, "expoOut", "OUT"),
-                 (1.45, "sineOut", "OUT", {"Root": (0, -0.3, 0.05, 0, -18, 0)}), (1.52, "expoOut", "KESA"), (1.98, "sineOut", "KESA", {"Root": (0, -0.54, -0.27, 0, 16, 0)}),
-                 (2.55, "sineInOut", "KESA", {"Root": (0, -0.52, -0.25, 0, 15, 0)}), (2.8, "cubicInOut", "CHIBURI"), (2.92, "cubicIn", "OUT"), (3.0, "linear", "DRAW3"),
-                 (3.28, "cubicIn", "NOTO"), (3.75, "sineInOut", "STANCE")],
-                ['{ t = 0.2, k = "Fx", n = "Glint" }', '{ t = 0.5, k = "Fx", n = "DrawGlint" }', '{ t = 0.9, k = "Fx", n = "DrawGlint" }', '{ t = 1.28, k = "Fx", n = "Release" }',
-                 '{ t = 1.3, k = "Trail", on = true }', '{ t = 1.48, k = "Fx", n = "KesaArc" }', '{ t = 1.53, k = "Stop", d = 0.05 }', '{ t = 1.53, k = "Shake", a = 0.25, d = 0.2 }',
-                 '{ t = 1.62, k = "Fx", n = "Ghosts", c = 3 }', '{ t = 1.66, k = "Trail", on = false }',
-                 '{ t = 2.05, k = "Hit", i = 1, fx = "GhostCut" }', '{ t = 2.27, k = "Hit", i = 2, fx = "GhostCut" }', '{ t = 2.52, k = "Hit", i = 3, fx = "GhostCut" }',
-                 '{ t = 2.53, k = "Stop", d = 0.08 }', '{ t = 2.54, k = "Shake", a = 0.35, d = 0.3 }', '{ t = 3.28, k = "Fx", n = "Click" }']))
+S.append(motion("TrueIaido", "진 발도술(2026-10-30 다시): 칼자루를 낚아채[강] 등에서 뽑아[약중] 빠짐[강] → 머리 위로 치켜들어[중] 숨[약] → 강하게 세로로 내리베어[강] "
+                "검기를 날린다(선이 따라감) → 검기가 대상 열 전체를 벤다(1타) → 털고[중] 딸깍 꽂는 순간 검기를 따라간 선이 다시 벤다(2타)[강]", 2.6,
+                [(0, None, "STANCE"), (0.14, "expoOut", "CROUCH"), (0.36, "sineInOut", "DRAW1"), (0.56, "sineIn", "DRAW3"), (0.61, "expoOut", "OUT"),
+                 (0.72, "cubicOut", "RAISE"), (0.86, "sineInOut", "RAISE", {"Root": (0, -0.04, 0.14, 0, 2, 0)}), (0.93, "expoOut", "CUTDOWN"),
+                 (1.2, "sineOut", "CUTDOWN", _drift("CUTDOWN")), (1.45, "cubicInOut", "CHIBURI"), (1.57, "cubicIn", "OUT"), (1.65, "linear", "DRAW3"),
+                 (1.92, "cubicIn", "NOTO"), (2.6, "sineInOut", "STANCE")],
+                ['{ t = 0.14, k = "Fx", n = "Glint" }', '{ t = 0.38, k = "Fx", n = "DrawGlint" }', '{ t = 0.59, k = "Fx", n = "Release" }',
+                 '{ t = 0.86, k = "Trail", on = true }', '{ t = 0.92, k = "Fx", n = "WaveLaunch" }', '{ t = 0.94, k = "Stop", d = 0.05 }',
+                 '{ t = 0.94, k = "Shake", a = 0.3, d = 0.2 }', '{ t = 1.05, k = "Trail", on = false }', '{ t = 1.16, k = "Hit", i = 1, fx = "WaveHit" }',
+                 '{ t = 1.92, k = "Fx", n = "Click" }', '{ t = 1.95, k = "Hit", i = 2, fx = "LineStrike" }', '{ t = 1.96, k = "Stop", d = 0.08 }',
+                 '{ t = 1.97, k = "Shake", a = 0.45, d = 0.3 }']))
 S.append(motion("IaidoPeak", "발도술의 절정: 칼자루를 쥐고[중] 천천히 뽑다[약약] 챙! 멈춰 날에 빛[강] · 숨을 멈추고[약] · 사라져 줄 끝에 이미 벤 자세로(ZAN) · 줄 전체를 가르는 칼날이 반짝일 때마다 타격[강중강] → 일어나 털고[중] 딸깍[강] 돌아온다[약]", 3.55,
                 [(0, None, "STANCE"), (0.2, "cubicOut", "CROUCH"), (0.62, "sineInOut", "DRAW1"), (0.9, "sineInOut", "DRAW2"),
                  (0.95, "expoOut", "DRAW2", {"Root": (0, -0.34, 0.04, 0, 31, 0), "Torso": (-6, 10, 0)}), (1.3, "sineInOut", "DRAW2", {"Root": (0, -0.32, 0.02, 0, 30, 0)}),
@@ -303,31 +304,28 @@ S.append(motion("IaidoPeak", "발도술의 절정: 칼자루를 쥐고[중] 천�
                  '{ t = 1.3, k = "Fx", n = "Vanish" }', '{ t = 1.3, k = "Dash", to = "Far", straight = true, past = 3, d = 0.04, e = "linear" }', '{ t = 1.37, k = "Fx", n = "PeakPath" }',
                  '{ t = 1.58, k = "Hit", i = 1, fx = "RowFlash" }', '{ t = 1.75, k = "Hit", i = 2, fx = "RowFlash" }', '{ t = 2.0, k = "Hit", i = 3, fx = "RowFlash" }',
                  '{ t = 2.01, k = "Stop", d = 0.1 }', '{ t = 2.02, k = "Shake", a = 0.5, d = 0.4 }', '{ t = 2.82, k = "Fx", n = "Click" }', '{ t = 2.9, k = "Dash", to = "Home", d = 0.45 }']))
-# 블링크 다섯: 남은 길의 1/5 · 1/4 · 1/3 · 1/2 · 전부 → 같은 걸음으로 줄 끝까지. 간격이 점점 짧아진다(가속).
-# 자세는 앞 자세와 크게 다르게(2026-10-26 사용자): 서서 치켜듦 → 바닥까지 낮은 런지 → 공중 올려베기 → 오른쪽으로 틀어 낮은 사선 →
-# 뒤돌아 휩쓸기 → 앞을 보고 강한 가로베기(줄 끝)
-# 끝의 수 = 나타난 자세로 휘두른 크기(°, Fx Blink — 칼등 쪽에서 지금 칼 방향까지, 그 방향으로 긴 곧은 검로를 긋는다)
-BLINKS = [(0.8, "OUT", "ZAN", 0.2, 120), (1.08, "ZAN", "SKYRISE", 0.25, 160), (1.32, "SKYRISE", "SIDEKESA", 0.333, 150),
-          (1.52, "SIDEKESA", "BACKSWEEP", 0.5, 180), (1.69, "BACKSWEEP", "SLASHR", 1, 160)]
-NEXT = [1.06, 1.3, 1.5, 1.67, 1.98]
-spec = [(0, None, "STANCE"), (0.14, "expoOut", "CROUCH"), (0.36, "sineInOut", "DRAW1"), (0.56, "sineIn", "DRAW3"), (0.61, "expoOut", "OUT"),
-        (0.78, "sineOut", "OUT", _drift("OUT"))]
-events = ['{ t = 0, k = "Fx", n = "CamFollow" }', '{ t = 0.14, k = "Fx", n = "Glint" }', '{ t = 0.38, k = "Fx", n = "DrawGlint" }', '{ t = 0.59, k = "Fx", n = "Release" }']
-for (t, before, after, frac, sweep), hold in zip(BLINKS, NEXT):
-    # 블링크한 한순간 자세가 바뀐다(키 사이 0.03초) — 그 뒤엔 여린 박으로 버틴다
-    spec.append((round(t + 0.03, 3), "linear", after))
-    # 공중 자세는 버티는 동안 조금 떨어진다
-    spec.append((hold, "sineOut", after, _drift(after, dy=-0.25) if after == "SKYRISE" else _drift(after)))
-    events.append('{ t = %s, k = "Fx", n = "Blink", p = "%s", sweep = %d }' % (t, before, sweep))
-    events.append('{ t = %s, k = "Dash", to = "Far", straight = true, frac = %s, past = 2, d = 0.03, e = "linear" }' % (t, frac))
-spec += [(2.18, "cubicInOut", "OUT"), (2.26, "linear", "DRAW3"), (2.62, "sineIn", "DRAW1"), (2.72, "expoIn", "NOTO"), (4.3, "sineInOut", "STANCE")]
-events += ['{ t = 1.73, k = "Stop", d = 0.05 }', '{ t = 1.73, k = "Shake", a = 0.3, d = 0.2 }', '{ t = 2.4, k = "Fx", n = "CamFree" }',
-           '{ t = 2.72, k = "Fx", n = "CutClick" }', '{ t = 2.78, k = "Fx", n = "CutsExtend" }', '{ t = 2.98, k = "Fx", n = "CutsEcho" }',
-           '{ t = 3.12, k = "Fx", n = "CutsFill" }', '{ t = 3.38, k = "Fx", n = "SpaceBreak" }',
-           '{ t = 3.4, k = "Hit", i = 1, fx = "BreakHit" }', '{ t = 3.41, k = "Stop", d = 0.12 }', '{ t = 3.42, k = "Shake", a = 0.7, d = 0.5 }',
-           '{ t = 3.7, k = "Dash", to = "Home", d = 0.5, e = "sineInOut" }']
-S.append(motion("SpaceCut", "공간의 이해([집중력]): 칼자루를 낚아채[강] 뽑아[약중] 빠짐[강] → 블링크마다 높이·몸 방향·칼 방향이 크게 바뀌며 다섯 번으로 적진을 가로질러(간격이 점점 짧아짐) "
-                "줄 끝에서 거의 가로로 멈춰 서고[강] → 천천히 꽂다[중약] 딸깍[강] → 검로가 필드를 가로질러 뻗고 · 퍼지고 · 공간을 채운 뒤 유리처럼 깨지며 필드 전체를 벤다[강] (고정 피해)", 4.4, spec, events))
+# 공간의 이해(2026-10-30 다시 — 컷신): 발을 내딛고(발 확대) 달리기 준비(오른손 칼자루, 카메라 오른쪽 등 뒤) → 박차는 순간 사라진다 →
+# 보이지 않는 채로 블링크 17번(간격이 점점 짧아짐 — 자리·잔상 자세·검흔은 Fx 가 무작위로) — 카메라는 오른쪽 위로 천천히 올라 적 진영을 비추고
+# 점점 빠르게 한 바퀴 돌다 시전자가 제자리에 나타나는 순간 멈춘다 → 베며 나타나 꽂으면 흑백 → 검흔 17개가 하나씩 터지는 17연타
+# 2026-10-30 사용자: "매 동작은 항상 베는 동작 … 검을 들고서 있는 동작은 없애" → 나타나는 자세도 칼을 치켜든 OUT 이 아니라 가로베기 끝(SLASHR)
+PHANTOMS = 17
+VANISH, RETURN = 1.17, 3.58
+blink_times = [round(1.25 + (RETURN - 0.1 - 1.25) * (k / PHANTOMS) ** 0.7, 3) for k in range(1, PHANTOMS + 1)]
+HITS_FROM, HIT_GAP = 4.18, 0.05
+spec = [(0, None, "STANCE"), (0.3, "cubicInOut", "FOOTLIFT"), (0.42, "quadIn", "FOOTDOWN"), (0.75, "cubicOut", "SET"),
+        (1.05, "sineInOut", "SET", _drift("SET", dy=-0.05)), (1.14, "expoOut", "RUNOFF"), (RETURN - 0.03, "linear", "RUNOFF"),
+        (RETURN, "linear", "SLASHR"), (3.72, "sineOut", "SLASHR", _drift("SLASHR")), (3.9, "cubicInOut", "DRAW3"), (4.08, "cubicIn", "NOTO"), (5.7, "sineInOut", "STANCE")]
+events = ['{ t = 0, k = "Fx", n = "CamFoot" }', '{ t = 0.42, k = "Fx", n = "StepDust" }', '{ t = 0.45, k = "Fx", n = "CamShoulder" }',
+          '{ t = 0.8, k = "Fx", n = "Glint" }', '{ t = %s, k = "Fx", n = "Disappear" }' % VANISH,
+          '{ t = %s, k = "Fx", n = "CamOrbit", d = %s }' % (VANISH, round(RETURN - VANISH, 3))]
+events += ['{ t = %s, k = "Fx", n = "Phantom" }' % t for t in blink_times]
+events += ['{ t = %s, k = "Fx", n = "Return" }' % RETURN, '{ t = 4.08, k = "Fx", n = "CutClick" }']
+events += ['{ t = %s, k = "Hit", i = %d, fx = "MarkHit" }' % (round(HITS_FROM + HIT_GAP * (k - 1), 3), k) for k in range(1, PHANTOMS + 1)]
+events += ['{ t = 5.02, k = "Fx", n = "FinalBreak" }', '{ t = 5.03, k = "Stop", d = 0.1 }', '{ t = 5.04, k = "Shake", a = 0.7, d = 0.5 }',
+           '{ t = 5.35, k = "Fx", n = "CamFree" }']
+S.append(motion("SpaceCut", "공간의 이해([집중력]) 컷신: 발을 들어[중] 내딛고(발 확대)[강] 달리기 준비로 칼자루를 쥐고[중] 버티다[약] 박차는 순간 사라진다[강] → "
+                "보이지 않게 블링크 17번(무작위 자리·잔상·검흔, 점점 빨라짐) → 제자리를 가로로 베며 나타나[강] 버티다[약] 꽂으면 흑백 → 검흔 17개가 하나씩 파바바박 터지는 17연타 (고정 피해)",
+                5.8, spec, events))
 S.append(motion("Provoke", "도발 중약강약강약: 엄지로 칼을 한 자 밀어내고 · 턱을 들어 내려다보다 · 왼손 끝을 까딱 · 버티고 · 딸깍 · 숨([집중력])", 1.75,
                 [(0, None, "STANCE"), (0.3, "cubicOut", "PEEK"), (0.72, "sineInOut", "PEEK", {"Head": (18, -20, 6)}), (0.8, "expoOut", "FLICK"),
                  (1.05, "sineOut", "FLICK", {"Head": (14, -24, 2)}), (1.12, "expoIn", "NOTO"), (1.75, "sineInOut", "STANCE")],

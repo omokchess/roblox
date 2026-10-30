@@ -220,6 +220,8 @@ function Common.Ghost(ctx: any, pose: any, cf: CFrame, opts: { [string]: any }?)
 			d.Anchored = d == root
 			d.CanCollide, d.CanQuery, d.CanTouch, d.CastShadow = false, false, false, false
 			d.Massless = true
+			-- 숨긴 시전자(LocalTransparencyModifier)에서 복제해도 잔상은 보이게
+			d.LocalTransparencyModifier = 0
 			if d ~= root then
 				d.Material = Enum.Material.Neon
 				d.Color = color
