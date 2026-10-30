@@ -630,7 +630,7 @@ function CombatDirector:_event(play: any, ev: any)
 				-- 적 진영 가운데(셉텐트리오네스 — 별자리를 적 위에 펼친다)
 				aim = self:_enemyCenter(a)
 			end
-			a.Weapons:SetOrbMode(ev.mode or "Orbit", aim)
+			a.Weapons:SetOrbMode(ev.mode or "Orbit", aim, ev.star)
 		end
 	elseif k == "Hide" then
 		if a.Weapons then

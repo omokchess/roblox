@@ -17,22 +17,30 @@ local K = Kit.K
 local STANCE = { Root = { 0, 0.7, 0, 0, -18, 0 }, Torso = { 6, -8, 0 }, Head = { -10, -26, 4 }, RArm = { 86.1, -0.9, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
 -- 버릇 — 별을 받친 오른손을 눈높이로 들어 올리고 고개를 들어 별을 본다(별이 손을 따라 오르며 차례로 반짝인다)
 local OFFER = { Root = { 0, 0.7, 0, 0, -18, 0 }, Torso = { 10, -10, 0 }, Head = { 8, -24, 2 }, RArm = { 103.7, 2.6, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
--- 가리키기 전 — 오른손을 귀 옆으로 끌어올려 겨눔을 모은다
-local READY = { Root = { 0, 0.7, 0, 0, -26, 0 }, Torso = { 6, -4, 0 }, Head = { 4, 22, 0 }, RArm = { 150, 18, 40 }, LArm = { 40, -20, -20 }, RLeg = { -3, 0, -3 }, LLeg = { 5, 0, 4 } }
--- 메그레즈: 팔을 쭉 뻗어 적을 가리킨다(팔 축이 적 가슴 쪽), 왼팔은 뒤로 흘려 균형
-local POINT = { Root = { 0, 0.65, 0, 0, -30, 0 }, Torso = { -2, -8, 0 }, Head = { 0, 26, 0 }, RArm = { 91.2, 45.1, 0 }, LArm = { -12, 0, -26 }, RLeg = { -10, 0, -4 }, LLeg = { 12, 0, 4 } }
--- 메라크 1 — 오른팔을 머리 뒤로 높이 젖혀 별을 집어 든다
-local FLING_UP = { Root = { 0, 0.75, 0, 0, -22, 0 }, Torso = { 12, 6, 0 }, Head = { 18, 14, 0 }, RArm = { 168, 0, 26 }, LArm = { 60, -10, -24 }, RLeg = { 4, 0, -3 }, LLeg = { -6, 0, 4 } }
--- 메라크 2 — 내딛으며 별을 적의 줄 끝까지 던지듯 팔을 앞 아래로 뿌린다
-local FLING_DOWN = { Root = { 0, 0.5, -0.2, 0, -30, 0 }, Torso = { -12, -10, 0 }, Head = { -6, 26, 0 }, RArm = { 87.6, 48, 0 }, LArm = { -20, 0, -30 }, RLeg = { -28, 0, -4 }, LLeg = { 22, 0, 4 } }
--- 알리오스 1 — 두 팔을 하늘로 V 자로 들어 별빛을 부른다
-local RAISE = { Root = { 0, 0.78, 0, 0, -18, 0 }, Torso = { 12, 0, 0 }, Head = { 26, 8, 0 }, RArm = { 166, 0, 24 }, LArm = { 166, 0, -24 }, RLeg = { -2, 0, -4 }, LLeg = { 2, 0, 4 } }
--- 알리오스 2 — 두 팔을 적 진영 위로 내리 뻗어 별비를 쏟는다
-local CAST = { Root = { 0, 0.58, -0.1, 0, -22, 0 }, Torso = { -8, -4, 0 }, Head = { -4, 20, 0 }, RArm = { 96, 26, 22 }, LArm = { 96, -26, -22 }, RLeg = { -16, 0, -4 }, LLeg = { 14, 0, 4 } }
--- 셉텐트리오네스 1 — 두 팔을 활짝 펴고 발끝으로 떠오르듯 선다(별 일곱이 적 위로 날아간다)
-local OPEN = { Root = { 0, 0.88, 0, 0, -18, 0 }, Torso = { 14, 0, 0 }, Head = { 22, 10, 0 }, RArm = { 112, -40, 72 }, LArm = { 112, 40, -72 }, RLeg = { -6, 0, -6 }, LLeg = { -2, 0, 6 } }
--- 셉텐트리오네스 2 — 두 손을 앞으로 모아 움켜쥔다(별자리가 한 점으로 무너진다)
-local CLOSE = { Root = { 0, 0.62, -0.1, 0, -24, 0 }, Torso = { -10, -6, 0 }, Head = { -2, 22, 0 }, RArm = { 92, 24, 4 }, LArm = { 92, -24, -4 }, RLeg = { -18, 0, -4 }, LLeg = { 16, 0, 4 } }
+-- 메그레즈 1 — 꺼낸 별을 손끝에 띄운 채 오른팔을 몸 앞으로 감아 왼쪽으로 가져간다(몸도 왼쪽으로 틂)
+local MEG_L = { Root = { 0, 0.7, 0, 0, -6, 0 }, Torso = { 4, 26, 0 }, Head = { 2, 16, 0 }, RArm = { 93.4, 52.7, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 메그레즈 2 — 오른쪽으로 확 뿌려 별을 대상 열로 날린다(팔이 앞 오른쪽으로 쭉, 고개는 적 쪽)
+local MEG_R = { Root = { 0, 0.7, -0.1, 0, -24, 0 }, Torso = { 0, -14, 0 }, Head = { -2, 18, 0 }, RArm = { 94.1, 2.8, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 메라크 1 — 꺼낸 별을 왼쪽 아래로 끌어내린다(오른손이 왼 무릎 앞, 몸을 왼쪽으로 숙여 튼다)
+local MER_LOW = { Root = { 0, 0.7, 0, 0, -18, 0 }, Torso = { -8, 20, 0 }, Head = { -12, 18, 0 }, RArm = { 62.7, 69.8, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 메라크 2 — 팔을 오른쪽 위로 휘둘러 별을 내 행으로 돌진시킨다(몸을 펴 젖히고 오른쪽으로 튼다)
+local MER_UP = { Root = { 0, 0.76, 0, 0, -24, 0 }, Torso = { 10, -14, 0 }, Head = { 12, 4, 0 }, RArm = { 116, 5.2, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 알리오스 0 — 꺼낸 별을 손끝에 띄워 적 진영 쪽으로 들어 올린다
+local AL_READY = { Root = { 0, 0.7, 0, 0, -18, 0 }, Torso = { 4, -6, 0 }, Head = { 0, 16, 0 }, RArm = { 104.8, 4.9, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 알리오스 손짓 A — 왼 위로 크게 그어 올린다
+local AL_A = { Root = { 0, 0.7, 0, 0, -18, 0 }, Torso = { 6, 16, 0 }, Head = { 10, 18, 0 }, RArm = { 123.6, 50, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 알리오스 손짓 B — 오른 아래로 내리긋는다
+local AL_B = { Root = { 0, 0.7, 0, 0, -18, 0 }, Torso = { -6, -14, 0 }, Head = { -8, 10, 0 }, RArm = { 68.1, -3.8, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 알리오스 손짓 C — 앞 위로 찌르듯 뻗는다
+local AL_C = { Root = { 0, 0.7, 0, 0, -18, 0 }, Torso = { 6, 0, 0 }, Head = { 8, 16, 0 }, RArm = { 112, 26.2, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 알리오스 손짓 D — 오른쪽으로 가로 휘두른다
+local AL_D = { Root = { 0, 0.7, 0, 0, -18, 0 }, Torso = { 2, -16, 0 }, Head = { 0, 8, 0 }, RArm = { 94, -23.2, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 셉텐트리오네스 1 — 오른손을 왼 허리로 끌어 모은다(별자리가 손을 따라 허리춤으로, 몸을 왼쪽으로 숙여 튼다)
+local SEPT_LOW = { Root = { 0, 0.7, 0, 0, -18, 0 }, Torso = { -6, 22, 0 }, Head = { -14, 14, 0 }, RArm = { 62.6, 86.4, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 셉텐트리오네스 2 — 오른팔을 하늘 높이 치켜든다(별 일곱이 하늘로 — 몸을 젖히고 올려다본다)
+local SEPT_UP = { Root = { 0, 0.8, 0, 0, -18, 0 }, Torso = { 12, -4, 0 }, Head = { 30, 4, 0 }, RArm = { 133.3, 16, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
+-- 셉텐트리오네스 3 — 치켜든 팔을 적 진영으로 내리친다(별자리가 진형을 강타)
+local SEPT_DOWN = { Root = { 0, 0.62, -0.1, 0, -22, 0 }, Torso = { -10, -8, 0 }, Head = { -10, 14, 0 }, RArm = { 77.2, 15.2, 0 }, LArm = { -14, 0, -22 }, RLeg = { -6, 0, 3 }, LLeg = { 10, 0, 6 } }
 -- 방어 — 왼손바닥을 앞으로 내밀어 별 셋을 방패로, 오른손은 뒤로 감싼다
 local SHIELD = { Root = { 0, 0.64, 0.25, 0, -14, 0 }, Torso = { -4, 4, 0 }, Head = { -2, 14, 0 }, RArm = { 30, 20, 30 }, LArm = { 86, -14, 0 }, RLeg = { -8, 0, -3 }, LLeg = { 10, 0, 3 } }
 -- 피격 — 가슴을 맞아 상체가 뒤로 젖혀지고 두 팔이 흩어진다
@@ -85,7 +93,7 @@ return {
 		Smooth = true,
 		Keys = {
 			K(0, nil, DANGLE),
-			K(1.5, nil, DANGLE, { Root = { 0, 0.14, 0, -4, -14, -2 }, Head = { 20, 16, 0 } }),
+			K(1.5, nil, DANGLE, { Root = { 0, 0.84, 0, -4, -14, -2 }, Head = { 20, 16, 0 } }),
 		},
 		Events = {
 			{ t = 0, k = "Orbs", mode = "Crown" },
@@ -115,7 +123,7 @@ return {
 		Keys = {
 			K(0, nil, STANCE),
 			K(0.06, "expoOut", RECOIL),
-			K(0.3, "sineOut", RECOIL, { Root = { 0, -0.05, 0.5, 0, -18, 0 }, Torso = { 12, 4, 0 } }),
+			K(0.3, "sineOut", RECOIL, { Root = { 0, 0.65, 0.5, 0, -18, 0 }, Torso = { 12, 4, 0 } }),
 			K(0.75, "sineInOut", STANCE),
 		},
 		Events = {
@@ -131,7 +139,7 @@ return {
 		Keys = {
 			K(0, nil, STANCE),
 			K(0.08, "expoOut", SHIELD),
-			K(0.24, "sineOut", SHIELD, { Root = { 0, -0.08, 0.35, 0, -14, 0 } }),
+			K(0.24, "sineOut", SHIELD, { Root = { 0, 0.62, 0.35, 0, -14, 0 } }),
 			K(0.8, "sineInOut", STANCE),
 		},
 		Events = {
@@ -148,7 +156,7 @@ return {
 		Keys = {
 			K(0, nil, STANCE),
 			K(0.1, "expoOut", SIDESTEP),
-			K(0.42, "sineOut", SIDESTEP, { Root = { -1.8, -0.2, 0.2, 0, -18, 4 } }),
+			K(0.42, "sineOut", SIDESTEP, { Root = { -1.8, 0.5, 0.2, 0, -18, 4 } }),
 			K(0.75, "sineInOut", STANCE),
 		},
 		Events = {
@@ -157,83 +165,155 @@ return {
 	},
 
 	Skills = {
-		-- 메그레즈: 오른손을 귀 옆으로 끌어올렸다가 쭉 뻗어 적을 가리키면 — 메그레즈가 빛줄기를 쏘아 그 열을 위아래로 훑는다
+		-- 메그레즈: 손 위 별무리에서 메그레즈를 꺼내(나머지는 허리춤으로)[약] 팔을 왼쪽으로 가져갔다가[중] 오른쪽으로 확 뿌리면[강] 별이 대상 열로 날아가 열을 가로질러 훑고 손끝으로 돌아온다
 		Megrez = {
-			Duration = 1.5,
+			Duration = 1.95,
 			Keys = {
 				K(0, nil, STANCE),
-				K(0.28, "cubicOut", READY),
-				K(0.5, "expoOut", POINT),
-				K(0.95, "sineOut", POINT, { Root = { 0, -0.08, 0.1, 0, -30, 0 } }),
-				K(1.5, "cubicInOut", STANCE),
+				K(0.4, "cubicInOut", MEG_L),
+				K(0.52, "sineInOut", MEG_L, { Head = { 0, 20, 0 } }),
+				K(0.62, "expoOut", MEG_R),
+				K(1.0, "sineOut", MEG_R, { Root = { 0, 0.66, -0.14, 0, -26, 0 } }),
+				K(1.85, "cubicInOut", STANCE),
 			},
 			Events = {
-				{ t = 0.3, k = "Fx", n = "MegrezCharge" },
-				{ t = 0.52, k = "Fx", n = "MegrezBeam" },
-				{ t = 0.62, k = "Hit", i = 1, fx = "StarHit" },
-				{ t = 0.63, k = "Stop", d = 0.06 },
-				{ t = 0.64, k = "Shake", a = 0.25, d = 0.25 },
+				{ t = 0.08, k = "Orbs", mode = "Pick", star = 1 },
+				{ t = 0.1, k = "Fx", n = "TeleGrab", star = 1 },
+				{ t = 0.6, k = "Fx", n = "MegrezFling" },
+				{ t = 0.78, k = "Hit", i = 1, fx = "StarHit" },
+				{ t = 0.79, k = "Stop", d = 0.05 },
+				{ t = 0.8, k = "Shake", a = 0.3, d = 0.25 },
+				{ t = 1.45, k = "Orbs", mode = "Orbit" },
 			},
 		},
 
-		-- 메라크: 팔을 머리 뒤로 젖혀 별을 집어 들고 — 내딛으며 적의 줄 끝까지 뿌리면 메라크가 그 줄을 꿰뚫고 달린다
+		-- 메라크: 메라크를 꺼내[약] 왼쪽 아래로 끌어내렸다가[중] 팔을 오른쪽 위로 휘두르면[강] 별이 내 행을 꿰뚫고 달리며 흰 선을 남기고(1타), 그 선이 네 번 부분부분 터지고 다섯 번째에 통째로 터진다(10 · 2 · 2 · 2 · 2 · 4)
 		Merak = {
-			Duration = 1.6,
+			Duration = 2.4,
 			Keys = {
 				K(0, nil, STANCE),
-				K(0.32, "cubicOut", FLING_UP),
-				K(0.52, "expoOut", FLING_DOWN),
-				K(1.0, "sineOut", FLING_DOWN, { Root = { 0, -0.15, -0.1, 0, -30, 0 } }),
-				K(1.6, "cubicInOut", STANCE),
+				K(0.42, "cubicInOut", MER_LOW),
+				K(0.6, "sineInOut", MER_LOW, { Head = { -14, 22, 0 } }),
+				K(0.72, "expoOut", MER_UP),
+				K(1.3, "sineOut", MER_UP, { Root = { 0, 0.8, 0, 0, -26, 0 } }),
+				K(2.3, "cubicInOut", STANCE),
 			},
 			Events = {
-				{ t = 0.3, k = "Fx", n = "MerakSpark" },
-				{ t = 0.52, k = "Fx", n = "MerakStreak" },
-				{ t = 0.66, k = "Hit", i = 1, fx = "StarHit" },
-				{ t = 0.67, k = "Shake", a = 0.3, d = 0.3 },
+				{ t = 0.08, k = "Orbs", mode = "Pick", star = 2 },
+				{ t = 0.1, k = "Fx", n = "TeleGrab", star = 2 },
+				{ t = 0.7, k = "Fx", n = "MerakDash" },
+				{ t = 0.85, k = "Hit", i = 1, fx = "MerakPass" },
+				{ t = 0.86, k = "Shake", a = 0.3, d = 0.25 },
+				{ t = 1.2, k = "Hit", i = 2, fx = "MerakBurst" },
+				{ t = 1.36, k = "Hit", i = 3, fx = "MerakBurst" },
+				{ t = 1.52, k = "Hit", i = 4, fx = "MerakBurst" },
+				{ t = 1.68, k = "Hit", i = 5, fx = "MerakBurst" },
+				{ t = 1.95, k = "Hit", i = 6, fx = "MerakBurst" },
+				{ t = 1.96, k = "Shake", a = 0.5, d = 0.35 },
+				{ t = 2.05, k = "Orbs", mode = "Orbit" },
 			},
 		},
 
-		-- 알리오스: 두 팔을 하늘로 들어 알리오스를 부르고 — 적 진영 위로 내리 뻗으면 별비가 진형 전체에 쏟아진다
+		-- 알리오스: 알리오스를 꺼내 적 진영 위로 띄우고[약] 허공에 팔을 자유자재로 휘두를 때마다[강] 별이 진형을 곧게 가로지른다 — 10타가 1 · 0.9 · 0.4 · 0.3 … 초 간격으로 점점 빨라진다 → 별이 손끝으로 돌아온다
 		Alioth = {
-			Duration = 2.0,
+			Duration = 6.0,
 			Keys = {
 				K(0, nil, STANCE),
-				K(0.45, "cubicOut", RAISE),
-				K(0.8, "sineInOut", RAISE, { Root = { 0, 0.12, 0, 0, -18, 0 }, Head = { 30, 8, 0 } }),
-				K(0.95, "expoOut", CAST),
-				K(1.5, "sineOut", CAST, { Root = { 0, -0.16, -0.1, 0, -22, 0 } }),
-				K(2.0, "cubicInOut", STANCE),
+				K(0.3, "cubicOut", AL_READY),
+				K(0.63, "sineInOut", AL_READY),
+				K(0.75, "expoOut", AL_A),
+				K(1.63, "sineInOut", AL_A),
+				K(1.75, "expoOut", AL_B),
+				K(2.53, "sineInOut", AL_B),
+				K(2.65, "expoOut", AL_C),
+				K(2.93, "sineInOut", AL_C),
+				K(3.05, "expoOut", AL_D),
+				K(3.23, "sineInOut", AL_D),
+				K(3.35, "expoOut", AL_A),
+				K(3.53, "sineInOut", AL_A),
+				K(3.65, "expoOut", AL_B),
+				K(3.83, "sineInOut", AL_B),
+				K(3.95, "expoOut", AL_C),
+				K(4.13, "sineInOut", AL_C),
+				K(4.25, "expoOut", AL_D),
+				K(4.43, "sineInOut", AL_D),
+				K(4.55, "expoOut", AL_A),
+				K(4.73, "sineInOut", AL_A),
+				K(4.85, "expoOut", AL_B),
+				K(5.25, "sineOut", AL_B),
+				K(5.9, "cubicInOut", STANCE),
 			},
 			Events = {
-				{ t = 0.45, k = "Fx", n = "AliothCall" },
-				{ t = 0.95, k = "Fx", n = "AliothRain" },
-				{ t = 1.2, k = "Hit", i = 1, fx = "RainHit" },
-				{ t = 1.22, k = "Shake", a = 0.4, d = 0.4 },
+				{ t = 0.08, k = "Orbs", mode = "Pick", star = 3 },
+				{ t = 0.1, k = "Fx", n = "TeleGrab", star = 3 },
+				{ t = 0.35, k = "Fx", n = "AliothLaunch" },
+				{ t = 0.75, k = "Hit", i = 1, fx = "AliothStrike" },
+				{ t = 1.75, k = "Hit", i = 2, fx = "AliothStrike" },
+				{ t = 2.65, k = "Hit", i = 3, fx = "AliothStrike" },
+				{ t = 3.05, k = "Hit", i = 4, fx = "AliothStrike" },
+				{ t = 3.35, k = "Hit", i = 5, fx = "AliothStrike" },
+				{ t = 3.65, k = "Hit", i = 6, fx = "AliothStrike" },
+				{ t = 3.95, k = "Hit", i = 7, fx = "AliothStrike" },
+				{ t = 4.25, k = "Hit", i = 8, fx = "AliothStrike" },
+				{ t = 4.55, k = "Hit", i = 9, fx = "AliothStrike" },
+				{ t = 4.85, k = "Hit", i = 10, fx = "AliothStrike" },
+				{ t = 0.75, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 1.75, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 2.65, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 3.05, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 3.35, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 3.65, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 3.95, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 4.25, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 4.55, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 4.85, k = "Shake", a = 0.15, d = 0.1 },
+				{ t = 5.0, k = "Fx", n = "AliothReturn" },
+				{ t = 5.4, k = "Orbs", mode = "Orbit" },
 			},
 		},
 
-		-- 셉텐트리오네스: 두 팔을 활짝 펴면 별 일곱이 적 위로 날아가 큰 북두칠성을 펼치고 별끼리 빛줄이 이어진다 — 두 손을 모아 쥐면 별자리가 한 점으로 무너져 핵융합처럼 터진다
+		-- 셉텐트리오네스(컷신): 오른손을 왼 허리로 모았다가[중] 하늘로 치켜들면[강] 별 일곱이 하늘 높이 오르고 → 별이 하나씩 적 진영으로 레이저(별 이름 · 화면 색 · 카메라가 별 → 레이저를 따라 아래로) → 팔을 내리치면[강] 북두칠성 꼴로 진형 전체를 강타하고 선 자국이 남는다
 		Septentriones = {
-			Duration = 3.0,
+			Duration = 10.8,
 			Keys = {
 				K(0, nil, STANCE),
-				K(0.5, "cubicOut", OPEN),
-				K(1.35, "sineInOut", OPEN, { Root = { 0, 0.24, 0, 0, -18, 0 }, Head = { 26, 10, 0 } }),
-				K(1.6, "expoOut", CLOSE),
-				K(2.3, "sineOut", CLOSE, { Root = { 0, -0.14, -0.1, 0, -24, 0 } }),
-				K(3.0, "cubicInOut", STANCE),
+				K(0.3, "cubicOut", SEPT_LOW),
+				K(0.75, "sineInOut", SEPT_LOW, { Head = { -16, 16, 0 } }),
+				K(0.95, "expoOut", SEPT_UP),
+				K(4.5, "sineInOut", SEPT_UP, { Root = { 0, 0.86, 0, 0, -18, 0 }, Head = { 26, 6, 0 } }),
+				K(8.6, "sineInOut", SEPT_UP, { Root = { 0, 0.9, 0, 0, -20, 0 } }),
+				K(8.95, "expoOut", SEPT_DOWN),
+				K(9.6, "sineOut", SEPT_DOWN, { Root = { 0, 0.58, -0.12, 0, -24, 0 } }),
+				K(10.6, "cubicInOut", STANCE),
 			},
 			Events = {
-				{ t = 0.45, k = "Orbs", mode = "Sky", at = "Enemies" },
-				{ t = 0.5, k = "Fx", n = "SeptRise" },
-				{ t = 1.05, k = "Fx", n = "SeptLines" },
-				{ t = 1.6, k = "Orbs", mode = "Gather", at = "Enemies" },
-				{ t = 1.62, k = "Fx", n = "SeptCollapse" },
-				{ t = 1.9, k = "Hit", i = 1, fx = "Fusion" },
-				{ t = 1.91, k = "Stop", d = 0.14 },
-				{ t = 1.92, k = "Shake", a = 0.9, d = 0.6 },
-				{ t = 2.4, k = "Orbs", mode = "Orbit" },
+				{ t = 0.95, k = "Orbs", mode = "Sky", at = "Enemies" },
+				{ t = 0.95, k = "Fx", n = "SeptRise", d = 1.1 },
+				{ t = 2.1, k = "Fx", n = "SeptLaser", star = 4, nth = 1 },
+				{ t = 2.57, k = "Hit", i = 1, fx = "SeptLaserHit" },
+				{ t = 2.57, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 3.05, k = "Fx", n = "SeptLaser", star = 5, nth = 2 },
+				{ t = 3.52, k = "Hit", i = 2, fx = "SeptLaserHit" },
+				{ t = 3.52, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 4.0, k = "Fx", n = "SeptLaser", star = 3, nth = 3 },
+				{ t = 4.47, k = "Hit", i = 3, fx = "SeptLaserHit" },
+				{ t = 4.47, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 4.95, k = "Fx", n = "SeptLaser", star = 1, nth = 4 },
+				{ t = 5.42, k = "Hit", i = 4, fx = "SeptLaserHit" },
+				{ t = 5.42, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 5.9, k = "Fx", n = "SeptLaser", star = 6, nth = 5 },
+				{ t = 6.37, k = "Hit", i = 5, fx = "SeptLaserHit" },
+				{ t = 6.37, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 6.85, k = "Fx", n = "SeptLaser", star = 2, nth = 6 },
+				{ t = 7.32, k = "Hit", i = 6, fx = "SeptLaserHit" },
+				{ t = 7.32, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 7.8, k = "Fx", n = "SeptLaser", star = 7, nth = 7 },
+				{ t = 8.27, k = "Hit", i = 7, fx = "SeptLaserHit" },
+				{ t = 8.27, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 9.05, k = "Hit", i = 8, fx = "SeptSlam" },
+				{ t = 9.06, k = "Stop", d = 0.12 },
+				{ t = 9.07, k = "Shake", a = 0.9, d = 0.7 },
+				{ t = 9.9, k = "Orbs", mode = "Orbit" },
 			},
 		},
 
@@ -243,7 +323,7 @@ return {
 			Keys = {
 				K(0, nil, STANCE),
 				K(0.18, "backOut", SHIELD),
-				K(0.8, "sineInOut", SHIELD, { Root = { 0, -0.08, 0.3, 0, -14, 0 } }),
+				K(0.8, "sineInOut", SHIELD, { Root = { 0, 0.62, 0.3, 0, -14, 0 } }),
 				K(1.1, "sineInOut", STANCE),
 			},
 			Events = {
@@ -259,8 +339,8 @@ return {
 			Keys = {
 				K(0, nil, STANCE),
 				K(0.45, "cubicInOut", PRAY),
-				K(1.1, "sineInOut", PRAY, { Root = { 0, 0.06, 0, 0, -18, 0 }, Torso = { 10, 0, 0 }, Head = { 26, 6, 0 } }),
-				K(1.8, "sineInOut", PRAY, { Root = { 0, -0.06, 0, 0, -18, 0 }, Torso = { 0, 0, 0 }, Head = { 12, 6, 0 } }),
+				K(1.1, "sineInOut", PRAY, { Root = { 0, 0.76, 0, 0, -18, 0 }, Torso = { 10, 0, 0 }, Head = { 26, 6, 0 } }),
+				K(1.8, "sineInOut", PRAY, { Root = { 0, 0.64, 0, 0, -18, 0 }, Torso = { 0, 0, 0 }, Head = { 12, 6, 0 } }),
 				K(2.6, "cubicInOut", STANCE),
 			},
 			Events = {

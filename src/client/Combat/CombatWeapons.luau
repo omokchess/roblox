@@ -149,7 +149,7 @@ local function buildPiece(piece: WeaponDefinitions.Piece, name: string, anchored
 	return model
 end
 
-export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown" | "Sky"
+export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown" | "Sky" | "Pick"
 
 --[[
 	별 빛무리(조율자 별자리 — 2026-10-30 사용자 참고 그림: 검은 하늘에 파란 빛무리를 두른 작은 흰 별, 옅은 고리).
@@ -223,6 +223,9 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 	self.Pop = {} :: { number? }
 	self.Lines = {} :: { { A: number, B: number, Part: BasePart, Alpha: number } }
 	self.Center = nil :: Vector3?
+	-- 별 하나 꺼내기(Pick — 조율자 스킬): 꺼낸 별 번호, 이펙트가 직접 모는 별(Drive)
+	self.Pick = nil :: number?
+	self.Drives = {} :: { [number]: (number) -> Vector3? }
 
 	local folder = Instance.new("Folder")
 	folder.Name = "CombatWeapon"
@@ -368,12 +371,20 @@ end
 	  Orbit  몸 둘레를 돈다(기본)             Gather 앞으로 뻗은 손 앞에 모인다(빔 모으기)
 	  Shield 앞에 세모 방패                   Spread 넓게 퍼져 빠르게 돈다(자기권)
 	  Crown  머리 위 작은 원(명상·들림)
-  Sky    (별자리 무기) 겨눈 자리(적 진영) 위에 별자리를 크게 펼친다(셉텐트리오네스)
+  Sky    (별자리 무기) 겨눈 자리(적 진영) 위 하늘 높이 별자리를 크게 펼친다(셉텐트리오네스)
+  Pick   (별자리 무기) star 번 별 하나만 손끝에 꺼내 밝히고, 나머지는 흐려져 오른쪽 아래 허리춤에 작은 별자리로 물러난다(조율자 스킬 —
+         2026-10-31 사용자: "별을 하나 꺼낸 후에 다른 별들은 비활성화 되면서 오른쪽 아래(허리춤 쯤)로 빠지도록")
   별자리 무기(Orbit.Points — 조율자 일곱 별)는 Orbit 일 때 둘레를 돌지 않고 그 자리에 떠서 숨 쉬듯 흔들린다.
 ]]
-function CombatWeapons:SetOrbMode(mode: OrbMode, aim: Vector3?)
+function CombatWeapons:SetOrbMode(mode: OrbMode, aim: Vector3?, star: number?)
 	self.OrbMode = mode
 	self.OrbAim = aim
+	self.Pick = if mode == "Pick" then (star or 1) else nil
+end
+
+-- 별 i 를 이펙트가 직접 몬다: 매 프레임 fn(dt) 이 돌려주는 월드 자리로 곧장 간다. nil 을 돌려주면 놓는다(대형 자리로 돌아간다)
+function CombatWeapons:Drive(i: number, fn: ((number) -> Vector3?)?)
+	self.Drives[i] = fn
 end
 
 -- 별 하나의 지금 자리(이펙트가 그 별에서 빛을 쏜다). 없으면 nil
@@ -405,8 +416,10 @@ local function shine(self: any, i: number, dt: number)
 		return
 	end
 	local on = self.Lit[i] ~= false
-	local k = self.LitK[i] or (if on then 1 else 0)
-	k += ((if on then 1 else 0) - k) * (1 - math.exp(-dt * 6))
+	-- 별 하나를 꺼냈으면(Pick) 그 별만 밝고 나머지는 거의 꺼진다
+	local want = if self.Pick then (if i == self.Pick then 1 else 0.12) elseif on then 1 else 0
+	local k = self.LitK[i] or want
+	k += (want - k) * (1 - math.exp(-dt * 6))
 	self.LitK[i] = k
 	local swell = 0
 	local pop = self.Pop[i]
@@ -460,7 +473,17 @@ function CombatWeapons:Update(dt: number)
 			local center = self.OrbAim or (cf * CFrame.new(0, 3, -12)).Position
 			local mid = self.Center :: Vector3
 			local d = (Vector3.new(point[1], point[2], point[3]) - mid) * 7
-			target = center + Vector3.new(0, 6, 0) + cf.RightVector * d.X + cf.UpVector * d.Y + cf.LookVector * -d.Z
+			target = center + Vector3.new(0, 15, 0) + cf.RightVector * d.X + cf.UpVector * d.Y + cf.LookVector * -d.Z
+		elseif point and mode == "Pick" then
+			local c = self.Center :: Vector3
+			if i == self.Pick then
+				-- 꺼낸 별: 손끝 바로 위
+				local hand = self.Character:FindFirstChild("Right Arm") :: BasePart?
+				target = if hand then (hand.CFrame * CFrame.new(0, -1.1, 0)).Position + Vector3.new(0, 0.3, 0) else (cf * CFrame.new(1.6, 0.4, -1)).Position
+			else
+				-- 나머지: 오른쪽 아래 허리춤에 0.45배 작은 별자리로
+				target = (cf * CFrame.new(Vector3.new(1.4, -0.75, 0.25) + Vector3.new(0, point[2] - c.Y, point[3] - c.Z) * 0.45)).Position
+			end
 		elseif mode == "Gather" then
 			local hand = self.Character:FindFirstChild("Right Arm") :: BasePart?
 			local center = if hand then (hand.CFrame * CFrame.new(0, -1.6, 0)).Position else (cf * CFrame.new(0, 0.5, -2.5)).Position
@@ -479,8 +502,17 @@ function CombatWeapons:Update(dt: number)
 			target = (cf * CFrame.new(math.cos(phase) * r, orbit.Height - 1 + bob, math.sin(phase) * r)).Position
 		end
 		local current = self.OrbPos[i] or target
-		local k = 1 - math.exp(-dt * (if mode == "Gather" then 18 elseif point and mode == "Orbit" then 14 else 10))
-		current = current:Lerp(target, k)
+		local drive = self.Drives[i]
+		local driven = if drive then drive(dt) else nil
+		if drive and not driven then
+			self.Drives[i] = nil
+		end
+		if driven then
+			current = driven
+		else
+			local k = 1 - math.exp(-dt * (if mode == "Gather" then 18 elseif point and (mode == "Orbit" or mode == "Pick") then 14 else 10))
+			current = current:Lerp(target, k)
+		end
 		self.OrbPos[i] = current
 		if point then
 			orb:PivotTo(CFrame.new(current))

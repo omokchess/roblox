@@ -434,7 +434,8 @@ for _, classId in CLASSES do
 				assert(past > 2, string.format("검 끝을 쏘아라가 적 진영 끝을 못 넘음: 끝 줄에서 %.2f", past))
 			end
 		end)
-		settle(director, classId .. " 스킬 " .. skillId, 6)
+		-- 가장 긴 연출(조율자 셉텐트리오네스 컷신 10.8초)까지 기다린다
+		settle(director, classId .. " 스킬 " .. skillId, 12)
 		played += 1
 	end
 	-- 쓰러짐

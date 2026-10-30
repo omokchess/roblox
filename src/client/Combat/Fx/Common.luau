@@ -167,6 +167,44 @@ function Common.Feet(ctx: any): Vector3
 	return Vector3.new(ctx.Root.Position.X, ctx.Ground, ctx.Root.Position.Z)
 end
 
+--[[
+	필드 상자(전투 공간의 앞 u · 옆 v · 높이 y). 적 진영 칸(ctx.EnemyTiles — 전투 화면이 넘겨준다)의 가운데들에서 u·v 범위를 잡고
+	칸 반 칸만큼 넓힌다. 칸을 모르면(전시장) 첫 대상을 첫 열 가운데로 6×3 칸을 어림한다.
+	돌려주는 것: { Base, F, R, U0, U1, V0, V1, Y0, Y1 } — 월드 점 = Base + F·u + R·v + (0, y, 0)
+]]
+local PITCH = 6
+function Common.FieldBox(ctx: any): any
+	local f = ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	local home = ctx.Actor.Home.Position
+	local base = Vector3.new(home.X, ctx.Ground, home.Z)
+	local centers = {}
+	if ctx.EnemyTiles and #ctx.EnemyTiles > 0 then
+		for _, t in ctx.EnemyTiles do
+			table.insert(centers, t.Position)
+		end
+	else
+		local t0 = ctx.Targets[1] or ctx.Target
+		for x = 0, 5 do
+			for y = -1, 1 do
+				table.insert(centers, t0 + f * (x * PITCH) + r * (y * PITCH))
+			end
+		end
+	end
+	local u0, u1, v0, v1 = math.huge, -math.huge, math.huge, -math.huge
+	for _, center in centers do
+		local d = center - base
+		u0, u1 = math.min(u0, d:Dot(f)), math.max(u1, d:Dot(f))
+		v0, v1 = math.min(v0, d:Dot(r)), math.max(v1, d:Dot(r))
+	end
+	local m = PITCH / 2 + 1
+	return { Base = base, F = f, R = r, U0 = u0 - m, U1 = u1 + m, V0 = v0 - m, V1 = v1 + m, Y0 = 0.15, Y1 = 5 }
+end
+
+function Common.BoxWorld(box: any, l: Vector3): Vector3
+	return box.Base + box.F * l.X + box.R * l.Y + Vector3.new(0, l.Z, 0)
+end
+
 -- 효과음 한 번(rbxassetid 숫자, 짧은 소리). 6초 뒤 지운다
 function Common.Sound(id: number, volume: number?, speed: number?)
 	local s = Instance.new("Sound")

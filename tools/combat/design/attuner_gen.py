@@ -69,16 +69,30 @@ pose("STANCE", "대기 — 발끝을 내린 채 떠서, 앞 오른쪽으로 내�
 pose("OFFER", "버릇 — 별을 받친 오른손을 눈높이로 들어 올리고 고개를 들어 별을 본다(별이 손을 따라 오르며 차례로 반짝인다)",
      pointing((2.4, 1.7, -1.6), **dict(STANCE_BODY, Torso=(10, -10, 0), Head=(8, -24, 2))))
 
-pose("READY", "가리키기 전 — 오른손을 귀 옆으로 끌어올려 겨눔을 모은다", P(Root=(0, 0, 0, 0, -26, 0), Torso=(6, -4, 0), Head=(4, 22, 0), RArm=(150, 18, 40), LArm=(40, -20, -20)))
-pose("POINT", "메그레즈: 팔을 쭉 뻗어 적을 가리킨다(팔 축이 적 가슴 쪽), 왼팔은 뒤로 흘려 균형",
-     pointing(ENEMY, Root=(0, -0.05, 0, 0, -30, 0), Torso=(-2, -8, 0), Head=(0, 26, 0), LArm=(-12, 0, -26), RLeg=(-10, 0, -4), LLeg=(12, 0, 4)))
-pose("FLING_UP", "메라크 1 — 오른팔을 머리 뒤로 높이 젖혀 별을 집어 든다", P(Root=(0, 0.05, 0, 0, -22, 0), Torso=(12, 6, 0), Head=(18, 14, 0), RArm=(168, 0, 26), LArm=(60, -10, -24), RLeg=(4, 0, -3), LLeg=(-6, 0, 4)))
-pose("FLING_DOWN", "메라크 2 — 내딛으며 별을 적의 줄 끝까지 던지듯 팔을 앞 아래로 뿌린다",
-     pointing(ENEMY_LOW, Root=(0, -0.2, -0.2, 0, -30, 0), Torso=(-12, -10, 0), Head=(-6, 26, 0), LArm=(-20, 0, -30), RLeg=(-28, 0, -4), LLeg=(22, 0, 4)))
-pose("RAISE", "알리오스 1 — 두 팔을 하늘로 V 자로 들어 별빛을 부른다", P(Root=(0, 0.08, 0, 0, -18, 0), Torso=(12, 0, 0), Head=(26, 8, 0), RArm=(166, 0, 24), LArm=(166, 0, -24), RLeg=(-2, 0, -4), LLeg=(2, 0, 4)))
-pose("CAST", "알리오스 2 — 두 팔을 적 진영 위로 내리 뻗어 별비를 쏟는다", P(Root=(0, -0.12, -0.1, 0, -22, 0), Torso=(-8, -4, 0), Head=(-4, 20, 0), RArm=(96, 26, 22), LArm=(96, -26, -22), RLeg=(-16, 0, -4), LLeg=(14, 0, 4)))
-pose("OPEN", "셉텐트리오네스 1 — 두 팔을 활짝 펴고 발끝으로 떠오르듯 선다(별 일곱이 적 위로 날아간다)", P(Root=(0, 0.18, 0, 0, -18, 0), Torso=(14, 0, 0), Head=(22, 10, 0), RArm=(112, -40, 72), LArm=(112, 40, -72), RLeg=(-6, 0, -6), LLeg=(-2, 0, 6)))
-pose("CLOSE", "셉텐트리오네스 2 — 두 손을 앞으로 모아 움켜쥔다(별자리가 한 점으로 무너진다)", P(Root=(0, -0.08, -0.1, 0, -24, 0), Torso=(-10, -6, 0), Head=(-2, 22, 0), RArm=(92, 24, 4), LArm=(92, -24, -4), RLeg=(-18, 0, -4), LLeg=(16, 0, 4)))
+# ── 2026-10-31 스킬 넷(사용자 말): 염동력 — 손짓으로 별을 부린다 ──
+def gesture(target, **kw):
+    return pointing(target, **dict(STANCE_BODY, **kw))
+
+
+pose("MEG_L", "메그레즈 1 — 꺼낸 별을 손끝에 띄운 채 오른팔을 몸 앞으로 감아 왼쪽으로 가져간다(몸도 왼쪽으로 틂)",
+     gesture((-2.4, 0.9, -1.8), Root=(0, 0, 0, 0, -6, 0), Torso=(4, 26, 0), Head=(2, 16, 0)))
+pose("MEG_R", "메그레즈 2 — 오른쪽으로 확 뿌려 별을 대상 열로 날린다(팔이 앞 오른쪽으로 쭉, 고개는 적 쪽)",
+     gesture((3.6, 0.8, -2.6), Root=(0, 0, -0.1, 0, -24, 0), Torso=(0, -14, 0), Head=(-2, 18, 0)))
+pose("MER_LOW", "메라크 1 — 꺼낸 별을 왼쪽 아래로 끌어내린다(오른손이 왼 무릎 앞, 몸을 왼쪽으로 숙여 튼다)",
+     gesture((-1.6, -1.2, -1.4), Torso=(-8, 20, 0), Head=(-12, 18, 0)))
+pose("MER_UP", "메라크 2 — 팔을 오른쪽 위로 휘둘러 별을 내 행으로 돌진시킨다(몸을 펴 젖히고 오른쪽으로 튼다)",
+     gesture((3.0, 3.2, -2.0), Root=(0, 0.06, 0, 0, -24, 0), Torso=(10, -14, 0), Head=(12, 4, 0)))
+pose("AL_READY", "알리오스 0 — 꺼낸 별을 손끝에 띄워 적 진영 쪽으로 들어 올린다", gesture((2.4, 1.6, -2.4), Torso=(4, -6, 0), Head=(0, 16, 0)))
+pose("AL_A", "알리오스 손짓 A — 왼 위로 크게 그어 올린다", gesture((-1.2, 3.0, -2.2), Torso=(6, 16, 0), Head=(10, 18, 0)))
+pose("AL_B", "알리오스 손짓 B — 오른 아래로 내리긋는다", gesture((3.0, -1.0, -1.6), Torso=(-6, -14, 0), Head=(-8, 10, 0)))
+pose("AL_C", "알리오스 손짓 C — 앞 위로 찌르듯 뻗는다", gesture((0.8, 2.4, -3.2), Torso=(6, 0, 0), Head=(8, 16, 0)))
+pose("AL_D", "알리오스 손짓 D — 오른쪽으로 가로 휘두른다", gesture((3.6, 0.8, -0.6), Torso=(2, -16, 0), Head=(0, 8, 0)))
+pose("SEPT_LOW", "셉텐트리오네스 1 — 오른손을 왼 허리로 끌어 모은다(별자리가 손을 따라 허리춤으로, 몸을 왼쪽으로 숙여 튼다)",
+     gesture((-1.0, -0.6, -0.6), Torso=(-6, 22, 0), Head=(-14, 14, 0)))
+pose("SEPT_UP", "셉텐트리오네스 2 — 오른팔을 하늘 높이 치켜든다(별 일곱이 하늘로 — 몸을 젖히고 올려다본다)",
+     gesture((1.4, 5.0, -2.4), Root=(0, 0.1, 0, 0, -18, 0), Torso=(12, -4, 0), Head=(30, 4, 0)))
+pose("SEPT_DOWN", "셉텐트리오네스 3 — 치켜든 팔을 적 진영으로 내리친다(별자리가 진형을 강타)",
+     gesture((2.4, -1.2, -3.4), Root=(0, -0.08, -0.1, 0, -22, 0), Torso=(-10, -8, 0), Head=(-10, 14, 0)))
 pose("SHIELD", "방어 — 왼손바닥을 앞으로 내밀어 별 셋을 방패로, 오른손은 뒤로 감싼다", P(Root=(0, -0.06, 0.25, 0, -14, 0), Torso=(-4, 4, 0), Head=(-2, 14, 0), RArm=(30, 20, 30), LArm=(86, -14, 0), RLeg=(-8, 0, -3), LLeg=(10, 0, 3)))
 pose("RECOIL", "피격 — 가슴을 맞아 상체가 뒤로 젖혀지고 두 팔이 흩어진다", P(Root=(0, -0.08, 0.55, 0, -18, 0), Torso=(18, 6, 0), Head=(22, 8, 0), RArm=(40, 0, 50), LArm=(40, 0, -50), RLeg=(10, 0, -4), LLeg=(-6, 0, 4)))
 pose("SIDESTEP", "회피 — 별빛처럼 옆으로 미끄러져 비켜선다(몸을 낮추고 왼쪽으로)", P(Root=(-1.7, -0.25, 0.2, 0, -18, 6), Torso=(-6, 0, -8), Head=(0, 12, 6), RArm=(20, 0, 46), LArm=(40, 0, -34), RLeg=(-4, 0, 12), LLeg=(-10, 0, -4)))
@@ -88,6 +102,10 @@ pose("PRAY", "호흡 — 두 손을 가슴 앞에 모으고 고개를 들어 별
 
 
 def K(t, e, name, over=None):
+    if over and "Root" in over and name != "LAND":
+        r = list(over["Root"])
+        r[1] = round(r[1] + HOVER, 3)
+        over = dict(over, Root=tuple(r))
     es = "nil" if e is None else '"%s"' % e
     if over:
         body = ", ".join("%s = %s" % (k, f(v)) for k, v in over.items())
@@ -124,7 +142,7 @@ local Kit = require(script.Parent.Parent.MotionKit)
 local K = Kit.K
 
 '''
-order = ["STANCE", "OFFER", "READY", "POINT", "FLING_UP", "FLING_DOWN", "RAISE", "CAST", "OPEN", "CLOSE", "SHIELD", "RECOIL", "SIDESTEP", "DANGLE", "LAND", "PRAY"]
+order = ["STANCE", "OFFER", "MEG_L", "MEG_R", "MER_LOW", "MER_UP", "AL_READY", "AL_A", "AL_B", "AL_C", "AL_D", "SEPT_LOW", "SEPT_UP", "SEPT_DOWN", "SHIELD", "RECOIL", "SIDESTEP", "DANGLE", "LAND", "PRAY"]
 lines = []
 for name in order:
     q = POSES[name]
@@ -174,24 +192,63 @@ text += "\n" + motion("Dodge", "회피: 몸을 낮춰 별빛처럼 옆으로 미
                       ['{ t = 0.08, k = "Fx", n = "StarBlink" }'], "\t\tBlendIn = 0.02,\n", 1)
 
 skills = []
-skills.append(motion("Megrez", "메그레즈: 오른손을 귀 옆으로 끌어올렸다가 쭉 뻗어 적을 가리키면 — 메그레즈가 빛줄기를 쏘아 그 열을 위아래로 훑는다", 1.5,
-                     [(0, None, "STANCE"), (0.28, "cubicOut", "READY"), (0.5, "expoOut", "POINT"), (0.95, "sineOut", "POINT", {"Root": (0, -0.08, 0.1, 0, -30, 0)}), (1.5, "cubicInOut", "STANCE")],
-                     ['{ t = 0.3, k = "Fx", n = "MegrezCharge" }', '{ t = 0.52, k = "Fx", n = "MegrezBeam" }', '{ t = 0.62, k = "Hit", i = 1, fx = "StarHit" }',
-                      '{ t = 0.63, k = "Stop", d = 0.06 }', '{ t = 0.64, k = "Shake", a = 0.25, d = 0.25 }']))
-skills.append(motion("Merak", "메라크: 팔을 머리 뒤로 젖혀 별을 집어 들고 — 내딛으며 적의 줄 끝까지 뿌리면 메라크가 그 줄을 꿰뚫고 달린다", 1.6,
-                     [(0, None, "STANCE"), (0.32, "cubicOut", "FLING_UP"), (0.52, "expoOut", "FLING_DOWN"), (1.0, "sineOut", "FLING_DOWN", {"Root": (0, -0.15, -0.1, 0, -30, 0)}), (1.6, "cubicInOut", "STANCE")],
-                     ['{ t = 0.3, k = "Fx", n = "MerakSpark" }', '{ t = 0.52, k = "Fx", n = "MerakStreak" }', '{ t = 0.66, k = "Hit", i = 1, fx = "StarHit" }',
-                      '{ t = 0.67, k = "Shake", a = 0.3, d = 0.3 }']))
-skills.append(motion("Alioth", "알리오스: 두 팔을 하늘로 들어 알리오스를 부르고 — 적 진영 위로 내리 뻗으면 별비가 진형 전체에 쏟아진다", 2.0,
-                     [(0, None, "STANCE"), (0.45, "cubicOut", "RAISE"), (0.8, "sineInOut", "RAISE", {"Root": (0, 0.12, 0, 0, -18, 0), "Head": (30, 8, 0)}), (0.95, "expoOut", "CAST"), (1.5, "sineOut", "CAST", {"Root": (0, -0.16, -0.1, 0, -22, 0)}), (2.0, "cubicInOut", "STANCE")],
-                     ['{ t = 0.45, k = "Fx", n = "AliothCall" }', '{ t = 0.95, k = "Fx", n = "AliothRain" }', '{ t = 1.2, k = "Hit", i = 1, fx = "RainHit" }',
-                      '{ t = 1.22, k = "Shake", a = 0.4, d = 0.4 }']))
-skills.append(motion("Septentriones", "셉텐트리오네스: 두 팔을 활짝 펴면 별 일곱이 적 위로 날아가 큰 북두칠성을 펼치고 별끼리 빛줄이 이어진다 — 두 손을 모아 쥐면 별자리가 한 점으로 무너져 핵융합처럼 터진다", 3.0,
-                     [(0, None, "STANCE"), (0.5, "cubicOut", "OPEN"), (1.35, "sineInOut", "OPEN", {"Root": (0, 0.24, 0, 0, -18, 0), "Head": (26, 10, 0)}), (1.6, "expoOut", "CLOSE"),
-                      (2.3, "sineOut", "CLOSE", {"Root": (0, -0.14, -0.1, 0, -24, 0)}), (3.0, "cubicInOut", "STANCE")],
-                     ['{ t = 0.45, k = "Orbs", mode = "Sky", at = "Enemies" }', '{ t = 0.5, k = "Fx", n = "SeptRise" }', '{ t = 1.05, k = "Fx", n = "SeptLines" }',
-                      '{ t = 1.6, k = "Orbs", mode = "Gather", at = "Enemies" }', '{ t = 1.62, k = "Fx", n = "SeptCollapse" }', '{ t = 1.9, k = "Hit", i = 1, fx = "Fusion" }',
-                      '{ t = 1.91, k = "Stop", d = 0.14 }', '{ t = 1.92, k = "Shake", a = 0.9, d = 0.6 }', '{ t = 2.4, k = "Orbs", mode = "Orbit" }']))
+# 2026-10-31 사용자: "전체적인 느낌은 염동력으로 움직인다는 느낌. 별을 하나 꺼낸 후에 다른 별들은 비활성화 되면서 오른쪽 아래(허리춤 쯤)로 빠지도록."
+# 별 꺼내기 = Orbs Pick(star) · 그 별을 날리는 것 = Fx(ctx.Weapons:Drive) · 끝나면 Orbs Orbit 으로 별자리가 손 위로 돌아온다.
+skills.append(motion("Megrez", "메그레즈: 손 위 별무리에서 메그레즈를 꺼내(나머지는 허리춤으로)[약] 팔을 왼쪽으로 가져갔다가[중] 오른쪽으로 확 뿌리면[강] "
+                     "별이 대상 열로 날아가 열을 가로질러 훑고 손끝으로 돌아온다", 1.95,
+                     [(0, None, "STANCE"), (0.4, "cubicInOut", "MEG_L"), (0.52, "sineInOut", "MEG_L", {"Head": (0, 20, 0)}), (0.62, "expoOut", "MEG_R"),
+                      (1.0, "sineOut", "MEG_R", {"Root": (0, -0.04, -0.14, 0, -26, 0)}), (1.85, "cubicInOut", "STANCE")],
+                     ['{ t = 0.08, k = "Orbs", mode = "Pick", star = 1 }', '{ t = 0.1, k = "Fx", n = "TeleGrab", star = 1 }', '{ t = 0.6, k = "Fx", n = "MegrezFling" }',
+                      '{ t = 0.78, k = "Hit", i = 1, fx = "StarHit" }', '{ t = 0.79, k = "Stop", d = 0.05 }', '{ t = 0.8, k = "Shake", a = 0.3, d = 0.25 }',
+                      '{ t = 1.45, k = "Orbs", mode = "Orbit" }']))
+skills.append(motion("Merak", "메라크: 메라크를 꺼내[약] 왼쪽 아래로 끌어내렸다가[중] 팔을 오른쪽 위로 휘두르면[강] 별이 내 행을 꿰뚫고 달리며 흰 선을 남기고(1타), "
+                     "그 선이 네 번 부분부분 터지고 다섯 번째에 통째로 터진다(10 · 2 · 2 · 2 · 2 · 4)", 2.4,
+                     [(0, None, "STANCE"), (0.42, "cubicInOut", "MER_LOW"), (0.6, "sineInOut", "MER_LOW", {"Head": (-14, 22, 0)}), (0.72, "expoOut", "MER_UP"),
+                      (1.3, "sineOut", "MER_UP", {"Root": (0, 0.1, 0, 0, -26, 0)}), (2.3, "cubicInOut", "STANCE")],
+                     ['{ t = 0.08, k = "Orbs", mode = "Pick", star = 2 }', '{ t = 0.1, k = "Fx", n = "TeleGrab", star = 2 }', '{ t = 0.7, k = "Fx", n = "MerakDash" }',
+                      '{ t = 0.85, k = "Hit", i = 1, fx = "MerakPass" }', '{ t = 0.86, k = "Shake", a = 0.3, d = 0.25 }']
+                     + ['{ t = %s, k = "Hit", i = %d, fx = "MerakBurst" }' % (t, i) for i, t in ((2, 1.2), (3, 1.36), (4, 1.52), (5, 1.68), (6, 1.95))]
+                     + ['{ t = 1.96, k = "Shake", a = 0.5, d = 0.35 }', '{ t = 2.05, k = "Orbs", mode = "Orbit" }']))
+
+# 알리오스: "한 대 - 1초 쉼 - 한 대 - 0.9초 쉼 - 한 대 - 0.4초 쉼 - 한 대 - 0.3초 쉼 - (그 후 0.3초씩 반복)" — 10타
+GAPS = [1.0, 0.9, 0.4] + [0.3] * 6
+ALIOTH_HITS = [0.75]
+for g in GAPS:
+    ALIOTH_HITS.append(round(ALIOTH_HITS[-1] + g, 2))
+SWIPES = ["AL_A", "AL_B", "AL_C", "AL_D"]
+al_keys = [(0, None, "STANCE"), (0.3, "cubicOut", "AL_READY")]
+prev = "AL_READY"
+for k, th in enumerate(ALIOTH_HITS):
+    # 손짓은 타격 바로 앞 0.12초에 휙 — 그 전까지는 앞 손짓에 머문다
+    if th - 0.12 > al_keys[-1][0] + 0.01:
+        al_keys.append((round(th - 0.12, 2), "sineInOut", prev))
+    prev = SWIPES[k % 4]
+    al_keys.append((th, "expoOut", prev))
+al_keys += [(round(ALIOTH_HITS[-1] + 0.4, 2), "sineOut", prev), (5.9, "cubicInOut", "STANCE")]
+al_events = ['{ t = 0.08, k = "Orbs", mode = "Pick", star = 3 }', '{ t = 0.1, k = "Fx", n = "TeleGrab", star = 3 }', '{ t = 0.35, k = "Fx", n = "AliothLaunch" }']
+al_events += ['{ t = %s, k = "Hit", i = %d, fx = "AliothStrike" }' % (th, k + 1) for k, th in enumerate(ALIOTH_HITS)]
+al_events += ['{ t = %s, k = "Shake", a = 0.15, d = 0.1 }' % th for th in ALIOTH_HITS]
+al_events += ['{ t = 5.0, k = "Fx", n = "AliothReturn" }', '{ t = 5.4, k = "Orbs", mode = "Orbit" }']
+skills.append(motion("Alioth", "알리오스: 알리오스를 꺼내 적 진영 위로 띄우고[약] 허공에 팔을 자유자재로 휘두를 때마다[강] 별이 진형을 곧게 가로지른다 — "
+                     "10타가 1 · 0.9 · 0.4 · 0.3 … 초 간격으로 점점 빨라진다 → 별이 손끝으로 돌아온다", 6.0, al_keys, al_events))
+
+# 셉텐트리오네스(컷신): 왼 허리로 손을 모았다 치켜들면 별 일곱이 하늘 높이(Orbs Sky) → 별이 하나씩 레이저(국자를 따라 알카이드부터) →
+# 북두칠성 꼴로 진형 전체를 강타. 카메라는 Fx 가 잡는다(SeptRise → SeptLaser ×7 → SeptSlam), 모션이 끝나면 감독이 놓는다.
+TRACE = [4, 5, 3, 1, 6, 2, 7]
+LASERS = [round(2.1 + 0.95 * k, 2) for k in range(7)]
+sept_events = ['{ t = 0.95, k = "Orbs", mode = "Sky", at = "Enemies" }', '{ t = 0.95, k = "Fx", n = "SeptRise", d = 1.1 }']
+for k, t in enumerate(LASERS):
+    sept_events += ['{ t = %s, k = "Fx", n = "SeptLaser", star = %d, nth = %d }' % (t, TRACE[k], k + 1),
+                    '{ t = %s, k = "Hit", i = %d, fx = "SeptLaserHit" }' % (round(t + 0.47, 2), k + 1),
+                    '{ t = %s, k = "Shake", a = 0.3, d = 0.2 }' % round(t + 0.47, 2)]
+sept_events += ['{ t = 9.05, k = "Hit", i = 8, fx = "SeptSlam" }', '{ t = 9.06, k = "Stop", d = 0.12 }', '{ t = 9.07, k = "Shake", a = 0.9, d = 0.7 }',
+                '{ t = 9.9, k = "Orbs", mode = "Orbit" }']
+skills.append(motion("Septentriones", "셉텐트리오네스(컷신): 오른손을 왼 허리로 모았다가[중] 하늘로 치켜들면[강] 별 일곱이 하늘 높이 오르고 → 별이 하나씩 적 진영으로 레이저"
+                     "(별 이름 · 화면 색 · 카메라가 별 → 레이저를 따라 아래로) → 팔을 내리치면[강] 북두칠성 꼴로 진형 전체를 강타하고 선 자국이 남는다", 10.8,
+                     [(0, None, "STANCE"), (0.3, "cubicOut", "SEPT_LOW"), (0.75, "sineInOut", "SEPT_LOW", {"Head": (-16, 16, 0)}), (0.95, "expoOut", "SEPT_UP"),
+                      (4.5, "sineInOut", "SEPT_UP", {"Root": (0, 0.16, 0, 0, -18, 0), "Head": (26, 6, 0)}), (8.6, "sineInOut", "SEPT_UP", {"Root": (0, 0.2, 0, 0, -20, 0)}),
+                      (8.95, "expoOut", "SEPT_DOWN"), (9.6, "sineOut", "SEPT_DOWN", {"Root": (0, -0.12, -0.12, 0, -24, 0)}), (10.6, "cubicInOut", "STANCE")],
+                     sept_events))
 skills.append(motion("Guard", "가드(스킬): 별 방패를 오래 세운다", 1.1,
                      [(0, None, "STANCE"), (0.18, "backOut", "SHIELD"), (0.8, "sineInOut", "SHIELD", {"Root": (0, -0.08, 0.3, 0, -14, 0)}), (1.1, "sineInOut", "STANCE")],
                      ['{ t = 0, k = "Orbs", mode = "Shield" }', '{ t = 0.18, k = "Fx", n = "StarShield" }', '{ t = 0.9, k = "Orbs", mode = "Orbit" }']))
@@ -202,5 +259,5 @@ skills.append(motion("Meditate", "호흡: 두 손을 가슴 앞에 모으고 별
 text += "\n\tSkills = {\n" + "\n".join(skills) + "\t},\n}\n"
 open(OUT, "w", encoding="utf-8", newline="\n").write(text)
 print("썼다", os.path.normpath(OUT))
-for name in ("STANCE", "OFFER", "POINT", "FLING_DOWN"):
+for name in ("STANCE", "OFFER", "MEG_R", "MER_UP", "SEPT_UP"):
     print(name, "RArm", POSES[name]["RArm"])
