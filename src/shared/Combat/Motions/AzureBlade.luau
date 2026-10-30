@@ -748,7 +748,6 @@ return {
 				{ t = 5.02, k = "Fx", n = "FinalBreak" },
 				{ t = 5.03, k = "Stop", d = 0.1 },
 				{ t = 5.04, k = "Shake", a = 0.7, d = 0.5 },
-				{ t = 5.35, k = "Fx", n = "CamFree" },
 			},
 		},
 

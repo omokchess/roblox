@@ -12,7 +12,7 @@
 	                박차는 순간 사라져(Disappear) 보이지 않게 블링크 17번 — 진영을 고르게 나눈 칸마다(층화 표본) 베기 잔상 · 절정 급 곧은 검흔 ·
 	                앞 잔상에서 이어지는 곧은 선(Phantom), 카메라는 오른쪽 위로 올라
 	                적 진영을 점점 빠르게 한 바퀴 돌다 멈춘다(CamOrbit) → 제자리를 베며 나타나(Return) 꽂으면 흑백(CutClick) →
-	                검흔·선이 하나씩 파바바박 터지는 17연타(MarkHit) → 임팩트 프레임(FinalBreak) → 카메라를 돌려준다(CamFree)
+	                검흔·선이 하나씩 파바바박 터지는 17연타(MarkHit) → 임팩트 프레임(FinalBreak) → 모션이 끝나면 카메라가 돌아간다
 	효과음: 로블록스 효과음 모음(ProSoundEffects). 챙 = 칼 뽑는 쇳소리 — 바꾸려면 SOUND 의 숫자만 고친다.
 	잔상 자세는 모션 파일의 Poses(tools/combat/design/azure_gen.py 가 만든다).
 ]]
@@ -537,9 +537,11 @@ end
 
 --[[
 	블링크 동안 한 방향으로만 도는 카메라 한 줄기: 어깨 너머 자리에서 시전자 오른쪽으로 돌기 시작해 위로 천천히 올라 적 진영
-	(필드 상자 — 잔상이 흩어지는 곳)을 비추고(RISE 초) → 진영 가운데를 점점 빠르게 돌며 넓어지다 → ev.d 초(시전자가 제자리에
-	나타나는 순간)에 **전투 카메라 자리에 딱** 멈춘다(그 구도가 시전자와 진영을 다 담고, CamFree 때 흔들림이 없다).
-	각 φ 는 진영 가운데에서 본 수평 방향(월드 x·z). 처음부터 끝까지 φ 가 한 방향으로만 늘어난다(한 바퀴 + 전투 카메라 각까지).
+	(필드 상자 — 잔상이 흩어지는 곳)을 비추고(RISE 초) → 진영 가운데를 점점 빠르게 돌다 → ev.d 초(시전자가 제자리에 나타나는 순간)에
+	**맺음 자리**(시전자 오른쪽 뒤 높이 — 어깨 너머로 시전자와 진영을 함께 담는다)에 딱 멈추고, 검흔이 다 터질 때까지 그대로 둔다.
+	전투 카메라로는 공격(모션)이 다 끝난 뒤 감독이 Shot 을 놓으며 돌아간다(2026-10-30 사용자: "검기들이 터지기 직전에 카메라가 기존 화면에
+	딱 고정되는데, 그러지 말고 공격이 완전히 종료된 후에 카메라가 원위치로" — 전엔 전투 카메라 자리에서 멈췄다).
+	각 φ 는 진영 가운데에서 본 수평 방향(월드 x·z). 처음부터 끝까지 φ 가 한 방향으로만 늘어난다(한 바퀴 + 맺음 자리 각까지).
 	2026-10-30 사용자: "카메라가 움직였다가 역방향으로 돌아(대략 2초 위치)" — 올라가는 길과 도는 길이 따로라 방향이 꺾였다 → 한 줄기로.
 ]]
 function Fx.CamOrbit(ctx: any, ev: any)
@@ -550,7 +552,8 @@ function Fx.CamOrbit(ctx: any, ev: any)
 	local center = boxWorld(box, Vector3.new((box.U0 + box.U1) / 2, (box.V0 + box.V1) / 2, 1))
 	local r0 = math.max(box.U1 - box.U0, box.V1 - box.V0) / 2 + 4
 	local h0 = 10
-	local base: CFrame = ctx.CameraBase or CFrame.lookAt(center + box.R * (r0 + 8) + Vector3.new(0, 16, 0), center)
+	local home = ctx.Actor.Home.Position
+	local base = CFrame.lookAt(home + box.R * 11 - box.F * 8 + Vector3.new(0, 9, 0), home + box.F * ((center - home):Dot(box.F) * 0.55))
 	local from: CFrame = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or base
 	local look0 = from.Position + from.LookVector * 10
 	local function polar(p: Vector3): (number, number, number)
@@ -559,7 +562,7 @@ function Fx.CamOrbit(ctx: any, ev: any)
 	end
 	local phiS, rS, hS = polar(from.Position)
 	local phiE, r1, h1 = polar(base.Position)
-	-- 도는 방향: 처음 움직임이 시전자 오른쪽(box.R)으로 가는 쪽. 한 바퀴 + 그 방향으로 전투 카메라 각까지
+	-- 도는 방향: 처음 움직임이 시전자 오른쪽(box.R)으로 가는 쪽. 한 바퀴 + 그 방향으로 맺음 자리 각까지
 	local dir = if Vector3.new(-math.sin(phiS), 0, math.cos(phiS)):Dot(box.R) >= 0 then 1 else -1
 	local sweep = 2 * math.pi + (dir * (phiE - phiS)) % (2 * math.pi)
 	local w0 = math.rad(30) -- 처음 빠르기(나머지는 가속)
@@ -568,24 +571,18 @@ function Fx.CamOrbit(ctx: any, ev: any)
 		local tt = math.min(t, total)
 		local swept = math.min(sweep, w0 * tt + 0.5 * acc * tt * tt)
 		local k = swept / sweep
-		-- 반지름·높이: 어깨 너머 → (RISE 초에 걸쳐) 진영 둘레 r0·h0 → (끝으로 갈수록) 전투 카메라 r1·h1
+		-- 반지름·높이: 어깨 너머 → (RISE 초에 걸쳐) 진영 둘레 r0·h0 → (끝으로 갈수록) 맺음 자리 r1·h1
 		local rise = sineInOut(math.min(1, tt / RISE))
 		local grow = math.clamp((tt - RISE) / math.max(0.1, total - RISE), 0, 1) ^ 2
 		local rad = rS + (r0 - rS) * rise + (r1 - r0) * grow
 		local a = phiS + dir * swept
 		local pos = center + Vector3.new(math.cos(a) * rad, hS + (h0 - hS) * rise + (h1 - h0) * grow, math.sin(a) * rad)
-		-- 끝 20% 동안 바라보는 방향을 전투 카메라의 방향으로 맞춘다(끝에서 자리·방향이 전투 카메라와 같다)
+		-- 끝 20% 동안 바라보는 방향을 맺음 자리의 방향으로 맞춘다(끝에서 자리·방향이 맺음 자리와 같다)
 		local w = sineInOut(math.clamp((k - 0.8) / 0.2, 0, 1))
 		local cf = CFrame.new(pos) * CFrame.lookAt(pos, look0:Lerp(center, rise)).Rotation:Lerp(base.Rotation, w)
 		s.cam = cf
 		return cf
 	end)
-end
-
-function Fx.CamFree(ctx: any)
-	local s = st(ctx)
-	s.cam = nil
-	ctx.Shot()
 end
 
 -- 발을 내딛는 순간 발치에 먼지·고리

@@ -324,8 +324,8 @@ events = ['{ t = 0, k = "Fx", n = "CamFoot" }', '{ t = 0.42, k = "Fx", n = "Step
 events += ['{ t = %s, k = "Fx", n = "Phantom" }' % t for t in blink_times]
 events += ['{ t = %s, k = "Fx", n = "Return" }' % RETURN, '{ t = 4.08, k = "Fx", n = "CutClick" }']
 events += ['{ t = %s, k = "Hit", i = %d, fx = "MarkHit" }' % (round(HITS_FROM + HIT_GAP * (k - 1), 3), k) for k in range(1, PHANTOMS + 1)]
-events += ['{ t = 5.02, k = "Fx", n = "FinalBreak" }', '{ t = 5.03, k = "Stop", d = 0.1 }', '{ t = 5.04, k = "Shake", a = 0.7, d = 0.5 }',
-           '{ t = 5.35, k = "Fx", n = "CamFree" }']
+# 카메라는 CamOrbit 의 맺음 자리에 머물다가 모션이 끝나면(감독이 Shot 을 놓으며) 전투 카메라로 돌아간다 — 2026-10-30 사용자 "공격이 완전히 종료된 후에"
+events += ['{ t = 5.02, k = "Fx", n = "FinalBreak" }', '{ t = 5.03, k = "Stop", d = 0.1 }', '{ t = 5.04, k = "Shake", a = 0.7, d = 0.5 }']
 S.append(motion("SpaceCut", "공간의 이해([집중력]) 컷신: 발을 들어[중] 내딛고(발 확대)[강] 달리기 준비로 칼자루를 쥐고[중] 버티다[약] 박차고[강] 달려 나가는 걸음 도중에 사라진다[중] → "
                 "보이지 않게 블링크 17번(무작위 자리·잔상·검흔, 점점 빨라짐) → 제자리를 가로로 베며 나타나[강] 버티다[약] 꽂으면 흑백 → 검흔 17개가 하나씩 파바바박 터지는 17연타 (고정 피해)",
                 5.8, spec, events))
