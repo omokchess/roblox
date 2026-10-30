@@ -653,8 +653,9 @@ local PHANTOM_CUTS = {
 }
 local PHANTOM_POSES = { "DRAWCUT", "SWEEP", "CUTDOWN", "KESA", "RISE", "SLASHR", "SKYRISE", "SIDEKESA", "BACKSWEEP" }
 -- 검로 크기: 2026-10-30 사용자 "검로 크기를 더 키워주고(발도술의 절정 급)" — 길이 1.6배, 굵기는 절정의 PeakPath 와 같은 범위(× MARK)
-local CUT_LENGTH = 1.6
-local CUT_WIDTH = { 0.06 * MARK, 0.16 * MARK }
+-- → 같은 날 "굵기를 60%정도로 줄이고, 길이를 40% 더 늘리자" — 길이 1.6 × 1.4, 굵기 × 0.6
+local CUT_LENGTH = 1.6 * 1.4
+local CUT_WIDTH = { 0.6 * 0.06 * MARK, 0.6 * 0.16 * MARK }
 
 --[[
 	cf(뿌리) 둘레에 name 자세의 곧은 검로 두 끝(조금씩 흔들고 scale 배 늘인다).
