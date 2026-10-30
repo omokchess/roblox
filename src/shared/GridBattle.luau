@@ -2674,15 +2674,19 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	end
 	-- 적에게 걸린 주는 피해 보정(광신·섬광·중력)을 먹인다. 보스는 보스 버프(감시식·오버클럭·커널 모드)도
 	local incoming = BattleStatus.OutgoingDamage(enemy.Status, (enemy.Power + skill.Damage) * multiplier)
+	-- 공격 자체의 위력(회피·막기·치명·보호막·무적을 따지기 전) — 조율자 두베가 "14 이상의 피해"를 이것으로도 센다
+	local raw = BattleStatus.OutgoingDamage(enemy.Status, (enemy.Power + skill.Damage) * math.max(0, before.Mult))
 	local boss = if enemy.Part then state.Boss else nil
 	if boss then
 		incoming *= 1 + bossBuffTotal(boss, "Damage")
+		raw *= 1 + bossBuffTotal(boss, "Damage")
 	end
 	local element: BattleStatus.Element = "Physical"
 	if skill.HpRatio then
 		-- 체퍼댐(궁극기): 지금 체력의 비율. 버프 칸·검수 배율은 안 먹는다(받는 쪽 등급·패리만)
 		local ratio = if boss and boss.LastStand == "BlueChain" then 0.35 else skill.HpRatio
 		incoming = ally.Health * ratio * (if parried then PARRY_KEEP else QteDefinitions.Multiplier("Dodge", grade))
+		raw = ally.Health * ratio
 		element = "True"
 	end
 	local taken = damageUnit(state, ally, incoming, element, true)
@@ -2748,7 +2752,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		pushLog(state, string.format("%s의 %s — %d 피해", enemy.Name, skill.Name, taken))
 	end
 
-	fire(state, "Defend", { Attacker = enemy, Grade = grade, Auto = autoParried, Skill = skill })
+	fire(state, "Defend", { Attacker = enemy, Grade = grade, Auto = autoParried, Skill = skill, Raw = raw })
 	if taken > 0 then
 		fire(state, "Taken", { Attacker = enemy, Damage = taken })
 	end

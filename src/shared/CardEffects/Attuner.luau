@@ -10,8 +10,10 @@
 	패시브(별 넷 — 스킬 별 셋은 BattleSkillEffects 가 켠다)
 	  알카이드  같은 행·열 아군 [가하는 피해량] +50%, 없으면 칠성. **신앙심 말고는 피해% 가 안 먹는다**(FaithOnlyDamage)
 	  미자르    턴 시작 시 한 아군(솔로면 자신) 지정 → 묶임 1 · 보호막 49 · 가하는 +50%. 자신이면 칠성
-	  페크다    아군 자동 회피 20%. 자동 회피로 피하면 칠성
-	  두베      턴 시작 시 아군 보호막 7. 아군이 14 이상 맞으면 칠성
+	  페크다    아군 자동 회피 20%. 공격을 피하면(자동 회피 · QTE 회피 · 자동 패링) 칠성
+	  두베      턴 시작 시 아군 보호막 7. 아군이 14 이상 맞거나, 위력 14 이상인 공격을 받으면(피하거나 막았어도) 칠성
+	  2026-10-31 사용자: "특정 이유때문에 일정량의 칠성을 얻지 못하는 경우가 있어" — 페크다는 자동 회피만, 두베는 실제로 깎인 양만 세어
+	  QTE 를 잘 피하면(디버그 자동 QTE 성공·무적이면 늘) 두 별이 안 켜져 칠성이 5 에서 멈췄다 → 위처럼 넓혔다.
 
 	별의 "모드"(태우기 위한 별이 바꾼다)는 규칙 질의로 묻는다 — AlkaidBurn · MizarBurn · PhecdaAccuracy · DubheMegrez.
 	축(CardAxes): 칠성(Constellation) · 연소(Burn) · 수호(Aegis) · 신앙(Faith)
@@ -205,7 +207,8 @@ M.Attuner_Phecda = {
 		return false
 	end,
 	Defend = function(c: Card, info: any)
-		if info.Auto and info.Grade == "Success" then
+		-- 피했으면(자동 회피뿐 아니라 QTE 회피 · 자동 패링도) 칠성 — 잘 피할수록 못 얻던 것을 고침(2026-10-31)
+		if info.Grade == "Success" then
 			light(c, "Phecda")
 		end
 	end,
@@ -232,9 +235,10 @@ M.Attuner_Dubhe = {
 		local ally = H.Ally(c)
 		c.Mem.before = ally.Status.Shield + ally.Health
 	end,
-	Defend = function(c: Card)
+	-- 위력 14 이상인 공격을 받으면 피하거나 막았어도(무적이어도) 센다(info.Raw — 회피·막기·보호막 전의 위력, 2026-10-31)
+	Defend = function(c: Card, info: any)
 		local ally = H.Ally(c)
-		if c.Mem.before and c.Mem.before - (ally.Status.Shield + ally.Health) >= 14 then
+		if (info.Raw or 0) >= 14 or (c.Mem.before and c.Mem.before - (ally.Status.Shield + ally.Health) >= 14) then
 			light(c, "Dubhe")
 		end
 		c.Mem.before = nil

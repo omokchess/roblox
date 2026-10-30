@@ -450,6 +450,16 @@ local function runCardEffects()
 	GridBattle.ResolveDodge(undying, foe.Id, "Fail")
 	expect(not undyingAlly.Alive, "불굴 must work only once per battle")
 
+	--=== 조율자 칠성: 잘 피해도(디버그 무적 · QTE 성공) 페크다 · 두베 별이 켜진다(2026-10-31 — 전엔 칠성이 5 에서 멈췄다) ===--
+
+	local stars = battleWith("Attuner", {})
+	stars.Debug = { God = true, NoCooldown = true }
+	local starAlly = GridBattle.Ally(stars)
+	local starFoe = GridBattle.AliveEnemies(stars)[1]
+	GridBattle.ResolveDodge(stars, starFoe.Id, "Success")
+	expect((starAlly :: any).StarLit and (starAlly :: any).StarLit.Phecda == true, "페크다 must light when the ally dodges by QTE")
+	expect((starAlly :: any).StarLit.Dubhe == true, "두베 must light on a dodged attack of 14+ power (slime 6 + 12)")
+
 	--=== 피격 → 분노(다혈질 + 격노) ===--
 
 	local plain = battleWith("Berserker", {})
