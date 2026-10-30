@@ -2,7 +2,7 @@
 --[[
 	Fx/AzureBlade — 청의 검사 이펙트. 푸른 칼빛·흰 섬광·잔상·물·검로. (2026-10-25, 같은 날 사용자 말 설명으로 다시 짬)
 
-	  집중 베기     조금 뽑다 챙 멈춤(Ching) → 잔상을 남기고(Slip) 앞 두 칸을 블링크로 지나 작게 기운 검흔(SmallCuts) → 딸깍 → 잔상을 남기고 제자리로
+	  집중 베기     조금 뽑다 챙 멈춤(Ching) → 잔상을 남기고(Slip) 대상 앞까지 돌진해 멈춘 뒤 마저 뽑아 베면 대상 쪽에 작게 기운 검흔(SmallCuts) → 딸깍 → 잔상을 남기고 제자리로
 	  진 발도술     (2026-10-30 다시) 등에서 뽑아(DrawGlint · Release) 강하게 세로로 내리베면 세로 초승달 검기가 내 행 끝까지 날아가고
 	                그 뒤를 선이 따라간다(WaveLaunch) → 행 전체 1타(WaveHit) → 칼을 꽂을 때 선에 빛이 달리며 2타(LineStrike)
 	  발도술의 절정 반쯤 뽑다 "챙" 하고 멈춰 드러난 날에 빛(Ching) → 사라져(Vanish) 줄 끝에 이미 벤 자세로 서고,
@@ -11,7 +11,8 @@
 	  공간의 이해   (2026-10-30 다시, 컷신) 발치 확대(CamFoot) · 내딛기(StepDust) → 오른쪽 등 뒤에서 달리기 준비(CamShoulder) →
 	                박차는 순간 사라져(Disappear) 보이지 않게 블링크 17번 — 진영을 고르게 나눈 칸마다(층화 표본) 베기 잔상 · 절정 급 곧은 검흔 ·
 	                앞 잔상에서 이어지는 곧은 선(Phantom), 카메라는 오른쪽 위로 올라
-	                적 진영을 점점 빠르게 한 바퀴 돌다 멈춘다(CamOrbit) → 제자리를 베며 나타나(Return) 꽂으면 흑백(CutClick) →
+	                적 진영을 점점 빠르게 한 바퀴 돌다 멈춘다(CamOrbit) → 제자리를 베며 나타나(Return) 천천히 납도하는 동안 카메라가 3초 끌리며 다가가고(CamSettle)
+	                꽂으면 흑백(CutClick) →
 	                검흔·선이 하나씩 파바바박 터지는 17연타(MarkHit) → 임팩트 프레임(FinalBreak) → 모션이 끝나면 카메라가 돌아간다
 	효과음: 로블록스 효과음 모음(ProSoundEffects). 챙 = 칼 뽑는 쇳소리 — 바꾸려면 SOUND 의 숫자만 고친다.
 	잔상 자세는 모션 파일의 Poses(tools/combat/design/azure_gen.py 가 만든다).
@@ -410,10 +411,8 @@ end
 
 --=== 집중 베기(2026-10-26 — 발도술 셋과 같은 결로 작게) ===--
 
--- 블링크로 빠지는 순간: 선 자리에 그 자세(ev.p)의 잔상을 남긴다(출발 자리를 적어 둔다 — 작은 검흔이 여기서 시작)
+-- 돌진으로 빠지는 순간: 선 자리에 그 자세(ev.p)의 잔상을 남긴다
 function Fx.Slip(ctx: any, ev: any)
-	local s = st(ctx)
-	s.slipFrom = ctx.Root.Position
 	local g = Common.Ghost(ctx, pose((ev and ev.p) or "DRAW1"), ctx.Root, { Transparency = 0.55, FadeIn = 0.01 })
 	if g then
 		task.delay(0.15, function()
@@ -423,11 +422,16 @@ function Fx.Slip(ctx: any, ev: any)
 	ctx.Vfx.Flash(ctx.Root.Position, { Color = ICE, Size = 4, Life = 0.15, Brightness = 4 })
 end
 
--- 지나간 앞 두 칸에 작게 기운 곧은 검흔 몇 줄이 반짝(발도술의 절정 칼날의 작은 판)
+-- 대상 앞까지 돌진해 멈춘 뒤 벤 순간: 시전자 앞 → 대상(들) 너머까지 작게 기운 곧은 검흔 몇 줄이 반짝(발도술의 절정 칼날의 작은 판).
+-- 2026-10-30 사용자: "적한테 돌진 먼저 한 후에 베게 … 이펙트가 도중에 나오다 말아버려" — 전엔 돌진하며 지나간 길 위에 났다
 function Fx.SmallCuts(ctx: any)
-	local s = st(ctx)
-	local a = s.slipFrom or ctx.Actor.Home.Position
-	local b = ctx.Root.Position
+	local f = ctx.Forward
+	local a = ctx.Root.Position
+	local reach = 6
+	for _, p in ctx.Targets do
+		reach = math.max(reach, (p - a):Dot(f) + 2.5)
+	end
+	local b = a + f * reach
 	local side = flat(b - a):Cross(Vector3.yAxis)
 	local rng = Random.new()
 	for k = 1, 4 do
@@ -523,13 +527,14 @@ local function dragOut(x: number): number
 	return 1 - (1 - x) ^ 4 * (1 + 4 * x)
 end
 
--- 들머리: 내딛는 오른발을 무릎 높이에서 내려다보며 확대(조금씩 다가간다 — 발과 발밑 땅이 화면 가운데)
+-- 들머리: 내딛는 오른발을 무릎 높이에서 내려다보며 확대(조금씩 다가간다 — 든 발 자리(앞 1.1)에서 내디딘 자리(앞 2.5) 사이가 화면 가운데.
+-- 2026-10-30 발이 미끄러지지 않게 크게 내딛도록 바꾸며 보는 곳도 앞으로 옮김)
 function Fx.CamFoot(ctx: any)
 	local s = st(ctx)
 	local home = ctx.Actor.Home
 	local g = ctx.Ground - home.Y
-	local look = home * Vector3.new(0.5, g + 0.25, -0.8)
-	local a0, a1 = home * Vector3.new(2.7, g + 1.6, -3.7), home * Vector3.new(2.1, g + 1.25, -2.9)
+	local look = home * Vector3.new(0.1, g + 0.25, -1.9)
+	local a0, a1 = home * Vector3.new(2.3, g + 1.6, -4.8), home * Vector3.new(1.7, g + 1.25, -4)
 	-- 어깨 너머 샷(0.45초)이 시작할 때 딱 멈추도록 0.45초에 감속해 닿는다
 	ctx.Shot(0.45, function(u)
 		local cf = CFrame.lookAt(a0:Lerp(a1, 1 - (1 - u) ^ 2), look)
@@ -557,10 +562,26 @@ function Fx.CamShoulder(ctx: any, ev: any)
 	end)
 end
 
+-- 필드 상자 가운데(바닥 위 1)
+local function fieldCenter(box: any): Vector3
+	return boxWorld(box, Vector3.new((box.U0 + box.U1) / 2, (box.V0 + box.V1) / 2, 1))
+end
+
+--[[
+	맺음 자리: 시전자 오른쪽 뒤 높이에서 어깨 너머로 시전자와 진영을 함께 담는다(바라보는 곳 = 시전자에서 진영 가운데로 55%).
+	back 배 = 바라보는 곳에서 그만큼 물러난 자리(1 = 그 자리). 공전은 1.35 에서 멈추고 CamSettle 이 3초 동안 1 로 끌어당긴다.
+]]
+local function finale(ctx: any, box: any, back: number): CFrame
+	local home = ctx.Actor.Home.Position
+	local look = home + box.F * ((fieldCenter(box) - home):Dot(box.F) * 0.55)
+	local pos = home + box.R * 11 - box.F * 8 + Vector3.new(0, 12, 0)
+	return CFrame.lookAt(look + (pos - look) * back, look)
+end
+
 --[[
 	블링크 동안 한 방향으로만 도는 카메라 한 줄기: 어깨 너머 자리에서 시전자 오른쪽으로 돌기 시작해 위로 천천히 올라 적 진영
 	(필드 상자 — 잔상이 흩어지는 곳)을 비추고(RISE 초) → 진영 가운데를 점점 빠르게 돌다 → 끝에서 부드럽게 감속해 ev.d 초(시전자가 제자리에
-	나타나는 순간)에 **맺음 자리**(시전자 오른쪽 뒤 높이 — 어깨 너머로 시전자와 진영을 함께 담는다)에 닿아 멈추고, 검흔이 다 터질 때까지 그대로 둔다.
+	나타나는 순간)에 맺음 자리(finale)에서 조금 물러난 자리에 닿는다 → CamSettle 이 납도하는 동안 3초에 걸쳐 맺음 자리로 끌어당긴다.
 	전투 카메라로는 공격(모션)이 다 끝난 뒤 감독이 Shot 을 놓으며 돌아간다(2026-10-30 사용자: "검기들이 터지기 직전에 카메라가 기존 화면에
 	딱 고정되는데, 그러지 말고 공격이 완전히 종료된 후에 카메라가 원위치로" — 전엔 전투 카메라 자리에서 멈췄다).
 	각 φ 는 진영 가운데에서 본 수평 방향(월드 x·z). 처음부터 끝까지 φ 가 한 방향으로만 늘어난다(한 바퀴 + 맺음 자리 각까지).
@@ -571,10 +592,9 @@ function Fx.CamOrbit(ctx: any, ev: any)
 	local total = (ev and ev.d) or 2.4
 	local RISE = 0.75
 	local box = fieldBox(ctx)
-	local center = boxWorld(box, Vector3.new((box.U0 + box.U1) / 2, (box.V0 + box.V1) / 2, 1))
+	local center = fieldCenter(box)
 	local r0 = math.max(box.U1 - box.U0, box.V1 - box.V0) / 2 + 4
-	local home = ctx.Actor.Home.Position
-	local base = CFrame.lookAt(home + box.R * 11 - box.F * 8 + Vector3.new(0, 12, 0), home + box.F * ((center - home):Dot(box.F) * 0.55))
+	local base = finale(ctx, box, 1.35)
 	local from: CFrame = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or base
 	local look0 = from.Position + from.LookVector * 10
 	local function polar(p: Vector3): (number, number, number)
@@ -601,6 +621,20 @@ function Fx.CamOrbit(ctx: any, ev: any)
 		-- 끝 20% 동안 바라보는 방향을 맺음 자리의 방향으로 맞춘다(끝에서 자리·방향이 맺음 자리와 같다)
 		local w = sineInOut(math.clamp((k - 0.8) / 0.2, 0, 1))
 		local cf = CFrame.new(pos) * CFrame.lookAt(pos, look0:Lerp(center, rise)).Rotation:Lerp(base.Rotation, w)
+		s.cam = cf
+		return cf
+	end)
+end
+
+-- 나타나 납도하는 동안: 공전이 멈춘 자리에서 맺음 자리로 ev.d 초(3초) 동안 끌리며 다가가 멈춘다(dragOut — 빠르게 따라붙고 긴 꼬리).
+-- 그 뒤 모션이 끝날 때까지 그대로 있다가 감독이 Shot 을 놓으며 전투 카메라로 돌아간다. (2026-10-30 사용자: "납도할 때 카메라도 3초 끌리게")
+function Fx.CamSettle(ctx: any, ev: any)
+	local s = st(ctx)
+	local d = (ev and ev.d) or 3
+	local goal = finale(ctx, fieldBox(ctx), 1)
+	local from: CFrame = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or goal
+	ctx.Shot(d, function(_, t)
+		local cf = from:Lerp(goal, dragOut(math.min(t, d) / d))
 		s.cam = cf
 		return cf
 	end)

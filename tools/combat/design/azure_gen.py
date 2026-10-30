@@ -91,8 +91,28 @@ def _full(name, over):
     return P
 
 
+# 칼끝이 검집 입을 막 빠져나온 뽑힘(이만큼 미끄러져야 칼이 검집에서 자유로워진다)
+FULL = A.TIP_Y - A.SHEATH_Y + 0.12
+# 발도(hilt → drawn)·납도(drawn → hilt)에서 칼이 검집 축을 따라 미끄러지는 몫(진행도) — 나머지 동안 칼이 휘둘러진다
+SLIDE = 0.4
+
+
+def saya_on_sword(P, depth):
+    """오른손에 쥔 칼(W)에 검집을 depth 만큼 뽑힌 자리로 씌운다(azure_poses.place_sword 의 거꾸로)"""
+    wc = A.weapon_cf(P, "W")
+    r, o = A.sword_in_saya(depth)
+    R = A.mm(wc.R, A.tr(r))
+    A.set_back(P, R, A.sub(wc.p, A.mv(R, o)))
+
+
 def _tween_mode(a, b):
     ma, mb = A.MODE[a], A.MODE[b]
+    # 2026-10-30 사용자: "발도, 납도할 때 검날이 좀 부자연스럽게 들어가(검집을 뚫는다던가)" — 반쯤 뽑힌 자세와 뽑아 든 자세를
+    # 곧장 이으면 칼이 검집 벽을 뚫고 휘둘러졌다 → 칼이 검집 축을 따라 끝까지 미끄러져 빠진 뒤(또는 입에 맞춘 뒤) 휘두른다
+    if ma == "hilt" and mb == "drawn":
+        return "draw"
+    if ma == "drawn" and mb == "hilt":
+        return "sheathe"
     if ma == "back" and mb == "back":
         return "back"
     if (ma == "carry" or a in A.ON_HILT) and (mb == "carry" or b in A.ON_HILT) and "carry" in (ma, mb):
@@ -119,10 +139,83 @@ def _between(Pa, Pb, u, mode, da, db, name_a="", name_b=""):
             w = u if A.MODE[name_b] == "hilt" else 1 - u
             if w > 0.5:
                 Q["LArm"], _ = A.reach(Q, "L", A.saya_point(Q, A.LGRIP_Y), hint=Q["LArm"])
+    elif mode in ("draw", "sheathe"):
+        # draw: 처음 SLIDE 동안 칼(손 공간 그대로)에서 검집이 축을 따라 FULL 까지 미끄러져 빠지고(왼손이 끌어냄) → 칼이 끝 자세로 휘둘러진다.
+        # sheathe: 그 거꾸로 — 칼이 입에 맞춰 오고(검집도 그 자리로) → 마지막 SLIDE 동안 축을 따라 미끄러져 들어간다.
+        hilt_p, drawn_p, d0 = (Pa, Pb, da) if mode == "draw" else (Pb, Pa, db)
+        w = u if mode == "draw" else 1 - u  # 0 = 뽑는 중 자세 쪽, 1 = 뽑아 든 자세 쪽
+        if w <= SLIDE:
+            Q["W"] = hilt_p["W"]
+            saya_on_sword(Q, d0 + (FULL - d0) * (w / SLIDE))
+            Q["LArm"], _ = A.reach(Q, "L", A.saya_point(Q, A.LGRIP_Y), hint=Q["LArm"])
+        else:
+            # 칼이 빠진 순간(진행도 SLIDE)의 검집·왼팔에서 뽑아 든 자세 쪽으로
+            u1 = SLIDE if mode == "draw" else 1 - SLIDE
+            Q1 = {k: tuple(x + (y - x) * u1 for x, y in zip(Pa[k], Pb[k])) for k in BODY}
+            Q1["W"] = hilt_p["W"]
+            saya_on_sword(Q1, FULL)
+            Q1["LArm"], _ = A.reach(Q1, "L", A.saya_point(Q1, A.LGRIP_Y), hint=Q1["LArm"])
+            v = (w - SLIDE) / (1 - SLIDE)
+            Q["W"] = _slerp6(hilt_p["W"], drawn_p["W"], v)
+            Q["O"] = _slerp6(Q1["O"], drawn_p["O"], v)
+            Q["LArm"] = tuple(x + (y - x) * v for x, y in zip(Q1["LArm"], drawn_p["LArm"]))
     else:
         Q["W"] = _slerp6(Pa["W"], Pb["W"], u)
         A.saya_with_sword(Q)
     return Q
+
+
+# ── 칼·검집 겹침 검사(2026-10-30 사용자: "발도, 납도할 때 … 검집을 뚫는다", "스탠딩 모션에서도 가끔씩 검날이 검집을 통과") ──
+# 키 사이를 재생과 같게(몸 = 직선, 칼·검집 = 자리 직선 + 회전 최단 호) 0.01초마다 짚어, 날 가운데 선 위 점마다 날 단면(반두께·반너비)이
+# 검집 겉 상자에 닿았는데 그 안에 다 들어가 있지 않거나(= 날이 검집 겉으로 비어져 나옴) 검집 축과 6° 넘게 어긋나 있으면 센다.
+SAYA_Y = (-0.35 * A.K, 3.81 * A.K)
+OUTER = (0.075 * A.K, 0.17 * A.K)  # 검집 겉 반폭(두께 x · 너비 z)
+BLADE = (0.0325 * A.K, 0.125 * A.K)  # 날 반두께 · 반너비(밑동 0.135 ~ 끝 0.11 의 가운데)
+BLADE_Y = [0.6 + i * 0.12 for i in range(44)]
+CLIPS = []
+CURRENT = [""]
+
+
+def _dsori(y):
+    return 2 * 0.34 * max(0.0, y / A.K - 0.44) / (4.01 * 4.01)
+
+
+def saya_clip(P):
+    inv = A.back_cf(P).inv()
+    wc = A.weapon_cf(P, "W")
+    n = 0
+    for y in BLADE_Y:
+        q = inv.pt(wc.pt((0, y, A.sori(y))))
+        if not (SAYA_Y[0] < q[1] < SAYA_Y[1]):
+            continue
+        ax, az = abs(q[0]), abs(q[2] - (A.sori(q[1] + A.SHEATH_Y) - A.sori(A.SHEATH_Y)))
+        if ax >= OUTER[0] + BLADE[0] or az >= OUTER[1] + BLADE[1]:
+            continue  # 닿지 않음
+        d = A.norm(A.mv(inv.R, A.mv(wc.R, (0, 1, _dsori(y)))))
+        t = A.norm((0, 1, _dsori(q[1] + A.SHEATH_Y)))
+        inside = ax + BLADE[0] <= OUTER[0] and az + BLADE[1] <= OUTER[1]
+        if not inside or sum(x * y for x, y in zip(d, t)) < math.cos(math.radians(6)):
+            n += 1
+    return n
+
+
+def _blend(Pa, Pb, u):
+    """재생과 같은 키 사이 자세: 몸 = 직선, 칼·검집 = 자리 직선 + 회전 최단 호"""
+    Q = {k: tuple(x + (y - x) * u for x, y in zip(Pa[k], Pb[k])) for k in BODY}
+    Q["W"], Q["O"] = _slerp6(Pa["W"], Pb["W"], u), _slerp6(Pa["O"], Pb["O"], u)
+    return Q
+
+
+def _check(out):
+    """keys() 가 만든 키 줄(중간 키 포함)을 0.01초마다 짚어 겹침을 CLIPS 에 적는다"""
+    full = [(t, name, _full(name, over)) for t, _, name, over in out]
+    for (t0, a, Pa), (t1, b, Pb) in zip(full, full[1:]):
+        steps = max(2, math.ceil((t1 - t0) / 0.01))
+        worst = 0
+        for j in range(steps + 1):
+            worst = max(worst, saya_clip(_blend(Pa, Pb, j / steps)))
+        if worst:
+            CLIPS.append(f"{CURRENT[0]:14s} {t0:5.2f}~{t1:5.2f}  {a} -> {b}  겹친 점 {worst}")
 
 
 def keys(spec):
@@ -141,13 +234,30 @@ def keys(spec):
             mode = _tween_mode(prev_name, name)
             if mode:
                 Pa, Pb = _full(prev_name, prev_over), _full(name, over)
-                n = max(2, math.ceil((t - t0) / 0.05 - 1e-9))
+                n = max(8 if mode in ("draw", "sheathe") else 2, math.ceil((t - t0) / 0.05 - 1e-9))
                 da, db = A.DEPTH.get(prev_name, 0.0), A.DEPTH.get(name, 0.0)
-                for j in range(1, n):
-                    Q = _between(Pa, Pb, _ease(e, j / n), mode, da, db, prev_name, name)
-                    out.append((round(t0 + (t - t0) * j / n, 3), "linear", name, Q))
+
+                def exact(tau, t0=t0, t=t, e=e, Pa=Pa, Pb=Pb, mode=mode, da=da, db=db, a=prev_name, b=name):
+                    return _between(Pa, Pb, _ease(e, (tau - t0) / (t - t0)), mode, da, db, a, b)
+
+                # 중간 키: 0.05초 간격 → 이웃 둘을 재생처럼 직선으로 이었을 때 칼이 검집 겉으로 비어져 나오면(saya_clip) 가운데에 키를 더 넣는다.
+                # (칼은 오른손에 붙어 있어 손이 크게 움직이는 사이에선 0.05초 간격으로는 등에 꽂힌 칼이 검집 밖으로 흔들렸다 —
+                #  2026-10-30 사용자: "스탠딩 모션에서도 가끔씩 검날이 검집을 통과")
+                taus = [t0 + (t - t0) * j / n for j in range(n + 1)]
+                poses = [Pa] + [exact(x) for x in taus[1:-1]] + [Pb]
+                k = 0
+                while k < len(taus) - 1:
+                    if taus[k + 1] - taus[k] > 0.006 and any(saya_clip(_blend(poses[k], poses[k + 1], f)) for f in (0.17, 0.33, 0.5, 0.67, 0.83)):
+                        m = (taus[k] + taus[k + 1]) / 2
+                        taus.insert(k + 1, m)
+                        poses.insert(k + 1, exact(m))
+                    else:
+                        k += 1
+                for tau, Q in zip(taus[1:-1], poses[1:-1]):
+                    out.append((round(tau, 3), "linear", name, Q))
                 e = "linear"
         out.append((t, e, name, over))
+    _check(out)
     lines, prev = [], {}
     for t, e, name, over in out:
         over = dict(over)
@@ -172,7 +282,13 @@ def keys(spec):
     return "\n".join(lines)
 
 
+def keys_named(name, spec):
+    CURRENT[0] = name
+    return keys(spec)
+
+
 def motion(name, comment, duration, spec, events, extra="", indent=2):
+    CURRENT[0] = name
     tab = "\t" * indent
     body = keys(spec)
     if indent == 1:
@@ -231,7 +347,7 @@ text += '''	-- 대기: 낮고 고요한 숨(Kit.Breath, Smooth). 들숨에 어�
 			BlendIn = 0.2,
 			BlendOut = 0.3,
 			Keys = {
-''' + "\n".join("\t" + line for line in keys([(0, None, "STANCE"), (0.16, "expoOut", "THUMB"), (0.85, "sineInOut", "THUMB", {"Head": (4, -30, 0)}), (1.15, "cubicInOut", "THUMB"), (1.22, "expoIn", "NOTO"), (1.75, "sineInOut", "STANCE")]).split("\n")) + '''
+''' + "\n".join("\t" + line for line in keys_named("Fidget", [(0, None, "STANCE"), (0.16, "expoOut", "THUMB"), (0.85, "sineInOut", "THUMB", {"Head": (4, -30, 0)}), (1.15, "cubicInOut", "THUMB"), (1.22, "expoIn", "NOTO"), (1.75, "sineInOut", "STANCE")]).split("\n")) + '''
 			},
 			Events = {
 				{ t = 0.16, k = "Fx", n = "Glint" },
@@ -273,17 +389,23 @@ S.append(motion("ScabbardStrike", "검집 타격 강중약중강: 칼자루를 �
                  (0.8, "expoIn", "STRIKE"), (1.15, "sineOut", "STRIKE", {"Root": (0, -0.44, -0.34, 0, -6, 0)}), (1.45, "cubicInOut", "CROUCH"), (1.52, "expoIn", "NOTO"), (1.95, "sineInOut", "STANCE")],
                 ['{ t = 0.58, k = "Dash", to = "Target", gap = 6.5, d = 0.2 }', '{ t = 0.8, k = "Hit", i = 1, fx = "SheathHit" }', '{ t = 0.81, k = "Stop", d = 0.08 }',
                  '{ t = 0.82, k = "Shake", a = 0.35, d = 0.25 }', '{ t = 1.15, k = "Dash", to = "Home", d = 0.32 }', '{ t = 1.52, k = "Fx", n = "Click" }']))
+# 2026-10-30 사용자: "'집중베기' 스킬 사용하고, 적한테 돌진 먼저 한 후에 베게 해줘. 지금은 베면서 돌진하는데, 그럼 이펙트가 도중에 나오다
+# 말아버려" — 전엔 블링크(0.04초 돌진) 도중에 벤 자세가 되어 검흔이 지나간 길 위에 났다 → 뽑다 만 칼을 쥔 채 대상 앞까지 돌진해 멈춘 뒤
+# 마저 뽑아(DRAW3) 벤다(DRAWCUT). 검흔(SmallCuts)은 다 온 뒤 대상 쪽에 난다.
 S.append(motion("FocusCut", "집중 베기([집중력]) — 발도술 셋과 같은 결로 작게: 칼자루를 낚아채[강] 조금 뽑다 챙! 멈추고[강] 숨을 고르다[약] "
-                "잔상을 남기고 앞 두 칸을 블링크로 지나 벤 자세로 나타나면 지나간 자리에 작게 기운 검흔이 반짝이며 벤다[강] → 버티고[약] 털고[중] "
-                "딸깍[강] → 잔상을 남기고 제자리로[약]", 2.2,
+                "잔상을 남기고 뽑다 만 칼을 쥔 채 대상 앞까지 돌진해 멈추고[중] 마저 뽑아[약] 한 번에 베면[강] 대상 둘레에 작게 기운 검흔이 반짝이며 벤다 → "
+                "버티고[약] 털고[중] 딸깍[강] → 잔상을 남기고 제자리로[약]", 2.4,
                 [(0, None, "STANCE"), (0.12, "expoOut", "CROUCH"), (0.32, "sineInOut", "DRAW1"),
-                 (0.36, "expoOut", "DRAW1", {"Root": (0, -0.34, 0.04, 0, 61, 0), "Torso": (-6, 14, 0)}), (0.58, "sineInOut", "DRAW1", {"Root": (0, -0.32, 0.02, 0, 60, 0)}),
-                 (0.62, "linear", "DRAWCUT"), (0.95, "sineOut", "DRAWCUT", _drift("DRAWCUT")), (1.2, "cubicInOut", "CHIBURI"), (1.32, "cubicIn", "OUT"),
-                 (1.4, "linear", "DRAW3"), (1.6, "cubicIn", "NOTO"), (1.66, "linear", "NOTO"), (2.2, "sineInOut", "STANCE")],
-                ['{ t = 0.12, k = "Fx", n = "Glint" }', '{ t = 0.34, k = "Fx", n = "Ching" }', '{ t = 0.59, k = "Fx", n = "Slip", p = "DRAW1" }',
-                 '{ t = 0.59, k = "Dash", to = "Target", n = 2, gap = -2.4, d = 0.04, e = "linear" }', '{ t = 0.65, k = "Fx", n = "SmallCuts" }',
-                 '{ t = 0.7, k = "Hit", i = 1, fx = "CutHit" }', '{ t = 0.71, k = "Stop", d = 0.06 }', '{ t = 0.71, k = "Shake", a = 0.25, d = 0.18 }',
-                 '{ t = 1.6, k = "Fx", n = "Click" }', '{ t = 1.68, k = "Fx", n = "Slip", p = "NOTO" }', '{ t = 1.68, k = "Dash", to = "Home", d = 0.04, e = "linear" }']))
+                 (0.36, "expoOut", "DRAW1", {"Root": (0, -0.34, 0.04, 0, 61, 0), "Torso": (-6, 14, 0)}), (0.5, "sineInOut", "DRAW1", {"Root": (0, -0.32, 0.02, 0, 60, 0)}),
+                 # 돌진(0.5 → 0.62): 몸을 앞으로 숙인 채 미끄러져 가 멈춘다
+                 (0.62, "quadOut", "DRAW1", {"Root": (0, -0.4, -0.12, 0, 58, 0), "Torso": (-14, 12, 0)}),
+                 (0.7, "quadIn", "DRAW3"), (0.76, "expoOut", "DRAWCUT"), (1.05, "sineOut", "DRAWCUT", _drift("DRAWCUT")), (1.3, "cubicInOut", "CHIBURI"),
+                 (1.42, "cubicIn", "OUT"), (1.52, "linear", "DRAW3"), (1.72, "cubicIn", "NOTO"), (1.78, "linear", "NOTO"), (2.4, "sineInOut", "STANCE")],
+                ['{ t = 0.12, k = "Fx", n = "Glint" }', '{ t = 0.34, k = "Fx", n = "Ching" }', '{ t = 0.5, k = "Fx", n = "Slip", p = "DRAW1" }',
+                 '{ t = 0.5, k = "Dash", to = "Target", gap = 3.2, d = 0.12, e = "quadOut" }', '{ t = 0.62, k = "Shake", a = 0.15, d = 0.1 }',
+                 '{ t = 0.72, k = "Fx", n = "Release" }', '{ t = 0.75, k = "Fx", n = "SmallCuts" }',
+                 '{ t = 0.79, k = "Hit", i = 1, fx = "CutHit" }', '{ t = 0.8, k = "Stop", d = 0.06 }', '{ t = 0.8, k = "Shake", a = 0.3, d = 0.2 }',
+                 '{ t = 1.72, k = "Fx", n = "Click" }', '{ t = 1.8, k = "Fx", n = "Slip", p = "NOTO" }', '{ t = 1.8, k = "Dash", to = "Home", d = 0.04, e = "linear" }']))
 S.append(motion("TrueIaido", "진 발도술(2026-10-30 다시): 칼자루를 낚아채[강] 등에서 뽑아[약중] 빠짐[강] → 머리 위로 치켜들어[중] 숨[약] → 강하게 세로로 내리베어[강] "
                 "검기를 날린다(선이 따라감) → 검기가 대상 열 전체를 벤다(1타) → 털고[중] 딸깍 꽂는 순간 검기를 따라간 선이 다시 벤다(2타)[강]", 2.6,
                 [(0, None, "STANCE"), (0.14, "expoOut", "CROUCH"), (0.36, "sineInOut", "DRAW1"), (0.56, "sineIn", "DRAW3"), (0.61, "expoOut", "OUT"),
@@ -316,26 +438,40 @@ def h(t):
     return round(t + H, 3)
 VANISH, RETURN = h(1.21), h(3.58)
 blink_times = [round(h(1.25) + (RETURN - 0.1 - h(1.25)) * (k / PHANTOMS) ** 0.7, 3) for k in range(1, PHANTOMS + 1)]
-HITS_FROM, HIT_GAP = h(4.18), 0.05
+SHEATHED = round(RETURN + 1.05, 3)  # 딸깍(칼이 다 들어간 순간) — 흑백 · 그 뒤 검흔이 하나씩 터진다
+HITS_FROM, HIT_GAP = round(SHEATHED + 0.1, 3), 0.05
+LAST_HIT = round(HITS_FROM + HIT_GAP * (PHANTOMS - 1), 3)
 spec = [(0, None, "STANCE"), (0.3, "cubicInOut", "FOOTLIFT"), (0.42, "quadIn", "FOOTDOWN"), (0.75, "cubicOut", "SET"),
         # 카메라가 끌며 멈추는 동안 준비 자세로 숨을 고르며 버틴다(조금 가라앉았다가 · 박차기 직전 더 웅크린다)
         (1.6, "sineInOut", "SET", _drift("SET", dy=-0.03, dz=-0.01, dry=-1)), (h(1.05), "sineInOut", "SET", _drift("SET", dy=-0.07)),
         (h(1.13), "expoOut", "RUNOFF"),
         # 박찬 뒤에도 앞으로 달려 나간다(뿌리를 앞으로 밀며 둘째 걸음 → 다시 첫 걸음) — 둘째 걸음 도중(VANISH)에 사라진다
-        (h(1.27), "linear", "RUNOFF2", {"Root": (0, -0.46, -2.1, 0, 6, 0)}), (h(1.4), "linear", "RUNOFF", {"Root": (0, -0.5, -3.9, 0, 8, 0)}),
-        (RETURN - 0.03, "linear", "RUNOFF", {"Root": (0, -0.5, -3.9, 0, 8, 0)}),
-        (RETURN, "linear", "SLASHR"), (h(3.72), "sineOut", "SLASHR", _drift("SLASHR")), (h(3.9), "cubicInOut", "DRAW3"), (h(4.08), "cubicIn", "NOTO"), (h(5.7), "sineInOut", "STANCE")]
-events = ['{ t = 0, k = "Fx", n = "CamFoot" }', '{ t = 0.42, k = "Fx", n = "StepDust" }', '{ t = 0.45, k = "Fx", n = "CamShoulder", d = %s }' % round(VANISH - 0.45, 3),
+        (h(1.27), "linear", "RUNOFF2"), (h(1.4), "linear", "RUNOFF", {"Root": (0, -0.45, -7.0, 0, 8, 0)}),
+        (RETURN - 0.03, "linear", "RUNOFF", {"Root": (0, -0.45, -7.0, 0, 8, 0)}),
+        # 2026-10-30 사용자: "블링크 후 납도를 조금 더 천천히" — 벤 끝을 버티다(0.25) 칼을 검집 입에 천천히 맞춰(0.5) 밀어 넣는다(0.3, 딸깍)
+        # (옛: 0.14 · 0.18 · 0.18)
+        (RETURN, "linear", "SLASHR"), (round(RETURN + 0.25, 3), "sineOut", "SLASHR", _drift("SLASHR")), (round(RETURN + 0.75, 3), "sineInOut", "DRAW3"),
+        (SHEATHED, "cubicIn", "NOTO"), (round(RETURN + 2.95, 3), "sineInOut", "STANCE")]
+# 흔들림(2026-10-30 사용자: "카메라 셰이크를 추가해줘"): 내딛기 · 박차기 · 사라짐 · 블링크마다 작게 · 베며 나타남 · 딸깍 · (17연타는 감독이
+# 타격마다 작게 흔든다) · 마지막 임팩트
+events = ['{ t = 0, k = "Fx", n = "CamFoot" }', '{ t = 0.42, k = "Fx", n = "StepDust" }', '{ t = 0.42, k = "Shake", a = 0.18, d = 0.15 }',
+          '{ t = %s, k = "Shake", a = 0.25, d = 0.2 }' % h(1.13), '{ t = %s, k = "Shake", a = 0.3, d = 0.25 }' % VANISH, '{ t = 0.45, k = "Fx", n = "CamShoulder", d = %s }' % round(VANISH - 0.45, 3),
           '{ t = 0.8, k = "Fx", n = "Glint" }', '{ t = %s, k = "Fx", n = "Disappear" }' % VANISH,
           '{ t = %s, k = "Fx", n = "CamOrbit", d = %s }' % (VANISH, round(RETURN - VANISH, 3))]
 events += ['{ t = %s, k = "Fx", n = "Phantom" }' % t for t in blink_times]
-events += ['{ t = %s, k = "Fx", n = "Return" }' % RETURN, '{ t = %s, k = "Fx", n = "CutClick" }' % h(4.08)]
+events += ['{ t = %s, k = "Shake", a = 0.08, d = 0.06 }' % t for t in blink_times]
+# 나타나는 순간부터 3초 동안 카메라가 맺음 자리로 끌리며 멈춘다(2026-10-30 사용자: "납도할 때 카메라도 3초 끌리게")
+events += ['{ t = %s, k = "Fx", n = "Return" }' % RETURN, '{ t = %s, k = "Shake", a = 0.4, d = 0.25 }' % RETURN,
+           '{ t = %s, k = "Fx", n = "CamSettle", d = 3 }' % RETURN,
+           '{ t = %s, k = "Fx", n = "CutClick" }' % SHEATHED, '{ t = %s, k = "Shake", a = 0.2, d = 0.15 }' % SHEATHED]
 events += ['{ t = %s, k = "Hit", i = %d, fx = "MarkHit" }' % (round(HITS_FROM + HIT_GAP * (k - 1), 3), k) for k in range(1, PHANTOMS + 1)]
 # 카메라는 CamOrbit 의 맺음 자리에 머물다가 모션이 끝나면(감독이 Shot 을 놓으며) 전투 카메라로 돌아간다 — 2026-10-30 사용자 "공격이 완전히 종료된 후에"
-events += ['{ t = %s, k = "Fx", n = "FinalBreak" }' % h(5.02), '{ t = %s, k = "Stop", d = 0.1 }' % h(5.03), '{ t = %s, k = "Shake", a = 0.7, d = 0.5 }' % h(5.04)]
+events += ['{ t = %s, k = "Fx", n = "FinalBreak" }' % round(LAST_HIT + 0.04, 3), '{ t = %s, k = "Stop", d = 0.1 }' % round(LAST_HIT + 0.05, 3),
+           '{ t = %s, k = "Shake", a = 0.7, d = 0.5 }' % round(LAST_HIT + 0.06, 3)]
 S.append(motion("SpaceCut", "공간의 이해([집중력]) 컷신: 발을 들어[중] 내딛고(발 확대)[강] 달리기 준비로 칼자루를 쥐고[중] 버티다[약] 박차고[강] 달려 나가는 걸음 도중에 사라진다[중] → "
-                "보이지 않게 블링크 17번(무작위 자리·잔상·검흔, 점점 빨라짐) → 제자리를 가로로 베며 나타나[강] 버티다[약] 꽂으면 흑백 → 검흔 17개가 하나씩 파바바박 터지는 17연타 (고정 피해)",
-                h(5.8), spec, events))
+                "보이지 않게 블링크 17번(무작위 자리·잔상·검흔, 점점 빨라짐) → 제자리를 가로로 베며 나타나[강] 버티다[약] 천천히 칼을 검집에 맞춰[약] 밀어 넣으면[중] "
+                "딸깍 흑백[강] → 검흔 17개가 하나씩 파바바박 터지는 17연타 (고정 피해)",
+                round(RETURN + 3.05, 3), spec, events))
 S.append(motion("Provoke", "도발 중약강약강약: 엄지로 칼을 한 자 밀어내고 · 턱을 들어 내려다보다 · 왼손 끝을 까딱 · 버티고 · 딸깍 · 숨([집중력])", 1.75,
                 [(0, None, "STANCE"), (0.3, "cubicOut", "PEEK"), (0.72, "sineInOut", "PEEK", {"Head": (18, -20, 6)}), (0.8, "expoOut", "FLICK"),
                  (1.05, "sineOut", "FLICK", {"Head": (14, -24, 2)}), (1.12, "expoIn", "NOTO"), (1.75, "sineInOut", "STANCE")],
@@ -351,3 +487,4 @@ S.append(motion("Meditate", "호흡 약중약: 칼을 꽂은 채 눈을 감고 �
 text += "\n\tSkills = {\n" + "\n".join(S) + "\t},\n}\n"
 open(OUT, "w", encoding="utf-8", newline="\n").write(text)
 print("썼다", os.path.normpath(OUT))
+print("칼·검집 겹침:", "없음" if not CLIPS else "\n  " + "\n  ".join(CLIPS))
