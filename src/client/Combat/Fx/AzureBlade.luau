@@ -2,7 +2,7 @@
 --[[
 	Fx/AzureBlade — 청의 검사 이펙트. 푸른 칼빛·흰 섬광·잔상·물·검로. (2026-10-25, 같은 날 사용자 말 설명으로 다시 짬)
 
-	  집중 베기     조금 뽑다 챙 멈춤(Ching) → 잔상을 남기고(Slip) 대상 앞까지 돌진해 멈춘 뒤 마저 뽑아 베면 대상 쪽에 작게 기운 검흔(SmallCuts) → 딸깍 → 잔상을 남기고 제자리로
+	  집중 베기     조금 뽑다 챙 멈춤(Ching) → 잔상을 남기고(Slip) 대상 앞까지 돌진해 멈춘 뒤 마저 뽑아 두 칸 앞으로 지나가며 베고 지나간 길에 작게 기운 검흔(SmallCuts) → 딸깍 → 잔상을 남기고 제자리로
 	  진 발도술     (2026-10-30 다시) 등에서 뽑아(DrawGlint · Release) 강하게 세로로 내리베면 세로 초승달 검기가 내 행 끝까지 날아가고
 	                그 뒤를 선이 따라간다(WaveLaunch) → 행 전체 1타(WaveHit) → 칼을 꽂을 때 선에 빛이 달리며 2타(LineStrike)
 	  발도술의 절정 반쯤 뽑다 "챙" 하고 멈춰 드러난 날에 빛(Ching) → 사라져(Vanish) 줄 끝에 이미 벤 자세로 서고,
@@ -411,8 +411,9 @@ end
 
 --=== 집중 베기(2026-10-26 — 발도술 셋과 같은 결로 작게) ===--
 
--- 돌진으로 빠지는 순간: 선 자리에 그 자세(ev.p)의 잔상을 남긴다
+-- 돌진으로 빠지는 순간: 선 자리에 그 자세(ev.p)의 잔상을 남긴다(출발 자리를 적어 둔다 — 작은 검흔이 여기서 시작)
 function Fx.Slip(ctx: any, ev: any)
+	st(ctx).slipFrom = ctx.Root.Position
 	local g = Common.Ghost(ctx, pose((ev and ev.p) or "DRAW1"), ctx.Root, { Transparency = 0.55, FadeIn = 0.01 })
 	if g then
 		task.delay(0.15, function()
@@ -422,21 +423,18 @@ function Fx.Slip(ctx: any, ev: any)
 	ctx.Vfx.Flash(ctx.Root.Position, { Color = ICE, Size = 4, Life = 0.15, Brightness = 4 })
 end
 
--- 대상 앞까지 돌진해 멈춘 뒤 벤 순간: 시전자 앞 → 대상(들) 너머까지 작게 기운 곧은 검흔 몇 줄이 반짝(발도술의 절정 칼날의 작은 판).
--- 2026-10-30 사용자: "적한테 돌진 먼저 한 후에 베게 … 이펙트가 도중에 나오다 말아버려" — 전엔 돌진하며 지나간 길 위에 났다
+-- 베며 두 칸 앞으로 지나간 뒤: 지나간 길(마지막 Slip 자리 → 지금 자리)에 작게 기운 곧은 검흔 몇 줄이 반짝(발도술의 절정 칼날의 작은 판).
+-- 2026-10-30 사용자: "적한테 돌진 먼저 한 후에 베게 … 이펙트가 도중에 나오다 말아버려" → "돌진 후에 베면서 두칸 앞으로 나가야" —
+-- 대상 앞까지 돌진해 멈춘 뒤 베며 지나가고, 검흔은 다 지나간 다음에 난다(도중에 끊기지 않게)
 function Fx.SmallCuts(ctx: any)
-	local f = ctx.Forward
-	local a = ctx.Root.Position
-	local reach = 6
-	for _, p in ctx.Targets do
-		reach = math.max(reach, (p - a):Dot(f) + 2.5)
-	end
-	local b = a + f * reach
+	local s = st(ctx)
+	local b = ctx.Root.Position
+	local a = s.slipFrom or (b - ctx.Forward * 12)
 	local side = flat(b - a):Cross(Vector3.yAxis)
 	local rng = Random.new()
-	for k = 1, 4 do
+	for k = 1, 5 do
 		local p0, p1 = tilted(rng, a, b, ctx.Ground, side, (b - a).Magnitude * 0.6, 3.4)
-		stroke(p0, p1, { Width = rng:NextNumber(0.08, 0.16), Color = if k % 2 == 0 then ICE else AZURE, Grow = 0.04, Life = 0.35, Delay = (k - 1) * 0.03 })
+		stroke(p0, p1, { Width = rng:NextNumber(0.1, 0.2), Color = if k % 2 == 0 then ICE else AZURE, Grow = 0.04, Life = 0.45, Delay = (k - 1) * 0.03 })
 	end
 	for _ = 1, 2 do
 		local q = a:Lerp(b, rng:NextNumber(0.3, 0.9))
