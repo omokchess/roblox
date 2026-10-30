@@ -152,6 +152,55 @@ end
 export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown" | "Sky"
 
 --[[
+	별 빛무리(조율자 별자리 — 2026-10-30 사용자 참고 그림: 검은 하늘에 파란 빛무리를 두른 작은 흰 별, 옅은 고리).
+	카메라를 늘 보는 BillboardGui(크기 = 스터드) 안에 가운데 맞춘 동그라미를 겹친다: 넓고 옅은 파랑 → 좁고 진한 파랑 → 흰 속점, 옅은 고리 하나.
+	Layers = { 동그라미, 켜졌을 때 투명도 } — 켜짐 정도에 따라 Update 가 투명도를 맞춘다.
+]]
+export type Glow = { Gui: BillboardGui, Size: UDim2, Layers: { { Frame: Frame, Alpha: number } }, Ring: UIStroke, Dot: Frame, Light: PointLight }
+local GLOW_SIZE = 1.5 -- 가장 밝은 별 빛무리 지름(스터드)
+local function makeGlow(core: BasePart, scale: number): Glow
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "StarGlow"
+	gui.Size = UDim2.fromScale(GLOW_SIZE * scale, GLOW_SIZE * scale)
+	gui.LightInfluence = 0
+	gui.Brightness = 2
+	gui.AlwaysOnTop = false
+	gui.Parent = core
+	local z = 0
+	local function disc(size: number, color: Color3, alpha: number): Frame
+		z += 1
+		local f = Instance.new("Frame")
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.Position = UDim2.fromScale(0.5, 0.5)
+		f.Size = UDim2.fromScale(size, size)
+		f.BackgroundColor3 = color
+		f.BackgroundTransparency = alpha
+		f.BorderSizePixel = 0
+		f.ZIndex = z
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = f
+		f.Parent = gui
+		return f
+	end
+	local layers = {}
+	for _, l in { { 1, Color3.fromRGB(40, 120, 255), 0.9 }, { 0.62, Color3.fromRGB(70, 150, 255), 0.78 }, { 0.36, Color3.fromRGB(130, 195, 255), 0.5 } } do
+		table.insert(layers, { Frame = disc(l[1], l[2], l[3]), Alpha = l[3] })
+	end
+	local ringFrame = disc(0.74, Color3.new(0, 0, 0), 1)
+	local ring = Instance.new("UIStroke")
+	ring.Color = Color3.fromRGB(150, 205, 255)
+	ring.Thickness = 1.2
+	ring.Transparency = 0.65
+	ring.Parent = ringFrame
+	local dot = disc(0.15, Color3.fromRGB(240, 248, 255), 0)
+	local light = Instance.new("PointLight")
+	light.Range, light.Brightness, light.Shadows, light.Color = 7, 0, false, Color3.fromRGB(90, 160, 255)
+	light.Parent = core
+	return { Gui = gui, Size = gui.Size, Layers = layers, Ring = ring, Dot = dot, Light = light }
+end
+
+--[[
 	character 에 weaponId(없으면 직업 기본 무기)를 붙인다. rig 에 모터를 등록한다.
 ]]
 function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, classId: string?)
@@ -168,7 +217,7 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 	self.OrbPos = {} :: { Vector3 }
 	self.OrbAim = nil :: Vector3?
 	-- 별자리(조율자): 별마다 부품·켜짐(Lit — nil 이면 켜짐)·켜짐 정도(0~1)·막 켜진 빛 부풂, 별자리 선, 도는 각
-	self.Stars = {} :: { { Core: BasePart?, Halo: BasePart?, Light: PointLight?, HaloSize: Vector3?, HaloAlpha: number } }
+	self.Stars = {} :: { Glow } 
 	self.Lit = {} :: { boolean }
 	self.LitK = {} :: { number }
 	self.Pop = {} :: { number? }
@@ -191,36 +240,14 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 			local meshes = if orbit.Points then nil else meshSource(def.Id, "Main")
 			for i = 1, orbit.Count do
 				local orb = buildPiece(piece, "Orb" .. i, true, meshes)
-				local scale = (orbit.Sizes and orbit.Sizes[i]) or 1
-				local color = orbit.Colors and orbit.Colors[i]
 				-- 떠 있는 조각은 용접 대신 통째로 옮긴다
 				for _, d in orb:GetDescendants() do
 					if d:IsA("BasePart") then
 						d.Anchored = true
-						if d.Name ~= "Grip" and orbit.Points then
-							d.Size *= scale
-							if color then
-								d.Color = rgb(color)
-							end
-						end
 					end
 				end
 				if orbit.Points then
-					local core = orb:FindFirstChild("Core") :: BasePart?
-					local halo = orb:FindFirstChild("Halo") :: BasePart?
-					local light: PointLight? = nil
-					if core then
-						light = Instance.new("PointLight")
-						light.Range, light.Brightness, light.Shadows, light.Color = 6, 0, false, core.Color
-						light.Parent = core
-					end
-					self.Stars[i] = {
-						Core = core,
-						Halo = halo,
-						Light = light,
-						HaloSize = halo and halo.Size,
-						HaloAlpha = if halo then halo.Transparency else 1,
-					}
+					self.Stars[i] = makeGlow(orb:FindFirstChild("Core") or orb.PrimaryPart, (orbit.Sizes and orbit.Sizes[i]) or 1)
 				end
 				orb.Parent = folder
 				table.insert(self.Orbs, orb)
@@ -238,8 +265,8 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 				line.Name = "StarLine"
 				line.Anchored, line.CanCollide, line.CanQuery, line.CanTouch, line.CastShadow = true, false, false, false, false
 				line.Material = Enum.Material.Neon
-				line.Color = Color3.fromRGB(196, 222, 255)
-				line.Size = Vector3.new(0.05, 0.05, 0.05)
+				line.Color = Color3.fromRGB(150, 205, 255)
+				line.Size = Vector3.new(0.04, 0.04, 0.04)
 				line.Transparency = 1
 				line.Parent = folder
 				table.insert(self.Lines, { A = pair[1], B = pair[2], Part = line, Alpha = 1 })
@@ -389,16 +416,16 @@ local function shine(self: any, i: number, dt: number)
 		self.Pop[i] = if pop < POP then pop else nil
 		swell = math.max(0, 1 - pop / POP)
 	end
-	if star.Core then
-		star.Core.Transparency = 0.65 * (1 - k)
+	-- 켜진 별: 빛무리 · 고리 · 흰 속점 · 빛. 꺼진 별: 흐리고 작은 속점만(별자리 꼴은 보인다)
+	for _, layer in star.Layers do
+		layer.Frame.BackgroundTransparency = 1 - math.min(1, (1 - layer.Alpha) * k * (1 + 1.5 * swell))
 	end
-	if star.Halo then
-		star.Halo.Transparency = 1 - math.min(1, (1 - star.HaloAlpha) * k * (1 + 2 * swell))
-		star.Halo.Size = (star.HaloSize :: Vector3) * (1 + 1.2 * swell)
-	end
-	if star.Light then
-		star.Light.Brightness = 1.4 * k + 3 * swell
-	end
+	star.Ring.Transparency = 1 - 0.35 * k
+	star.Dot.BackgroundTransparency = 0.55 * (1 - k)
+	star.Dot.Size = UDim2.fromScale(0.1 + 0.05 * k, 0.1 + 0.05 * k)
+	local grow = 1 + 0.8 * swell
+	star.Gui.Size = UDim2.fromScale(star.Size.X.Scale * grow, star.Size.Y.Scale * grow)
+	star.Light.Brightness = 1.4 * k + 3 * swell
 end
 
 function CombatWeapons:Update(dt: number)
@@ -429,6 +456,7 @@ function CombatWeapons:Update(dt: number)
 			target = (cf * CFrame.new(point[1], c.Y + dy * math.cos(a) - dz * math.sin(a) + bob, c.Z + dy * math.sin(a) + dz * math.cos(a))).Position
 		elseif point and mode == "Sky" then
 			-- 겨눈 자리(적 진영 가운데) 위에 별자리를 크게(2.5배) 펼친다 — 오른쪽 옆 카메라에 보이게 YZ 판 그대로
+			-- (쉴 때 별자리가 폭 약 5.7 이라 하늘 별자리는 약 14)
 			local center = self.OrbAim or (cf * CFrame.new(0, 3, -12)).Position
 			local mid = self.Center :: Vector3
 			local d = (Vector3.new(point[1], point[2], point[3]) - mid) * 2.5
@@ -469,7 +497,7 @@ function CombatWeapons:Update(dt: number)
 		part.Transparency = line.Alpha
 		local pa, pb = self.OrbPos[line.A], self.OrbPos[line.B]
 		if pa and pb and line.Alpha < 0.995 then
-			part.Size = Vector3.new(0.05, 0.05, math.max(0.05, (pb - pa).Magnitude))
+			part.Size = Vector3.new(0.04, 0.04, math.max(0.05, (pb - pa).Magnitude))
 			part.CFrame = CFrame.lookAt(pa:Lerp(pb, 0.5), pb)
 		end
 	end
