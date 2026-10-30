@@ -476,15 +476,15 @@ local classSkills: { [string]: { Skill } } = {
 			Id = "FrontBackPierce",
 			Name = "앞뒤관통",
 			Description = "- 사용 후 2턴 간 아군의 [회피 시간] +(2×[집중])%.\n- 사용 후 2턴 간 자신의 [받는 피해량] −10%.",
-			Damage = 9,
+			Damage = 6, -- 2026-10-30 사용자: 강화 스킬 최대 70 기준 결투사 전체 ×0.65(옛 9)
 			Range = "Melee",
 			Shape = { Kind = "Single" , Cells = { { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, Motions = { { Kind = "Single", Cells = { { X = -6, Y = 0 }, { X = -3, Y = 0 }, { X = -2, Y = 0 }, { X = -1, Y = 0 }, { X = 0, Y = 0 } } } } },
 		{
 			Id = "TripleThrust", Cooldown = 4,
 			Name = "찔러찔러또찔러",
-			Description = "- 대상에게 [출혈] 3 부여.\n- 사용 후 3턴 간 [회피 시간] +(2.5×[집중])%.\n- [집중] 1 획득.\n- 피해량: 22를 3연타로 나눔(합은 한 방의 1.2배).",
+			Description = "- 대상에게 [출혈] 3 부여.\n- 사용 후 3턴 간 [회피 시간] +(2.5×[집중])%.\n- [집중] 1 획득.\n- 피해량: 15를 3연타로 나눔(합은 한 방의 1.2배).",
 			-- 2026-10-04 연타 규칙(GridBattle MULTI_HIT_BONUS): 한 방 22 를 세 번에 나눠 × 1.2
-			Damage = 22,
+			Damage = 15, -- 2026-10-30 사용자: 강화 스킬 최대 70 기준 결투사 전체 ×0.65(옛 22)
 			Range = "Melee",
 			Shape = { Kind = "Line", Radius = 3 , Cells = { { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, Motions = { { Kind = "Single", Cells = { { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, { Kind = "Single", Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } } } },
 		{
@@ -737,7 +737,7 @@ local classSkills: { [string]: { Skill } } = {
 			Id = "ScabbardStrike",
 			Name = "검집 타격",
 			Description = "- 검집으로 상대를 친다.\n- [집중력]이 있으면 `집중 베기`로 바뀜.",
-			Damage = 18,
+			Damage = 27, -- 2026-10-30 사용자: 청의 검사 기본 피해 +50%(옛 18)
 			Range = "Melee",
 			Shape = { Kind = "Line", Radius = 2, Cells = { { X = 0, Y = 0 }, { X = 1, Y = 0 } } },
 			Cooldown = 1,
@@ -747,7 +747,7 @@ local classSkills: { [string]: { Skill } } = {
 			Id = "TrueIaido",
 			Name = "진 발도술",
 			Description = "- 엄청난 속도로 검집에서 검을 뽑아 상대를 무자비하게 벤다.\n- 범위 안에서 가장 앞에 있는 적에게만.\n- 4 / 3 / 3 비율로 3연타(합은 한 방의 1.2배).",
-			Damage = 22,
+			Damage = 33, -- 2026-10-30 사용자: 청의 검사 기본 피해 +50%(옛 22)
 			Range = "Melee",
 			Shape = { Kind = "Square", Cells = box(0, 4, -1, 1) },
 			HitWeights = { 4, 3, 3 },
@@ -759,7 +759,7 @@ local classSkills: { [string]: { Skill } } = {
 			Id = "IaidoPeak",
 			Name = "발도술의 절정",
 			Description = "- `진 발도술`처럼 베지만 벨 수 있는 적이 최대 4명.\n  - 앞에 있는 적부터.\n- 6 / 4 / 4 비율로 3연타(합은 한 방의 1.2배).\n- [집중력]이 있으면 `공간의 이해`로 바뀜.",
-			Damage = 32,
+			Damage = 48, -- 2026-10-30 사용자: 청의 검사 기본 피해 +50%(옛 32)
 			Range = "Melee",
 			Shape = { Kind = "Square", Cells = box(0, 4, -1, 1) },
 			HitWeights = { 6, 4, 4 },
@@ -779,7 +779,7 @@ local focusSkills: { Skill } = {
 		Id = "FocusCut",
 		Name = "집중 베기",
 		Description = "- [집중력] 변형.\n- 앞에 있는 적들을 작게 벤다.",
-		Damage = 22,
+		Damage = 33, -- 2026-10-30 사용자: 청의 검사 기본 피해 +50%(옛 22)
 		Range = "Melee",
 		Shape = { Kind = "Line", Radius = 2, Cells = { { X = 0, Y = 0 }, { X = 1, Y = 0 } } },
 		Cooldown = 2,
@@ -790,7 +790,7 @@ local focusSkills: { Skill } = {
 		Id = "SpaceCut",
 		Name = "공간의 이해",
 		Description = "- [집중력] 변형.\n- 연속으로 블링크해 적진을 가로지르고, 줄 끝에서 칼을 꽂으면 격자로 썰린 검흔이 필드 전체를 벤다.\n- 적의 방어와 상관없는 고정 피해(트루 데미지).\n- 모든 [집중력]을 소모.",
-		Damage = 34,
+		Damage = 51, -- 2026-10-30 사용자: 청의 검사 기본 피해 +50%(옛 34)
 		Range = "Melee",
 		-- 2026-10-26 사용자: 필드 전체 타격기로(전엔 적 칸 기준 앞뒤 2칸 × 3줄)
 		Shape = { Kind = "All" },
@@ -815,7 +815,7 @@ local upgradeSkills: { Skill } = {
 		Name = "마지막까지 빛나는 점을 향해 검 끝을 쏘아라",
 		Description = "- 조건: `신경을 곤두세우고 깊은 호흡을 들여` 사용 후 준비자세 종료.\n- [치명타 확률] 보정 +15%.\n- 보유한 [집중]을 모두 소모하고, 소모한 [집중] 1당 [치명타 피해량] +4%.\n- 3턴 간 아군의 [회피 시간] +15%, [받는 피해량] −10%.\n- 사용 후 대상에게 [출혈] 5 부여.\n- 사용 후 태세를 변경하고 2턴 간 [받는 피해량] −15% · [가하는 피해량] +15% 획득.",
 		-- 2026-10-03 사용자: 3배(32 → 96) → 2026-10-28 사용자: 탱커를 겸하는 서브딜러라 너무 높다 — 45
-		Damage = 45,
+		Damage = 29, -- 2026-10-30 사용자: 강화 스킬 최대 70 기준 결투사 전체 ×0.65(옛 45)
 		Range = "Melee",
 		Shape = { Kind = "Row" , Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } },
 		ClassId = "Duelist",

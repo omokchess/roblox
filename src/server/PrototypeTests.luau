@@ -1382,7 +1382,8 @@ function PrototypeTests.RunSystems()
 		local frontBackPierce = BattleSkills.ById("FrontBackPierce")
 		expect(frontBackPierce ~= nil, "FrontBackPierce must exist")
 		if frontBackPierce then
-			expect(frontBackPierce.Damage == 9, "each motion of FrontBackPierce deals 9, for a total of 9x2=18")
+			-- 2026-10-30 사용자 밸런스: 강화 스킬 최대 70 기준 결투사 전체 ×0.65 → 9 × 2 에서 6 × 2
+			expect(frontBackPierce.Damage == 6, "each motion of FrontBackPierce deals 6, for a total of 6x2=12")
 			local shapes = BattleSkills.AllShapes(frontBackPierce)
 			expect(#shapes == 2, "FrontBackPierce must have exactly two motions: forward, then backward")
 			local forward, backward = shapes[1], shapes[2]
@@ -2143,6 +2144,10 @@ function PrototypeTests.RunSystems()
 					2026-09-28 편집기에서 광전사 `종베기`(대기 8턴, 분노 전부 소모·자해)를 50으로 올렸다.
 				]]
 				local cap = if (skill.Cooldown or 0) >= 6 then 50 else 40
+				-- 2026-10-30 사용자: 청의 검사 기본 피해 +50% — 눈금도 같은 비율로 넓혀 둔다(발도술의 절정 48)
+				if classId == "AzureBlade" then
+					cap *= 1.5
+				end
 				expect(skill.Damage >= 0 and skill.Damage <= cap, "skill damage must stay on the 0~40 scale (50 for long-cooldown finishers): " .. skill.Id)
 			end
 			local signature = table.concat(names, "/")

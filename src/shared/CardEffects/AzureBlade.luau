@@ -488,19 +488,20 @@ M.AzureBlade_C_Momentum = {
 	end,
 }
 
--- 도발 응수: 도발한 턴에 회피하면 턴 끝에 검집 타격을 공짜로(피해 50%)(2026-10-28 리메 — 옛 다음 턴 치명 +6%)
+-- 도발 응수: 도발한 턴에 회피하면 턴 끝에 검집 타격을 공짜로(피해 50%) — 회피할 때 집중력이 있었으면 집중 베기
+-- (집중 베기는 집중력을 쓰지 않는다). (2026-10-28 리메 — 옛 다음 턴 치명 +6%, 2026-10-30 집중 베기 추가)
 M.AzureBlade_C_Answer = {
 	Defend = function(c: Card, info: any)
 		if info.Grade == "Success" and provokedOn(c, 0) then
-			c.Mem.answer = true
+			c.Mem.answer = if focused(c) then "FocusCut" else "ScabbardStrike"
 		end
 	end,
 	TurnEnd = function(c: Card)
-		if c.Mem.answer and #H.Enemies(c) > 0 then
-			c.Mem.answer = nil
-			return c.Rt.Env.CastFree("ScabbardStrike", c.P(1))
-		end
+		local skill = c.Mem.answer
 		c.Mem.answer = nil
+		if skill and #H.Enemies(c) > 0 then
+			return c.Rt.Env.CastFree(skill, c.P(1))
+		end
 		return false
 	end,
 }
