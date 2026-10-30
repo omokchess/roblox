@@ -517,6 +517,12 @@ local function orbitEase(x: number): number
 	return x * x * x * (4 - 3 * x)
 end
 
+-- 끌며 멈추기 1 − (1−x)⁴(1+4x): 빠르기 20x(1−x)³ — 0 에서 일어나 1/4 지점에서 가장 빠르고, 긴 꼬리로 천천히 끌며 멈춘다
+-- (2026-10-30 사용자: "카메라가 어깨 너머에서 멈출 때 더 끌면서 멈추는 느낌으로")
+local function dragOut(x: number): number
+	return 1 - (1 - x) ^ 4 * (1 + 4 * x)
+end
+
 -- 들머리: 내딛는 오른발을 무릎 높이에서 내려다보며 확대(조금씩 다가간다 — 발과 발밑 땅이 화면 가운데)
 function Fx.CamFoot(ctx: any)
 	local s = st(ctx)
@@ -532,8 +538,8 @@ function Fx.CamFoot(ctx: any)
 	end)
 end
 
--- 달리기 준비: 시전자의 오른쪽 등 뒤(어깨 너머로 적 진영을 본다). 발치에서 0.3초에 부드럽게 넘어오고, 사라지는 순간(ev.d 초)까지
--- 천천히 다가간다(버티는 동안에도 멈춰 있지 않고, 공전이 시작할 때 빠르기 0 으로 넘겨준다)
+-- 달리기 준비: 시전자의 오른쪽 등 뒤(어깨 너머로 적 진영을 본다). 발치에서 빠르게 넘어와 0.6초 동안 끌며 멈추고(dragOut),
+-- 사라지는 순간(ev.d 초)까지 천천히 다가간다(버티는 동안에도 멈춰 있지 않고, 공전이 시작할 때 빠르기 0 으로 넘겨준다)
 function Fx.CamShoulder(ctx: any, ev: any)
 	local s = st(ctx)
 	local home = ctx.Actor.Home
@@ -543,7 +549,7 @@ function Fx.CamShoulder(ctx: any, ev: any)
 	ctx.Shot(d, function(_, t)
 		local tt = math.min(t, d)
 		local dolly = goal * CFrame.new(0, 0, -0.9 * sineInOut(tt / d))
-		local cf = from:Lerp(dolly, sineInOut(math.min(1, tt / 0.3)))
+		local cf = from:Lerp(dolly, dragOut(math.min(1, tt / math.min(0.6, d))))
 		s.cam = cf
 		return cf
 	end)
