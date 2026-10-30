@@ -538,8 +538,10 @@ function Fx.CamFoot(ctx: any)
 	end)
 end
 
--- 달리기 준비: 시전자의 오른쪽 등 뒤(어깨 너머로 적 진영을 본다). 발치에서 빠르게 넘어와 0.6초 동안 끌며 멈추고(dragOut),
--- 사라지는 순간(ev.d 초)까지 천천히 다가간다(버티는 동안에도 멈춰 있지 않고, 공전이 시작할 때 빠르기 0 으로 넘겨준다)
+-- 달리기 준비: 시전자의 오른쪽 등 뒤(어깨 너머로 적 진영을 본다). 발치에서 빠르게 넘어와 SETTLE 초 동안 끌며 멈추고(dragOut),
+-- 사라지는 순간(ev.d 초)까지 천천히 다가간다(버티는 동안에도 멈춰 있지 않고, 공전이 시작할 때 빠르기 0 으로 넘겨준다).
+-- 2026-10-30 사용자: "끌리는 게 못해도 2초는 돼야" — 0.6 → 2초(모션도 준비 자세를 그만큼 더 버틴다)
+local SETTLE = 2
 function Fx.CamShoulder(ctx: any, ev: any)
 	local s = st(ctx)
 	local home = ctx.Actor.Home
@@ -549,7 +551,7 @@ function Fx.CamShoulder(ctx: any, ev: any)
 	ctx.Shot(d, function(_, t)
 		local tt = math.min(t, d)
 		local dolly = goal * CFrame.new(0, 0, -0.9 * sineInOut(tt / d))
-		local cf = from:Lerp(dolly, dragOut(math.min(1, tt / math.min(0.6, d))))
+		local cf = from:Lerp(dolly, dragOut(math.min(1, tt / math.min(SETTLE, d))))
 		s.cam = cf
 		return cf
 	end)
@@ -571,9 +573,8 @@ function Fx.CamOrbit(ctx: any, ev: any)
 	local box = fieldBox(ctx)
 	local center = boxWorld(box, Vector3.new((box.U0 + box.U1) / 2, (box.V0 + box.V1) / 2, 1))
 	local r0 = math.max(box.U1 - box.U0, box.V1 - box.V0) / 2 + 4
-	local h0 = 10
 	local home = ctx.Actor.Home.Position
-	local base = CFrame.lookAt(home + box.R * 11 - box.F * 8 + Vector3.new(0, 9, 0), home + box.F * ((center - home):Dot(box.F) * 0.55))
+	local base = CFrame.lookAt(home + box.R * 11 - box.F * 8 + Vector3.new(0, 12, 0), home + box.F * ((center - home):Dot(box.F) * 0.55))
 	local from: CFrame = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or base
 	local look0 = from.Position + from.LookVector * 10
 	local function polar(p: Vector3): (number, number, number)
@@ -589,12 +590,14 @@ function Fx.CamOrbit(ctx: any, ev: any)
 		local tt = math.min(t, total)
 		local k = orbitEase(tt / total)
 		local swept = sweep * k
-		-- 반지름·높이: 어깨 너머 → (RISE 초에 걸쳐) 진영 둘레 r0·h0 → (나머지 동안) 맺음 자리 r1·h1 — 둘 다 sineInOut 이라 이음매에서 빠르기 0
+		-- 반지름: 어깨 너머 → (RISE 초에 걸쳐) 진영 둘레 r0 → (나머지 동안) 맺음 자리 r1 — 둘 다 sineInOut 이라 이음매에서 빠르기 0.
+		-- 높이: 도는 내내 한 곡선으로 조금씩 올라간다(어깨 높이 → 맺음 자리 높이, 2026-10-30 사용자 "돌면서 약간 위로 올라가게도 …
+		-- 바라보는 방향은 여전히 적 진영" — 바라보는 곳은 진영 가운데 그대로)
 		local rise = sineInOut(math.min(1, tt / RISE))
 		local grow = sineInOut(math.clamp((tt - RISE) / math.max(0.1, total - RISE), 0, 1))
 		local rad = rS + (r0 - rS) * rise + (r1 - r0) * grow
 		local a = phiS + dir * swept
-		local pos = center + Vector3.new(math.cos(a) * rad, hS + (h0 - hS) * rise + (h1 - h0) * grow, math.sin(a) * rad)
+		local pos = center + Vector3.new(math.cos(a) * rad, hS + (h1 - hS) * sineInOut(tt / total), math.sin(a) * rad)
 		-- 끝 20% 동안 바라보는 방향을 맺음 자리의 방향으로 맞춘다(끝에서 자리·방향이 맺음 자리와 같다)
 		local w = sineInOut(math.clamp((k - 0.8) / 0.2, 0, 1))
 		local cf = CFrame.new(pos) * CFrame.lookAt(pos, look0:Lerp(center, rise)).Rotation:Lerp(base.Rotation, w)
