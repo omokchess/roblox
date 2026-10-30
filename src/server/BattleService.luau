@@ -99,18 +99,22 @@ export type Session = {
 local BattleService = {}
 BattleService.__index = BattleService
 
+-- 2026-10-30 사용자: "내가 테스트 돌릴 땐 QTE 자동 성공, 무적, 쿨0턴, 적 체력 10배 상시로" — Studio 에서만 처음부터 켠다
+-- (퍼블리시된 서버는 IsStudio 가 거짓이라 그대로). F2 패널에서 끌 수 있다.
+local STUDIO_TEST = RunService:IsStudio()
+
 local function defaultConfig(): Config
 	return {
 		ClassId = "Duelist",
 		Enemies = { "Slime" },
 		Cells = {},
-		HealthScale = 1,
+		HealthScale = if STUDIO_TEST then 10 else 1,
 		PowerScale = 1,
 		Arena = "Sky",
-		God = false,
+		God = STUDIO_TEST,
 		AllyDamageScale = 1,
-		NoCooldown = false,
-		AutoQte = "Off",
+		NoCooldown = STUDIO_TEST,
+		AutoQte = if STUDIO_TEST then "Success" else "Off",
 		WeaponPower = 0,
 	}
 end

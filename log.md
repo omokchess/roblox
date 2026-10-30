@@ -4800,3 +4800,5 @@ Moon Animator 2 는 유료(19.99달러)라 사용자가 사지 않기로 하고 
   - Common.Ghost: 숨긴 배우(LocalTransparencyModifier 1)에서 복제해도 잔상이 보이게 0 으로.
 - 점검: run_system_tests · test_motion_math · check_fx · selene 통과, smoke_director 청의 검사 통과(보스 통합 실패는 전부터).
   스튜디오에서 진 발도술·공간의 이해 느린 재생으로 한 번 봤다(그 뒤 고친 직선 검로·자세는 사용자가 직접 본다).
+- 사용자: "내가 테스트 돌릴 땐 QTE 자동 성공, 무적, 쿨0턴, 적 체력 10배 상시로" → BattleService 기본 설정을 Studio(IsStudio)에서만
+  AutoQte Success · God · NoCooldown(스테미나도 안 씀) · 적 체력 ×10 으로 시작. 퍼블리시된 서버는 그대로, F2 패널에서 끌 수 있다.
