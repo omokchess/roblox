@@ -167,6 +167,14 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 	self.OrbT = 0
 	self.OrbPos = {} :: { Vector3 }
 	self.OrbAim = nil :: Vector3?
+	-- 별자리(조율자): 별마다 부품·켜짐(Lit — nil 이면 켜짐)·켜짐 정도(0~1)·막 켜진 빛 부풂, 별자리 선, 도는 각
+	self.Stars = {} :: { { Core: BasePart?, Halo: BasePart?, Light: PointLight?, HaloSize: Vector3?, HaloAlpha: number } }
+	self.Lit = {} :: { boolean }
+	self.LitK = {} :: { number }
+	self.Pop = {} :: { number? }
+	self.Lines = {} :: { { A: number, B: number, Part: BasePart, Alpha: number } }
+	self.SpinT = 0
+	self.Center = nil :: Vector3?
 
 	local folder = Instance.new("Folder")
 	folder.Name = "CombatWeapon"
@@ -179,16 +187,62 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 		end
 		if piece.Hand == "Float" then
 			local orbit = def.Orbit or { Count = 3, Radius = 2.6, Height = 1.6, Speed = 1 }
+			-- 별자리(Points)는 블렌더 메시 대신 표의 구(Core·Halo)로 짓는다(2026-10-30 사용자: "구 형태의 진짜 별")
+			local meshes = if orbit.Points then nil else meshSource(def.Id, "Main")
 			for i = 1, orbit.Count do
-				local orb = buildPiece(piece, "Orb" .. i, true, meshSource(def.Id, "Main"))
+				local orb = buildPiece(piece, "Orb" .. i, true, meshes)
+				local scale = (orbit.Sizes and orbit.Sizes[i]) or 1
+				local color = orbit.Colors and orbit.Colors[i]
 				-- 떠 있는 조각은 용접 대신 통째로 옮긴다
 				for _, d in orb:GetDescendants() do
 					if d:IsA("BasePart") then
 						d.Anchored = true
+						if d.Name ~= "Grip" and orbit.Points then
+							d.Size *= scale
+							if color then
+								d.Color = rgb(color)
+							end
+						end
 					end
+				end
+				if orbit.Points then
+					local core = orb:FindFirstChild("Core") :: BasePart?
+					local halo = orb:FindFirstChild("Halo") :: BasePart?
+					local light: PointLight? = nil
+					if core then
+						light = Instance.new("PointLight")
+						light.Range, light.Brightness, light.Shadows, light.Color = 6, 0, false, core.Color
+						light.Parent = core
+					end
+					self.Stars[i] = {
+						Core = core,
+						Halo = halo,
+						Light = light,
+						HaloSize = halo and halo.Size,
+						HaloAlpha = if halo then halo.Transparency else 1,
+					}
 				end
 				orb.Parent = folder
 				table.insert(self.Orbs, orb)
+			end
+			if orbit.Points then
+				local sum = Vector3.zero
+				for _, p in orbit.Points do
+					sum += Vector3.new(p[1], p[2], p[3])
+				end
+				self.Center = sum / #orbit.Points
+			end
+			-- 별자리 선: 두 별이 다 켜지면 잇는다(Update 가 자리·투명도를 맞춘다)
+			for _, pair in orbit.Lines or {} do
+				local line = Instance.new("Part")
+				line.Name = "StarLine"
+				line.Anchored, line.CanCollide, line.CanQuery, line.CanTouch, line.CastShadow = true, false, false, false, false
+				line.Material = Enum.Material.Neon
+				line.Color = Color3.fromRGB(196, 222, 255)
+				line.Size = Vector3.new(0.05, 0.05, 0.05)
+				line.Transparency = 1
+				line.Parent = folder
+				table.insert(self.Lines, { A = pair[1], B = pair[2], Part = line, Alpha = 1 })
 			end
 			continue
 		end
@@ -303,22 +357,47 @@ end
 
 --[[
 	켜진 별(조율자 [칠성]을 준 별 — Orbit.Points 순서와 같은 BattleSkillEffects.STAR_SOURCES 이름 표)만 밝게.
-	lit 가 nil 이면 전부 켠다(전시장·관전). 꺼진 별은 흐리게만(없애지 않는다 — 별자리 꼴은 늘 보인다).
+	lit 가 nil 이면 전부 켠다(전시장·관전). 꺼진 별은 흐린 속만(없애지 않는다 — 별자리 꼴은 늘 보인다).
+	막 켜진 별은 겉 빛이 한 번 부풀었다 가라앉고, 이웃 별도 켜져 있으면 별자리 선이 이어진다(Update).
 ]]
 local STAR_NAMES = { "Megrez", "Merak", "Alioth", "Alkaid", "Mizar", "Phecda", "Dubhe" }
 function CombatWeapons:SetLit(lit: { [string]: boolean }?)
-	for i, orb in self.Orbs do
+	for i in self.Orbs do
 		local on = lit == nil or lit[STAR_NAMES[i] or ""] == true
-		for _, d in orb:GetDescendants() do
-			if d:IsA("BasePart") and d.Name ~= "Grip" then
-				local base = d:GetAttribute("LitAlpha")
-				if base == nil then
-					base = d.Transparency
-					d:SetAttribute("LitAlpha", base)
-				end
-				d.Transparency = if on then base else 1 - (1 - base) * 0.3
-			end
+		if on and self.Lit[i] == false then
+			self.Pop[i] = 0
 		end
+		self.Lit[i] = on
+	end
+end
+
+-- 별 하나의 밝기: 켜짐 정도 k 를 부드럽게 쫓고(켜진 별 = 밝은 속 · 겉 빛 · 빛, 꺼진 별 = 흐린 속), 막 켜졌으면 0.7초 동안 빛이 부푼다
+local POP = 0.7
+local function shine(self: any, i: number, dt: number)
+	local star = self.Stars[i]
+	if not star then
+		return
+	end
+	local on = self.Lit[i] ~= false
+	local k = self.LitK[i] or (if on then 1 else 0)
+	k += ((if on then 1 else 0) - k) * (1 - math.exp(-dt * 6))
+	self.LitK[i] = k
+	local swell = 0
+	local pop = self.Pop[i]
+	if pop then
+		pop += dt
+		self.Pop[i] = if pop < POP then pop else nil
+		swell = math.max(0, 1 - pop / POP)
+	end
+	if star.Core then
+		star.Core.Transparency = 0.65 * (1 - k)
+	end
+	if star.Halo then
+		star.Halo.Transparency = 1 - math.min(1, (1 - star.HaloAlpha) * k * (1 + 2 * swell))
+		star.Halo.Size = (star.HaloSize :: Vector3) * (1 + 1.2 * swell)
+	end
+	if star.Light then
+		star.Light.Brightness = 1.4 * k + 3 * swell
 	end
 end
 
@@ -334,6 +413,7 @@ function CombatWeapons:Update(dt: number)
 	local mode = self.OrbMode
 	local speed = orbit.Speed * (if mode == "Spread" then 3.2 elseif mode == "Gather" then 2.4 else 1)
 	self.OrbT += dt * speed
+	self.SpinT += dt * (orbit.Spin or 0)
 	local cf = root.CFrame
 	local n = #self.Orbs
 	for i, orb in self.Orbs do
@@ -341,15 +421,17 @@ function CombatWeapons:Update(dt: number)
 		local target: Vector3
 		local point = orbit.Points and orbit.Points[i]
 		if point and mode == "Orbit" then
-			-- 별자리: 제자리에 떠서 별마다 다른 박자로 숨 쉬듯 흔들린다
-			local bob = math.sin(self.OrbT * 2.2 + i * 1.7) * 0.12
-			local sway = math.cos(self.OrbT * 1.6 + i * 2.3) * 0.08
-			target = (cf * CFrame.new(point[1], point[2] + bob, point[3] + sway)).Position
+			-- 별자리: 캐릭터 옆에서 가운데를 축으로 제 판(YZ) 안에서 천천히 돌고(Spin), 별마다 다른 박자로 조금씩 숨 쉬듯 흔들린다
+			local c = self.Center :: Vector3
+			local a = self.SpinT
+			local dy, dz = point[2] - c.Y, point[3] - c.Z
+			local bob = math.sin(self.OrbT * 2.2 + i * 1.7) * 0.06
+			target = (cf * CFrame.new(point[1], c.Y + dy * math.cos(a) - dz * math.sin(a) + bob, c.Z + dy * math.sin(a) + dz * math.cos(a))).Position
 		elseif point and mode == "Sky" then
-			-- 겨눈 자리(적 진영 가운데) 위에 별자리를 세 배로 펼친다 — 오른쪽 옆 카메라에 보이게 YZ 판 그대로
+			-- 겨눈 자리(적 진영 가운데) 위에 별자리를 크게(2.5배) 펼친다 — 오른쪽 옆 카메라에 보이게 YZ 판 그대로
 			local center = self.OrbAim or (cf * CFrame.new(0, 3, -12)).Position
-			local mid = Vector3.new(0.45, 3.4, 0.85)
-			local d = (Vector3.new(point[1], point[2], point[3]) - mid) * 3
+			local mid = self.Center :: Vector3
+			local d = (Vector3.new(point[1], point[2], point[3]) - mid) * 2.5
 			target = center + Vector3.new(0, 6, 0) + cf.RightVector * d.X + cf.UpVector * d.Y + cf.LookVector * -d.Z
 		elseif mode == "Gather" then
 			local hand = self.Character:FindFirstChild("Right Arm") :: BasePart?
@@ -373,10 +455,22 @@ function CombatWeapons:Update(dt: number)
 		current = current:Lerp(target, k)
 		self.OrbPos[i] = current
 		if point then
-			-- 별은 얼굴(-Z)이 카메라 쪽(캐릭터 오른쪽)을 보고 제 판 안에서 천천히 돈다
-			orb:PivotTo(CFrame.lookAt(current, current + cf.RightVector) * CFrame.Angles(0, 0, self.OrbT * 0.8 + i))
+			orb:PivotTo(CFrame.new(current))
+			shine(self, i, dt)
 		else
 			orb:PivotTo(CFrame.new(current) * CFrame.Angles(0, self.OrbT * 3 + i, self.OrbT * 2))
+		end
+	end
+	-- 별자리 선: 두 별이 다 켜져 있고 별자리 꼴(Orbit·Sky)일 때만 잇는다(천천히 나타나고 사라진다)
+	for _, line in self.Lines do
+		local on = self.Lit[line.A] ~= false and self.Lit[line.B] ~= false and (mode == "Orbit" or mode == "Sky")
+		line.Alpha += ((if on then 0.35 else 1) - line.Alpha) * (1 - math.exp(-dt * 5))
+		local part = line.Part
+		part.Transparency = line.Alpha
+		local pa, pb = self.OrbPos[line.A], self.OrbPos[line.B]
+		if pa and pb and line.Alpha < 0.995 then
+			part.Size = Vector3.new(0.05, 0.05, math.max(0.05, (pb - pa).Magnitude))
+			part.CFrame = CFrame.lookAt(pa:Lerp(pb, 0.5), pb)
 		end
 	end
 end
