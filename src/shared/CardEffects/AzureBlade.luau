@@ -198,7 +198,7 @@ M.AzureBlade_R_Stance = {
 	end,
 }
 
--- 검풍: 발도술의 절정이 3명 이상 베면 진 발도술 재사용 대기 끝 + 스테미나 5
+-- 연쇄 발도(옛 검풍): 발도술의 절정이 3명 이상 베면 진 발도술 재사용 대기 끝 + 스테미나 5
 M.AzureBlade_R_SwordWind = {
 	AfterSkill = function(c: Card, info: any)
 		if isSkill(info, "IaidoPeak") and hitCount(info) >= 3 then
@@ -232,7 +232,7 @@ M.AzureBlade_R_Ring = {
 	end,
 }
 
--- 도발의 대가: 도발을 쓴 턴에 받는 피해 −15%
+-- 도발의 각오(옛 도발의 대가): 도발을 쓴 턴에 받는 피해 −15%
 M.AzureBlade_R_Price = {
 	BeforeTaken = function(c: Card, info: any)
 		if provokedOn(c, 0) then
@@ -449,7 +449,7 @@ M.AzureBlade_C_Cleave = {
 	end,
 }
 
--- 검집 되치기: 검집 타격이 맞힌 적은 이번 턴 가하는 피해 −10%
+-- 검집 견제(옛 검집 되치기): 검집 타격이 맞힌 적은 이번 턴 가하는 피해 −10%
 M.AzureBlade_C_Rebuke = {
 	Hit = function(c: Card, info: any)
 		if isSkill(info, "ScabbardStrike") and info.Target.Alive then
@@ -526,7 +526,7 @@ M.AzureBlade_C_Whet = {
 	end,
 }
 
--- 방랑 검객: 적이 3기 이상이면 발도술의 절정 피해 +10%
+-- 일당백(옛 방랑 검객): 적이 3기 이상이면 발도술의 절정 피해 +10%
 M.AzureBlade_C_Wanderer = {
 	BeforeSkill = function(c: Card, info: any)
 		if isSkill(info, "IaidoPeak") and #H.Enemies(c) >= 3 then
@@ -537,7 +537,7 @@ M.AzureBlade_C_Wanderer = {
 	end,
 }
 
--- 어깨 너머: 가드를 쓴 다음 턴의 첫 스킬 스테미나 −25%
+-- 막아 낸 여유(옛 어깨 너머): 가드를 쓴 다음 턴의 첫 스킬 스테미나 −25%
 M.AzureBlade_C_Shoulder = {
 	Rules = {
 		StaminaCost = function(c: Card, value: number): number

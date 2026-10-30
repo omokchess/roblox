@@ -10,6 +10,11 @@
 	`치우쳐진 검`, 혼자 2레벨이던 `혼신의 도발`을 채우고, 레벨마다 값이 같거나 되돌아가던 `방어 태도`·`검풍`·`방랑 검객`을 고쳤다.
 	원안 값(도발은 바뀌지 않음 · 방어력 2.5% · 집중력 +1턴 · 방어력 +10% · 공격력 −2.5%)은 1레벨에 그대로 두고 더했다.
 
+	2026-10-30 사용자: "카드 효과에 맞게 이름이랑 아이콘도 재구성" — 이름이 효과와 어긋나던 다섯 장을 바꿈(Id·효과는 그대로):
+	  도발의 대가 → 도발의 각오(받는 피해 감소인데 '대가') · 검풍 → 연쇄 발도(셋 이상 베면 진 발도술 재사용) ·
+	  검집 되치기 → 검집 견제(맞힌 적의 피해 감소) · 방랑 검객 → 일당백(적 3기 이상) · 어깨 너머 → 막아 낸 여유(가드 뒤 스테미나 소모 감소).
+	  그림은 tools/card_art/specs/azureblade.py.
+
 	수치 앵커
 	  검집 타격 18(재사용 1) · 집중 베기 22(2) · 진 발도술 22 = 대상 행 4/6(2) · 발도술의 절정 32 = 6/4/4(4) · 공간의 이해 34 고정 17연타(6) — 2026-10-30 피해 +50%(33·48·51)
 	  [집중력] = 최대 1, `도발`(재사용 2, 스테미나 0)로 얻고 2턴 뒤 사라짐
@@ -103,7 +108,7 @@ local cards: { Card } = {
 	{
 		Id = "AzureBlade_R_SwordWind",
 		Art = "AzureBlade_R_SwordWind",
-		Name = "검풍",
+		Name = "연쇄 발도",
 		Description = "`발도술의 절정`이 적을 3명 이상 베면 `진 발도술`의 재사용 대기가 끝나고 스테미나를 {5} 회복한다.",
 		Levels = { { 5, 6, 7, 8, 9, 11 } },
 		Grade = "Rare",
@@ -133,7 +138,7 @@ local cards: { Card } = {
 	{
 		Id = "AzureBlade_R_Price",
 		Art = "AzureBlade_R_Price",
-		Name = "도발의 대가",
+		Name = "도발의 각오",
 		Description = "`도발`을 쓴 턴에 [받는 피해량]이 {15}% 줄어든다.",
 		Levels = { { 15, 18, 21, 24, 27, 32 } },
 		Grade = "Rare",
@@ -295,7 +300,7 @@ local cards: { Card } = {
 	{
 		Id = "AzureBlade_C_Rebuke",
 		Art = "AzureBlade_C_Rebuke",
-		Name = "검집 되치기",
+		Name = "검집 견제",
 		Description = "`검집 타격`이 맞힌 적은 이번 턴(곧 올 반격) [가하는 피해량]이 {10}% 줄어든다.",
 		Levels = { { 10, 12, 14, 16, 18, 22 } },
 		Grade = "Common",
@@ -355,7 +360,7 @@ local cards: { Card } = {
 	{
 		Id = "AzureBlade_C_Wanderer",
 		Art = "AzureBlade_C_Wanderer",
-		Name = "방랑 검객",
+		Name = "일당백",
 		Description = "적이 3기 이상이면 `발도술의 절정`의 [가하는 피해량]이 {10}% 오른다.",
 		Levels = { { 10, 12, 14, 16, 18, 21 } },
 		Grade = "Common",
@@ -365,7 +370,7 @@ local cards: { Card } = {
 	{
 		Id = "AzureBlade_C_Shoulder",
 		Art = "AzureBlade_C_Shoulder",
-		Name = "어깨 너머",
+		Name = "막아 낸 여유",
 		Description = "`가드`를 쓴 다음 턴의 첫 스킬은 스테미나 소모가 {25}% 줄어든다.",
 		Levels = { { 25, 30, 35, 40, 45, 52 } },
 		Grade = "Common",

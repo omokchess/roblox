@@ -28,10 +28,15 @@ def _(A):
     lock(A, 0.72, 0.68, 0.24, color=A.accent, key=WHITE)
 
 
-@art("AzureBlade_E_Biased")  # 치우쳐진 검: 기운 저울 위의 칼
+@art("AzureBlade_E_Biased")  # 치우쳐진 검: 칼 쪽으로 기운 저울 — 올라간 접시엔 금 간 방패(받는 피해 ↑), 내려간 접시엔 칼(쓰러뜨리면 다시)
 def _(A):
-    scales(A, C, 0.6, 0.62, color=WHITE, tilt=-14)
-    odachi(A, 0.3, 0.34, 0.5, -25, color=A.accent)
+    s, cy, tilt = 0.62, 0.6, -14
+    scales(A, C, cy, s, color=WHITE, tilt=tilt)
+    pans = [(px, py + 0.22 * s) for px, py in at(C, cy - 0.25 * s, s, tilt, [(-0.38, 0), (0.38, 0)])]
+    (hx, hy), (lx, ly) = sorted(pans, key=lambda p: p[1])  # 올라간 접시 · 내려간 접시
+    shield(A, hx, hy - 0.06, 0.15, color=WHITE, w=THIN)
+    crack(A, hx, hy - 0.06, 0.12, 80, color=A.accent, w=THIN)
+    odachi(A, lx - 0.06, ly - 0.025, 0.26, 0, color=A.accent)
 
 
 @art("AzureBlade_E_Mushin")  # 무념무상: 감은 눈과 고요한 물결
@@ -60,11 +65,12 @@ def _(A):
     shield(A, 0.4, 0.56, 0.42, color=WHITE, w=LINE)
 
 
-@art("AzureBlade_R_SwordWind")  # 검풍: 칼끝에서 이는 바람
+@art("AzureBlade_R_SwordWind")  # 연쇄 발도(옛 검풍): 셋을 한 번에 가른 칼 줄기와 되돌아오는 화살(진 발도술 재사용 대기 끝)
 def _(A):
-    odachi(A, 0.28, 0.7, 0.78, -40, color=WHITE)
-    for k in range(3):
-        A.arc(0.62, 0.38, 0.12 + k * 0.08, 200, 320, w=THIN, color=A.accent, tr=k * 0.2)
+    for x, y in ((0.3, 0.62), (0.5, 0.54), (0.7, 0.46)):
+        A.ring(x, y, 0.07, w=THIN, color=WHITE)
+    A.line(0.14, 0.7, 0.86, 0.38, w=LINE, color=ICE)
+    loop_arrow(A, 0.72, 0.24, 0.12, color=A.accent, w=THIN, start=-40, end=220)
 
 
 @art("AzureBlade_R_Zanshin")  # 잔심: 벤 뒤 남은 눈길(칼과 눈)
@@ -80,10 +86,10 @@ def _(A):
         A.ring(0.74, 0.26, 0.06 + k * 0.06, w=THIN, color=A.accent, tr=k * 0.25)
 
 
-@art("AzureBlade_R_Price")  # 도발의 대가: 손바닥 앞의 금 간 방패
+@art("AzureBlade_R_Price")  # 도발의 각오(옛 도발의 대가): 까딱이는 손 뒤의 단단한 방패와 줄어드는 피해(아래 화살)
 def _(A):
-    shield(A, 0.56, 0.52, 0.5, color=WHITE, w=LINE)
-    crack(A, 0.56, 0.5, 0.36, 80, color=A.accent, w=THIN)
+    shield(A, 0.58, 0.5, 0.5, color=WHITE, w=LINE)
+    arrow(A, 0.58, 0.36, 0.58, 0.62, color=A.accent, w=LINE)
     hand_open(A, 0.26, 0.7, 0.26)
 
 
@@ -185,10 +191,11 @@ def _(A):
     crack(A, C, C, 0.62, 60, color=A.accent, w=LINE)
 
 
-@art("AzureBlade_C_Rebuke")  # 검집 되치기: 검집 끝에 부딪쳐 꺾인 화살
+@art("AzureBlade_C_Rebuke")  # 검집 견제(옛 검집 되치기): 검집에 맞은 주먹이 힘을 잃는다(가하는 피해 ↓)
 def _(A):
-    odachi(A, 0.2, 0.72, 0.6, -40, sheathed=True)
-    A.poly([(0.84, 0.2), (0.62, 0.36), (0.78, 0.5)], w=LINE, color=A.accent)
+    odachi(A, 0.18, 0.74, 0.62, -40, sheathed=True)
+    fist(A, 0.66, 0.36, 0.3)
+    arrow(A, 0.84, 0.26, 0.84, 0.52, color=A.accent, w=THIN)
 
 
 @art("AzureBlade_C_Deflect")  # 흘려 넘기기: 비스듬한 칼에 미끄러지는 화살
@@ -198,10 +205,11 @@ def _(A):
     arrow(A, 0.56, 0.4, 0.74, 0.62, color=A.accent, w=THIN)
 
 
-@art("AzureBlade_C_Momentum")  # 기세: 앞으로 쏟아지는 화살 셋
+@art("AzureBlade_C_Momentum")  # 기세: 앞으로 쏟아지는 화살 셋과 되돌아오는 칼(진 발도술 재사용 대기 끝)
 def _(A):
     chevrons(A, 0.56, C, 0.3, 3, 0, 0.1, color=A.accent)
     odachi(A, 0.16, 0.74, 0.5, -20, color=WHITE)
+    loop_arrow(A, 0.78, 0.26, 0.1, color=WHITE, w=THIN, start=-40, end=220)
 
 
 @art("AzureBlade_C_Answer")  # 도발 응수: 마주 선 손과 칼
@@ -223,21 +231,24 @@ def _(A):
     sparkle(A, 0.7, 0.42, 0.06, color=A.accent)
 
 
-@art("AzureBlade_C_Wanderer")  # 방랑 검객: 삿갓과 등에 멘 칼
+@art("AzureBlade_C_Wanderer")  # 일당백(옛 방랑 검객): 늘어선 셋을 한 칼에(적이 많을수록 발도술의 절정이 세다)
 def _(A):
-    A.poly([(0.22, 0.5), (0.5, 0.3), (0.78, 0.5)], w=LINE * 1.3, color=WHITE)
-    A.line(0.2, 0.5, 0.8, 0.5, w=LINE)
-    odachi(A, 0.32, 0.62, 0.6, -15, sheathed=True)
+    for x in (0.3, 0.5, 0.7):
+        person(A, x, 0.56, 0.36, color=WHITE, w=THIN)
+    A.line(0.12, 0.66, 0.88, 0.4, w=LINE, color=A.accent)
 
 
-@art("AzureBlade_C_Shoulder")  # 어깨 너머: 어깨 위로 솟은 칼자루
+@art("AzureBlade_C_Shoulder")  # 막아 낸 여유(옛 어깨 너머): 방패 뒤로 줄어드는 기력 소모(스테미나 ↓)
 def _(A):
-    A.arc(C, 0.78, 0.26, 180, 360, w=LINE, color=WHITE)
-    odachi(A, 0.62, 0.4, 0.6, 120, sheathed=True)
-    sparkle(A, 0.28, 0.3, 0.06, color=A.accent)
+    shield(A, 0.38, 0.54, 0.46, color=WHITE, w=LINE)
+    bolt(A, 0.7, 0.4, 0.26, color=A.accent, w=THIN)
+    arrow(A, 0.86, 0.3, 0.86, 0.56, color=A.accent, w=THIN)
 
 
-@art("AzureBlade_C_Glare")  # 도발의 눈빛: 눈에서 번지는 빛
+@art("AzureBlade_C_Glare")  # 도발의 눈빛: 노려보는 눈 앞에서 꺼지는 치명타(별에 빗금)
 def _(A):
-    eye(A, C, 0.52, 0.48, color=WHITE, pupil=A.accent)
-    rays(A, C, 0.52, 0.28, 0.36, 8, 0, color=A.accent, w=THIN)
+    eye(A, C, 0.58, 0.48, color=WHITE, pupil=A.accent)
+    star(A, 0.74, 0.26, 0.11, color=A.accent, w=THIN)
+    A.line(0.62, 0.38, 0.86, 0.14, w=THIN, color=WHITE)
+
+
