@@ -3,15 +3,16 @@
 	Fx/AzureBlade — 청의 검사 이펙트. 푸른 칼빛·흰 섬광·잔상·물·검로. (2026-10-25, 같은 날 사용자 말 설명으로 다시 짬)
 
 	  집중 베기     조금 뽑다 챙 멈춤(Ching) → 잔상을 남기고(Slip) 앞 두 칸을 블링크로 지나 작게 기운 검흔(SmallCuts) → 딸깍 → 잔상을 남기고 제자리로
-	  진 발도술     (2026-10-30 다시) 등에서 뽑아(DrawGlint · Release) 강하게 세로로 내리베면 세로 초승달 검기가 대상 열까지 날아가고
-	                그 뒤를 선이 따라간다(WaveLaunch) → 열 전체 1타(WaveHit) → 칼을 꽂을 때 선에 빛이 달리며 2타(LineStrike)
+	  진 발도술     (2026-10-30 다시) 등에서 뽑아(DrawGlint · Release) 강하게 세로로 내리베면 세로 초승달 검기가 내 행 끝까지 날아가고
+	                그 뒤를 선이 따라간다(WaveLaunch) → 행 전체 1타(WaveHit) → 칼을 꽂을 때 선에 빛이 달리며 2타(LineStrike)
 	  발도술의 절정 반쯤 뽑다 "챙" 하고 멈춰 드러난 날에 빛(Ching) → 사라져(Vanish) 줄 끝에 이미 벤 자세로 서고,
 	                지나간 자리에 불규칙한 곧은 검로(PeakPath) → 줄 전체를 가르는 곧은 칼날들이 반짝일 때마다 타격(RowFlash).
 	                (2026-10-26 사용자) 제 줄을 따라 곧게 가고, 검로·칼날은 위아래로 ±TILT° 안에서 제각각 기울며 크기는 MARK 배
 	  공간의 이해   (2026-10-30 다시, 컷신) 발치 확대(CamFoot) · 내딛기(StepDust) → 오른쪽 등 뒤에서 달리기 준비(CamShoulder) →
-	                박차는 순간 사라져(Disappear) 보이지 않게 블링크 17번 — 무작위 자리·잔상·검흔(Phantom), 카메라는 오른쪽 위로 올라
-	                적 진영을 점점 빠르게 한 바퀴 돌다 멈춘다(CamOrbit) → 제자리에 나타나(Return) 꽂으면 흑백(CutClick) →
-	                검흔이 하나씩 파바바박 터지는 17연타(MarkHit) → 임팩트 프레임(FinalBreak) → 카메라를 돌려준다(CamFree)
+	                박차는 순간 사라져(Disappear) 보이지 않게 블링크 17번 — 진영을 고르게 나눈 칸마다(층화 표본) 베기 잔상 · 절정 급 곧은 검흔 ·
+	                앞 잔상에서 이어지는 곧은 선(Phantom), 카메라는 오른쪽 위로 올라
+	                적 진영을 점점 빠르게 한 바퀴 돌다 멈춘다(CamOrbit) → 제자리를 베며 나타나(Return) 꽂으면 흑백(CutClick) →
+	                검흔·선이 하나씩 파바바박 터지는 17연타(MarkHit) → 임팩트 프레임(FinalBreak) → 카메라를 돌려준다(CamFree)
 	효과음: 로블록스 효과음 모음(ProSoundEffects). 챙 = 칼 뽑는 쇳소리 — 바꾸려면 SOUND 의 숫자만 고친다.
 	잔상 자세는 모션 파일의 Poses(tools/combat/design/azure_gen.py 가 만든다).
 ]]
@@ -223,44 +224,43 @@ function Fx.Release(ctx: any)
 	ctx.Vfx.Sparks(p, { Color = ICE, Count = 8, Speed = 10 })
 end
 
---=== 진 발도술(2026-10-30 다시 — 강한 세로베기로 검기를 날려 대상 열을 벤다) ===--
+--=== 진 발도술(2026-10-30 다시 — 강한 세로베기로 검기를 날려 내 행(라인) 전체를 벤다) ===--
 
 --[[
-	대상 열(첫 대상이 선 열)을 옆으로 가로지르는 두 끝(바닥 높이). 적 칸 중 앞 거리가 같은 칸들의 옆 범위 + 반 칸.
-	칸을 모르면(전시장) 대상 둘레 ±9.
+	내 행(시전자 라인)의 적 진영 끝까지 앞 거리. 적 칸 중 옆 거리가 시전자와 같은 칸들의 가장 먼 앞 거리 + 반 칸.
+	칸을 모르면(전시장) 가장 먼 대상 너머 한 칸.
 ]]
-local function columnSpan(ctx: any, at: Vector3): (Vector3, Vector3)
+local function rowReach(ctx: any): number
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
 	local home = ctx.Actor.Home.Position
-	local along = (at - home):Dot(f)
-	local v0, v1 = math.huge, -math.huge
+	local far = -math.huge
 	for _, t in ctx.EnemyTiles or {} do
 		local d = t.Position - home
-		if math.abs(d:Dot(f) - along) < 2 then
-			v0, v1 = math.min(v0, d:Dot(r)), math.max(v1, d:Dot(r))
+		if math.abs(d:Dot(r)) < 2 then
+			far = math.max(far, d:Dot(f) + 3)
 		end
 	end
-	if v0 > v1 then
-		local v = (at - home):Dot(r)
-		v0, v1 = v - 6, v + 6
+	if far == -math.huge then
+		for _, p in ctx.Targets do
+			far = math.max(far, (p - home):Dot(f) + 6)
+		end
 	end
-	local base = Vector3.new(home.X, ctx.Ground, home.Z) + f * along
-	return base + r * (v0 - 3), base + r * (v1 + 3)
+	return if far == -math.huge then 18 else far
 end
 
 --[[
-	강한 세로베기 → 검기: 앞으로 볼록한 세로 초승달이 WAVE_TIME 초에 대상 열까지 날아가고(그 뒤를 선이 따라 자란다 —
-	stroke 의 Grow 곡선 1-(1-a)^3 와 같은 곡선으로 움직인다), 닿으면 열 전체를 세로로 가르는 빛 벽이 서고 열을 가로지르는 선이 남는다.
-	선들은 칼을 꽂을 때(LineStrike) 다시 벤다.
+	강한 세로베기 → 검기: 앞으로 볼록한 세로 초승달이 WAVE_TIME 초에 행 끝까지 날아가고(그 뒤를 선이 따라 자란다 —
+	stroke 의 Grow 곡선 1-(1-a)^3 와 같은 곡선으로 움직인다), 끝에 닿으면 행을 세로로 가르는 빛 벽이 서고 행을 따라 바닥 선이 남는다.
+	선들은 칼을 꽂을 때(LineStrike) 다시 벤다. (2026-10-30 사용자: "행 전체 타격으로" — 처음엔 열로 잘못 말했다)
 ]]
 local WAVE_TIME = 0.22
 function Fx.WaveLaunch(ctx: any)
 	local s = st(ctx)
 	local f = ctx.Forward
 	local start = ctx.Root.Position + f * 1.6 + Vector3.new(0, 0.7, 0)
-	local target = ctx.Targets[1] or (start + f * 14)
-	local finish = start + f * math.max(4, (target - start):Dot(f))
+	local home = ctx.Actor.Home.Position
+	local finish = start + f * math.max(4, rowReach(ctx) - (start - home):Dot(f))
 	s.waveLines = {}
 	table.insert(s.waveLines, stroke(start, finish, { Width = 0.06, Color = ICE, Grow = WAVE_TIME, Keep = true, Bits = 3 }))
 	ctx.Vfx.Flash(start, { Color = WHITE, Size = 5, Life = 0.18, Brightness = 6 })
@@ -286,30 +286,30 @@ function Fx.WaveLaunch(ctx: any)
 		for _, seg in segs do
 			seg:Destroy()
 		end
-		-- 열 전체를 세로로 가르는 빛 벽(잠깐) + 열을 가로지르는 선 두 줄(남는다)
-		local a0, a1 = columnSpan(ctx, finish)
-		local width = (a1 - a0).Magnitude
-		local wall = CombatVfx.Part(Vector3.new(0.06, 4.4, width), CFrame.lookAt(a0:Lerp(a1, 0.5), a1) * CFrame.new(0, 2.2, 0), WHITE)
+		-- 행을 세로로 가르는 빛 벽(잠깐 — 검기가 지나간 길) + 행을 따라 바닥에 남는 선
+		local g0 = Vector3.new(start.X, ctx.Ground, start.Z)
+		local g1 = Vector3.new(finish.X, ctx.Ground, finish.Z)
+		local length = (g1 - g0).Magnitude
+		local wall = CombatVfx.Part(Vector3.new(0.06, 4.4, length), CFrame.lookAt(g0:Lerp(g1, 0.5), g1) * CFrame.new(0, 2.2, 0), WHITE)
 		CombatVfx.Timed(0.3, function(t)
 			wall.Transparency = t
-			wall.Size = Vector3.new(0.06 + 0.5 * t, 4.4 + 1.2 * t, width)
+			wall.Size = Vector3.new(0.06 + 0.5 * t, 4.4 + 1.2 * t, length)
 		end, function()
 			wall:Destroy()
 		end)
-		table.insert(s.waveLines, stroke(a0 + Vector3.new(0, 1.5, 0), a1 + Vector3.new(0, 1.5, 0), { Width = 0.06, Color = ICE, Grow = 0.06, Keep = true, Bits = 3 }))
-		table.insert(s.waveLines, stroke(a0 + Vector3.new(0, 0.1, 0), a1 + Vector3.new(0, 0.1, 0), { Width = 0.05, Color = ICE, Grow = 0.06, Keep = true, Bits = 2 }))
+		table.insert(s.waveLines, stroke(g0 + Vector3.new(0, 0.1, 0), g1 + Vector3.new(0, 0.1, 0), { Width = 0.05, Color = ICE, Grow = 0.06, Keep = true, Bits = 2 }))
 		ctx.Vfx.Flash(finish, { Color = ICE, Size = 7, Life = 0.2, Brightness = 5 })
 	end)
 end
 
--- 1타: 검기가 대상 열의 적들을 세로로 벤다
+-- 1타: 검기가 내 행의 적들을 세로로 벤다
 function Fx.WaveHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	Common.Arc(ctx, p, 0, 70, -70, { Radius = 2.4, Width = 0.5, Color = AZURE, Core = WHITE, Sweep = 0.03, Life = 0.2 })
 	ctx.Vfx.Sparks(p, { Color = WHITE, Count = 10, Speed = 18 })
 end
 
--- 2타(칼을 꽂는 순간): 검기를 따라간 선과 열을 가로지르는 선에 번개처럼 빛이 달리고 터진다
+-- 2타(칼을 꽂는 순간): 검기를 따라간 선과 행을 따라 남은 바닥 선에 번개처럼 빛이 달리고 터진다
 -- (대상이 여럿이어도 선은 첫 대상 때 한 번 — 목록을 비워 둔다. 사건 표는 쓸 때마다 같은 표라 그것으로 가리면 두 번째 사용부터 안 터진다)
 function Fx.LineStrike(ctx: any, _ev: any, at: Vector3?)
 	local s = st(ctx)
@@ -618,6 +618,8 @@ function Fx.Disappear(ctx: any)
 	s.hidden = true
 	s.phantoms = {}
 	s.markEv = nil
+	s.slots = nil -- 첫 Phantom 이 이번 시전의 잔상 자리들을 새로 고른다
+	s.lastAt = ctx.Root.Position -- 잔상을 잇는 선은 박찬 자리에서 시작한다
 	ctx.Vfx.Flash(ctx.Root.Position, { Color = WHITE, Size = 6, Life = 0.18, Brightness = 6 })
 	ctx.Vfx.Dust(Common.Feet(ctx), { Color = ICE, Count = 12 })
 	stroke(ctx.Root.Position, ctx.Root.Position + ctx.Forward * 9, { Width = 0.06, Color = ICE, Grow = 0.05, Life = 0.25 })
@@ -650,30 +652,74 @@ local PHANTOM_CUTS = {
 	BACKSWEEP = { Vector3.new(-4, 0.5, -1.5), Vector3.new(4, 0.2, 2.5) }, -- 뒤돌며 휩쓸기
 }
 local PHANTOM_POSES = { "DRAWCUT", "SWEEP", "CUTDOWN", "KESA", "RISE", "SLASHR", "SKYRISE", "SIDEKESA", "BACKSWEEP" }
+-- 검로 크기: 2026-10-30 사용자 "검로 크기를 더 키워주고(발도술의 절정 급)" — 길이 1.6배, 굵기는 절정의 PeakPath 와 같은 범위(× MARK)
+local CUT_LENGTH = 1.6
+local CUT_WIDTH = { 0.06 * MARK, 0.16 * MARK }
 
--- cf(뿌리) 둘레에 name 자세의 곧은 검로 두 끝(조금씩 흔들고 늘인다 — 땅 밑으로는 내려가지 않는다)
-local function cutLine(ctx: any, rng: Random, name: string, cf: CFrame): (Vector3, Vector3)
+--[[
+	cf(뿌리) 둘레에 name 자세의 곧은 검로 두 끝(조금씩 흔들고 scale 배 늘인다).
+	땅 밑으로 내려가는 끝은 같은 줄을 따라 땅 높이까지만 줄인다(꺾지 않아 곧게 남는다).
+]]
+local function cutLine(ctx: any, rng: Random, name: string, cf: CFrame, scale: number): (Vector3, Vector3)
 	local cut = PHANTOM_CUTS[name]
 	local function jitter(v: Vector3): Vector3
 		return cf * (v + Vector3.new(rng:NextNumber(-0.4, 0.4), rng:NextNumber(-0.4, 0.4), rng:NextNumber(-0.4, 0.4)))
 	end
 	local a, b = jitter(cut[1]), jitter(cut[2])
-	local mid, half = a:Lerp(b, 0.5), (b - a) * (rng:NextNumber(0.9, 1.2) / 2)
+	local mid, half = a:Lerp(b, 0.5), (b - a) * (scale * rng:NextNumber(0.9, 1.2) / 2)
 	local floor = ctx.Ground + 0.1
-	a, b = mid - half, mid + half
-	return Vector3.new(a.X, math.max(a.Y, floor), a.Z), Vector3.new(b.X, math.max(b.Y, floor), b.Z)
+	local function above(p: Vector3): Vector3
+		if p.Y >= floor or mid.Y <= floor then
+			return Vector3.new(p.X, math.max(p.Y, floor), p.Z)
+		end
+		return mid + (p - mid) * ((mid.Y - floor) / (mid.Y - p.Y))
+	end
+	return above(mid - half), above(mid + half)
 end
 
 --[[
-	블링크 한 번: 적 진영 안 무작위 자리에, 무작위로 돈 베기 자세(바로 앞 잔상과는 다른 자세)의 잔상 하나 + 그 베기가 지나간 곧은 검흔 하나.
-	잔상·검흔은 칼을 꽂은 뒤 MarkHit 가 하나씩 터뜨린다.
+	잔상 자리 고르기 — 2026-10-30 사용자: "잔상 위치가 가끔씩 겹치거나, 혹은 특정 구역이 비어보이는 문제를 수정".
+	층화 표본(jittered grid): 적 진영(필드 상자 안쪽 = 적 칸 범위)을 잔상 수에 맞춘 nu × nv 칸으로 나누고(칸이 정사각형에 가깝게 —
+	6 × 3 진영이면 적 칸과 같다) 칸 순서를 섞어 블링크마다 한 칸씩, 칸 가운데 50% 안의 무작위 자리를 쓴다.
+	→ 모든 구역에 고르게 하나씩(비는 구역 없음) · 이웃 잔상은 칸의 절반 이상 떨어진다(겹침 없음) · 순서는 무작위라 이리저리 튄다.
+]]
+local PHANTOMS = 17 -- 모션의 Phantom 사건 수(SpaceCut HitWeights 17 과 같다)
+local function phantomSlots(box: any, rng: Random): { Vector3 }
+	local u0, v0 = box.U0 + 1, box.V0 + 1
+	local lu, lv = box.U1 - 1 - u0, box.V1 - 1 - v0
+	local nv = math.max(1, math.floor(math.sqrt(PHANTOMS * lv / lu) + 0.5))
+	local nu = math.ceil(PHANTOMS / nv)
+	local cells = {}
+	for i = 0, nu - 1 do
+		for j = 0, nv - 1 do
+			table.insert(cells, Vector2.new(i, j))
+		end
+	end
+	for k = #cells, 2, -1 do -- 섞기(Fisher–Yates)
+		local m = rng:NextInteger(1, k)
+		cells[k], cells[m] = cells[m], cells[k]
+	end
+	local slots = {}
+	for _, cell in cells do
+		local u = u0 + (cell.X + 0.5 + rng:NextNumber(-0.25, 0.25)) * lu / nu
+		local v = v0 + (cell.Y + 0.5 + rng:NextNumber(-0.25, 0.25)) * lv / nv
+		table.insert(slots, boxWorld(box, Vector3.new(u, v, 0)))
+	end
+	return slots
+end
+
+--[[
+	블링크 한 번: 고른 자리에, 무작위로 돈 베기 자세(바로 앞 잔상과는 다른 자세)의 잔상 하나 + 그 베기가 지나간 곧은 검흔 하나 +
+	바로 앞 자리(첫 번째는 박찬 자리)에서 이어지는 곧은 선 하나. 셋 다 칼을 꽂은 뒤 MarkHit 가 하나씩 터뜨린다.
 ]]
 function Fx.Phantom(ctx: any)
 	local s = st(ctx)
 	s.phantoms = s.phantoms or {}
-	local box = fieldBox(ctx)
 	local rng = Random.new()
-	local foot = boxWorld(box, Vector3.new(rng:NextNumber(box.U0 + 1, box.U1 - 1), rng:NextNumber(box.V0 + 1, box.V1 - 1), 0))
+	if not s.slots or #s.slots == 0 then
+		s.slots = phantomSlots(fieldBox(ctx), rng)
+	end
+	local foot = table.remove(s.slots) :: Vector3
 	local at = Vector3.new(foot.X, ctx.Actor.Home.Y, foot.Z)
 	local cf = CFrame.new(at) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
 	local name
@@ -682,19 +728,26 @@ function Fx.Phantom(ctx: any)
 	until name ~= s.lastPhantom
 	s.lastPhantom = name
 	local ghost = Common.Ghost(ctx, pose(name), cf, { Transparency = 0.5, FadeIn = 0.03, Life = 30 })
-	local a, b = cutLine(ctx, rng, name, cf)
-	local mark = stroke(a, b, { Width = 0.05, Color = ICE, Grow = 0.05, Keep = true, Bits = 3 })
-	table.insert(s.phantoms, { Ghost = ghost, Mark = mark, At = a:Lerp(b, 0.5) })
+	local a, b = cutLine(ctx, rng, name, cf, CUT_LENGTH)
+	local width = rng:NextNumber(CUT_WIDTH[1], CUT_WIDTH[2])
+	local mark = stroke(a, b, { Width = width, Color = ICE, Grow = 0.05, Keep = true, Bits = 4 })
+	local link = stroke(s.lastAt or ctx.Actor.Home.Position, at, { Width = 0.1, Color = AZURE, Grow = 0.04, Keep = true, Bits = 2 })
+	s.lastAt = at
+	table.insert(s.phantoms, { Ghost = ghost, Mark = mark, Link = link, Width = width, At = a:Lerp(b, 0.5) })
 	ctx.Vfx.Flash(at, { Color = ICE, Size = 4, Life = 0.15, Brightness = 4 })
 end
 
--- 제자리를 가로로 베며 나타난다(SLASHR 의 곧은 검로가 한 번 번쩍)
+-- 마지막 잔상에서 제자리로 이어지는 선을 그으며, 제자리를 가로로 베며 나타난다(SLASHR 의 곧은 검로가 한 번 번쩍)
 function Fx.Return(ctx: any)
 	local s = st(ctx)
 	s.hidden = false
 	setHidden(ctx.Actor.Model, false)
-	local a, b = cutLine(ctx, Random.new(), "SLASHR", ctx.Actor.Home)
-	stroke(a, b, { Width = 0.07, Color = ICE, Grow = 0.04, Life = 0.35 })
+	if s.lastAt then
+		stroke(s.lastAt, ctx.Actor.Home.Position, { Width = 0.1, Color = AZURE, Grow = 0.04, Life = 0.35 })
+		s.lastAt = nil
+	end
+	local a, b = cutLine(ctx, Random.new(), "SLASHR", ctx.Actor.Home, CUT_LENGTH)
+	stroke(a, b, { Width = CUT_WIDTH[2], Color = ICE, Grow = 0.04, Life = 0.35 })
 	ctx.Vfx.Flash(ctx.Root.Position, { Color = WHITE, Size = 6, Life = 0.2, Brightness = 6 })
 	ctx.Vfx.Dust(Common.Feet(ctx), { Color = ICE, Count = 10 })
 end
@@ -724,12 +777,13 @@ function Fx.MarkHit(ctx: any, ev: any, at: Vector3?)
 		if #list > 0 then
 			local p = table.remove(list, math.random(#list))
 			p.Mark.Burst()
+			p.Link.Burst()
 			if p.Ghost then
 				p.Ghost.Vanish(0.15)
 			end
 			ctx.Vfx.Flash(p.At, { Color = WHITE, Size = 5, Life = 0.12, Brightness = 6 })
 			local d = (p.Mark.To - p.Mark.From).Unit
-			stroke(p.Mark.From - d, p.Mark.To + d, { Width = 0.1, Color = WHITE, Grow = 0.03, Life = 0.12 })
+			stroke(p.Mark.From - d, p.Mark.To + d, { Width = p.Width * 1.3, Color = WHITE, Grow = 0.03, Life = 0.12 })
 		end
 	end
 	if at then
@@ -742,6 +796,7 @@ function Fx.FinalBreak(ctx: any)
 	local s = st(ctx)
 	for _, p in s.phantoms or {} do
 		p.Mark.Burst()
+		p.Link.Burst()
 		if p.Ghost then
 			p.Ghost.Vanish(0.2)
 		end
