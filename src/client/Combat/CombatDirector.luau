@@ -1008,7 +1008,14 @@ function CombatDirector:_step(realDt: number)
 			a.FidgetIn = (a.FidgetIn or 4 + math.random() * 8) - dt
 			if (a.FidgetIn :: number) <= 0 then
 				a.FidgetIn = 6 + math.random() * 9
-				a.Animator:Fidget(fidgets[math.random(#fidgets)])
+				a.Animator:Fidget(fidgets[math.random(#fidgets)], function(ev)
+					-- 버릇의 사건: 별 대형 바꾸기 · 이펙트(대상 없음)
+					if ev.k == "Orbs" and a.Weapons then
+						a.Weapons:SetOrbMode(ev.mode or "Orbit")
+					elseif ev.k == "Fx" then
+						self:_fx(a, ev.n, self:_ctx(a, {}, 1), ev, nil)
+					end
+				end)
 			end
 		end
 		-- 모션

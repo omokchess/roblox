@@ -85,8 +85,8 @@ function CombatAnimator:Play(motion: any, options: PlayOptions?)
 	return handle
 end
 
--- 대기 버릇을 한 번 한다(동작 중이거나 이미 하고 있으면 건너뛴다)
-function CombatAnimator:Fidget(motion: any)
+-- 대기 버릇을 한 번 한다(동작 중이거나 이미 하고 있으면 건너뛴다). 버릇의 Events 는 지날 때 onEvent 로 알린다
+function CombatAnimator:Fidget(motion: any, onEvent: ((ev: any) -> ())?)
 	if self.fidget or (self.action and not self.action.Done) then
 		return
 	end
@@ -98,7 +98,7 @@ function CombatAnimator:Fidget(motion: any)
 			end
 		end
 	end
-	self.fidget = { Motion = MotionMath.Compile(motion), T = 0, Only = only }
+	self.fidget = { Motion = MotionMath.Compile(motion), T = 0, Only = only, OnEvent = onEvent, EventIndex = 1 }
 end
 
 -- 붙든(Hold) 동작을 풀고 바탕으로 돌아간다
@@ -135,6 +135,14 @@ function CombatAnimator:Update(dt: number)
 	elseif fidget then
 		fidget.T += dt
 		local m = fidget.Motion
+		local events = m.Events or {}
+		while fidget.EventIndex <= #events and events[fidget.EventIndex].t <= fidget.T do
+			local ev = events[fidget.EventIndex]
+			fidget.EventIndex += 1
+			if fidget.OnEvent then
+				fidget.OnEvent(ev)
+			end
+		end
 		local fp = MotionMath.Sample(m, math.min(fidget.T, m.Duration))
 		local wIn = if m.BlendIn > 0 then math.min(1, fidget.T / m.BlendIn) else 1
 		local wOut = if fidget.T <= m.Duration then 0 elseif m.BlendOut > 0 then math.min(1, (fidget.T - m.Duration) / m.BlendOut) else 1

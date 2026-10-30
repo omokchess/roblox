@@ -16,8 +16,6 @@ OUT = os.path.join(HERE, "..", "..", "..", "src", "shared", "Combat", "Motions",
 
 ENEMY = (0, 0.4, -10)  # 적 가슴(캐릭터 앞 -Z)
 ENEMY_LOW = (0, -1.5, -9)
-# 별자리 가운데(캐릭터 오른쪽 뒤 머리 높이 — WeaponDefinitions.SevenStars Orbit.Points 의 가운데. 2026-10-30 머리 위 → 옆으로 옮기며 돈다)
-SKY_STAR = (0.6, 1.6, 3.1)
 KEYS = ["Root", "Torso", "Head", "RArm", "LArm", "RLeg", "LLeg"]
 
 
@@ -50,9 +48,18 @@ def pose(name, note, q):
     NOTE[name] = note
 
 
-pose("STANCE", "대기 — 지휘봉을 든 듯 오른손을 가슴 앞 위로, 왼손은 배 앞. 몸은 카메라 쪽으로 조금 열고 별을 올려다본다", P())
-pose("GAZE", "버릇: 몸을 오른쪽으로 크게 틀어 어깨 너머 옆에서 도는 별자리를 돌아보며 오른손 끝으로 가리킨다",
-     pointing(SKY_STAR, Root=(0, 0, 0, 0, -70, 0), Torso=(6, -20, 0), Head=(12, -45, 0), LArm=(18, -14, -10)))
+# 대기(2026-10-30 사용자 그림 — 앞에서 본 모습: 오른팔은 옆으로 비스듬히 아래로 펼치고, 왼팔은 조금 벌려 늘어뜨리고,
+# 오른다리로 곧게 서고 왼다리는 앞으로 비스듬히 바깥으로 내민다). 별은 오른쪽(펼친 팔 쪽)에 떠 있어 고개를 조금 그쪽으로.
+# 관절 부호(posecalc 로 잰 값): 다리 x+ = 앞, 왼다리 z− = 바깥, 오른다리 z+ = 바깥, 왼팔 z− = 바깥, 머리 y− = 오른쪽.
+STANCE_BODY = dict(Root=(0.1, -0.03, 0, 0, -18, 0), Torso=(2, 0, 0), Head=(4, -10, 0), LArm=(4, 0, -32), RLeg=(0, 0, 2), LLeg=(20, 0, -12))
+STANCE_HAND = (3.7, -0.8, -0.3)  # 오른손 끝이 향하는 곳(오른쪽 · 조금 아래 · 조금 앞)
+pose("STANCE", "대기 — 오른팔을 옆으로 비스듬히 아래로 펼쳐 별 쪽을 거느리고, 왼팔은 조금 벌려 늘어뜨린다. 오른다리로 곧게 서고 왼다리는 앞으로 비스듬히 내민다",
+     pointing(STANCE_HAND, **STANCE_BODY))
+# 버릇(2026-10-30 사용자: "오른팔을 한번 왼쪽으로 돌렸다가, 오른쪽으로 쭉 펼쳐서 별이 한번 몸을 한바퀴 빠르게 공전")
+pose("SWEEP_L", "버릇 1 — 오른팔을 몸 앞으로 감아 왼쪽까지 돌린다(몸도 왼쪽으로 조금 틀고 손끝을 본다)",
+     pointing((-2.4, 0.6, -1.8), **dict(STANCE_BODY, Root=(0.1, -0.03, 0, 0, -6, 0), Torso=(2, 28, 0), Head=(2, 20, 0))))
+pose("SWEEP_R", "버릇 2 — 오른팔을 오른쪽으로 쭉 펼친다(별이 몸을 한 바퀴 빠르게 돈다) · 몸을 오른쪽으로 틀어 별을 본다",
+     pointing((4.8, 1.2, -0.4), **dict(STANCE_BODY, Root=(0.1, 0.02, 0, 0, -22, 0), Torso=(4, -10, 0), Head=(8, -24, 0))))
 pose("READY", "가리키기 전 — 오른손을 귀 옆으로 끌어올려 겨눔을 모은다", P(Root=(0, 0, 0, 0, -26, 0), Torso=(6, -4, 0), Head=(4, 22, 0), RArm=(150, 18, 40), LArm=(40, -20, -20)))
 pose("POINT", "메그레즈: 팔을 쭉 뻗어 적을 가리킨다(팔 축이 적 가슴 쪽), 왼팔은 뒤로 흘려 균형",
      pointing(ENEMY, Root=(0, -0.05, 0, 0, -30, 0), Torso=(-2, -8, 0), Head=(0, 26, 0), LArm=(-12, 0, -26), RLeg=(-10, 0, -4), LLeg=(12, 0, 4)))
@@ -108,33 +115,35 @@ local Kit = require(script.Parent.Parent.MotionKit)
 local K = Kit.K
 
 '''
-order = ["STANCE", "GAZE", "READY", "POINT", "FLING_UP", "FLING_DOWN", "RAISE", "CAST", "OPEN", "CLOSE", "SHIELD", "RECOIL", "SIDESTEP", "DANGLE", "LAND", "PRAY"]
+order = ["STANCE", "SWEEP_L", "SWEEP_R", "READY", "POINT", "FLING_UP", "FLING_DOWN", "RAISE", "CAST", "OPEN", "CLOSE", "SHIELD", "RECOIL", "SIDESTEP", "DANGLE", "LAND", "PRAY"]
 lines = []
 for name in order:
     q = POSES[name]
     lines.append("-- %s\nlocal %s = { %s }" % (NOTE[name], name, ", ".join("%s = %s" % (k, f(q[k])) for k in KEYS)))
 text = head + "\n".join(lines) + "\n\nreturn {\n\tStance = STANCE,\n\n"
-text += '''	-- 대기: 고요한 숨(Kit.Breath, Smooth). 들숨에 지휘하는 오른손이 살짝 오르고, 내쉬며 고개가 별 쪽으로 돈다
+text += '''	-- 대기: 고요한 숨(Kit.Breath, Smooth). 들숨에 펼친 오른손이 살짝 오르고, 내쉬며 고개가 별(오른쪽) 쪽으로 돈다
 	Idle = Kit.Breath(STANCE, {
 		Duration = 4.2,
 		Chest = 2.4,
 		Rise = 0.03,
 		Head = -1.4,
-		In = { RArm = { 66, 12, 20 } },
-		Mid = { Head = { 8, 12, 0 } },
+		In = { RArm = ''' + f(pointing((3.7, -0.45, -0.3), **STANCE_BODY)["RArm"]) + ''' },
+		Mid = { Head = { 6, -16, 0 } },
 	}),
 
-	-- 버릇(가끔): 별을 올려다보며 손끝으로 메그레즈를 짚어 보고 다시 지휘 자세로
+	-- 버릇(가끔, 2026-10-30 사용자 말): 오른팔을 몸 앞으로 감아 왼쪽까지 돌렸다가[중] · 오른쪽으로 쭉 펼치면[강] 별이 몸을 한 바퀴
+	-- 빠르게 돌고(Orbs Whirl — 다 돌면 저절로 별자리로 돌아간다) · 펼친 채 별을 보다[약] · 대기 자세로
 	Fidgets = {
 		{
-			Duration = 2.8,
-			BlendIn = 0.35,
-			BlendOut = 0.45,
+			Duration = 2.2,
+			BlendIn = 0.3,
+			BlendOut = 0.4,
 			Keys = {
-''' + "\n".join("\t" + K(*k) for k in [(0, None, "STANCE"), (0.8, "cubicInOut", "GAZE"), (1.9, "sineInOut", "GAZE", {"Head": (16, -50, 2)}), (2.8, "cubicInOut", "STANCE")]) + '''
+''' + "\n".join("\t" + K(*k) for k in [(0, None, "STANCE"), (0.42, "cubicInOut", "SWEEP_L"), (0.56, "sineInOut", "SWEEP_L", {"Head": (0, 16, 0)}), (0.72, "expoOut", "SWEEP_R"), (1.45, "sineInOut", "SWEEP_R", {"Head": (12, -30, 0)}), (2.2, "cubicInOut", "STANCE")]) + '''
 			},
 			Events = {
-				{ t = 0.9, k = "Fx", n = "StarTwinkle" },
+				{ t = 0.72, k = "Orbs", mode = "Whirl" },
+				{ t = 0.74, k = "Fx", n = "StarTwinkle" },
 			},
 		},
 	},
@@ -185,5 +194,5 @@ skills.append(motion("Meditate", "호흡: 두 손을 가슴 앞에 모으고 별
 text += "\n\tSkills = {\n" + "\n".join(skills) + "\t},\n}\n"
 open(OUT, "w", encoding="utf-8", newline="\n").write(text)
 print("썼다", os.path.normpath(OUT))
-for name in ("POINT", "FLING_DOWN", "GAZE"):
+for name in ("STANCE", "SWEEP_L", "SWEEP_R", "POINT", "FLING_DOWN"):
     print(name, "RArm", POSES[name]["RArm"])

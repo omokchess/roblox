@@ -149,7 +149,7 @@ local function buildPiece(piece: WeaponDefinitions.Piece, name: string, anchored
 	return model
 end
 
-export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown" | "Sky"
+export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown" | "Sky" | "Whirl"
 
 --[[
 	별 빛무리(조율자 별자리 — 2026-10-30 사용자 참고 그림: 검은 하늘에 파란 빛무리를 두른 작은 흰 별, 옅은 고리).
@@ -224,6 +224,8 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 	self.Lines = {} :: { { A: number, B: number, Part: BasePart, Alpha: number } }
 	self.SpinT = 0
 	self.Center = nil :: Vector3?
+	self.WhirlT = 0
+	self.WhirlFrom = {} :: { number }
 
 	local folder = Instance.new("Folder")
 	folder.Name = "CombatWeapon"
@@ -370,12 +372,25 @@ end
 	  Shield 앞에 세모 방패                   Spread 넓게 퍼져 빠르게 돈다(자기권)
 	  Crown  머리 위 작은 원(명상·들림)
   Sky    (별자리 무기) 겨눈 자리(적 진영) 위에 별자리를 크게 펼친다(셉텐트리오네스)
+  Whirl  몸 둘레를 한 바퀴 빠르게 돌고(WHIRL 초) 저절로 Orbit 으로 돌아간다(조율자 버릇 — 오른팔을 쭉 펼칠 때)
   별자리 무기(Orbit.Points — 조율자 일곱 별)는 Orbit 일 때 둘레를 돌지 않고 그 자리에 떠서 숨 쉬듯 흔들린다.
 ]]
 function CombatWeapons:SetOrbMode(mode: OrbMode, aim: Vector3?)
 	self.OrbMode = mode
 	self.OrbAim = aim
+	if mode == "Whirl" then
+		-- 별마다 지금 자리의 몸 둘레 각에서 출발한다(제자리에서 곧장 돌기 시작하게)
+		self.WhirlT = 0
+		local root = self.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		for i in self.Orbs do
+			local p = self.OrbPos[i]
+			local rel = if root and p then root.CFrame:PointToObjectSpace(p) else Vector3.new(1, 0, 0)
+			self.WhirlFrom[i] = math.atan2(rel.Z, rel.X)
+		end
+	end
 end
+
+local WHIRL = 0.8 -- 몸을 한 바퀴 도는 시간(초)
 
 -- 별 하나의 지금 자리(이펙트가 그 별에서 빛을 쏜다). 없으면 nil
 function CombatWeapons:OrbPosition(i: number): Vector3?
@@ -441,6 +456,13 @@ function CombatWeapons:Update(dt: number)
 	local speed = orbit.Speed * (if mode == "Spread" then 3.2 elseif mode == "Gather" then 2.4 else 1)
 	self.OrbT += dt * speed
 	self.SpinT += dt * (orbit.Spin or 0)
+	if mode == "Whirl" then
+		self.WhirlT += dt
+		if self.WhirlT >= WHIRL then
+			self.OrbMode = "Orbit"
+			mode = "Orbit"
+		end
+	end
 	local cf = root.CFrame
 	local n = #self.Orbs
 	for i, orb in self.Orbs do
@@ -461,6 +483,11 @@ function CombatWeapons:Update(dt: number)
 			local mid = self.Center :: Vector3
 			local d = (Vector3.new(point[1], point[2], point[3]) - mid) * 2.5
 			target = center + Vector3.new(0, 6, 0) + cf.RightVector * d.X + cf.UpVector * d.Y + cf.LookVector * -d.Z
+		elseif mode == "Whirl" then
+			-- 몸 둘레(반지름 2.8)를 별마다 다른 높이로 한 바퀴 — 천천히 일어나 빨라졌다 다시 늦춰진다
+			local u = math.min(1, self.WhirlT / WHIRL)
+			local a = (self.WhirlFrom[i] or 0) - 2 * math.pi * (-(math.cos(math.pi * u) - 1) / 2)
+			target = (cf * CFrame.new(math.cos(a) * 2.8, 0.2 + (i - 1) * 0.45, math.sin(a) * 2.8)).Position
 		elseif mode == "Gather" then
 			local hand = self.Character:FindFirstChild("Right Arm") :: BasePart?
 			local center = if hand then (hand.CFrame * CFrame.new(0, -1.6, 0)).Position else (cf * CFrame.new(0, 0.5, -2.5)).Position
@@ -479,7 +506,7 @@ function CombatWeapons:Update(dt: number)
 			target = (cf * CFrame.new(math.cos(phase) * r, orbit.Height - 1 + bob, math.sin(phase) * r)).Position
 		end
 		local current = self.OrbPos[i] or target
-		local k = 1 - math.exp(-dt * (if mode == "Gather" then 18 else 10))
+		local k = 1 - math.exp(-dt * (if mode == "Gather" or mode == "Whirl" then 18 else 10))
 		current = current:Lerp(target, k)
 		self.OrbPos[i] = current
 		if point then
