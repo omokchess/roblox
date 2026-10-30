@@ -157,7 +157,7 @@ export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown" | "Sky"
 	Layers = { 동그라미, 켜졌을 때 투명도 } — 켜짐 정도에 따라 Update 가 투명도를 맞춘다.
 ]]
 export type Glow = { Gui: BillboardGui, Size: UDim2, Layers: { { Frame: Frame, Alpha: number } }, Ring: UIStroke, Dot: Frame, Light: PointLight }
-local GLOW_SIZE = 1.5 -- 가장 밝은 별 빛무리 지름(스터드)
+local GLOW_SIZE = 0.5 -- 가장 밝은 별 빛무리 지름(스터드) — 2026-10-30 키패드만 하게(옛 1.5)
 local function makeGlow(core: BasePart, scale: number): Glow
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "StarGlow"
@@ -216,13 +216,12 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 	self.OrbT = 0
 	self.OrbPos = {} :: { Vector3 }
 	self.OrbAim = nil :: Vector3?
-	-- 별자리(조율자): 별마다 부품·켜짐(Lit — nil 이면 켜짐)·켜짐 정도(0~1)·막 켜진 빛 부풂, 별자리 선, 도는 각
+	-- 별자리(조율자): 별마다 부품·켜짐(Lit — nil 이면 켜짐)·켜짐 정도(0~1)·막 켜진 빛 부풂, 별자리 선, 별자리 가운데
 	self.Stars = {} :: { Glow } 
 	self.Lit = {} :: { boolean }
 	self.LitK = {} :: { number }
 	self.Pop = {} :: { number? }
 	self.Lines = {} :: { { A: number, B: number, Part: BasePart, Alpha: number } }
-	self.SpinT = 0
 	self.Center = nil :: Vector3?
 	self.WhirlT = 0
 	self.WhirlFrom = {} :: { number }
@@ -268,7 +267,7 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 				line.Anchored, line.CanCollide, line.CanQuery, line.CanTouch, line.CastShadow = true, false, false, false, false
 				line.Material = Enum.Material.Neon
 				line.Color = Color3.fromRGB(150, 205, 255)
-				line.Size = Vector3.new(0.04, 0.04, 0.04)
+				line.Size = Vector3.new(0.025, 0.025, 0.025)
 				line.Transparency = 1
 				line.Parent = folder
 				table.insert(self.Lines, { A = pair[1], B = pair[2], Part = line, Alpha = 1 })
@@ -455,7 +454,6 @@ function CombatWeapons:Update(dt: number)
 	local mode = self.OrbMode
 	local speed = orbit.Speed * (if mode == "Spread" then 3.2 elseif mode == "Gather" then 2.4 else 1)
 	self.OrbT += dt * speed
-	self.SpinT += dt * (orbit.Spin or 0)
 	if mode == "Whirl" then
 		self.WhirlT += dt
 		if self.WhirlT >= WHIRL then
@@ -470,18 +468,19 @@ function CombatWeapons:Update(dt: number)
 		local target: Vector3
 		local point = orbit.Points and orbit.Points[i]
 		if point and mode == "Orbit" then
-			-- 별자리: 캐릭터 옆에서 가운데를 축으로 제 판(YZ) 안에서 천천히 돌고(Spin), 별마다 다른 박자로 조금씩 숨 쉬듯 흔들린다
+			-- 별자리: 별자리째 몸 둘레를 공전한다(가운데가 반지름 Radius 원을 돈다). 판은 돌지 않고 늘 카메라 쪽(YZ)을 본다 —
+			-- 2026-10-30 사용자: "캐릭터 주위를 공전하는거지, 회전하는 게 아니야". 별마다 조금씩 숨 쉬듯 흔들린다
 			local c = self.Center :: Vector3
-			local a = self.SpinT
-			local dy, dz = point[2] - c.Y, point[3] - c.Z
-			local bob = math.sin(self.OrbT * 2.2 + i * 1.7) * 0.06
-			target = (cf * CFrame.new(point[1], c.Y + dy * math.cos(a) - dz * math.sin(a) + bob, c.Z + dy * math.sin(a) + dz * math.cos(a))).Position
+			local around = self.OrbT * math.pi * 2 / 3
+			local bob = math.sin(self.OrbT * 2.2 + i * 1.7) * 0.03
+			local hub = Vector3.new(math.cos(around) * orbit.Radius, orbit.Height - 1 + math.sin(self.OrbT * 1.3) * 0.12, math.sin(around) * orbit.Radius)
+			target = (cf * CFrame.new(hub + Vector3.new(point[1] - c.X, point[2] - c.Y + bob, point[3] - c.Z))).Position
 		elseif point and mode == "Sky" then
-			-- 겨눈 자리(적 진영 가운데) 위에 별자리를 크게(2.5배) 펼친다 — 오른쪽 옆 카메라에 보이게 YZ 판 그대로
-			-- (쉴 때 별자리가 폭 약 5.7 이라 하늘 별자리는 약 14)
+			-- 겨눈 자리(적 진영 가운데) 위에 별자리를 크게(7배) 펼친다 — 오른쪽 옆 카메라에 보이게 YZ 판 그대로
+			-- (쉴 때 별자리가 폭 약 1.9 라 하늘 별자리는 약 13)
 			local center = self.OrbAim or (cf * CFrame.new(0, 3, -12)).Position
 			local mid = self.Center :: Vector3
-			local d = (Vector3.new(point[1], point[2], point[3]) - mid) * 2.5
+			local d = (Vector3.new(point[1], point[2], point[3]) - mid) * 7
 			target = center + Vector3.new(0, 6, 0) + cf.RightVector * d.X + cf.UpVector * d.Y + cf.LookVector * -d.Z
 		elseif mode == "Whirl" then
 			-- 몸 둘레(반지름 2.8)를 별마다 다른 높이로 한 바퀴 — 천천히 일어나 빨라졌다 다시 늦춰진다
@@ -524,7 +523,7 @@ function CombatWeapons:Update(dt: number)
 		part.Transparency = line.Alpha
 		local pa, pb = self.OrbPos[line.A], self.OrbPos[line.B]
 		if pa and pb and line.Alpha < 0.995 then
-			part.Size = Vector3.new(0.04, 0.04, math.max(0.05, (pb - pa).Magnitude))
+			part.Size = Vector3.new(0.025, 0.025, math.max(0.05, (pb - pa).Magnitude))
 			part.CFrame = CFrame.lookAt(pa:Lerp(pb, 0.5), pb)
 		end
 	end
