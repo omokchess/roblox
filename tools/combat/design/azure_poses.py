@@ -404,7 +404,13 @@ keep("SET", "달리기 준비 — 앞발을 굽히고 뒷발을 뒤로 뻗어 �
 P = base(Root=(0, -0.5, -0.35, 0, 8, 0), Torso=(-38, 4, 0), Head=(16, -6, 0), RArm=(160, 10, 10), LArm=(-40, 0, -20), RLeg=(60, 0, -6), LLeg=(-50, 0, 6))
 carried(P)
 e = grip_hilt(P)
-keep("RUNOFF", "박차고 나감 — 오른 무릎을 앞으로 끌어올리며 몸을 던진다(이 순간 사라진다), 오른손은 칼자루", P, e)
+keep("RUNOFF", "박차고 나감 — 오른 무릎을 앞으로 끌어올리며 몸을 던진다, 오른손은 칼자루", P, e)
+
+# 2026-10-30 사용자: "달려가는 모션이 멈춘 후에 사라지는데, 달려가는 모션중에 사라지도록" — 박찬 뒤 한 걸음 더 달려 나가는 도중에 사라진다
+P = base(Root=(0, -0.46, -0.4, 0, 6, 0), Torso=(-40, 2, 0), Head=(18, -4, 0), RArm=(160, 10, 10), LArm=(40, 0, -16), RLeg=(-52, 0, -6), LLeg=(62, 0, 6))
+carried(P)
+e = grip_hilt(P)
+keep("RUNOFF2", "달려 나가는 둘째 걸음 — 왼 무릎이 앞으로, 오른다리는 뒤로 차 내고 왼팔은 앞으로 흔든다(이 걸음 도중에 사라진다), 오른손은 칼자루", P, e)
 
 
 # 자세마다 칼의 상태(azure_gen 이 키 사이 중간 키를 넣을 때 본다)
@@ -419,7 +425,7 @@ for name in ("DRAW1", "DRAW2", "DRAW3"):
     MODE[name] = "hilt"
 DEPTH.update({"THUMB": 0.1, "PEEK": 0.22, "FLICK": 0.22})
 # 오른손이 칼자루를 잡고 있는 꽂힌 자세(검집째 들기·뽑기와 이어질 수 있다)
-ON_HILT = {"THUMB", "CROUCH", "NOTO", "PEEK", "FLICK", "SET", "RUNOFF"}
+ON_HILT = {"THUMB", "CROUCH", "NOTO", "PEEK", "FLICK", "SET", "RUNOFF", "RUNOFF2"}
 
 
 if __name__ == "__main__":

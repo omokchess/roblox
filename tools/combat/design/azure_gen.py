@@ -18,7 +18,7 @@ POSES, NOTES = A.POSES, A.NOTES
 
 KEYS = ["Root", "Torso", "Head", "RArm", "LArm", "RLeg", "LLeg", "W", "O"]
 ORDER = ["STANCE", "THUMB", "CROUCH", "DRAW1", "DRAW2", "DRAW3", "OUT", "KESA", "RISE", "DRAWCUT", "CUTDOWN", "SWEEP", "ZAN", "CHIBURI", "NOTO",
-         "PEEK", "FLICK", "LIFT", "STRIKE", "BLOCK", "RECOIL", "STEPBACK", "HANG", "LAND", "BOW", "SLASHR", "SKYRISE", "SIDEKESA", "BACKSWEEP", "FOOTLIFT", "FOOTDOWN", "SET", "RUNOFF", "RAISE"]
+         "PEEK", "FLICK", "LIFT", "STRIKE", "BLOCK", "RECOIL", "STEPBACK", "HANG", "LAND", "BOW", "SLASHR", "SKYRISE", "SIDEKESA", "BACKSWEEP", "FOOTLIFT", "FOOTDOWN", "SET", "RUNOFF", "RUNOFF2", "RAISE"]
 # 이펙트가 쓰는 자세(잔상 — Fx/AzureBlade 의 Ghost)
 GHOST_POSES = ["STANCE", "DRAW1", "DRAW2", "DRAWCUT", "RISE", "CUTDOWN", "KESA", "SWEEP", "OUT", "SLASHR", "NOTO", "ZAN", "SKYRISE", "SIDEKESA", "BACKSWEEP"]
 ARMS = {"RArm", "LArm", "W", "O"}
@@ -309,11 +309,14 @@ S.append(motion("IaidoPeak", "발도술의 절정: 칼자루를 쥐고[중] 천�
 # 점점 빠르게 한 바퀴 돌다 시전자가 제자리에 나타나는 순간 멈춘다 → 베며 나타나 꽂으면 흑백 → 검흔 17개가 하나씩 터지는 17연타
 # 2026-10-30 사용자: "매 동작은 항상 베는 동작 … 검을 들고서 있는 동작은 없애" → 나타나는 자세도 칼을 치켜든 OUT 이 아니라 가로베기 끝(SLASHR)
 PHANTOMS = 17
-VANISH, RETURN = 1.17, 3.58
+VANISH, RETURN = 1.21, 3.58
 blink_times = [round(1.25 + (RETURN - 0.1 - 1.25) * (k / PHANTOMS) ** 0.7, 3) for k in range(1, PHANTOMS + 1)]
 HITS_FROM, HIT_GAP = 4.18, 0.05
 spec = [(0, None, "STANCE"), (0.3, "cubicInOut", "FOOTLIFT"), (0.42, "quadIn", "FOOTDOWN"), (0.75, "cubicOut", "SET"),
-        (1.05, "sineInOut", "SET", _drift("SET", dy=-0.05)), (1.14, "expoOut", "RUNOFF"), (RETURN - 0.03, "linear", "RUNOFF"),
+        (1.05, "sineInOut", "SET", _drift("SET", dy=-0.05)), (1.13, "expoOut", "RUNOFF"),
+        # 박찬 뒤에도 앞으로 달려 나간다(뿌리를 앞으로 밀며 둘째 걸음 → 다시 첫 걸음) — 둘째 걸음 도중(VANISH)에 사라진다
+        (1.27, "linear", "RUNOFF2", {"Root": (0, -0.46, -2.1, 0, 6, 0)}), (1.4, "linear", "RUNOFF", {"Root": (0, -0.5, -3.9, 0, 8, 0)}),
+        (RETURN - 0.03, "linear", "RUNOFF", {"Root": (0, -0.5, -3.9, 0, 8, 0)}),
         (RETURN, "linear", "SLASHR"), (3.72, "sineOut", "SLASHR", _drift("SLASHR")), (3.9, "cubicInOut", "DRAW3"), (4.08, "cubicIn", "NOTO"), (5.7, "sineInOut", "STANCE")]
 events = ['{ t = 0, k = "Fx", n = "CamFoot" }', '{ t = 0.42, k = "Fx", n = "StepDust" }', '{ t = 0.45, k = "Fx", n = "CamShoulder" }',
           '{ t = 0.8, k = "Fx", n = "Glint" }', '{ t = %s, k = "Fx", n = "Disappear" }' % VANISH,
@@ -323,7 +326,7 @@ events += ['{ t = %s, k = "Fx", n = "Return" }' % RETURN, '{ t = 4.08, k = "Fx",
 events += ['{ t = %s, k = "Hit", i = %d, fx = "MarkHit" }' % (round(HITS_FROM + HIT_GAP * (k - 1), 3), k) for k in range(1, PHANTOMS + 1)]
 events += ['{ t = 5.02, k = "Fx", n = "FinalBreak" }', '{ t = 5.03, k = "Stop", d = 0.1 }', '{ t = 5.04, k = "Shake", a = 0.7, d = 0.5 }',
            '{ t = 5.35, k = "Fx", n = "CamFree" }']
-S.append(motion("SpaceCut", "공간의 이해([집중력]) 컷신: 발을 들어[중] 내딛고(발 확대)[강] 달리기 준비로 칼자루를 쥐고[중] 버티다[약] 박차는 순간 사라진다[강] → "
+S.append(motion("SpaceCut", "공간의 이해([집중력]) 컷신: 발을 들어[중] 내딛고(발 확대)[강] 달리기 준비로 칼자루를 쥐고[중] 버티다[약] 박차고[강] 달려 나가는 걸음 도중에 사라진다[중] → "
                 "보이지 않게 블링크 17번(무작위 자리·잔상·검흔, 점점 빨라짐) → 제자리를 가로로 베며 나타나[강] 버티다[약] 꽂으면 흑백 → 검흔 17개가 하나씩 파바바박 터지는 17연타 (고정 피해)",
                 5.8, spec, events))
 S.append(motion("Provoke", "도발 중약강약강약: 엄지로 칼을 한 자 밀어내고 · 턱을 들어 내려다보다 · 왼손 끝을 까딱 · 버티고 · 딸깍 · 숨([집중력])", 1.75,

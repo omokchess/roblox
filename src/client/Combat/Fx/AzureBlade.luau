@@ -536,9 +536,11 @@ function Fx.CamShoulder(ctx: any)
 end
 
 --[[
-	블링크 동안: 오른쪽 위로 천천히 올라 적 진영(필드 상자 — 잔상이 흩어지는 곳)을 비추고(RISE 초) → 진영 가운데를 점점 빠르게 돌며 넓어지다 →
-	ev.d 초(시전자가 제자리에 나타나는 순간)에 **전투 카메라 자리에 딱** 멈춘다(그 구도가 시전자와 진영을 다 담고, CamFree 때 흔들림이 없다).
-	각 φ 는 진영 가운데에서 본 수평 방향(월드 x·z). 오른쪽에서 한 바퀴 넘게 돌아 전투 카메라의 각에서 끝난다(가까운 돌기 방향으로).
+	블링크 동안 한 방향으로만 도는 카메라 한 줄기: 어깨 너머 자리에서 시전자 오른쪽으로 돌기 시작해 위로 천천히 올라 적 진영
+	(필드 상자 — 잔상이 흩어지는 곳)을 비추고(RISE 초) → 진영 가운데를 점점 빠르게 돌며 넓어지다 → ev.d 초(시전자가 제자리에
+	나타나는 순간)에 **전투 카메라 자리에 딱** 멈춘다(그 구도가 시전자와 진영을 다 담고, CamFree 때 흔들림이 없다).
+	각 φ 는 진영 가운데에서 본 수평 방향(월드 x·z). 처음부터 끝까지 φ 가 한 방향으로만 늘어난다(한 바퀴 + 전투 카메라 각까지).
+	2026-10-30 사용자: "카메라가 움직였다가 역방향으로 돌아(대략 2초 위치)" — 올라가는 길과 도는 길이 따로라 방향이 꺾였다 → 한 줄기로.
 ]]
 function Fx.CamOrbit(ctx: any, ev: any)
 	local s = st(ctx)
@@ -549,39 +551,32 @@ function Fx.CamOrbit(ctx: any, ev: any)
 	local r0 = math.max(box.U1 - box.U0, box.V1 - box.V0) / 2 + 4
 	local h0 = 10
 	local base: CFrame = ctx.CameraBase or CFrame.lookAt(center + box.R * (r0 + 8) + Vector3.new(0, 16, 0), center)
-	local off = base.Position - center
-	local r1, h1 = math.max(8, Vector3.new(off.X, 0, off.Z).Magnitude), off.Y
-	local phiEnd = math.atan2(off.Z, off.X)
-	local right = box.R - box.F * 0.35
-	local phi0 = math.atan2(right.Z, right.X)
-	-- 돌 각: 한 바퀴 + 오른쪽 → 전투 카메라 각(두 방향 중 덜 도는 쪽)
-	local gap = (phiEnd - phi0) % (2 * math.pi)
-	local dir = if gap <= math.pi then 1 else -1
-	local sweep = 2 * math.pi + (if dir == 1 then gap else 2 * math.pi - gap)
-	local tb = math.max(0.1, total - RISE)
-	local w0 = math.rad(30) -- 처음 빠르기(나머지는 가속)
-	local acc = 2 * (sweep - w0 * tb) / (tb * tb)
-	local function at(a: number, k: number): Vector3
-		local rad = r0 + (r1 - r0) * k * k
-		return center + Vector3.new(math.cos(a) * rad, h0 + (h1 - h0) * k * k, math.sin(a) * rad)
-	end
-	local from: CFrame = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.lookAt(at(phi0, 0), center)
+	local from: CFrame = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or base
 	local look0 = from.Position + from.LookVector * 10
+	local function polar(p: Vector3): (number, number, number)
+		local d = p - center
+		return math.atan2(d.Z, d.X), Vector3.new(d.X, 0, d.Z).Magnitude, d.Y
+	end
+	local phiS, rS, hS = polar(from.Position)
+	local phiE, r1, h1 = polar(base.Position)
+	-- 도는 방향: 처음 움직임이 시전자 오른쪽(box.R)으로 가는 쪽. 한 바퀴 + 그 방향으로 전투 카메라 각까지
+	local dir = if Vector3.new(-math.sin(phiS), 0, math.cos(phiS)):Dot(box.R) >= 0 then 1 else -1
+	local sweep = 2 * math.pi + (dir * (phiE - phiS)) % (2 * math.pi)
+	local w0 = math.rad(30) -- 처음 빠르기(나머지는 가속)
+	local acc = 2 * (sweep - w0 * total) / (total * total)
 	ctx.Shot(total, function(_, t)
 		local tt = math.min(t, total)
-		local cf
-		if tt < RISE then
-			local k = sineInOut(tt / RISE)
-			cf = CFrame.lookAt(from.Position:Lerp(at(phi0, 0), k), look0:Lerp(center, k))
-		else
-			local tau = tt - RISE
-			local swept = math.min(sweep, w0 * tau + 0.5 * acc * tau * tau)
-			local k = swept / sweep
-			local pos = at(phi0 + dir * swept, k)
-			-- 끝 20% 동안 바라보는 방향을 전투 카메라의 방향으로 맞춘다(끝에서 자리·방향이 전투 카메라와 같다)
-			local w = sineInOut(math.clamp((k - 0.8) / 0.2, 0, 1))
-			cf = CFrame.new(pos) * CFrame.lookAt(pos, center).Rotation:Lerp(base.Rotation, w)
-		end
+		local swept = math.min(sweep, w0 * tt + 0.5 * acc * tt * tt)
+		local k = swept / sweep
+		-- 반지름·높이: 어깨 너머 → (RISE 초에 걸쳐) 진영 둘레 r0·h0 → (끝으로 갈수록) 전투 카메라 r1·h1
+		local rise = sineInOut(math.min(1, tt / RISE))
+		local grow = math.clamp((tt - RISE) / math.max(0.1, total - RISE), 0, 1) ^ 2
+		local rad = rS + (r0 - rS) * rise + (r1 - r0) * grow
+		local a = phiS + dir * swept
+		local pos = center + Vector3.new(math.cos(a) * rad, hS + (h0 - hS) * rise + (h1 - h0) * grow, math.sin(a) * rad)
+		-- 끝 20% 동안 바라보는 방향을 전투 카메라의 방향으로 맞춘다(끝에서 자리·방향이 전투 카메라와 같다)
+		local w = sineInOut(math.clamp((k - 0.8) / 0.2, 0, 1))
+		local cf = CFrame.new(pos) * CFrame.lookAt(pos, look0:Lerp(center, rise)).Rotation:Lerp(base.Rotation, w)
 		s.cam = cf
 		return cf
 	end)
@@ -619,10 +614,13 @@ function Fx.Disappear(ctx: any)
 	s.phantoms = {}
 	s.markEv = nil
 	s.slots = nil -- 첫 Phantom 이 이번 시전의 잔상 자리들을 새로 고른다
-	s.lastAt = ctx.Root.Position -- 잔상을 잇는 선은 박찬 자리에서 시작한다
-	ctx.Vfx.Flash(ctx.Root.Position, { Color = WHITE, Size = 6, Life = 0.18, Brightness = 6 })
-	ctx.Vfx.Dust(Common.Feet(ctx), { Color = ICE, Count = 12 })
-	stroke(ctx.Root.Position, ctx.Root.Position + ctx.Forward * 9, { Width = 0.06, Color = ICE, Grow = 0.05, Life = 0.25 })
+	-- 달려 나가는 도중이라 몸(Torso)은 제자리보다 앞에 있다 — 번쩍·먼지·선을 몸 자리에서
+	local torso = actor.Model:FindFirstChild("Torso") :: BasePart?
+	local body = if torso then torso.Position else ctx.Root.Position
+	s.lastAt = body -- 잔상을 잇는 선은 사라진 자리에서 시작한다
+	ctx.Vfx.Flash(body, { Color = WHITE, Size = 6, Life = 0.18, Brightness = 6 })
+	ctx.Vfx.Dust(Vector3.new(body.X, ctx.Ground, body.Z), { Color = ICE, Count = 12 })
+	stroke(body, body + ctx.Forward * 9, { Width = 0.06, Color = ICE, Grow = 0.05, Life = 0.25 })
 	setHidden(actor.Model, true)
 	task.spawn(function()
 		repeat
