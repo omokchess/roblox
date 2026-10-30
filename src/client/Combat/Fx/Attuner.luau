@@ -21,10 +21,16 @@ local function line(ctx: any, a: Vector3, b: Vector3, color: Color3, width: numb
 	ctx.Vfx.Beam(a, b, { Color = color, Width = width, Life = life })
 end
 
+-- 버릇: 별이 국자를 따라 손잡이 끝(알카이드)부터 국자 입(두베)까지 차례로 푸르게 반짝인다(별은 손을 따라 움직이니 반짝일 때마다 자리를 다시 읽는다)
+local TRACE = { 4, 5, 3, 1, 6, 2, 7 }
 function Fx.StarTwinkle(ctx: any)
-	local p = ctx.Star(1)
-	ctx.Vfx.Flash(p, { Color = GOLD, Size = 3, Life = 0.4, Brightness = 3 })
-	ctx.Vfx.Sparks(p, { Color = WHITE, Count = 6, Speed = 4, Accel = Vector3.new(0, 2, 0) })
+	for k, i in TRACE do
+		task.delay((k - 1) * 0.09, function()
+			local p = ctx.Star(i)
+			ctx.Vfx.Flash(p, { Color = PALE, Size = 0.9, Life = 0.3, Brightness = 4 })
+			ctx.Vfx.Sparks(p, { Color = WHITE, Count = 2, Speed = 2, Accel = Vector3.new(0, 1.5, 0) })
+		end)
+	end
 end
 
 function Fx.Touchdown(ctx: any)
