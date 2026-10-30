@@ -705,7 +705,7 @@ return {
 			Events = {
 				{ t = 0, k = "Fx", n = "CamFoot" },
 				{ t = 0.42, k = "Fx", n = "StepDust" },
-				{ t = 0.45, k = "Fx", n = "CamShoulder" },
+				{ t = 0.45, k = "Fx", n = "CamShoulder", d = 0.76 },
 				{ t = 0.8, k = "Fx", n = "Glint" },
 				{ t = 1.21, k = "Fx", n = "Disappear" },
 				{ t = 1.21, k = "Fx", n = "CamOrbit", d = 2.37 },

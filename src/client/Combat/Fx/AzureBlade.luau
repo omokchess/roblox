@@ -508,6 +508,15 @@ local function sineInOut(x: number): number
 	return -(math.cos(math.pi * x) - 1) / 2
 end
 
+--[[
+	카메라 굴곡(2026-10-30 사용자: "카메라 움직임 함수에 굴곡을 추가해서 딱딱 끊기는 느낌이 없게").
+	컷신 카메라는 샷끼리 넘겨줄 때 빠르기가 0 이 되게 이어 붙인다(발치 → 어깨 너머 → 공전 → 맺음 자리 → 모션이 끝나면 감독이 0.45초 sineInOut 으로 놓음).
+	공전 각 = 4x³ − 3x⁴: 빠르기 12x²(1−x) — 0 에서 아주 천천히 일어나 2/3 지점까지 점점 빨라지고, 끝에서 부드럽게 0 으로 멈춘다.
+]]
+local function orbitEase(x: number): number
+	return x * x * x * (4 - 3 * x)
+end
+
 -- 들머리: 내딛는 오른발을 무릎 높이에서 내려다보며 확대(조금씩 다가간다 — 발과 발밑 땅이 화면 가운데)
 function Fx.CamFoot(ctx: any)
 	local s = st(ctx)
@@ -515,21 +524,26 @@ function Fx.CamFoot(ctx: any)
 	local g = ctx.Ground - home.Y
 	local look = home * Vector3.new(0.5, g + 0.25, -0.8)
 	local a0, a1 = home * Vector3.new(2.7, g + 1.6, -3.7), home * Vector3.new(2.1, g + 1.25, -2.9)
-	ctx.Shot(0.5, function(u)
+	-- 어깨 너머 샷(0.45초)이 시작할 때 딱 멈추도록 0.45초에 감속해 닿는다
+	ctx.Shot(0.45, function(u)
 		local cf = CFrame.lookAt(a0:Lerp(a1, 1 - (1 - u) ^ 2), look)
 		s.cam = cf
 		return cf
 	end)
 end
 
--- 달리기 준비: 시전자의 오른쪽 등 뒤(어깨 너머로 적 진영을 본다). 발치에서 부드럽게 넘어온다
-function Fx.CamShoulder(ctx: any)
+-- 달리기 준비: 시전자의 오른쪽 등 뒤(어깨 너머로 적 진영을 본다). 발치에서 0.3초에 부드럽게 넘어오고, 사라지는 순간(ev.d 초)까지
+-- 천천히 다가간다(버티는 동안에도 멈춰 있지 않고, 공전이 시작할 때 빠르기 0 으로 넘겨준다)
+function Fx.CamShoulder(ctx: any, ev: any)
 	local s = st(ctx)
 	local home = ctx.Actor.Home
+	local d = (ev and ev.d) or 0.76
 	local from: CFrame = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or home
 	local goal = CFrame.lookAt(home * Vector3.new(3.1, 1.9, 6.6), home * Vector3.new(-0.6, 0, -12))
-	ctx.Shot(0.3, function(u)
-		local cf = from:Lerp(goal, sineInOut(u))
+	ctx.Shot(d, function(_, t)
+		local tt = math.min(t, d)
+		local dolly = goal * CFrame.new(0, 0, -0.9 * sineInOut(tt / d))
+		local cf = from:Lerp(dolly, sineInOut(math.min(1, tt / 0.3)))
 		s.cam = cf
 		return cf
 	end)
@@ -537,8 +551,8 @@ end
 
 --[[
 	블링크 동안 한 방향으로만 도는 카메라 한 줄기: 어깨 너머 자리에서 시전자 오른쪽으로 돌기 시작해 위로 천천히 올라 적 진영
-	(필드 상자 — 잔상이 흩어지는 곳)을 비추고(RISE 초) → 진영 가운데를 점점 빠르게 돌다 → ev.d 초(시전자가 제자리에 나타나는 순간)에
-	**맺음 자리**(시전자 오른쪽 뒤 높이 — 어깨 너머로 시전자와 진영을 함께 담는다)에 딱 멈추고, 검흔이 다 터질 때까지 그대로 둔다.
+	(필드 상자 — 잔상이 흩어지는 곳)을 비추고(RISE 초) → 진영 가운데를 점점 빠르게 돌다 → 끝에서 부드럽게 감속해 ev.d 초(시전자가 제자리에
+	나타나는 순간)에 **맺음 자리**(시전자 오른쪽 뒤 높이 — 어깨 너머로 시전자와 진영을 함께 담는다)에 닿아 멈추고, 검흔이 다 터질 때까지 그대로 둔다.
 	전투 카메라로는 공격(모션)이 다 끝난 뒤 감독이 Shot 을 놓으며 돌아간다(2026-10-30 사용자: "검기들이 터지기 직전에 카메라가 기존 화면에
 	딱 고정되는데, 그러지 말고 공격이 완전히 종료된 후에 카메라가 원위치로" — 전엔 전투 카메라 자리에서 멈췄다).
 	각 φ 는 진영 가운데에서 본 수평 방향(월드 x·z). 처음부터 끝까지 φ 가 한 방향으로만 늘어난다(한 바퀴 + 맺음 자리 각까지).
@@ -565,15 +579,13 @@ function Fx.CamOrbit(ctx: any, ev: any)
 	-- 도는 방향: 처음 움직임이 시전자 오른쪽(box.R)으로 가는 쪽. 한 바퀴 + 그 방향으로 맺음 자리 각까지
 	local dir = if Vector3.new(-math.sin(phiS), 0, math.cos(phiS)):Dot(box.R) >= 0 then 1 else -1
 	local sweep = 2 * math.pi + (dir * (phiE - phiS)) % (2 * math.pi)
-	local w0 = math.rad(30) -- 처음 빠르기(나머지는 가속)
-	local acc = 2 * (sweep - w0 * total) / (total * total)
 	ctx.Shot(total, function(_, t)
 		local tt = math.min(t, total)
-		local swept = math.min(sweep, w0 * tt + 0.5 * acc * tt * tt)
-		local k = swept / sweep
-		-- 반지름·높이: 어깨 너머 → (RISE 초에 걸쳐) 진영 둘레 r0·h0 → (끝으로 갈수록) 맺음 자리 r1·h1
+		local k = orbitEase(tt / total)
+		local swept = sweep * k
+		-- 반지름·높이: 어깨 너머 → (RISE 초에 걸쳐) 진영 둘레 r0·h0 → (나머지 동안) 맺음 자리 r1·h1 — 둘 다 sineInOut 이라 이음매에서 빠르기 0
 		local rise = sineInOut(math.min(1, tt / RISE))
-		local grow = math.clamp((tt - RISE) / math.max(0.1, total - RISE), 0, 1) ^ 2
+		local grow = sineInOut(math.clamp((tt - RISE) / math.max(0.1, total - RISE), 0, 1))
 		local rad = rS + (r0 - rS) * rise + (r1 - r0) * grow
 		local a = phiS + dir * swept
 		local pos = center + Vector3.new(math.cos(a) * rad, hS + (h0 - hS) * rise + (h1 - h0) * grow, math.sin(a) * rad)

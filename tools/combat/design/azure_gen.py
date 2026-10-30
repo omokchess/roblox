@@ -318,7 +318,7 @@ spec = [(0, None, "STANCE"), (0.3, "cubicInOut", "FOOTLIFT"), (0.42, "quadIn", "
         (1.27, "linear", "RUNOFF2", {"Root": (0, -0.46, -2.1, 0, 6, 0)}), (1.4, "linear", "RUNOFF", {"Root": (0, -0.5, -3.9, 0, 8, 0)}),
         (RETURN - 0.03, "linear", "RUNOFF", {"Root": (0, -0.5, -3.9, 0, 8, 0)}),
         (RETURN, "linear", "SLASHR"), (3.72, "sineOut", "SLASHR", _drift("SLASHR")), (3.9, "cubicInOut", "DRAW3"), (4.08, "cubicIn", "NOTO"), (5.7, "sineInOut", "STANCE")]
-events = ['{ t = 0, k = "Fx", n = "CamFoot" }', '{ t = 0.42, k = "Fx", n = "StepDust" }', '{ t = 0.45, k = "Fx", n = "CamShoulder" }',
+events = ['{ t = 0, k = "Fx", n = "CamFoot" }', '{ t = 0.42, k = "Fx", n = "StepDust" }', '{ t = 0.45, k = "Fx", n = "CamShoulder", d = %s }' % round(VANISH - 0.45, 3),
           '{ t = 0.8, k = "Fx", n = "Glint" }', '{ t = %s, k = "Fx", n = "Disappear" }' % VANISH,
           '{ t = %s, k = "Fx", n = "CamOrbit", d = %s }' % (VANISH, round(RETURN - VANISH, 3))]
 events += ['{ t = %s, k = "Fx", n = "Phantom" }' % t for t in blink_times]
