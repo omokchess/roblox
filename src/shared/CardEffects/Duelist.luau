@@ -302,38 +302,19 @@ M.Duelist_E_NamelessBlade = {
 
 --=== 희귀 ===--
 
--- 방혈: 출혈을 걸 때마다 {3}턴 간 치명 피해 +{2.5}%, 최대 {5}중첩
+-- 방혈: 출혈 6 이상인 적을 맞히면 출혈 절반을 터뜨려 ×3 고정 피해(적마다 턴당 1회)(2026-10-28 리메 — 옛 출혈마다 치명 피해 +2.5%)
 M.Duelist_R_Bloodletting = {
-	Status = function(c: Card, info: any)
-		if info.Kind ~= "Bleed" then
+	Hit = function(c: Card, info: any)
+		local target = info.Target
+		local stacks = target.Status.Bleed or 0
+		if not target.Alive or stacks < 6 or not H.PerTurn(c, "burst" .. tostring(target.Id), 1) then
 			return false
 		end
-		local turn = H.State(c).Turn
-		local list = c.Mem.list or {}
-		c.Mem.list = list
-		for index = #list, 1, -1 do
-			if list[index] < turn then
-				table.remove(list, index)
-			end
-		end
-		if #list < c.V(3) then
-			table.insert(list, turn + c.V(1) - 1)
-		end
-		H.Clear(c)
-		H.Mod(c, "CritDamage", #list * c.P(2), -1)
+		local burst = math.floor(stacks / 2)
+		target.Status.Bleed = stacks - burst
+		H.Hurt(c, target, burst * c.V(1))
+		H.Log(c, "방혈 — 출혈이 터졌다")
 		return true
-	end,
-	TurnStart = function(c: Card, turn: number)
-		local list = c.Mem.list or {}
-		for index = #list, 1, -1 do
-			if list[index] < turn then
-				table.remove(list, index)
-			end
-		end
-		H.Clear(c)
-		if #list > 0 then
-			H.Mod(c, "CritDamage", #list * c.P(2), -1)
-		end
 	end,
 }
 
@@ -367,11 +348,26 @@ M.Duelist_R_Counter = {
 	end,
 }
 
--- 발끝 전환: 태세를 바꾼 턴에 회피 시간 +{5}%
+-- 발끝 전환: 태세를 바꾼 턴에 패링하면 집중 2 + 다음 공격 치명 +20%(2026-10-28 리메 — 옛 태세 바꾼 턴 회피 시간 +5%)
 M.Duelist_R_Pivot = {
 	Stance = function(c: Card)
-		H.Mod(c, "ParryWindow", c.P(1), 1)
-		return true
+		c.Mem.switched = H.State(c).Turn
+	end,
+	Defend = function(c: Card, info: any)
+		if info.Grade == "Success" and c.Mem.switched == H.State(c).Turn and H.PerTurn(c, "pivot", 1) then
+			gainFocus(c, 2)
+			c.Mem.crit = true
+			return true
+		end
+		return false
+	end,
+	BeforeSkill = function(c: Card, info: any)
+		if c.Mem.crit and info.Skill.Damage > 0 then
+			info.Crit += c.P(1)
+			c.Mem.crit = nil
+			return true
+		end
+		return false
 	end,
 }
 
@@ -456,11 +452,14 @@ M.Duelist_C_CatchBreath = {
 	end,
 }
 
--- 전환 보호: 태세를 바꾼 턴에 받는 피해 −{8}%
+-- 전환 보호: 태세를 바꾸면 보호막 10(턴당 1회)(2026-10-28 리메 — 옛 태세 바꾼 턴 받는 피해 −8%)
 M.Duelist_C_SwitchGuard = {
 	Stance = function(c: Card)
-		H.Mod(c, "DamageTaken", -c.P(1), 1)
-		return true
+		if H.PerTurn(c, "switch", 1) then
+			H.Shield(c, c.V(1))
+			return true
+		end
+		return false
 	end,
 }
 
@@ -488,10 +487,16 @@ M.Duelist_C_ShallowCut = {
 	end,
 }
 
--- 평정: 집중 1당 받는 피해 −{0.2}% 더
+-- 평정: 집중 5 이상이면 맞을 때 20% 확률로 집중 1을 내주고 피해 0(2026-10-28 리메 — 옛 집중 1당 받는 피해 −0.2%)
 M.Duelist_C_Composure = {
 	BeforeTaken = function(c: Card, info: any)
-		info.Mult *= math.max(0, 1 - c.P(1) * focus(c))
+		if info.Mult > 0 and focus(c) >= 5 and H.Rng(c) < c.P(1) then
+			info.Mult = 0
+			H.Spend(c, R.FOCUS, 1)
+			H.Log(c, "평정 — 흘려 넘겼다")
+			return true
+		end
+		return false
 	end,
 }
 
@@ -514,39 +519,42 @@ M.Duelist_C_FlowThrough = {
 	end,
 }
 
--- 급소 찾기: 출혈 상태의 적을 처치하면 다음 공격 치명 확률 +{5}%
+-- 급소 찾기: 출혈 상태의 적을 쓰러뜨리면 남은 출혈 50% 가 다른 적에게(2026-10-28 리메 — 옛 출혈 적 처치 → 다음 치명 +5%)
 M.Duelist_C_FindTheSpot = {
 	Kill = function(c: Card, info: any)
-		if info.Target.Status.Bleed > 0 then
-			c.Mem.crit = c.P(1)
+		local stacks = info.Target.Status.Bleed or 0
+		local next = H.Enemies(c)[1]
+		if stacks <= 0 or not next then
+			return false
+		end
+		bleed(c, next, stacks * c.P(1))
+		H.Log(c, "급소 찾기 — 출혈이 옮겨 붙었다")
+		return true
+	end,
+}
+
+-- 공세: 공격 태세 치명타 → 대상 출혈의 50% 만큼 고정 피해(턴당 1회)(2026-10-28 리메 — 옛 공격 태세 받는 피해 증가 −5%p)
+M.Duelist_C_Offense = {
+	Hit = function(c: Card, info: any)
+		local target = info.Target
+		local stacks = target.Status.Bleed or 0
+		if isAttack(c) and info.Crit and target.Alive and stacks > 0 and H.PerTurn(c, "offense", 1) then
+			H.Hurt(c, target, stacks * c.P(1))
 			return true
 		end
 		return false
 	end,
-	BeforeSkill = function(c: Card, info: any)
-		if c.Mem.crit and info.Skill.Damage > 0 then
-			info.Crit += c.Mem.crit
-			c.Mem.crit = nil
-		end
-	end,
 }
 
--- 공세: 공격 태세의 받는 피해 증가 −{5}%p
-M.Duelist_C_Offense = {
-	Rules = {
-		AttackTakenCut = function(c: Card, value: number): number
-			return value + c.P(1)
-		end,
-	},
-}
-
--- 수세: 방어 태세의 피해 감소 −{5}%p
+-- 수세: 방어 태세에서 패링하면 보호막 6(2026-10-28 리메 — 옛 방어 태세 피해 감소 −5%p)
 M.Duelist_C_Defense = {
-	Rules = {
-		DefenseDealtCut = function(c: Card, value: number): number
-			return value + c.P(1)
-		end,
-	},
+	Defend = function(c: Card, info: any)
+		if info.Grade == "Success" and not isAttack(c) then
+			H.Shield(c, c.V(1))
+			return true
+		end
+		return false
+	end,
 }
 
 -- 결착: 적을 처치하면 집중 {2} 더
@@ -557,18 +565,14 @@ M.Duelist_C_Conclusion = {
 	end,
 }
 
--- 파수: 전열(1~2열)에서 회피 시간 +{8}%, 인접 아군 +{4}%(파티)
+-- 파수: 전열(1~2열)이면 자동 패링 +10%(2026-10-28 리메 — 옛 전열 회피 시간 +8%·인접 아군 +4%)
 M.Duelist_C_Sentry = {
-	TurnStart = function(c: Card)
+	BeforeTaken = function(c: Card, info: any)
 		if H.IsFront(c) then
-			H.Mod(c, "ParryWindow", c.P(1), 1)
+			info.AutoParry += c.P(1)
+			return true
 		end
-	end,
-	Move = function(c: Card)
-		H.Clear(c)
-		if H.IsFront(c) then
-			H.Mod(c, "ParryWindow", c.P(1), 1)
-		end
+		return false
 	end,
 }
 
@@ -622,22 +626,17 @@ M.Duelist_C_Retribution = {
 	end,
 }
 
--- 결속(파티): 자신이 얻는 회피 시간 증가의 {10}%를 인접한 아군도 받는다
+-- 결속(파티): 패링하면 아군 전체 다음 턴 피해 +12%(턴당 1회 — 솔로면 자신)(2026-10-28 리메 — 옛 회피 시간 증가의 10% 를 인접 아군과 나눔)
 M.Duelist_C_Bond = {
 	Party = true,
-	TurnStart = function(c: Card)
-		local ally = H.Ally(c)
-		local share = BattleStatus.Total(ally.Status, "ParryWindow") * c.P(1)
-		if share <= 0 then
-			return
+	Defend = function(c: Card, info: any)
+		if info.Grade ~= "Success" or not H.PerTurn(c, "bond", 1) then
+			return false
 		end
-		local mine = H.Cell(c)
-		for _, other in H.Allies(c) do
-			local cell = other ~= ally and H.Cell(c, other)
-			if cell and mine and math.abs(cell.X - mine.X) + math.abs(cell.Y - mine.Y) == 1 then
-				H.ModOn(c, other, "ParryWindow", share, 1)
-			end
+		for _, unit in H.Allies(c) do
+			H.ModOn(c, unit, "DamageDealt", c.P(1), 2)
 		end
+		return true
 	end,
 }
 
@@ -661,23 +660,33 @@ M.Duelist_C_Steady = {
 	end,
 }
 
--- 칼끝: 집중 1당 치명 확률 +{0.5}%
+-- 칼끝: 치명타로 맞히면 30% 확률로 집중 1(턴당 1회)(2026-10-28 리메 — 옛 집중 1당 치명 +0.5%)
 M.Duelist_C_BladeTip = {
-	BeforeSkill = function(c: Card, info: any)
-		info.Crit += focus(c) * c.P(1)
+	Hit = function(c: Card, info: any)
+		if info.Crit and H.Rng(c) < c.P(1) and H.PerTurn(c, "tip", 1) then
+			gainFocus(c, 1)
+			return true
+		end
+		return false
 	end,
 }
 
--- 흐름: 패링에 성공하면 이번 전투 동안 회피 시간 +{2.5}%(최대 {25}%)
+-- 흐름: 패링마다 다음 공격 피해 +10%(최대 3번, 공격하면 초기화)(2026-10-28 리메 — 옛 패링마다 회피 시간 +2.5%)
 M.Duelist_C_StepBack = {
 	Defend = function(c: Card, info: any)
 		if info.Grade ~= "Success" then
 			return false
 		end
-		c.Mem.bonus = math.min((c.Mem.bonus or 0) + c.P(1), c.P(2))
-		H.Clear(c)
-		H.Mod(c, "ParryWindow", c.Mem.bonus, -1)
+		c.Mem.flow = math.min(3, (c.Mem.flow or 0) + 1)
 		return true
+	end,
+	BeforeSkill = function(c: Card, info: any)
+		if (c.Mem.flow or 0) > 0 and info.Skill.Damage > 0 then
+			info.Bonus += c.Mem.flow * c.P(1)
+			c.Mem.flow = 0
+			return true
+		end
+		return false
 	end,
 }
 

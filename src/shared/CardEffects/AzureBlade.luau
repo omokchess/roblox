@@ -110,11 +110,16 @@ M.AzureBlade_E_Provoke = {
 	end,
 }
 
--- 치우쳐진 검: 받는 피해 +2.5%, 대신 주는 피해 +10%
+-- 치우쳐진 검: 받는 피해 +20%, 대신 적을 쓰러뜨리면 진 발도술 재사용 대기 끝 + 스테미나 8(2026-10-28 리메 — 옛 방어 −2.5%/피해 +10% 는 체감이 없었다)
 M.AzureBlade_E_Biased = {
 	BattleStart = function(c: Card)
 		H.Mod(c, "DamageTaken", c.P(1), -1)
-		H.Mod(c, "DamageDealt", c.P(2), -1)
+		return true
+	end,
+	Kill = function(c: Card)
+		H.Ally(c).Cooldowns.TrueIaido = 0
+		restoreStamina(c, c.V(2))
+		H.Log(c, "치우쳐진 검 — 진 발도술이 다시 선다")
 		return true
 	end,
 }
@@ -179,17 +184,18 @@ M.AzureBlade_R_AllOut = {
 	AfterSkill = refreshAllOut,
 }
 
--- 방어 태도: 집중력이 있을 때 받는 피해 −10%, 주는 피해 −2.5%
-local function refreshStance(c: Card)
-	H.Clear(c)
-	if focused(c) then
-		H.Mod(c, "DamageTaken", -c.P(1), 1)
-		H.Mod(c, "DamageDealt", -c.P(2), 1)
-	end
-end
+-- 방어 태도: 집중력이 있을 때 막아 내면 30% 확률로 피해 0 + 집중력 1턴 연장(2026-10-28 리메 — 옛 방어 +10%/공격 −2.5%)
 M.AzureBlade_R_Stance = {
-	TurnStart = refreshStance,
-	AfterSkill = refreshStance,
+	BeforeTaken = function(c: Card, info: any)
+		if info.Grade == "Partial" and focused(c) and H.Rng(c) < c.P(1) then
+			info.Mult = 0
+			local ally = H.Ally(c)
+			ally.ConcentrationLeft = (ally.ConcentrationLeft or 1) + 1
+			H.Log(c, "방어 태도 — 흘려 막았다")
+			return true
+		end
+		return false
+	end,
 }
 
 -- 검풍: 발도술의 절정이 3명 이상 베면 진 발도술 재사용 대기 끝 + 스테미나 5
@@ -294,43 +300,67 @@ M.AzureBlade_R_FalseGap = {
 
 --=== 일반 ===--
 
--- 민첩성: 필드 이동 속도 +5%(BattleService 가 FieldMoveSpeed 로 묻는다), 전투에서는 민첩 +2
+-- 민첩성: 필드 이동 속도 +10%(BattleService 가 FieldMoveSpeed 로 묻는다), 전투에서 이동한 턴엔 자동 패링 +12%
+-- (2026-10-28 리메 — 옛 이동 +5%·민첩 +2)
 M.AzureBlade_C_Agility = {
 	Rules = {
 		FieldMoveSpeed = function(c: Card, value: number): number
 			return value + c.P(1)
 		end,
 	},
-	BattleStart = function(c: Card)
-		local stats = H.State(c).AllyStats
-		stats.Agility = (stats.Agility or 0) + c.V(2)
-		return true
+	Move = function(c: Card)
+		c.Mem.movedTurn = turn(c)
+	end,
+	BeforeTaken = function(c: Card, info: any)
+		if c.Mem.movedTurn == turn(c) then
+			info.AutoParry += c.P(2)
+			return true
+		end
+		return false
 	end,
 }
 
--- 집중력의 향상: 집중력이 있을 때 치명 +1.5%
+-- 집중력의 향상: 집중력을 얻으면 다음 스킬 치명 +15%(2026-10-28 리메 — 옛 집중 중 치명 +1.5%)
 M.AzureBlade_C_FocusUp = {
-	BeforeSkill = function(c: Card, info: any)
-		if focused(c) then
-			info.Crit += c.P(1)
+	Gain = function(c: Card, id: string)
+		if id == R.CONCENTRATION then
+			c.Mem.armed = true
 		end
+	end,
+	BeforeSkill = function(c: Card, info: any)
+		if c.Mem.armed then
+			info.Crit += c.P(1)
+			c.Mem.armed = nil
+			return true
+		end
+		return false
 	end,
 }
 
--- 바람의 검: 진 발도술 치명 +2.5%
+-- 바람의 검: 진 발도술 치명타마다 그 피해의 30% 를 한 번 더(2026-10-28 리메 — 옛 진 발도술 치명 +2.5%)
 M.AzureBlade_C_WindBlade = {
-	BeforeSkill = function(c: Card, info: any)
-		if isSkill(info, "TrueIaido") then
-			info.Crit += c.P(1)
+	Hit = function(c: Card, info: any)
+		if isSkill(info, "TrueIaido") and info.Crit and info.Target.Alive and (info.Damage or 0) > 0 then
+			H.Hurt(c, info.Target, info.Damage * c.P(1))
+			return true
 		end
+		return false
 	end,
 }
 
--- 칼끝 겨누기: 검집 타격 치명 +5%
+-- 칼끝 겨누기: 검집 타격이 맞히면 다음 진 발도술 피해 +15%(2026-10-28 리메 — 옛 검집 타격 치명 +5%)
 M.AzureBlade_C_Point = {
 	BeforeSkill = function(c: Card, info: any)
-		if isSkill(info, "ScabbardStrike") then
-			info.Crit += c.P(1)
+		if isSkill(info, "TrueIaido") and c.Mem.primed then
+			info.Bonus += c.P(1)
+			c.Mem.primed = nil
+			return true
+		end
+		return false
+	end,
+	AfterSkill = function(c: Card, info: any)
+		if isSkill(info, "ScabbardStrike") and hitCount(info) > 0 then
+			c.Mem.primed = true
 		end
 	end,
 }
@@ -430,35 +460,47 @@ M.AzureBlade_C_Rebuke = {
 	end,
 }
 
--- 흘려 넘기기: 막아 내면 받는 피해 5% 더 감소
+-- 흘려 넘기기: 막아 내면 받은 피해의 50% 를 공격한 적에게(턴당 1회)(2026-10-28 리메 — 옛 막을 때 피해 −5%)
 M.AzureBlade_C_Deflect = {
-	BeforeTaken = function(c: Card, info: any)
-		if info.Grade == "Partial" then
-			info.Mult *= 1 - c.P(1)
+	Defend = function(c: Card, info: any)
+		c.Mem.blocked = info.Grade == "Partial"
+	end,
+	Taken = function(c: Card, info: any)
+		local attacker = info.Attacker
+		if c.Mem.blocked and attacker and attacker.Alive and H.PerTurn(c, "deflect", 1) then
+			c.Mem.blocked = nil
+			H.Hurt(c, attacker, info.Damage * c.P(1))
 			return true
 		end
 		return false
 	end,
 }
 
--- 기세: 도발을 쓴 다음 턴 진 발도술 피해 +8%
+-- 기세: 도발 다음 턴의 진 발도술은 30% 확률로 재사용 대기 없음(2026-10-28 리메 — 옛 진 발도술 피해 +8%)
 M.AzureBlade_C_Momentum = {
-	BeforeSkill = function(c: Card, info: any)
-		if isSkill(info, "TrueIaido") and provokedOn(c, -1) then
-			info.Bonus += c.P(1)
+	AfterSkill = function(c: Card, info: any)
+		if isSkill(info, "TrueIaido") and provokedOn(c, -1) and H.Rng(c) < c.P(1) then
+			H.Ally(c).Cooldowns.TrueIaido = 0
+			H.Log(c, "기세 — 진 발도술이 다시 선다")
 			return true
 		end
 		return false
 	end,
 }
 
--- 도발 응수: 도발을 쓴 턴에 회피하면 다음 턴 치명 +6%
+-- 도발 응수: 도발한 턴에 회피하면 턴 끝에 검집 타격을 공짜로(피해 50%)(2026-10-28 리메 — 옛 다음 턴 치명 +6%)
 M.AzureBlade_C_Answer = {
 	Defend = function(c: Card, info: any)
-		if info.Grade == "Success" and provokedOn(c, 0) and H.PerTurn(c, "answer", 1) then
-			H.Mod(c, "CritChance", c.P(1), 2)
-			return true
+		if info.Grade == "Success" and provokedOn(c, 0) then
+			c.Mem.answer = true
 		end
+	end,
+	TurnEnd = function(c: Card)
+		if c.Mem.answer and #H.Enemies(c) > 0 then
+			c.Mem.answer = nil
+			return c.Rt.Env.CastFree("ScabbardStrike", c.P(1))
+		end
+		c.Mem.answer = nil
 		return false
 	end,
 }
