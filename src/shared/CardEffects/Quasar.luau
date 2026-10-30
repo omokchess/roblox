@@ -292,13 +292,17 @@ M.Quasar_R_Accretion = {
 	end,
 }
 
--- 압축: 특이점의 질량당 피해 {1}% → {2}%
+-- 압축: 특이점으로 적을 쓰러뜨리면 재사용 대기 끝 + 질량 3(2026-10-28 리메 — 옛 특이점 질량당 피해 1% → 1.5%)
 M.Quasar_R_Compression = {
-	Rules = {
-		SingularityPerMass = function(c: Card, value: number): number
-			return math.max(value, c.P(2))
-		end,
-	},
+	AfterSkill = function(c: Card, info: any)
+		if not isSkill(info, "Singularity") or (info.Kills or 0) <= 0 then
+			return false
+		end
+		H.Ally(c).Cooldowns.Singularity = 0
+		gainMass(c, c.V(1))
+		H.Log(c, "압축 — 특이점이 다시 선다")
+		return true
+	end,
 }
 
 -- 제트: 특이점이 {1}단계로 나가면 맞은 적에게 [중력] {2}턴
@@ -369,21 +373,30 @@ M.Quasar_R_Overcharge = {
 
 --=== 일반 ===--
 
--- 가속 차징: 차징 {1}턴당 늘어나는 피해 +{2}%
+-- 가속 차징: 차징 중 공격받으면 30% 확률로 차징 +1(턴당 1회)(2026-10-28 리메 — 옛 차징 1턴당 피해 +5%)
 M.Quasar_C_FastCharge = {
-	Rules = {
-		ChargeStep = function(c: Card, value: number): number
-			return value + c.P(2) / c.V(1)
-		end,
-	},
+	Taken = function(c: Card)
+		local now = charge(c)
+		local cap = math.floor(Q(c.Rt, "ChargeCap", 2))
+		if now <= 0 or now >= cap or H.Rng(c) >= c.P(1) or not H.PerTurn(c, "charge", 1) then
+			return false
+		end
+		BattleStatus.AddStack(H.Status(c), R.CHARGE, 1, cap)
+		H.Log(c, "가속 차징")
+		return true
+	end,
 }
 
--- 중력 압착: [중력] 걸린 적에게 피해 +{1}%
+-- 중력 압착: 중력 걸린 적을 맞히면 25% 확률로 1칸 더 끌어와 고정 피해 10(2026-10-28 리메 — 옛 중력 걸린 적에게 피해 +8%)
 M.Quasar_C_GravityCrush = {
-	BeforeHit = function(c: Card, info: any)
-		if hasGravity(info.Target) then
-			info.Bonus += c.P(1)
+	Hit = function(c: Card, info: any)
+		local target = info.Target
+		if not target.Alive or not hasGravity(target) or H.Rng(c) >= c.P(1) then
+			return false
 		end
+		c.Rt.Env.Pull(1, { [target.Id] = true })
+		H.Hurt(c, target, 10)
+		return true
 	end,
 }
 
@@ -438,9 +451,16 @@ M.Quasar_C_Planted = {
 	end,
 }
 
--- 광륜(파티): 인접한 아군 받는 피해 −{1}%
+-- 광륜: 턴 시작 시 질량 5마다 보호막 2(2026-10-28 리메 — 옛 파티 전용 — 인접 아군 받는 피해 −8%(솔로에서 효과 없음))
 M.Quasar_C_Halo = {
-	Party = true,
+	TurnStart = function(c: Card)
+		local amount = math.floor(mass(c) / 5) * c.V(1)
+		if amount < 1 then
+			return false
+		end
+		H.Shield(c, amount)
+		return true
+	end,
 }
 
 -- 냉각: 질량 {1} 이상에서 특이점을 쓰면 재사용 대기 {2}턴 더 감소

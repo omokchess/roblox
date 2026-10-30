@@ -387,13 +387,18 @@ M.Pulsar_C_ReflectUp = {
 	},
 }
 
--- 감극 활용: 감극 {1}중첩당 피해 +{2}%
+-- 감극 활용: 감극 3중첩인 적을 맞히면 감극을 터뜨려 중첩 × 6 고정 피해(2026-10-28 리메 — 옛 감극 1중첩당 피해 +3%)
 M.Pulsar_C_DepolarDamage = {
-	BeforeHit = function(c: Card, info: any)
-		local stacks = depolarOf(info.Target)
-		if stacks > 0 then
-			info.Bonus += math.floor(stacks / c.V(1)) * c.P(2)
+	Hit = function(c: Card, info: any)
+		local target = info.Target
+		local stacks = depolarOf(target)
+		if not target.Alive or stacks < 3 then
+			return false
 		end
+		BattleStatus.SpendAll(target.Status, R.DEPOLAR)
+		H.Hurt(c, target, stacks * c.V(1))
+		H.Log(c, "감극 활용 — 극이 터졌다")
+		return true
 	end,
 }
 
@@ -442,9 +447,16 @@ M.Pulsar_C_Afterglow = {
 	end,
 }
 
--- 인력(파티): 중성자의 표적 확률 +{1}%
+-- 인력: 자기장 중 공격받으면 35% 확률로 공격한 적에게 감극 1(2026-10-28 리메 — 옛 파티 전용 — 중성자 표적 확률 +8%(솔로에서 효과 없음))
 M.Pulsar_C_Attraction = {
-	Party = true,
+	Defend = function(c: Card, info: any)
+		local attacker = info.Attacker
+		if hasField(c) and attacker and attacker.Alive and H.Rng(c) < c.P(1) then
+			applyDepolar(c, attacker, 1)
+			return true
+		end
+		return false
+	end,
 }
 
 -- 자화: 전투 시작 시 자기장 {1}턴
@@ -484,11 +496,13 @@ M.Pulsar_C_Focused = {
 	end,
 }
 
--- 수호광: 체력이 절반 아래인 아군 받는 피해 −{1}% (솔로면 자신)
+-- 수호광: 전투당 1회, 체력이 절반 아래로 떨어지면 최대 체력 15% 보호막(2026-10-28 리메 — 옛 체력 절반 아래면 받는 피해 −8%)
 M.Pulsar_C_GuardLight = {
-	BeforeTaken = function(c: Card, info: any)
-		if H.HealthRatio(c) < 0.5 then
-			info.Mult *= 1 - c.P(1)
+	Damaged = function(c: Card)
+		local ally = H.Ally(c)
+		if ally.Alive and H.HealthRatio(c) < 0.5 and CardEffects.PerBattle(c, "guard", 1) then
+			H.Shield(c, ally.MaxHealth * c.P(1))
+			H.Log(c, "수호광")
 			return true
 		end
 		return false
@@ -504,13 +518,15 @@ M.Pulsar_C_StaticField = {
 	},
 }
 
--- 잔상: 섬광 명중률 감소 +{1}%p
+-- 잔상: 섬광을 쓰면 보호막 6(자기장이 있으면 두 배)(2026-10-28 리메 — 옛 섬광 명중률 감소 +5%p)
 M.Pulsar_C_Afterimage = {
-	Rules = {
-		FlareAccuracy = function(c: Card, value: number): number
-			return value + c.P(1)
-		end,
-	},
+	AfterSkill = function(c: Card, info: any)
+		if not isSkill(info, "Flare") then
+			return false
+		end
+		H.Shield(c, c.V(1) * (if hasField(c) then 2 else 1))
+		return true
+	end,
 }
 
 -- 반동 제어: 수렴을 {1}번 쓸 때마다 다음 턴 받는 피해 −{2}%

@@ -57,6 +57,19 @@ local function addFaith(c: Card, amount: number)
 	ally.Faith = (ally.Faith or 0) + math.floor(amount)
 end
 
+-- 파상풍 걸기(성흔·녹슨 못): BattleSkillEffects.TetanusHit 에 질의·피해·적 목록·로그를 이어 준다
+local function tetanus(c: Card, unit: any, amount: number)
+	BattleSkillEffects.TetanusHit(unit, amount, function(key, base)
+		return Q(c.Rt, key, base)
+	end, function(target, damage)
+		return c.Rt.Env.Damage(target, damage, "True", true)
+	end, function()
+		return H.Enemies(c)
+	end, function(text)
+		H.Log(c, text)
+	end)
+end
+
 local function isBranded(unit: any): boolean
 	for _, modifier in unit.Status.Modifiers do
 		if modifier.Source == "낙인" then
@@ -225,22 +238,16 @@ M.WallPilgrim_E_Stigmata = {
 		if not info.Hits or not H.PerTurn(c, "stigmata", c.V(1)) then
 			return false
 		end
+		-- info.Hits 의 항목은 {Id, Damage, Crit} 다(유닛이 아니다) — 2026-10-28 고침: 예전엔 늘 아무것도 안 했다
 		local seen, any = {}, false
 		for _, list in info.Hits do
-			for _, enemy in list do
-				if not seen[enemy] and enemy.Alive then
+			for _, hit in list do
+				local enemy = H.State(c).Units[hit.Id]
+				if enemy and enemy.Alive and not seen[enemy] then
 					seen[enemy] = true
 					local z = zealOf(enemy)
 					if z > 0 then
-						BattleSkillEffects.TetanusHit(enemy, z, function(key, base)
-							return Q(c.Rt, key, base)
-						end, function(unit, amount)
-							return c.Rt.Env.Damage(unit, amount, "True", true)
-						end, function()
-							return H.Enemies(c)
-						end, function(text)
-							H.Log(c, text)
-						end)
+						tetanus(c, enemy, z)
 						any = true
 					end
 				end
@@ -506,14 +513,15 @@ M.WallPilgrim_C_Cleave = {
 	end,
 }
 
--- 녹슨 못: 광신 걸린 적이 주는 피해 −{1}% 더
+-- 녹슨 못: 광신 걸린 적에게 공격받으면 35% 확률로 그 적에게 파상풍 1(턴당 1회)(2026-10-28 리메 — 옛 광신 걸린 적이 주는 피해 −4%)
 M.WallPilgrim_C_RustyNail = {
-	BeforeTaken = function(c: Card, info: any)
-		if zealOf(info.Attacker) > 0 then
-			info.Mult *= 1 - c.P(1)
-			return true
+	Defend = function(c: Card, info: any)
+		local attacker = info.Attacker
+		if not attacker or not attacker.Alive or zealOf(attacker) <= 0 or H.Rng(c) >= c.P(1) or not H.PerTurn(c, "rust", 1) then
+			return false
 		end
-		return false
+		tetanus(c, attacker, 1)
+		return true
 	end,
 }
 

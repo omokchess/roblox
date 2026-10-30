@@ -424,10 +424,15 @@ M.Alchemist_R_Recycle = {
 
 --=== 일반 ===--
 
--- 만족감: 꽉 찬 병 {1}개당 주는 피해 +{2}%
+-- 만족감: 던지기가 맞힌 적에게 꽉 찬 병 1개마다 고정 피해 3(2026-10-28 리메 — 옛 꽉 찬 병 1개당 피해 +3%)
 M.Alchemist_C_Satisfaction = {
-	BeforeSkill = function(c: Card, info: any)
-		info.Bonus += math.floor(fullBottles(c) / c.V(1)) * c.P(2)
+	Hit = function(c: Card, info: any)
+		local n = fullBottles(c)
+		if n <= 0 or not isSkill(info, "Throw") or not info.Target.Alive then
+			return false
+		end
+		H.Hurt(c, info.Target, n * c.V(1))
+		return true
 	end,
 }
 
@@ -488,13 +493,15 @@ M.Alchemist_C_Tolerance = {
 	Healed = tolerance,
 }
 
--- 약초학: 약재 {1}당 받는 회복 +{2}% (약재 기본 1% 대신)
+-- 약초학: 약재를 쓸 때마다 체력 2(턴당 2회)(2026-10-28 리메 — 옛 약재 1당 받는 회복 +1%)
 M.Alchemist_C_Herbal = {
-	Rules = {
-		HerbHealScale = function(c: Card, value: number): number
-			return math.max(value, c.V(2) / c.V(1))
-		end,
-	},
+	Spend = function(c: Card, id: string)
+		if id == R.HERB and H.PerTurn(c, "herb", 2) then
+			H.HealFlat(c, c.V(1))
+			return true
+		end
+		return false
+	end,
 }
 
 -- 호신용 물약: 전투 시작 시 꽉 찬 병 {1}개(회복 병 포함 네 종류 중 무작위)
@@ -506,13 +513,22 @@ M.Alchemist_C_Floorstart = {
 	end,
 }
 
--- 고중량 고반복: 벌크업 중첩당 +{1}%p
+-- 고중량 고반복: 섞기를 7번 쓸 때마다 체력 10 + 빈 병 1(2026-10-28 리메 — 옛 벌크업 중첩당 +2%p)
 M.Alchemist_C_Bulk = {
-	Rules = {
-		BulkPer = function(c: Card, value: number): number
-			return value + c.P(1)
-		end,
-	},
+	AfterSkill = function(c: Card, info: any)
+		if not isSkill(info, "Mix") then
+			return false
+		end
+		c.Mem.reps = (c.Mem.reps or 0) + 1
+		if c.Mem.reps < c.V(1) then
+			return false
+		end
+		c.Mem.reps = 0
+		H.HealFlat(c, 10)
+		H.Gain(c, R.EMPTY_BOTTLE, 1)
+		H.Log(c, "고중량 고반복 — 한 세트 끝")
+		return true
+	end,
 }
 
 -- 보험 증액: 보험 회복 {1}%
@@ -524,13 +540,16 @@ M.Alchemist_C_Insurance = {
 	},
 }
 
--- 부작용 완화: 부작용 중첩당 −{1}%p
+-- 부작용 활용: 부작용 1중첩마다 던지기 고정 피해 +2(2026-10-28 리메 — 옛 부작용 완화: 부작용 중첩당 받는 피해 −3%p)
 M.Alchemist_C_Sideeffect = {
-	Rules = {
-		SideEffectPer = function(c: Card, value: number): number
-			return value - c.P(1)
-		end,
-	},
+	Hit = function(c: Card, info: any)
+		local n = c.Rt.SideEffects or 0
+		if n <= 0 or not isSkill(info, "Throw") or not info.Target.Alive then
+			return false
+		end
+		H.Hurt(c, info.Target, n * c.V(1))
+		return true
+	end,
 }
 
 -- 커다란 약병: 던지기가 붙어 선 적에게도 스킬 피해의 {1}%
@@ -572,14 +591,17 @@ M.Alchemist_C_Cooldown = {
 	end,
 }
 
--- 절박함: 체력 {1}% 이하면 주는 피해 +{2}%
+-- 절박함: 전투당 1회, 체력 30% 이하로 떨어지면 꽉 찬 병 2 + 원액 1(2026-10-28 리메 — 옛 체력 30% 이하 피해 +8%)
 M.Alchemist_C_Lowhp = {
-	BeforeSkill = function(c: Card, info: any)
-		if H.HealthRatio(c) <= c.P(1) then
-			info.Bonus += c.P(2)
-			return true
+	Damaged = function(c: Card)
+		if not H.Ally(c).Alive or H.HealthRatio(c) > c.P(1) or not CardEffects.PerBattle(c, "low", 1) then
+			return false
 		end
-		return false
+		randomBottle(c, BOTTLES)
+		randomBottle(c, BOTTLES)
+		H.Gain(c, R.EXTRACT, 1)
+		H.Log(c, "절박함 — 비상 조제")
+		return true
 	end,
 }
 

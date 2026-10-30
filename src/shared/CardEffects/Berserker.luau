@@ -412,13 +412,14 @@ M.Berserker_C_Bite = {
 	end,
 }
 
--- 들이받기: 대상의 출혈 {1} 당 피해 +{2}%
+-- 들이받기: 출혈 8 이상인 적을 맞히면 분노 1(턴당 1회)(2026-10-28 리메 — 옛 출혈 5당 피해 +1%)
 M.Berserker_C_Ram = {
-	BeforeHit = function(c: Card, info: any)
-		local stacks = math.floor(info.Target.Status.Bleed / c.V(1))
-		if stacks > 0 then
-			info.Bonus += stacks * c.P(2)
+	Hit = function(c: Card, info: any)
+		if (info.Target.Status.Bleed or 0) >= c.V(1) and H.PerTurn(c, "ram", 1) then
+			H.Gain(c, R.RAGE, 1)
+			return true
 		end
+		return false
 	end,
 }
 
@@ -474,10 +475,14 @@ M.Berserker_C_Swing = {
 	end,
 }
 
--- 끓어오름: [분노] {1} 마다 치명 확률 +{2}%
+-- 끓어오름: 분노가 최대치가 되면 체력 6 회복(턴당 1회)(2026-10-28 리메 — 옛 분노 3당 치명 +1%)
 M.Berserker_C_Boiling = {
-	BeforeSkill = function(c: Card, info: any)
-		info.Crit += math.floor(rage(c) / c.V(1)) * c.P(2)
+	Gain = function(c: Card, id: string)
+		if id == R.RAGE and rage(c) >= rageCap(c) and H.PerTurn(c, "boil", 1) then
+			H.HealFlat(c, c.V(1))
+			return true
+		end
+		return false
 	end,
 }
 
@@ -528,14 +533,18 @@ M.Berserker_C_RageFuel = {
 	end,
 }
 
--- 집중: 체력 {1}% 이하면 치명 확률 +{2}%
+-- 집중: 체력 절반 이하에서 처치하면 모든 재사용 대기 −1 + 분노 1(2026-10-28 리메 — 옛 체력 75% 이하 치명 +5%)
 M.Berserker_C_DeathWish = {
-	BeforeSkill = function(c: Card, info: any)
-		if H.HealthRatio(c) <= c.P(1) then
-			info.Crit += c.P(2)
-			return true
+	Kill = function(c: Card)
+		if H.HealthRatio(c) > 0.5 then
+			return false
 		end
-		return false
+		local cooldowns = H.Ally(c).Cooldowns
+		for id, left in cooldowns do
+			cooldowns[id] = math.max(0, left - 1)
+		end
+		H.Gain(c, R.RAGE, c.V(1))
+		return true
 	end,
 }
 

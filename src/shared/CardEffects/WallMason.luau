@@ -229,16 +229,27 @@ M.WallMason_R_Blessing = {
 	end,
 }
 
--- 허물어진 틈(옛 후열 조준, Id 그대로): 뒷벽 허물기에 맞은 적 2턴 받는 피해 +{1}% — 다시 맞으면 갱신(겹치지 않음)
+-- 허물어진 틈(옛 후열 조준, Id 그대로): 뒷벽 허물기에 맞은 적 2턴 받는 피해 +15% — 다시 맞으면 갱신(겹치지 않음).
+-- 그 사이 쓰러지면 아군 전체 벽 1. (2026-10-28 리메 — 옛 +6%. info.Hits 는 유닛이 아니라 {Id, Damage, Crit} 라
+-- 옛 코드는 매번 오류로 꺼져 있었다 → Id 로 유닛을 찾는다)
+local function cracked(c: Card, unit: any): boolean
+	for _, modifier in unit.Status.Modifiers do
+		if modifier.Source == "카드:" .. c.Id then
+			return true
+		end
+	end
+	return false
+end
 M.WallMason_R_BackRowAim = {
 	AfterSkill = function(c: Card, info: any)
 		if not isSkill(info, "BreakBackWall") then
 			return false
 		end
 		local seen = {}
-		for _, list in info.Hits do
-			for _, enemy in list do
-				if not seen[enemy] then
+		for _, list in info.Hits or {} do
+			for _, hit in list do
+				local enemy = H.State(c).Units[hit.Id]
+				if enemy and enemy.Alive and not seen[enemy] then
 					seen[enemy] = true
 					BattleStatus.RemoveBySource(enemy.Status, "카드:" .. c.Id)
 					H.ModOn(c, enemy, "DamageTaken", c.P(1), 2)
@@ -246,6 +257,16 @@ M.WallMason_R_BackRowAim = {
 			end
 		end
 		return next(seen) ~= nil
+	end,
+	Kill = function(c: Card, info: any)
+		if not cracked(c, info.Target) then
+			return false
+		end
+		for _, ally in H.Allies(c) do
+			wall(c, ally, 1)
+		end
+		H.Log(c, "허물어진 틈 — 무너진 돌로 벽을 쌓는다")
+		return true
 	end,
 }
 
@@ -391,12 +412,12 @@ M.WallMason_C_Grit = {
 	},
 }
 
--- 석공의 맹세: 신앙심 {1}당 주는 피해 +{2}%, 최대 {3}%
+-- 석공의 맹세: 턴 시작 시 신앙심 40 이상이면 벽 1(2026-10-28 리메 — 옛 신앙심 10당 피해 +3%(최대 15%))
 M.WallMason_C_MasonOath = {
-	BeforeSkill = function(c: Card, info: any)
-		local bonus = math.min(math.floor((H.Ally(c).Faith or 0) / c.V(1)) * c.P(2), c.P(3))
-		if bonus > 0 then
-			info.Bonus += bonus
+	TurnStart = function(c: Card)
+		local ally = H.Ally(c)
+		if (ally.Faith or 0) >= c.V(1) then
+			wall(c, ally, 1)
 			return true
 		end
 		return false
@@ -413,13 +434,16 @@ M.WallMason_C_QuickRite = {
 	end,
 }
 
--- 빗겨내기: 벽이 있는 아군 자동 회피·패링 +{1}%
+-- 빗겨내기: 벽이 있을 때 회피하면 40% 확률로 벽 1(턴당 1회)(2026-10-28 리메 — 옛 벽이 있는 아군 자동 회피·패링 +3%)
 M.WallMason_C_Deflect = {
-	Rules = {
-		WallAutoBonus = function(c: Card, value: number): number
-			return value + c.P(1)
-		end,
-	},
+	Defend = function(c: Card, info: any)
+		local ally = H.Ally(c)
+		if info.Grade == "Success" and wallOf(ally) > 0 and H.Rng(c) < c.P(1) and H.PerTurn(c, "deflect", 1) then
+			wall(c, ally, 1)
+			return true
+		end
+		return false
+	end,
 }
 
 -- 돌 고르기: 쌓기 패시브 +{1}
@@ -473,12 +497,15 @@ M.WallMason_C_Footstone = {
 	end,
 }
 
--- 운 좋은 정: 뒷벽 허물기 치명 확률 +{1}%
+-- 운 좋은 정: 정 다듬기를 쓰면 25% 확률로 뒷벽 허물기 재사용 대기 끝(2026-10-28 리메 — 옛 뒷벽 허물기 치명 +3%)
 M.WallMason_C_LuckyChisel = {
-	BeforeSkill = function(c: Card, info: any)
-		if isSkill(info, "BreakBackWall") then
-			info.Crit += c.P(1)
+	AfterSkill = function(c: Card, info: any)
+		if isSkill(info, "ChiselWork") and H.Rng(c) < c.P(1) then
+			H.Ally(c).Cooldowns.BreakBackWall = 0
+			H.Log(c, "운 좋은 정 — 뒷벽 허물기가 다시 선다")
+			return true
 		end
+		return false
 	end,
 }
 

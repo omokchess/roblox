@@ -299,13 +299,16 @@ M.WallBreaker_R_ChainCollapse = {
 	end,
 }
 
--- 무딘 살: 허물 벽 중첩당 받는 피해 증가 −{1}%p
+-- 무딘 살: 허물 벽 8 이상이면 맞을 때 허물 벽 1을 내주고 피해 절반(턴당 1회)(2026-10-28 리메 — 옛 허물 벽 스택당 받는 피해 증가 −0.2%p)
 M.WallBreaker_R_DullFlesh = {
-	Rules = {
-		RuinTakenPer = function(c: Card, value: number): number
-			return value - c.P(1)
-		end,
-	},
+	BeforeTaken = function(c: Card, info: any)
+		if info.Mult > 0 and ruin(c) >= c.V(1) and H.PerTurn(c, "dull", 1) then
+			info.Mult *= 0.5
+			H.Spend(c, R.RUIN, 1)
+			return true
+		end
+		return false
+	end,
 }
 
 --=== 일반 ===--
@@ -394,25 +397,30 @@ M.WallBreaker_C_FleshPrice = {
 	},
 }
 
--- 파괴의 맹세: 신앙심 {1}당 주는 피해 +{2}%
+-- 파괴의 맹세: 턴 시작 시 신앙심 40 이상이면 허물 벽 1(2026-10-28 리메 — 옛 신앙심 10당 피해 +2%)
 M.WallBreaker_C_RuinOath = {
-	BeforeSkill = function(c: Card, info: any)
-		local bonus = math.floor((H.Ally(c).Faith or 0) / c.V(1)) * c.P(2)
-		if bonus > 0 then
-			info.Bonus += bonus
-			return true
+	TurnStart = function(c: Card)
+		if (H.Ally(c).Faith or 0) >= c.V(1) then
+			return gainRuin(c, 1) > 0
 		end
 		return false
 	end,
 }
 
--- 더 많은 잔해: 잔해 회수 비율 {2}%
+-- 잔해 더미: 허물다를 쓰면 터뜨린 허물 벽 1마다 보호막 2(2026-10-28 리메 — 옛 더 많은 잔해: 잔해 회수 +5%)
 M.WallBreaker_C_DebrisPlus = {
-	Rules = {
-		DebrisRatio = function(c: Card, value: number): number
-			return math.max(value, c.P(2))
-		end,
-	},
+	BeforeSkill = function(c: Card, info: any)
+		c.Mem.ruin = if isSkill(info, "TearDown") then ruin(c) else nil
+	end,
+	AfterSkill = function(c: Card)
+		local spent = c.Mem.ruin
+		c.Mem.ruin = nil
+		if not spent or spent <= 0 then
+			return false
+		end
+		H.Shield(c, spent * c.V(1))
+		return true
+	end,
 }
 
 -- 광적인 파괴: 허물 벽 {1} 이상이면 허물다 재사용 대기 −{2}턴
@@ -445,10 +453,18 @@ M.WallBreaker_C_Defenceless = {
 	end,
 }
 
--- 약점 파괴: 허물 벽 {1}당 치명 확률 +{2}%
+-- 약점 파괴: 허물다 치명타면 터뜨린 허물 벽 30% 를 돌려받는다(스킬마다 1회)(2026-10-28 리메 — 옛 허물 벽 2당 치명 +2%)
 M.WallBreaker_C_WeakPoint = {
 	BeforeSkill = function(c: Card, info: any)
-		info.Crit += math.floor(ruin(c) / c.V(1)) * c.P(2)
+		c.Mem.ruin = if isSkill(info, "TearDown") then ruin(c) else nil
+	end,
+	Hit = function(c: Card, info: any)
+		local spent = c.Mem.ruin
+		if not spent or not info.Crit or not isSkill(info, "TearDown") then
+			return false
+		end
+		c.Mem.ruin = nil
+		return gainRuin(c, math.floor(spent * c.P(1))) > 0
 	end,
 }
 

@@ -499,10 +499,21 @@ M.Attuner_R_Sunspot = {
 
 --=== 일반 ===--
 
--- 별빛 조준: (칠성 / 5, 반올림)% 치명타 확률
+-- 별빛 조준: 칠성을 얻을 때마다 다음 스킬 치명 +8%(최대 7번 쌓임)(2026-10-28 리메 — 옛 (칠성 / 5)% 치명 — 최대 1.4%)
 M.Attuner_C_Starlight = {
+	Gain = function(c: Card, id: string)
+		if id == R.STAR then
+			c.Mem.n = math.min(7, (c.Mem.n or 0) + 1)
+		end
+	end,
 	BeforeSkill = function(c: Card, info: any)
-		info.Crit += math.floor(stars(c) / c.V(1) + 0.5) / 100
+		local n = c.Mem.n or 0
+		if n <= 0 or info.Skill.Damage <= 0 then
+			return false
+		end
+		info.Crit += n * c.P(1)
+		c.Mem.n = 0
+		return true
 	end,
 }
 
@@ -635,11 +646,16 @@ M.Attuner_C_Devout = {
 	end,
 }
 
--- 묵주: 신앙심 10마다 치명타 확률 +1%
+-- 묵주: 신앙심 30 이상이면 칠성 1(셉텐트리오네스 전까지 1번 — LightStar 가 출처별로 막는다)(2026-10-28 리메 — 옛 신앙심 10당 치명 +1%)
+local function rosary(c: Card)
+	if (H.Ally(c).Faith or 0) >= c.V(1) then
+		return light(c, "Rosary")
+	end
+	return false
+end
 M.Attuner_C_Rosary = {
-	BeforeSkill = function(c: Card, info: any)
-		info.Crit += math.floor(H.Ally(c).Faith / c.V(1)) * 0.01
-	end,
+	TurnStart = rosary,
+	AfterSkill = rosary,
 }
 
 -- 중력 렌즈: 셉텐트리오네스 치명타 피해량 +15%
