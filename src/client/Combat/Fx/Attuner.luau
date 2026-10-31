@@ -580,6 +580,9 @@ function Fx.AliothLaunch(ctx: any)
 		return
 	end
 	s.aliothDone = {}
+	-- 다음 자리 고르기(aliothNext)가 보는 기록: 지나간 자리(진형 상자 u·v) · 최근 이동 방위
+	s.aliothVisited = {}
+	s.aliothSectors = {}
 	local last = ctx.Star(3)
 	s.aliothPath = { From = last, To = ctx.EnemyCenter + Vector3.new(0, 4.5, 0), T = 0, D = 0.15 }
 	ripple(ctx, ctx.Hand("R"), 1.4)
@@ -601,7 +604,79 @@ function Fx.AliothLaunch(ctx: any)
 	end)
 end
 
--- 손짓 한 번: 별이 지금 자리에서 진형 안 무작위 자리로 곧게 내리긋는다(처음 셋은 크고 느리게 · 뒤로 갈수록 짧고 빠르게)
+--[[
+	다음 자리 고르기(2026-10-31 사용자: "별이 너무 조금만 움직이지 않게 — 이미 갔던 방향은 두 번 동안 안 가고, 이동 후 5×5 구역 안엔 다시 안 가고 등등").
+	진형 상자(Common.FieldBox — 앞 u · 옆 v) 안에서 후보를 여럿 뽑아 규칙을 다 지키는 것 중 하나를 고른다.
+	  1. 지금 자리와 그 전 자리의 5×5 스터드 구역 안은 안 감(제자리걸음·두 점 사이 핑퐁 막기)
+	  2. 진형 대각선의 MIN_TRAVEL 배 넘게 움직임(늘 진형을 크게 가로지른다)
+	  3. 이동 방향을 8방위로 나눠 직전 두 번 간 방위로는 안 감
+	다 지키는 후보가 없으면 2 의 거리를 줄여 보고(0.7 · 0.45 배), 그래도 없으면 3 을 푼다.
+]]
+local ALIOTH_ZONE = 2.5 -- 5×5 구역의 반
+local ALIOTH_MIN_TRAVEL = 0.4
+local ALIOTH_SECTOR_MEMORY = 2
+local function aliothNext(s: any, box: any, from: Vector3, rng: Random): (number, number, number)
+	local d = from - box.Base
+	local u0, v0 = d:Dot(box.F), d:Dot(box.R)
+	local visited = s.aliothVisited or {}
+	local sectors = s.aliothSectors or {}
+	local diag = math.sqrt((box.U1 - box.U0) ^ 2 + (box.V1 - box.V0) ^ 2)
+	local function sectorOf(du: number, dv: number): number
+		return math.floor(((math.atan2(dv, du) + math.pi) / (2 * math.pi)) * 8 + 0.5) % 8
+	end
+	local function ok(u: number, v: number, minTravel: number, checkSector: boolean): boolean
+		for k = math.max(1, #visited - 1), #visited do
+			local p = visited[k]
+			if math.abs(u - p[1]) < ALIOTH_ZONE and math.abs(v - p[2]) < ALIOTH_ZONE then
+				return false
+			end
+		end
+		if math.abs(u - u0) < ALIOTH_ZONE and math.abs(v - v0) < ALIOTH_ZONE then
+			return false
+		end
+		if math.sqrt((u - u0) ^ 2 + (v - v0) ^ 2) < minTravel then
+			return false
+		end
+		if checkSector then
+			local sec = sectorOf(u - u0, v - v0)
+			for k = math.max(1, #sectors - ALIOTH_SECTOR_MEMORY + 1), #sectors do
+				if sectors[k] == sec then
+					return false
+				end
+			end
+		end
+		return true
+	end
+	-- 방향 규칙(사용자 지시)을 먼저 지키고 거리부터 줄여 본다 → 그래도 없으면 방향 규칙을 푼다
+	local tries = {
+		{ diag * ALIOTH_MIN_TRAVEL, true },
+		{ diag * ALIOTH_MIN_TRAVEL * 0.7, true },
+		{ diag * ALIOTH_MIN_TRAVEL * 0.45, true },
+		{ diag * ALIOTH_MIN_TRAVEL, false },
+		{ diag * ALIOTH_MIN_TRAVEL * 0.5, false },
+		{ 0, false },
+	}
+	local u, v = u0, v0
+	for _, rule in tries do
+		local found = false
+		for _ = 1, 96 do
+			local cu, cv = rng:NextNumber(box.U0 + 1, box.U1 - 1), rng:NextNumber(box.V0 + 1, box.V1 - 1)
+			if ok(cu, cv, rule[1], rule[2]) then
+				u, v, found = cu, cv, true
+				break
+			end
+		end
+		if found then
+			break
+		end
+	end
+	table.insert(visited, { u0, v0 })
+	table.insert(sectors, sectorOf(u - u0, v - v0))
+	s.aliothVisited, s.aliothSectors = visited, sectors
+	return u, v, rng:NextNumber(0.8, 3.2)
+end
+
+-- 손짓 한 번: 별이 지금 자리에서 진형을 크게 가로질러 곧게 내리긋는다(처음 셋은 크고 느리게 · 뒤로 갈수록 짧고 빠르게)
 function Fx.AliothStrike(ctx: any, ev: any, at: Vector3?)
 	local s = st(ctx)
 	local i = (ev and ev.i) or 0
@@ -609,7 +684,8 @@ function Fx.AliothStrike(ctx: any, ev: any, at: Vector3?)
 		s.aliothDone[i] = true
 		local box = Common.FieldBox(ctx)
 		local rng = Random.new()
-		local to = Common.BoxWorld(box, Vector3.new(rng:NextNumber(box.U0 + 1, box.U1 - 1), rng:NextNumber(box.V0 + 1, box.V1 - 1), rng:NextNumber(0.8, 3.2)))
+		local u, v, h = aliothNext(s, box, ctx.Star(3), rng)
+		local to = Common.BoxWorld(box, Vector3.new(u, v, h))
 		local d = if i <= 3 then 0.11 else 0.06
 		s.aliothPath = { From = ctx.Star(3), To = to, T = 0, D = d }
 		task.delay(d, function()
