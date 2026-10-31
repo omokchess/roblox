@@ -73,18 +73,23 @@ do
 	check(t2[1] == "CallistoSymberasma", "2턴 고찰이 있어 심베라즈마 — " .. tostring(t2[1]))
 	check(stack(ally, ClassResources.GOCHAL) == 0, "심베라즈마가 고찰을 지움")
 	check(stack(ally, ClassResources.SYMBERASMA) > 0, "심베라즈마 디버프")
+	local b = boss(s)
 	local t3 = playTurn(s)
-	check(#t3 == 3 and t3[1] == "CallistoSynthesis", "3턴 성위가 없어 신데시 톤 아스트론 3연타 — " .. table.concat(t3, ","))
+	-- 연타 무늬가 달라 서 있는 칸에 따라 몇 대 맞는지가 다르다(예고는 늘 3개)
+	check(#b.Plans == 3 and #t3 >= 1 and t3[1] == "CallistoSynthesis", "3턴 성위가 없어 신데시 톤 아스트론 3연타 — " .. table.concat(t3, ","))
 	local t4 = playTurn(s)
 	check(t4[1] == "CallistoSlash", "4턴(짝수 바퀴) 세시 파라티리시 — " .. tostring(t4[1]))
 	check(stack(ally, ClassResources.SEONGWI) == 2, "세시 파라티리시 성위 2 — " .. stack(ally, ClassResources.SEONGWI))
 	local t5 = playTurn(s)
-	check(#t5 == 5 and t5[1] == "CallistoTrohia", "5턴 트로히아 5연타(5번 회피) — " .. table.concat(t5, ","))
-	check(stack(ally, ClassResources.SEONGWI) == 7, "트로히아 타당 성위 1 — " .. stack(ally, ClassResources.SEONGWI))
-	check(math.abs(BattleStatus.Total(ally.Status, "DamageTaken") - 0.07) < 1e-6 or BattleStatus.Total(ally.Status, "DamageTaken") > 0.07, "성위 1당 받는 피해 +1%")
+	check(#b.Plans == 5 and #t5 >= 2 and t5[1] == "CallistoTrohia", "5턴 트로히아 5연타 — 별자리 칸이 아니면 2대 이상 — " .. table.concat(t5, ","))
+	check(stack(ally, ClassResources.SEONGWI) == 2 + #t5, "트로히아 타당 성위 1 — " .. stack(ally, ClassResources.SEONGWI))
+	check(BattleStatus.Total(ally.Status, "DamageTaken") >= stack(ally, ClassResources.SEONGWI) * 0.01 - 1e-6, "성위 1당 받는 피해 +1%")
+	local ripe = stack(ally, ClassResources.SEONGWI) >= 6
 	local t6 = playTurn(s)
-	check(t6[1] == "CallistoArktos", "6턴 성위 6 이상이라 미크리 아르크토스 하라시 — " .. tostring(t6[1]))
-	check(stack(ally, ClassResources.SEONGWI) == 0 and stack(ally, ClassResources.MUTBYEOL) > 0, "렌즈가 성위를 뭇별로 바꿈")
+	check(t6[1] == (if ripe then "CallistoArktos" else "CallistoSynthesis"), "6턴: 성위 6 이상이면 렌즈, 아니면 찌르기 — " .. tostring(t6[1]))
+	if ripe then
+		check(stack(ally, ClassResources.SEONGWI) == 0 and stack(ally, ClassResources.MUTBYEOL) > 0, "렌즈가 성위를 뭇별로 바꿈")
+	end
 	print("2 1페이지 박자 OK")
 end
 
@@ -278,6 +283,102 @@ do
 	end
 	check(blink > 0, "다 피하면 [성위 - 점멸] — " .. blink)
 	print("9 점멸 OK (" .. blink .. ")")
+end
+
+--=== 10. 유도: 별자리 칸·연타 무늬·추적 행열·비숍 대각 이동·심베라즈마 내던지기 ===--
+do
+	local function has(cells, x, y)
+		for _, c in cells do
+			if c[1] == x and c[2] == y then
+				return true
+			end
+		end
+		return false
+	end
+	local pocketSeen, strikeSeen = 0, 0
+	for trial = 1, 12 do
+		local s = battle()
+		local b = boss(s)
+		local ally = GridBattle.Ally(s)
+		for _ = 1, trial % 6 do
+			playTurn(s)
+		end
+		ally.Health = ally.MaxHealth
+		local before = BattleGrid.CellOf(s.Grid, b.Id)
+		GridBattle.EnemyPlan(s, rng)
+		local after = BattleGrid.CellOf(s.Grid, b.Id)
+		if before and after then
+			local dx, dy = math.abs(after.X - before.X), math.abs(after.Y - before.Y)
+			check(dx == dy, string.format("비숍처럼 대각선으로만 — (%d,%d)→(%d,%d)", before.X, before.Y, after.X, after.Y))
+		end
+		local here = BattleGrid.CellOf(s.Grid, GridBattle.ALLY_ID)
+		local lure = s.Callisto.Lure
+		local plans = b.Plans or {}
+		if lure and #plans > 0 and here then
+			local l = lure[1]
+			check(math.abs(l[1] - here.X) + math.abs(l[2] - here.Y) >= 3, "별자리 칸은 아군 자리에서 3칸 이상")
+			-- 칸마다 맞는 횟수: 별자리 칸이 가장 적고, 빈칸이 없다
+			local hitsAt = function(x, y)
+				local n = 0
+				for _, p in plans do
+					if has(p.Cells, x, y) then
+						n += 1
+					end
+				end
+				return n
+			end
+			local lureHits = hitsAt(l[1], l[2])
+			for x = 1, 6 do
+				for y = 1, 3 do
+					if not has(lure, x, y) then
+						check(hitsAt(x, y) > lureHits, string.format("별자리 칸이 아닌 (%d,%d) 는 더 맞는다", x, y))
+					end
+				end
+			end
+			if #plans > 1 then
+				strikeSeen += 1
+			else
+				pocketSeen += 1
+			end
+			-- 별자리 칸으로 옮기면: 맞는 횟수가 가장 적고 턴 끝에 성위
+			GridBattle.MoveAlly(s, l[1], l[2])
+			local threats = #GridBattle.PlannedThreatList(s)
+			check(threats == lureHits, "별자리 칸에서는 그 칸 몫만 맞는다")
+			local sw = stack(ally, ClassResources.SEONGWI) + stack(ally, ClassResources.MUTBYEOL) * 100
+			for _, t in GridBattle.PlannedThreatList(s) do
+				GridBattle.ResolveDodge(s, t.Unit.Id, "Success", t.Index)
+			end
+			GridBattle.EndTurn(s)
+			local now = stack(ally, ClassResources.SEONGWI) + stack(ally, ClassResources.MUTBYEOL) * 100
+			check(now > sw, "별자리 칸에서 턴을 마치면 성위")
+		end
+	end
+	check(pocketSeen > 0 and strikeSeen > 0, string.format("한 방·연타 유도 둘 다 나옴(%d · %d)", pocketSeen, strikeSeen))
+	-- 추적: 메라크(행)·페크다(열)는 어디 서도 닿는다
+	local s = toPage2()
+	local b = boss(s)
+	b.Plans = { { SkillId = "CallistoMerak", Cells = {}, Track = "Row" } }
+	s.Callisto.Cooldowns = { CallistoAlcor = 9, CallistoAlioth = 9, CallistoPhecda = 9 }
+	s.Callisto.Aliot = 3
+	s.Callisto.AlcorId = nil
+	-- 알코르가 있어 소환은 건너뛰게
+	GridBattle.EnemyPlan(s, rng)
+	if b.Plans and b.Plans[1].SkillId == "CallistoMerak" then
+		for x = 1, 6 do
+			GridBattle.MoveAlly(s, x, (x % 3) + 1)
+			check(#GridBattle.PlannedThreatList(s) == 1, "메라크는 서 있는 행을 노린다(어디 서도 닿음)")
+		end
+	end
+	-- 심베라즈마: 3칸 넘게 내던진다
+	local s2 = battle()
+	playTurn(s2)
+	local from = BattleGrid.CellOf(s2.Grid, GridBattle.ALLY_ID)
+	local used = playTurn(s2)
+	local to = BattleGrid.CellOf(s2.Grid, GridBattle.ALLY_ID)
+	if used[1] == "CallistoSymberasma" and from and to then
+		check(math.abs(to.X - from.X) + math.abs(to.Y - from.Y) >= 3, "심베라즈마가 멀리 내던짐")
+	end
+	print(string.format("10 유도 OK (한 방 %d · 연타 %d)", pocketSeen, strikeSeen))
 end
 
 print("칼리스토 규칙: 모두 통과")

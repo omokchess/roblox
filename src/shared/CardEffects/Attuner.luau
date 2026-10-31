@@ -165,8 +165,9 @@ M.Attuner_Mizar = {
 		end
 		c.Mem.skipped = if pick == me then 0 else (c.Mem.skipped or 0) + 1
 		if not mode(c, "MizarBurn") then
+			-- 묶임은 디버그 검수와 같은 규칙: 묶이면 그 뒤 두 턴 면역(BattleSkillEffects.TryBind)
 			if Q(c.Rt, "MizarNoBind", 0) < 1 then
-				BattleStatus.AddStack(pick.Status, R.BIND, 1, 1)
+				BattleSkillEffects.TryBind(pick.Status)
 			end
 			local shield = math.floor(Q(c.Rt, "MizarShield", 49) * shieldScale(c))
 			BattleStatus.AddShield(pick.Status, shield)

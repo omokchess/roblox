@@ -283,6 +283,44 @@ return {
 				{ t = 1.4, k = "Dash", to = "Home", d = 0.34 },
 			},
 		},
+		--=== 등장 · 페이지 전환(전투 화면이 튼다 — 얼굴 클로즈업 컷신) ===--
+		-- 등장: 비숍의 인사 — 가슴의 작은곰자리 펜던트에 손을 얹고 무릎을 굽혀 고개 숙임 → 고개 들어 미소 → 카메라를 들어 찰칵
+		CallistoIntro = {
+			Duration = 3.2,
+			Keys = {
+				K(0, nil, OBS),
+				K(0.7, "sineOut", OBS, { Root = { 0, -0.35, 0, 0, 20, 0 }, Torso = { -22, -6, 0 }, Head = { -18, -10, 0 }, RArm = { 30, 0, 20 }, LArm = { 72, 34, 22 }, RLeg = { -14, 0, 4 }, LLeg = { 22, 0, -4 } }),
+				K(1.4, nil, OBS, { Root = { 0, -0.38, 0, 0, 20, 0 }, Torso = { -24, -6, 0 }, Head = { -20, -10, 0 }, RArm = { 30, 0, 20 }, LArm = { 72, 34, 22 }, RLeg = { -14, 0, 4 }, LLeg = { 22, 0, -4 } }),
+				K(1.95, "sineInOut", OBS, { Head = { -2, -6, 10 } }),
+				K(2.35, "sineOut", AIM),
+				K(2.55, nil, AIM),
+				K(3.2, "sineInOut", OBS),
+			},
+			Events = {
+				{ t = 0, k = "Fx", n = "IntroShot", d = 3.2 },
+				{ t = 0.1, k = "Fx", n = "Mood", m = "Smile", d = 1.8 },
+				{ t = 2.3, k = "Fx", n = "Mood", m = "Aim", d = 0.8 },
+				{ t = 2.45, k = "Fx", n = "Flash" },
+			},
+		},
+		-- 페이지 전환: 무릎을 꿇었다가 별을 올려다보고(눈물·결의), 두 팔을 펴며 일어서 별빛이 터진다
+		CallistoPageShift = {
+			Duration = 2.7,
+			Keys = {
+				K(0, nil, OBS),
+				K(0.35, "expoOut", OBS, { Root = { 0, -1.3, 0.2, 0, 20, 0 }, Torso = { -20, 0, 0 }, Head = { -24, 0, 0 }, RLeg = { 88, 0, 6 }, LLeg = { -8, 0, -6 }, RArm = { 12, 0, 16 }, LArm = { 20, 0, -16 } }),
+				K(1.3, "sineInOut", OBS, { Root = { 0, -1.3, 0.2, 0, 20, 0 }, Torso = { 10, 0, 0 }, Head = { 32, 0, 0 }, RLeg = { 88, 0, 6 }, LLeg = { -8, 0, -6 }, RArm = { 40, 0, 30 }, LArm = { 110, 0, -10 } }),
+				K(1.95, "sineOut", OBS, { Root = { 0, 0.4, 0, 0, 0, 0 }, Torso = { 12, 0, 0 }, Head = { 20, 0, 0 }, RArm = { 140, 0, 50 }, LArm = { 140, 0, -50 }, RLeg = { 0, 0, 4 }, LLeg = { 0, 0, -4 } }),
+				K(2.7, "sineInOut", OBS),
+			},
+			Events = {
+				{ t = 0, k = "Fx", n = "PageShot", d = 2.7 },
+				{ t = 0.4, k = "Fx", n = "Mood", m = "Sorrow", d = 1.4 },
+				{ t = 1.9, k = "Fx", n = "PageBurst" },
+				{ t = 1.9, k = "Shake", a = 0.4, d = 0.4 },
+			},
+		},
+
 		--=== 2페이지 성위 품은 자(북두칠성 망치) ===--
 		-- 평타 수많은 성위 아래 파묻혀: 다가가 머리 위에서 내려찍는다
 		CallistoBuried = {

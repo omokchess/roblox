@@ -620,6 +620,24 @@ function BattleSkillEffects.SetImmune(status: BattleStatus.State, id: string, tu
 	;(status.Immune :: any)[id] = turns
 end
 
+--[[
+	[묶임] 한 규칙(2026-10-31 사용자: "조율자 묶임이 디버그 묶임이랑 달라서 사실상 매 턴 묶여 있다").
+	디버그 검수 묶임처럼 한 번 묶이면 그 뒤 두 턴은 다시 묶이지 않는다 — 면역(Immune.Bind)은 조율자 미자르와 디버그 검수가 함께 본다.
+	turns = 면역 턴 끝 수(턴 시작에 묶는 미자르는 3: 묶인 턴 끝 · 다음 턴 끝 · 그다음 턴 끝까지 — 넷째 턴 시작에 다시 묶일 수 있다).
+]]
+BattleSkillEffects.BIND_IMMUNE_TURNS = 3
+function BattleSkillEffects.BindImmune(status: BattleStatus.State): boolean
+	return (status.Immune and (status.Immune :: any)[R.BIND] or 0) > 0
+end
+function BattleSkillEffects.TryBind(status: BattleStatus.State, turns: number?): boolean
+	if BattleSkillEffects.BindImmune(status) then
+		return false
+	end
+	BattleStatus.AddStack(status, R.BIND, 1, 1)
+	BattleSkillEffects.SetImmune(status, R.BIND, turns or BattleSkillEffects.BIND_IMMUNE_TURNS)
+	return true
+end
+
 function BattleSkillEffects.ApplyBrand(status: BattleStatus.State, stacks: number, turns: number): number
 	BattleStatus.AddStack(status, R.BRAND, math.floor(stacks), ClassResources.Cap(R.BRAND))
 	BattleStatus.RemoveBySource(status, "낙인")

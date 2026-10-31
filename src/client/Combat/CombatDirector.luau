@@ -92,6 +92,22 @@ type Actor = {
 	Reach: number?,
 	-- 적 쪽 사람 모양(칼리스토): Humanoid 로 움직이되 적으로 센다(모델은 연출이 만들었으니 치울 때 지운다)
 	Foe: boolean?,
+	-- 그린 얼굴의 표정 조종기(칼리스토 — Combat/Callisto.FaceOf). 공격·반응·쓰러짐마다 표정을 바꾼다
+	Face: any?,
+}
+
+-- 칼리스토 스킬마다 짓는 표정(없으면 Attack): 카메라는 한 눈을 감고 겨눔(Aim), 별을 부르면 Cast
+local SKILL_MOOD: { [string]: string } = {
+	CallistoPhoto = "Aim",
+	CallistoSymberasma = "Aim",
+	CallistoArktos = "Aim",
+	CallistoAlcor = "Cast",
+	CallistoArtificial = "Cast",
+	CallistoShower = "Cast",
+	CallistoSubmerge = "Cast",
+	CallistoResonance = "Cast",
+	CallistoIntro = "Smile",
+	CallistoPageShift = "Cast",
 }
 
 -- 관전용 연출기(Quiet)는 화면을 흔들지 않고, 치울 때 남(내 전투)의 효과까지 지우지 않는다
@@ -329,6 +345,7 @@ function CombatDirector:AddCallisto(id: string, parent: Instance, home: CFrame)
 	local actor = self:AddHumanoid(id, model, "Callisto", home, "CallistoArms")
 	actor.Foe = true
 	actor.Pos = home
+	actor.Face = Callisto.FaceOf(model)
 	return actor
 end
 
@@ -735,6 +752,9 @@ function CombatDirector:_react(t: Actor, name: string)
 		-- 반응 모션에도 이펙트 사건(패링 불꽃·돌벽 …)이 있어 _play 로 돌린다
 		self:_play(t, motion, { {} })
 	end
+	if t.Face then
+		t.Face:Set(name, 0.8)
+	end
 	if name == "Hit" then
 		CombatVfx.HitFlash(t.Model)
 	end
@@ -865,7 +885,32 @@ function CombatDirector:PlaySkill(id: string, skillId: string, targetsByHit: { {
 	if not a then
 		return nil
 	end
-	return self:_play(a, self:_skillMotion(a, skillId), targetsByHit, { OnDone = onDone, Stage = stage })
+	return self:_play(a, self:_skillMotion(a, skillId), targetsByHit, { OnDone = self:_moodFor(a, skillId, onDone), Stage = stage })
+end
+
+-- 그린 얼굴이 있으면 스킬 표정을 짓고, 모션이 끝나면 기본 표정으로(끝 콜백을 감싸 돌려준다)
+function CombatDirector:_moodFor(a: Actor, skillId: string, onDone: (() -> ())?): (() -> ())?
+	local face = a.Face
+	if not face then
+		return onDone
+	end
+	face:Set(SKILL_MOOD[skillId] or "Attack")
+	return function()
+		if not a.Dying then
+			face:Set(nil)
+		end
+		if onDone then
+			onDone()
+		end
+	end
+end
+
+-- 기본 표정(페이지마다 — 칼리스토 1 Observe · 2 Resolve · 3 Sorrow)
+function CombatDirector:SetMood(id: string, mood: string)
+	local a = self.Actors[id]
+	if a and a.Face then
+		a.Face:SetBase(mood)
+	end
 end
 
 -- 적이 공격을 예고하는 동안(회피 QTE 중) 웅크려 떤다
@@ -894,7 +939,7 @@ function CombatDirector:PlayEnemyAttack(enemyId: string, skillId: string, target
 	local reaction = if grade == "Success" then "Dodge" elseif grade == "Partial" then "Guard" else "Hit"
 	local play
 	play = self:_play(a, self:_skillMotion(a, skillId), { { targetId } }, {
-		OnDone = onDone,
+		OnDone = self:_moodFor(a, skillId, onDone),
 		OnHit = function()
 			local t = self.Actors[targetId]
 			if t then
@@ -1013,6 +1058,9 @@ end
 function CombatDirector:_die(a: Actor)
 	a.Dying = true
 	a.PendingDeath = false
+	if a.Face then
+		a.Face:Set("Death")
+	end
 	local death = self:_motion(a, "Death")
 	local ctx = self:_ctx(a, nil)
 	if death then

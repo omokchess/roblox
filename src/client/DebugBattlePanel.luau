@@ -25,6 +25,7 @@
 	뒤에 와서 미리보기를 끄고, 서버 상태가 올 때마다 줄을 다시 만들면 마우스가 가만히 있는 줄엔 Enter 가 안 왔다.
 ]]
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -943,8 +944,9 @@ function DebugBattlePanel:_pollHover()
 	if not self.open then
 		return
 	end
-	-- 패널·곁 창 둘 다 IgnoreGuiInset 이라 AbsolutePosition 과 GetMouseLocation 이 같은 화면 좌표다
-	local mouse = UserInputService:GetMouseLocation()
+	-- AbsolutePosition 은 IgnoreGuiInset 이어도 상단바 아래가 원점이고, GetMouseLocation 은 화면 맨 위가 원점이다 —
+	-- 상단바 높이를 빼야 같은 기준이 된다(2026-10-31 사용자: "마우스를 올리면 2~3칸 아래 카드가 호버된다")
+	local mouse = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
 	local found = nil
 	if inside(self.body, mouse) then
 		for _, target in self.hoverTargets do

@@ -675,7 +675,9 @@ local LIST: { Keyword } = {
 		Id = "Bind",
 		Name = "묶임",
 		Kind = "Debuff",
-		Description = "그 턴 동안 칸을 옮길 수 없음.",
+		Description = "- 그 턴 동안 칸을 옮길 수 없음.\n"
+			.. "- 한 번 묶이면 그 뒤 2턴 동안은 다시 묶이지 않음.\n"
+			.. "  - 조율자 `미자르`와 디버그 검수 묶임이 같은 규칙·같은 면역을 씀.",
 		Scalable = false,
 		Unit = "",
 		Color = "#b7a4d6",

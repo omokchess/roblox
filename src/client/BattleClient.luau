@@ -16,6 +16,7 @@
 ]]
 
 local Players = game:GetService("Players")
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -57,8 +58,9 @@ local TILE_BUFF = BattleStage.BOARD.Buff
 local TILE_DEBUFF = BattleStage.BOARD.Debuff
 local TILE_HEAL = BattleStage.BOARD.Heal
 local TILE_DELETE = BattleStage.BOARD.Pending
--- 칼리스토 예고 범위 색(별빛)
+-- 칼리스토 예고 범위 색(별빛) · 별자리 칸(유도 — 가장 덜 맞는 칸)
 local CALLISTO_RANGE = Color3.fromRGB(120, 175, 255)
+local CALLISTO_LURE = Color3.fromRGB(255, 226, 120)
 
 -- 보스 부위 이름표 높이(부위 바닥 기준)
 -- 먼 라인(1)일수록 화면에서 위로 올라가 보이므로 서브코어-삭제는 낮게, 머리는 높게 달아 겹치지 않게 한다
@@ -374,6 +376,11 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 			add("HealCell", "회복 칸", "✚", Color3.fromRGB(110, 240, 130), nil, "턴 끝에 이 칸에 서 있으면 최대 체력 30% 회복(회복 불가 중에도 15%).")
 		end
 	end
+	-- 묶임 면역(조율자 미자르·디버그 검수 공통 — BattleSkillEffects.TryBind). 디버그전은 위 검수 칸 줄이 이미 보여 준다
+	local bindImmune = status.Immune and status.Immune[ClassResources.BIND] or 0
+	if not boss and bindImmune > 1 and not (status.Stacks and (status.Stacks[ClassResources.BIND] or 0) > 0) then
+		add("BindImmune", "묶임 면역", "免", Color3.fromRGB(170, 230, 255), bindImmune - 1, string.format("묶인 뒤라 앞으로 %d턴 동안 다시 묶이지 않음.", bindImmune - 1))
+	end
 	if status.Shield > 0 then
 		add("Shield", "보호막", "盾", Color3.fromRGB(120, 190, 255), status.Shield, "받는 피해를 이 수치만큼 먼저 막는다.")
 	end
@@ -657,20 +664,44 @@ local PHASE_FLASH = {
 	칼리스토 알림(2026-10-31): 처음 · 페이지가 바뀔 때 · [작은 곰 자리]를 얻을 때 · 장판을 깔 때 한 번씩 화면 가운데 글.
 ]]
 local CALLISTO_FLASH = Color3.fromRGB(150, 190, 255)
+-- 페이지마다 기본 표정(그린 얼굴 — Combat/Callisto): 1 관찰자 · 2 결의 · 3 슬픔(눈물)
+local CALLISTO_PAGE_MOOD = { [1] = "Observe", [2] = "Resolve", [3] = "Sorrow" }
+
+-- 미뤄 둔 컷신: 처음 나타날 때 등장(비숍의 인사), 페이지가 바뀌면 페이지 전환 — 연출이 한가해지면 튼다
+function BattleClient:_callistoCutscene()
+	local want = self.callistoCutscene
+	local director = self.director
+	if not want or not director or director:IsBusy() or self.qte then
+		return
+	end
+	if not director:Has(want.Id) then
+		return
+	end
+	self.callistoCutscene = nil
+	director:PlaySkill(want.Id, want.Skill, { {} })
+end
+
 function BattleClient:_callistoAlerts(snapshot: any)
 	local view = snapshot.Callisto
 	if not view then
 		self.callistoSeen = nil
 		return
 	end
+	if self.director then
+		self.director:SetMood(view.UnitId, CALLISTO_PAGE_MOOD[view.Page] or "Observe")
+	end
 	local seen = self.callistoSeen
 	if not seen then
 		self.callistoSeen = { Page = view.Page, Ursa = view.UrsaMinor, Field = view.Field }
 		self.hud:Flash("칼리스토 — " .. view.PageName, "큰곰자리의 천문학자 · 몸을 누르면 정보", CALLISTO_FLASH)
+		if (snapshot.Turn or 1) <= 1 then
+			self.callistoCutscene = { Id = view.UnitId, Skill = "CallistoIntro" }
+		end
 		return
 	end
 	if view.Page ~= seen.Page then
 		seen.Page = view.Page
+		self.callistoCutscene = { Id = view.UnitId, Skill = "CallistoPageShift" }
 		self.hud:Flash(string.format("%d페이지 — %s", view.Page, view.PageName), if view.Page >= 3 then "10턴 동안 장판을 버텨라 · 체력 1% 이하면 시험 종료" else nil, CALLISTO_FLASH)
 	end
 	if view.UrsaMinor and not seen.Ursa then
@@ -1418,6 +1449,13 @@ function BattleClient:_paintTiles()
 		end
 	end
 	local planSeen: { [string]: number } = {}
+	-- 칼리스토: 칸마다 이번 턴 맞는 횟수 · 연타 수 · 별자리 칸
+	local callistoHits: { [string]: number } = {}
+	local callistoStrikes = 0
+	local lureAt: { [string]: boolean } = {}
+	for _, c in (snapshot.Callisto and snapshot.Callisto.Lure) or {} do
+		lureAt[c[1] .. "," .. c[2]] = true
+	end
 	for _, enemyId in snapshot.Planned or {} do
 		local unit = snapshot.Units[enemyId]
 		planSeen[enemyId] = (planSeen[enemyId] or 0) + 1
@@ -1426,14 +1464,30 @@ function BattleClient:_paintTiles()
 			local planSkill = BattleSkills.ById(plan.SkillId)
 			local damaging = planSkill ~= nil and ((planSkill.Damage or 0) > 0 or planSkill.HpRatio ~= nil or planSkill.Inflicts == true) and not plan.Canceled
 			local callisto = unit.DefId == "Callisto"
-			if damaging and (unit.Part or (callisto and planSeen[enemyId] == 1)) then
-				-- 칼리스토 연타(Strikes)는 같은 칸 예고가 여럿 — 묶음 하나에 "×N"
+			if callisto and damaging then
+				-- 칼리스토 유도(2026-10-31): 연타마다 칸이 달라 칸마다 몇 대 맞는지 센다(별자리 칸 글자 옆에 보인다)
+				for _, c in plan.Cells do
+					local key = c[1] .. "," .. c[2]
+					callistoHits[key] = (callistoHits[key] or 0) + 1
+				end
+				callistoStrikes = math.max(callistoStrikes, planSeen[enemyId])
+			end
+			if damaging and (unit.Part or callisto) then
+				-- 칼리스토 연타는 묶음 하나("×N"), 연타마다 칸이 달라 모든 계획의 칸을 합친다 · 추적 행열은 꼬리표로
 				local group = if callisto then enemyId .. ":" .. plan.SkillId else unit.Part .. ":" .. planSeen[enemyId]
 				local strikes = if callisto and unit.Plans and #unit.Plans > 1 then string.format(" ×%d", #unit.Plans) else ""
-				local label = (planSkill :: any).Name .. strikes .. (if planSkill and planSkill.Unavoidable then " · 회피 불가" elseif planSkill and planSkill.GuardOnly then " · 막기만" elseif planSkill and planSkill.DodgeOnly then " · 회피만" else "")
+				local track = if plan.Track == "Row" then " · 서 있는 행을 노림" elseif plan.Track == "Column" then " · 서 있는 열을 노림" else ""
+				local label = (planSkill :: any).Name .. strikes .. track .. (if planSkill and planSkill.Unavoidable then " · 회피 불가" elseif planSkill and planSkill.GuardOnly then " · 막기만" elseif planSkill and planSkill.DodgeOnly then " · 회피만" else "")
 				for _, c in plan.Cells do
 					local key = c[1] .. "," .. c[2]
 					partRanges[key] = partRanges[key] or {}
+					local dup = false
+					for _, e in partRanges[key] do
+						dup = dup or e.Group == group
+					end
+					if dup then
+						continue
+					end
 					table.insert(partRanges[key], {
 						Group = group,
 						Color = if callisto then CALLISTO_RANGE else partColor[unit.Part] or Color3.fromRGB(255, 150, 40),
@@ -1547,14 +1601,25 @@ function BattleClient:_paintTiles()
 			local cellKey = x .. "," .. y
 			local mod = modAt[cellKey]
 			-- 검수 칸(검수됨!·검수 준비중)은 칸 글자 대신 덩어리마다 글자 하나 + 칸 위 효과(아래 GroupMarks, 2026-10-02 요청)
+			-- 칼리스토 유도: 별자리 칸(★ — 가장 덜 맞는 칸, 턴을 마치면 성위) · 연타면 칸마다 맞는 횟수
+			local hits = callistoHits[cellKey] or 0
+			local callistoTag = nil
+			if lureAt[cellKey] then
+				callistoTag = string.format("★ 별자리%s\n+성위 %d", if callistoStrikes > 1 then string.format(" ×%d", hits) else "", (snapshot.Callisto and snapshot.Callisto.LureSeongwi) or 2)
+			elseif callistoStrikes > 1 and hits > 0 then
+				callistoTag = string.format("×%d", hits)
+			end
 			BattleStage.Tag(
 				ally,
-				if gone[cellKey] or deleting[cellKey] or not gimmick then nil
+				if callistoTag and not gone[cellKey] then callistoTag
+					elseif gone[cellKey] or deleting[cellKey] or not gimmick then nil
 					elseif mod == "Buff" then "▲ 버프"
 					elseif mod == "Debuff" then "▼ 버그"
 					elseif mod == "Heal" then "✚ 회복"
 					else nil,
-				if gone[cellKey] then Color3.fromRGB(235, 235, 235)
+				if lureAt[cellKey] then CALLISTO_LURE
+					elseif callistoTag then CALLISTO_RANGE
+					elseif gone[cellKey] then Color3.fromRGB(235, 235, 235)
 					elseif deleting[cellKey] then TILE_DELETE
 					elseif mod == "Buff" then TILE_BUFF
 					elseif mod == "Heal" then TILE_HEAL
@@ -1569,6 +1634,8 @@ function BattleClient:_paintTiles()
 				BattleStage.Paint(ally, TILE_ME, true)
 			elseif deleting[cellKey] and gimmick then
 				BattleStage.Paint(ally, TILE_DELETE, true)
+			elseif lureAt[cellKey] then
+				BattleStage.Paint(ally, CALLISTO_LURE, true)
 			elseif mod and gimmick then
 				BattleStage.Paint(ally, if mod == "Buff" then TILE_BUFF elseif mod == "Heal" then TILE_HEAL else TILE_DEBUFF, true)
 			else
@@ -1707,8 +1774,8 @@ function BattleClient:_bindInput()
 				self.hud:ShowBossInfo(self.snapshot, part)
 				return
 			end
-			-- 전투 화면은 IgnoreGuiInset 이라 GUI 자리와 마우스 자리가 같은 기준이다
-			if self.hud:IsBossInfoOpen() and not self.hud:IsOverBossInfo(UserInputService:GetMouseLocation()) then
+			-- AbsolutePosition 은 상단바 아래가 원점(IgnoreGuiInset 이어도) — 마우스 자리에서 상단바 높이를 뺀다
+			if self.hud:IsBossInfoOpen() and not self.hud:IsOverBossInfo(UserInputService:GetMouseLocation() - GuiService:GetGuiInset()) then
 				self.hud:HideBossInfo()
 			end
 		elseif input.KeyCode == Enum.KeyCode.Escape and self.hud:IsBossInfoOpen() then
@@ -1781,6 +1848,8 @@ function BattleClient:_bindInput()
 			self.hud:SetBoss(self:_hpView(self.snapshot))
 			self.hud:SetCallisto(self:_hpView(self.snapshot))
 		end
+		-- 칼리스토 등장·페이지 전환 컷신(연출이 한가할 때 — 공격 연출과 겹치지 않게)
+		self:_callistoCutscene()
 		-- 내 차례(연출이 끝났고 막을 공격 · 기다리는 위협이 없음)면 "내 차례까지" 남겨 둔 화면 효과를 거둔다(조율자 셉텐트리오네스 화면 색)
 		if
 			self.director

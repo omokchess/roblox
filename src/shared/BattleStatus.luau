@@ -366,6 +366,8 @@ function BattleStatus.Snapshot(state: State): any
 		Oil = state.Oil,
 		Stacks = stacks,
 		Modifiers = modifiers,
+		-- 다시 안 걸리는 남은 턴 끝 수(묶임 면역 등 — 상태 아이콘이 보인다)
+		Immune = if state.Immune then table.clone(state.Immune) else nil,
 	}
 end
 

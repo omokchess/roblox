@@ -12,6 +12,7 @@ local STAR_CORE = c(225, 240, 255)
 local DEEP = c(60, 80, 190)
 local FLASH = c(255, 252, 240)
 local BURN = c(255, 170, 90)
+local GOLDEN_STAR = c(255, 222, 150)
 
 local Fx = {}
 
@@ -217,6 +218,55 @@ function Fx.Submerge(ctx: any)
 			Vfx.Pillar(p, { Color = DEEP, Life = 0.6, Height = 4, Width = 2.6 })
 		end
 	end)
+end
+
+--=== 표정 · 등장 · 페이지 전환 ===--
+
+-- 모션 도중 표정 바꾸기(사건 { n = "Mood", m = 표정, d = 초 }) — 그린 얼굴(Combat/Callisto)이 있을 때만
+function Fx.Mood(ctx: any, ev: any)
+	local face = ctx.Actor and ctx.Actor.Face
+	if face and ev and ev.m then
+		face:Set(ev.m, ev.d)
+	end
+end
+
+-- 얼굴 클로즈업 컷신: 정면 약간 옆에서 9 → 5 스터드로 다가간다(돌진 중에도 머리를 따라간다)
+local function faceShot(ctx: any, d: number, from: number, to: number, side: number)
+	local head = ctx.Actor.Model:FindFirstChild("Head") :: BasePart?
+	if not head then
+		return
+	end
+	ctx.Shot(d, function(alpha: number)
+		local h = head.Position
+		local f = ctx.Forward
+		local r = f:Cross(Vector3.yAxis)
+		local k = 1 - (1 - math.min(alpha * 1.4, 1)) ^ 2
+		local dist = from + (to - from) * k
+		local eye = h + f * dist + r * side + Vector3.new(0, 0.35, 0)
+		return CFrame.lookAt(eye, h + Vector3.new(0, 0.05, 0))
+	end)
+end
+
+function Fx.IntroShot(ctx: any, ev: any)
+	faceShot(ctx, (ev and ev.d) or 3.2, 10, 4.6, 1.3)
+	ctx.Vfx.Ring(CFrame.new(Common.Feet(ctx) + Vector3.new(0, 0.12, 0)), { R0 = 0.5, R1 = 6, Color = STAR, Life = 1.2, Width = 0.2, Height = 0.05 })
+end
+
+function Fx.PageShot(ctx: any, ev: any)
+	faceShot(ctx, (ev and ev.d) or 2.7, 8, 4.2, -1.4)
+end
+
+-- 일어서며 별빛이 터진다(무기가 바뀌는 순간과 함께)
+function Fx.PageBurst(ctx: any)
+	local Vfx = ctx.Vfx
+	local p = ctx.Root.Position
+	Vfx.Flash(p + Vector3.new(0, 1, 0), { Color = STAR_CORE, Size = 10, Life = 0.5, Brightness = 8 })
+	for i = 0, 2 do
+		task.delay(0.12 * i, function()
+			Vfx.Ring(CFrame.new(Vector3.new(p.X, ctx.Ground + 0.15, p.Z)), { R0 = 1, R1 = 9 + i * 3, Color = if i == 1 then GOLDEN_STAR else STAR, Life = 0.7, Width = 0.3, Height = 0.06 })
+		end)
+	end
+	Vfx.Burst(p + Vector3.new(0, 1.5, 0), { Count = 24, Colors = { STAR, STAR_CORE }, Size = 0.35, Speed = 20, Life = 0.9, Gravity = -6, Material = Enum.Material.Neon })
 end
 
 --=== 2페이지 성위 품은 자 — 북두칠성 망치 ===--

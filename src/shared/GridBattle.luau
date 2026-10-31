@@ -128,6 +128,8 @@ export type CallistoState = {
 	AlcorId: string?,
 	AlcorCount: number,
 	Swing: { Hit: boolean }?,
+	-- 이번 턴 별자리 칸(유도 — 가장 덜 맞는 칸. 여기서 턴을 마치면 [성위] LURE_SEONGWI)
+	Lure: { { number } }?,
 }
 
 --[[
@@ -155,6 +157,8 @@ export type BossState = {
 	-- 칸을 못 움직이는 턴(검수 준비중 칸에서 턴을 마친 다음 턴) · 다시 안 묶이는 남은 턴 끝 수(LOCK_IMMUNE_TURNS)
 	Locked: number?,
 	LockImmune: number?,
+	-- 지금 공유 묶임 면역(Immune.Bind)이 검수가 스스로 건 것인가(미자르 것과 가른다)
+	OwnBindImmune: boolean?,
 	-- 검수중이 남긴 스테미나 빚: 남은 턴 뒤 Amount 만큼 깎는다
 	StaminaDebt: { { Turns: number, Amount: number } }?,
 	-- 2026-10-03 사용자: 4페이즈·보스 스테미나·보스 버프·충전·궁극기(회복 불가)·부위마다 검은 칸 부작용 하나씩 없앰
@@ -2631,27 +2635,68 @@ local ALIOTH_TURNS = 5
 local SEVEN_MAX = 7
 -- 칠성군: [성위 - 칠성]을 주는 스킬(북두칠성·평타·소환은 빠진다)
 local SEVEN_SKILLS = { CallistoAlioth = true, CallistoMegrez = true, CallistoPhecda = true, CallistoMerak = true }
--- 겨누는 모양: Row = 아군이 선 줄(칼리스토도 그 줄로 옮겨 섬) · Cross/Square = 아군 칸 둘레 · Column = 아군이 선 열 · All = 아군 칸 전부
-local CALLISTO_AIM: { [string]: string } = {
-	CallistoSlash = "Row",
-	CallistoPhoto = "Cross",
-	CallistoTrohia = "Square",
-	CallistoSymberasma = "All",
-	CallistoSynthesis = "Row",
-	CallistoArktos = "All",
-	CallistoAstro = "All",
-	CallistoResonance = "Row",
-	CallistoArtificial = "Square",
-	CallistoShower = "Column",
-	CallistoSubmerge = "All",
-	CallistoBuried = "Row",
-	CallistoAlioth = "All",
-	CallistoMegrez = "Cross",
-	CallistoPhecda = "Column",
-	CallistoMerak = "Row",
-	CallistoDipper = "All",
+--[[
+	겨누는 방식(2026-10-31 사용자: "칼리스토 스킬 피하기가 많이 쉽다 — 플레이어 위치를 유도해서 공격하도록").
+	예전엔 아군이 선 칸 둘레만 쳐서 예고를 보고 아무 칸으로나 옮기면 다 피했다(이동은 어디로든 한 번).
+	  Pocket n   아군 칸 전부를 치되 별자리 칸 n 개만 비운다 — 별자리 칸은 아군 자리에서 3칸 넘게 떨어진 곳(꼭 옮겨야 한다)
+	  Strikes    연타마다 무늬가 다르다(앞뒤 절반·체크·사선·줄) — 모든 칸이 적어도 한 번 맞고, 가장 덜 맞는 칸이 별자리 칸
+	             (3연타는 그 칸만 0번, 5연타는 그 칸도 마지막 한 대 — 다른 칸은 그보다 많이)
+	  All        아군 칸 전부 · TrackRow/TrackColumn  맞는 순간 서 있는 행·열(어디 서도 닿는다 — 사양 "해당 행·열 전체")
+	별자리 칸에서 턴을 마치면 [성위] LURE_SEONGWI — 피하면 별이 쌓여 [뭇별]·강타로 돌아오고, 안 피하면 맞는다.
+]]
+local CALLISTO_FORM: { [string]: { Kind: string, Size: number? } } = {
+	CallistoSlash = { Kind = "Pocket", Size = 2 },
+	CallistoPhoto = { Kind = "Pocket", Size = 3 },
+	CallistoTrohia = { Kind = "Strikes" },
+	CallistoSymberasma = { Kind = "All" },
+	CallistoSynthesis = { Kind = "Strikes" },
+	CallistoArktos = { Kind = "All" },
+	CallistoAstro = { Kind = "All" },
+	CallistoResonance = { Kind = "Pocket", Size = 3 },
+	CallistoArtificial = { Kind = "Pocket", Size = 2 },
+	CallistoShower = { Kind = "Strikes" },
+	CallistoSubmerge = { Kind = "All" },
+	CallistoBuried = { Kind = "Pocket", Size = 3 },
+	CallistoAlioth = { Kind = "All" },
+	CallistoMegrez = { Kind = "Pocket", Size = 2 },
+	CallistoPhecda = { Kind = "TrackColumn" },
+	CallistoMerak = { Kind = "TrackRow" },
+	CallistoDipper = { Kind = "All" },
 }
-GridBattle.CALLISTO_AIM = CALLISTO_AIM
+GridBattle.CALLISTO_FORM = CALLISTO_FORM
+-- 별자리 칸에서 턴을 마치면 얻는 [성위]
+local LURE_SEONGWI = 2
+GridBattle.LURE_SEONGWI = LURE_SEONGWI
+-- 연타 무늬(칸 x 1 = 가운데 선 쪽 · 6 = 맨 뒤 / y 1~3)
+local STRIKE_FORMS: { (number, number) -> boolean } = {
+	function(x, _y)
+		return x <= 3
+	end,
+	function(x, _y)
+		return x >= 4
+	end,
+	function(x, y)
+		return (x + y) % 2 == 0
+	end,
+	function(x, y)
+		return (x + y) % 2 == 1
+	end,
+	function(x, y)
+		return (x + y) % 3 == 0
+	end,
+	function(x, y)
+		return (x + y) % 3 == 1
+	end,
+	function(x, y)
+		return (x + y) % 3 == 2
+	end,
+	function(_x, y)
+		return y ~= 2
+	end,
+	function(x, y)
+		return y == 2 or x == 1 or x == 6
+	end,
+}
 
 local function stackOf(unit: Unit, id: string): number
 	return BattleStatus.Stack(unit.Status, id)
@@ -2854,24 +2899,166 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 	return id
 end
 
--- 겨눈 아군 칸들(예고 때 아군이 선 칸 기준)
-local function callistoCells(state: State, aim: string, at: BattleGrid.Cell): { { number } }
-	local w, h = state.Grid.Width, state.Grid.Height
+local function allCells(state: State): { { number } }
 	local cells = {}
-	for x = 1, w do
-		for y = 1, h do
-			local dx, dy = math.abs(x - at.X), math.abs(y - at.Y)
-			local hit = aim == "All"
-				or (aim == "Row" and y == at.Y)
-				or (aim == "Column" and x == at.X)
-				or (aim == "Square" and dx <= 1 and dy <= 1)
-				or (aim == "Cross" and dx + dy <= 1)
-			if hit then
-				table.insert(cells, { x, y })
-			end
+	for x = 1, state.Grid.Width do
+		for y = 1, state.Grid.Height do
+			table.insert(cells, { x, y })
 		end
 	end
 	return cells
+end
+
+local function hasCell(list: { { number } }, x: number, y: number): boolean
+	for _, c in list do
+		if c[1] == x and c[2] == y then
+			return true
+		end
+	end
+	return false
+end
+
+-- 별자리 칸 고르기: 아군 자리에서 맨해튼 3칸 이상 떨어진 칸 하나 + 이웃으로 size 칸까지(아군 칸은 빼고)
+local NEIGHBORS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
+local function pickLure(state: State, rng: () -> number, here: BattleGrid.Cell, size: number): { { number } }
+	local far = {}
+	for _, c in allCells(state) do
+		if math.abs(c[1] - here.X) + math.abs(c[2] - here.Y) >= 3 then
+			table.insert(far, c)
+		end
+	end
+	if #far == 0 then
+		far = allCells(state)
+	end
+	local lure = { far[math.floor(rng() * #far) + 1] }
+	for _ = 1, 24 do
+		if #lure >= size then
+			break
+		end
+		local base = lure[math.floor(rng() * #lure) + 1]
+		local d = NEIGHBORS[math.floor(rng() * 4) + 1]
+		local x, y = base[1] + d[1], base[2] + d[2]
+		local inside = x >= 1 and x <= state.Grid.Width and y >= 1 and y <= state.Grid.Height
+		if inside and not (x == here.X and y == here.Y) and not hasCell(lure, x, y) then
+			table.insert(lure, { x, y })
+		end
+	end
+	return lure
+end
+
+--[[
+	연타 무늬: count 타마다 STRIKE_FORMS 중 하나(겹치지 않게). 별자리 칸(lure 첫 칸)은 3연타면 한 번도, 5연타면 마지막 한 대만 맞고
+	다른 칸은 그보다 한 번 이상 더 맞게 메운다(가장 작은 무늬부터) — 빈틈이 없어 위치만으로는 다 못 피한다.
+]]
+local function strikeCells(state: State, rng: () -> number, count: number, lure: { number }): { { { number } } }
+	local w, h = state.Grid.Width, state.Grid.Height
+	local order = {}
+	for i = 1, #STRIKE_FORMS do
+		table.insert(order, i)
+	end
+	for i = #order, 2, -1 do
+		local j = math.floor(rng() * i) + 1
+		order[i], order[j] = order[j], order[i]
+	end
+	local sets: { { [number]: boolean } } = {}
+	for k = 1, count do
+		local form = STRIKE_FORMS[order[(k - 1) % #order + 1]]
+		local set = {}
+		for x = 1, w do
+			for y = 1, h do
+				if form(x, y) then
+					set[x * 10 + y] = true
+				end
+			end
+		end
+		sets[k] = set
+	end
+	local lk = lure[1] * 10 + lure[2]
+	local lureHits = if count >= 5 then 1 else 0
+	for k = 1, count do
+		sets[k][lk] = nil
+	end
+	if lureHits == 1 then
+		sets[count][lk] = true
+	end
+	local function size(set: { [number]: boolean }): number
+		local n = 0
+		for _ in set do
+			n += 1
+		end
+		return n
+	end
+	for x = 1, w do
+		for y = 1, h do
+			local key = x * 10 + y
+			if key ~= lk then
+				local hits = 0
+				for k = 1, count do
+					if sets[k][key] then
+						hits += 1
+					end
+				end
+				while hits < lureHits + 1 do
+					local best, bestSize = nil, math.huge
+					for k = 1, count do
+						if not sets[k][key] and size(sets[k]) < bestSize then
+							best, bestSize = k, size(sets[k])
+						end
+					end
+					if not best then
+						break
+					end
+					sets[best][key] = true
+					hits += 1
+				end
+			end
+		end
+	end
+	local out = {}
+	for k = 1, count do
+		local cells = {}
+		for x = 1, w do
+			for y = 1, h do
+				if sets[k][x * 10 + y] then
+					table.insert(cells, { x, y })
+				end
+			end
+		end
+		out[k] = cells
+	end
+	return out
+end
+
+--[[
+	칼리스토 이동 — 기물군의 비숍(사양 스토리)이라 체스 비숍처럼 **대각선으로만** 옮긴다(몇 칸이든). 행을 노리는 스킬이면
+	그 행에 닿는 대각 칸을 먼저 찾는다. 갈 곳이 없으면 제자리.
+]]
+local function bishopMove(state: State, rng: () -> number, unit: Unit, wantRow: number?)
+	local from = BattleGrid.CellOf(state.Grid, unit.Id)
+	if not from then
+		return
+	end
+	local options, preferred = {}, {}
+	for _, d in { { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } } do
+		local x, y = from.X + d[1], from.Y + d[2]
+		while x >= 1 and x <= state.Grid.Width and y >= 1 and y <= state.Grid.Height do
+			if not BattleGrid.Occupant(state.Grid, "Enemy", x, y) then
+				table.insert(options, { x, y })
+				if wantRow and y == wantRow then
+					table.insert(preferred, { x, y })
+				end
+			else
+				break
+			end
+			x += d[1]
+			y += d[2]
+		end
+	end
+	local pool = if #preferred > 0 then preferred else options
+	if #pool > 0 then
+		local pick = pool[math.floor(rng() * #pool) + 1]
+		BattleGrid.Move(state.Grid, unit.Id, pick[1], pick[2])
+	end
 end
 
 --[[
@@ -2903,18 +3090,37 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 			pushLog(state, string.format("알리오스 — 아군 필드에 장판 %d턴", ALIOTH_TURNS))
 		end
 	end
-	local aim = CALLISTO_AIM[id] or "Row"
-	for _ = 1, 8 do
-		local x = if aim == "Row" then math.floor(rng() * 3) + 1 else math.floor(rng() * state.Grid.Width) + 1
-		local y = if aim == "Row" then here.Y else math.floor(rng() * state.Grid.Height) + 1
-		if BattleGrid.Move(state.Grid, unit.Id, x, y) then
-			break
+	local form = CALLISTO_FORM[id] or { Kind = "All" }
+	bishopMove(state, rng, unit, if form.Kind == "TrackRow" then here.Y else nil)
+	local count = math.max(1, skill.Strikes or 1)
+	local sets: { { { number } } } = {}
+	c.Lure = nil
+	if form.Kind == "Pocket" then
+		local lure = pickLure(state, rng, here, form.Size or 2)
+		c.Lure = lure
+		local cells = {}
+		for _, cell in allCells(state) do
+			if not hasCell(lure, cell[1], cell[2]) then
+				table.insert(cells, cell)
+			end
+		end
+		for k = 1, count do
+			sets[k] = cells
+		end
+	elseif form.Kind == "Strikes" then
+		local lure = pickLure(state, rng, here, 1)
+		c.Lure = lure
+		sets = strikeCells(state, rng, count, lure[1])
+	else
+		local cells = allCells(state)
+		for k = 1, count do
+			sets[k] = cells
 		end
 	end
-	local cells = callistoCells(state, aim, here)
+	local track = if form.Kind == "TrackRow" then "Row" elseif form.Kind == "TrackColumn" then "Column" else nil
 	local plans = {}
-	for _ = 1, math.max(1, skill.Strikes or 1) do
-		table.insert(plans, { SkillId = id, Cells = cells })
+	for k = 1, count do
+		table.insert(plans, { SkillId = id, Cells = sets[k], Track = track, Strike = k })
 		table.insert(state.Planned, unit.Id)
 	end
 	unit.Plans = plans
@@ -2996,6 +3202,20 @@ local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: U
 		setGochal(ally, false)
 		timedDebuff(ally, ClassResources.SYMBERASMA, "심베라즈마", CALLISTO_DEBUFF_TURNS, { { "DamageTaken", 0.2 } })
 		pushLog(state, ally.Name .. " — 고찰이 지워지고 [심베라즈마] (방어력 −20%)")
+		-- 사양 "멱살을 잡고 찍은 뒤 내던진다": 아군을 3칸 넘게 떨어진 칸으로 던진다
+		local at = BattleGrid.CellOf(state.Grid, ALLY_ID)
+		if at then
+			local far = {}
+			for _, cell in allCells(state) do
+				if math.abs(cell[1] - at.X) + math.abs(cell[2] - at.Y) >= 3 then
+					table.insert(far, cell)
+				end
+			end
+			if #far > 0 then
+				local to = far[math.floor(nextRandom(state) * #far) + 1]
+				BattleGrid.Move(state.Grid, ALLY_ID, to[1], to[2])
+			end
+		end
 	elseif id == "CallistoSynthesis" then
 		if seongwi > 0 then
 			BattleStatus.AddBurn(ally.Status, 5)
@@ -3037,6 +3257,13 @@ local function callistoEndTurn(state: State, c: CallistoState)
 	if ally.Alive and stackOf(ally, ClassResources.GOCHAL) > 0 then
 		BattleStatus.AddBurn(ally.Status, 1)
 	end
+	-- 별자리 칸(유도): 거기서 턴을 마쳤으면 [성위] — 피한 값
+	local at = BattleGrid.CellOf(state.Grid, ALLY_ID)
+	if c.Lure and at and ally.Alive and hasCell(c.Lure, at.X, at.Y) then
+		addSeongwi(state, ally, LURE_SEONGWI)
+		pushLog(state, string.format("별자리 칸 — %s [성위] %d", ally.Name, LURE_SEONGWI))
+	end
+	c.Lure = nil
 	for id, source in { [ClassResources.MUTBYEOL] = "뭇별", [ClassResources.SYMBERASMA] = "심베라즈마", [ClassResources.BLADE_SCAR] = "칼춤 상처" } do
 		local left = 0
 		for _, m in ally.Status.Modifiers do
@@ -3499,11 +3726,20 @@ local function bossTurnEffects(state: State, boss: BossState)
 		end
 	end
 	if pending and ally.Alive then
-		if (boss.LockImmune or 0) > 0 then
-			pushLog(state, string.format("검수 준비중 칸에서 턴을 마쳤지만 묶임 면역(%d턴) — 움직일 수 있음", boss.LockImmune :: number))
+		-- 묶임 면역은 조율자 미자르 묶임과 함께 쓴다(BattleSkillEffects.TryBind — 한 규칙). 검수가 스스로 건 면역은
+		-- 제 카운터(LockImmune)로만 세고, 공유 면역(Immune.Bind)은 미자르가 건 것일 때만 본다(OwnBindImmune)
+		local immune = BattleSkillEffects.BindImmune(ally.Status)
+		if not immune then
+			boss.OwnBindImmune = false
+		end
+		if (boss.LockImmune or 0) > 0 or (immune and not boss.OwnBindImmune) then
+			pushLog(state, "검수 준비중 칸에서 턴을 마쳤지만 묶임 면역 — 움직일 수 있음")
 		else
 			boss.Locked = 1
 			boss.LockImmune = LOCK_IMMUNE_TURNS
+			-- 턴 끝에 묶이므로 이 EndTurn 의 면역 감소를 한 번 더 본다(미자르가 묶인 턴과 그 뒤 두 턴을 건너뛰게)
+			BattleSkillEffects.SetImmune(ally.Status, ClassResources.BIND, LOCK_IMMUNE_TURNS + 1)
+			boss.OwnBindImmune = true
 			pushLog(state, "검수 준비중 칸에서 턴을 마쳤다 — 다음 턴 움직일 수 없다")
 		end
 	end
@@ -3814,6 +4050,9 @@ function GridBattle.Snapshot(state: State): any
 			AlcorId = if alcorAlive(state, callisto) then callisto.AlcorId else nil,
 			Dipper = callisto.Dipper,
 			Chilseong = callisto.Page == 2 and unit ~= nil and unit.Health < unit.MaxHealth * CHILSEONG_RATIO,
+			-- 별자리 칸(유도 — 가장 덜 맞는 칸, 여기서 턴을 마치면 성위)
+			Lure = if callisto.Lure then table.clone(callisto.Lure) else nil,
+			LureSeongwi = LURE_SEONGWI,
 		}
 	end
 	--[[
