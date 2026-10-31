@@ -1,3 +1,4 @@
+-- (2026-10-31) 처음 깔 때 쓴 생성기. 지금 쓰는 PlayerService·PlayerClient 원본은 tools/studio_only/ — 그쪽을 고쳐 Studio 에 넣는다
 --!nocheck
 --[[
 	Player_Setup.luau — 플레이어 쪽을 한 번에 깐다.
