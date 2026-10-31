@@ -11,7 +11,7 @@
 	  알카이드  같은 행·열 아군 [가하는 피해량] +50%, 없으면 칠성. **신앙심 말고는 피해% 가 안 먹는다**(FaithOnlyDamage)
 	  미자르    턴 시작 시 한 아군(솔로면 자신) 지정 → 묶임 1 · 보호막 49 · 가하는 +50%. 자신이면 칠성
 	  페크다    아군 자동 회피 20%. 공격을 피하면(자동 회피 · QTE 회피 · 자동 패링) 칠성
-	  두베      턴 시작 시 아군 보호막 7. 받은 피해가 최대 체력의 14% 에 이르면 칠성 — 보호막이 먹은 피해는 절반으로 센다.
+	  두베      턴 시작 시 아군 보호막 7. 적의 공격 한 번에 받은 피해가 최대 체력의 14% 이상이면 칠성 — 보호막이 먹은 피해는 절반으로 센다.
 	            디버그 무적·자동 회피(자동 QTE)가 켜져 있으면 늘 켜진다.
 	  2026-10-31 사용자: "특정 이유때문에 일정량의 칠성을 얻지 못하는 경우가 있어" — 페크다는 자동 회피만, 두베는 실제로 깎인 양만 세어
 	  QTE 를 잘 피하면(디버그 자동 QTE 성공·무적이면 늘) 두 별이 안 켜져 칠성이 5 에서 멈췄다 → 위처럼 넓혔다.
@@ -224,9 +224,9 @@ M.Attuner_Phecda = {
 --[[
 	두베(2026-10-31 사용자): "보호막이 있다면 HP의 28%에 이르는 피해를 받을 경우에 켜지게 해서, HP가 100이면 보호막이 28 달았을 때에도 켜지게.
 	도중에 보호막이 다 소모돼서 HP가 감소할 땐 1:1 비율 그대로 … 보호막이 14가 있다 하면 7%에 7% 실HP가 더 달아서 발동" →
-	받은 피해를 쌓는다: 보호막이 먹은 양 ÷ 2 + 깎인 체력. 쌓인 양이 최대 체력의 14% 에 이르면 칠성(최대 체력 100 이면 보호막만 28, 또는
-	보호막 14 + 체력 7). 공격 밖에서 깎인 체력(화상 등)도 1:1 로 센다. 별이 켜져 있는 동안은 0 으로 두고(셉텐트리오네스로 꺼지면 처음부터),
-	디버그 무적·자동 회피(자동 QTE)면 늘 켠다(같은 날 사용자).
+	적의 공격 한 번에 받은 피해 = 보호막이 먹은 양 ÷ 2 + 깎인 체력. 최대 체력의 14% 이상이면 칠성(최대 체력 100 이면 보호막만 28, 또는
+	보호막 14 + 체력 7). 디버그 무적·자동 회피(자동 QTE)면 늘 켠다(같은 날 사용자).
+	같은 날 질문 답: 여러 번 맞은 것을 쌓지 않고 한 번의 공격으로만, 공격 밖에서 깎인 체력(화상 등)은 안 센다.
 ]]
 local DUBHE_SHARE = 0.14
 
@@ -237,18 +237,6 @@ local function dubheDebug(c: Card)
 	end
 end
 
-local function dubheAdd(c: Card, shieldLost: number, healthLost: number)
-	local ally = H.Ally(c)
-	if ally.StarLit and ally.StarLit.Dubhe then
-		c.Mem.dubhe = 0
-		return
-	end
-	c.Mem.dubhe = (c.Mem.dubhe or 0) + shieldLost / 2 + healthLost
-	if c.Mem.dubhe >= ally.MaxHealth * DUBHE_SHARE then
-		c.Mem.dubhe = 0
-		light(c, "Dubhe")
-	end
-end
 
 M.Attuner_Dubhe = {
 	TurnStart = function(c: Card)
@@ -272,13 +260,10 @@ M.Attuner_Dubhe = {
 		c.Mem.before = nil
 		if before then
 			local ally = H.Ally(c)
-			dubheAdd(c, math.max(0, before.Shield - ally.Status.Shield), math.max(0, before.Health - ally.Health))
-		end
-	end,
-	-- 공격 밖에서 깎인 체력(화상 등). 공격 중이면 Defend 가 센다
-	Damaged = function(c: Card, info: any)
-		if not c.Mem.before then
-			dubheAdd(c, 0, info.Amount or 0)
+			local taken = math.max(0, before.Shield - ally.Status.Shield) / 2 + math.max(0, before.Health - ally.Health)
+			if taken >= ally.MaxHealth * DUBHE_SHARE then
+				light(c, "Dubhe")
+			end
 		end
 	end,
 	-- 태우기 위한 별: 자신의 턴이 끝난 뒤 메그레즈(쓸 때마다 기본 피해량 감소 — 카드가 Flat 으로 깎는다)

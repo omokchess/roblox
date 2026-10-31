@@ -459,12 +459,12 @@ local function runCardEffects()
 	GridBattle.ResolveDodge(stars, starFoe.Id, "Success")
 	expect((starAlly :: any).StarLit and (starAlly :: any).StarLit.Phecda == true, "페크다 must light when the ally dodges by QTE")
 	expect((starAlly :: any).StarLit.Dubhe == true, "두베 must always light in debug god / auto-dodge mode")
-	-- 두베: 받은 피해(보호막이 먹은 양은 절반) ≥ 최대 체력 14%. 최대 체력 100 · 보호막 없음 · 슬라임 한 대(18 이상)면 켜지고,
-	-- 보호막이 넉넉하면 한 대(18 ~ 27 → 9 ~ 13.5)로는 안 켜진다
-	local function hitOnce(shield: number): boolean
+	-- 두베: 공격 한 번에 받은 피해(보호막이 먹은 양은 절반) ≥ 최대 체력 14%. 최대 체력 100 · 보호막 없음 · 슬라임 한 대(18 이상)면 켜지고,
+	-- 보호막이 넉넉하면 한 대(18 ~ 27 → 9 ~ 13.5)로는 안 켜진다. 최대 체력 200 이면 한 대(18 ~ 27 < 28)씩 두 번 맞아도 쌓이지 않는다
+	local function hits(maxHealth: number, shield: number, count: number): boolean
 		local b = battleWith("Attuner", {})
 		local who = GridBattle.Ally(b)
-		who.MaxHealth, who.Health, who.Status.Shield = 100, 100, shield
+		who.MaxHealth, who.Health, who.Status.Shield = maxHealth, maxHealth, shield
 		-- 페크다 자동 회피(20%, 씨앗 고정)가 이 한 대를 피하지 않게 뺀다
 		local cards = (b :: any).Runtime.Cards
 		for i = #cards, 1, -1 do
@@ -472,11 +472,14 @@ local function runCardEffects()
 				table.remove(cards, i)
 			end
 		end
-		GridBattle.ResolveDodge(b, GridBattle.AliveEnemies(b)[1].Id, "Fail")
+		for _ = 1, count do
+			GridBattle.ResolveDodge(b, GridBattle.AliveEnemies(b)[1].Id, "Fail")
+		end
 		return (who :: any).StarLit ~= nil and (who :: any).StarLit.Dubhe == true
 	end
-	expect(hitOnce(0), "두베 must light when 14%+ of max health is lost")
-	expect(not hitOnce(1000), "두베 must count shield-absorbed damage at half (one slime hit stays under 14%)")
+	expect(hits(100, 0, 1), "두베 must light when one attack takes 14%+ of max health")
+	expect(not hits(100, 1000, 1), "두베 must count shield-absorbed damage at half (one slime hit stays under 14%)")
+	expect(not hits(200, 0, 2), "두베 must not add up separate attacks")
 
 	--=== 피격 → 분노(다혈질 + 격노) ===--
 

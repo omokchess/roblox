@@ -213,6 +213,9 @@ local function fight(classId: string, cards: { any }, turns: number, policy: str
 		for _, enemy in GridBattle.AliveEnemies(state) do
 			enemy.Resist = { Fire = 0.9 }
 		end
+		-- 두베(적의 공격 한 방에 최대 체력 14%, 2026-10-31)는 슬라임으론 안 켜져 칠성이 6 에서 멈춘다 → 셉텐트리오네스 카드를 보려고
+		-- 디버그 자동 회피처럼 늘 켠다(battle.Debug.AutoDodge 는 두베만 본다)
+		state.Debug = { AutoDodge = true }
 	end
 	if policy == "low" then
 		GridBattle.Ally(state).Health = 100

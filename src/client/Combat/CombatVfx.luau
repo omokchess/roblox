@@ -22,6 +22,8 @@ local folder: Folder? = nil
 -- 흔들림: 연출이 카메라에 더한다
 CombatVfx.ShakeAmp = 0
 local shakes: { { A: number, T: number, D: number } } = {}
+-- 내 차례가 오면 거둘 것(조율자 셉텐트리오네스가 남겨 둔 화면 색 등) — UntilMyTurn · MyTurn
+local untilTurn: { () -> () } = {}
 
 local function root(): Folder
 	if not folder or not folder.Parent then
@@ -98,6 +100,7 @@ function CombatVfx.Clear()
 	end
 	active = {}
 	shakes = {}
+	untilTurn = {}
 	if folder then
 		folder:ClearAllChildren()
 	end
@@ -615,6 +618,22 @@ function CombatVfx.Block(cf: CFrame, size: Vector3, opts: { [string]: any })
 	end, function()
 		p:Destroy()
 	end)
+end
+
+-- 내 차례가 오면 fn 을 부른다(한 번). BattleClient 가 플레이어 차례(연출이 끝났고 막을 공격 · 기다리는 위협이 없음)마다 MyTurn() 을 부른다
+function CombatVfx.UntilMyTurn(fn: () -> ())
+	table.insert(untilTurn, fn)
+end
+
+function CombatVfx.MyTurn()
+	if #untilTurn == 0 then
+		return
+	end
+	local list = untilTurn
+	untilTurn = {}
+	for _, fn in list do
+		fn()
+	end
 end
 
 -- 이 모듈 밖에서 부품이 필요할 때(무기 복제 날리기 등)

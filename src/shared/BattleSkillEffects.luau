@@ -90,6 +90,8 @@ export type Effect = {
 	Before: ((Context) -> number)?,
 	-- 맞는 대상마다 더하는 [가하는 피해량](낙인 스택당 등). GridBattle 이 hitInfo.Bonus 에 더한다
 	TargetBonus: ((Context, any) -> number)?,
+	-- 타격 하나가 끝날 때마다(대상, 몇 번째 타격) — 연타 사이에 상태이상을 쌓아 다음 타격의 TargetBonus 가 보게
+	EachHit: ((Context, any, number) -> ())?,
 	-- 피해 계산 후.
 	After: ((Context) -> ())?,
 }
@@ -1337,6 +1339,8 @@ local function lightStar(ctx: Context, source: string)
 	end
 end
 
+local SEPT_BURN = { 1, 1, 1, 1, 1, 1, 1, 3 } -- 셉텐트리오네스 타격마다 거는 화상(레이저 7발 · 강타)
+
 local attunerEffects: { [string]: Effect } = {
 	-- 메그레즈: 사용 시 칠성(별마다 한 번). 적중 시 화상 3, 융해 1.
 	Megrez = {
@@ -1376,16 +1380,29 @@ local attunerEffects: { [string]: Effect } = {
 		셉텐트리오네스(강화, 칠성 7). 스테미나 60 — 모자란 만큼 체력(GridBattle 이 `HealthForStamina` 로 낸다).
 		적중 시 (피해 / 100) 회복(최대 30), 화상 10 · 융해 5, 자신 화상 3, 핵융합 반응. 쓰고 나면 별을 전부 끈다.
 	]]
+	--[[
+		2026-10-31 사용자: "대상의 화상 1당 이 스킬의 피해량 +10%(최대 400%)". 같은 날 질문 답: 레이저가 맞을 때마다 화상을 걸고 그것까지 센다
+		(레이저 1씩 · 강타 3 — 합 10 은 그대로, 뒤 타격일수록 세짐), 다 맞힌 뒤 대상의 화상을 전부 한 번 발동(화상 % 만큼 최대 체력 화염 피해, 화상은 남는다).
+	]]
 	Septentriones = {
-		-- 2026-10-31 사용자: "대상의 화상 1당 이 스킬의 피해량 +10%(최대 400%)"
 		TargetBonus = function(ctx, target)
 			return math.min(4, 0.1 * (ctx.StatusOf(target).Burn or 0))
+		end,
+		EachHit = function(ctx, target, hitIndex)
+			BattleStatus.AddBurn(ctx.StatusOf(target), SEPT_BURN[hitIndex] or 0)
 		end,
 		After = function(ctx)
 			if #ctx.Targets > 0 then
 				local cap = ctx.Query("SeptentrionesHealCap", 30)
 				local healed = ctx.Heal(ctx.Ally, math.min(cap, math.floor((ctx.TotalDealt or 0) / 100)))
-				scorch(ctx, 10, 5)
+				scorch(ctx, 0, 5) -- 화상은 타격마다 걸었다(EachHit). 여기선 융해와 카드의 화상 보너스만
+				for _, target in ctx.Targets do
+					local burn = ctx.StatusOf(target).Burn or 0
+					if target.Alive and burn > 0 then
+						local dealt = ctx.Damage(target, math.floor(target.MaxHealth * burn / 100), "Fire", true)
+						ctx.Log(string.format("화상 발동 %d%% — %d 피해", burn, dealt))
+					end
+				end
 				BattleStatus.AddBurn(ctx.Status, 3)
 				if ctx.Query("SeptentrionesNoFusion", 0) < 1 then
 					BattleStatus.SpendAll(ctx.Status, R.FUSION)

@@ -13,8 +13,8 @@
 	                 그 선이 네 번 부분부분 터지고 다섯 번째에 통째로 터진다(MerakBurst — 비율 10 · 2 · 2 · 2 · 2 · 4)
 	  알리오스       별을 적 진영 위로 띄우고(AliothLaunch) 허공에 팔을 휘두를 때마다 별이 진형을 곧게 가로지른다(AliothStrike 10타,
 	                 0.5 · 0.45 · 0.2 · 0.15 … 초 간격으로 빨라짐 — 사용자 원안의 두 배 빠르기) → 손으로 돌아온다(AliothReturn)
-	  셉텐트리오네스 컷신 — 왼 허리로 손을 모았다 치켜들면 별 일곱이 하늘 높이 오르고 카메라가 따라간다(SeptRise — 레터박스 · 밤하늘 화면 ·
-	                 하늘 성반) → 별이 하나씩 적 진영으로 레이저(SeptLaser — 별 이름표, 매번 다른 화면 색, 카메라는 별을 보다 레이저 끝을 따라 아래로,
+	  셉텐트리오네스 컷신 — 왼 허리로 손을 모았다 치켜들면 별 일곱이 하늘 높이 올라 바닥과 나란히 눕고 카메라가 따라간다(SeptRise — 레터박스 ·
+	                 밤하늘 화면 · 누운 성반, 레이저는 수직으로) → 별이 하나씩 적 진영으로 레이저(SeptLaser — 별 이름표, 매번 다른 화면 색, 카메라는 별을 보다 레이저 끝을 따라 아래로,
 	                 떨어진 자리에 룬 · 하늘과 바닥에 별자리 선이 한 줄씩) → 모으기(SeptGather) → 일곱 빛줄기가 한꺼번에 내리꽂혀 진형 전체를 강타
 	                 (SeptSlam — 화면 효과 · 제목 카드 "SEPTENTRIONES" · 별을 잇는 선 자국이 남는다)
 ]]
@@ -239,8 +239,8 @@ end
 
 --[[
 	제목 카드(별 이름 · SEPTENTRIONES) — 극장판 필살기 이름표처럼: 가로 빛줄이 화면을 왼쪽에서 긋고, 오른쪽에서 미끄러져 들어온 큰 이름이
-	빨강 · 청록으로 갈라졌다가(색수차) 하나로 모인다. 위엔 작은 머리글(로마 숫자 등), 아래엔 바이어 이름 · 한글.
-	opts: Top · Big · Sub · Dur(초) · Y(화면 세로 자리) · Height(화면 세로 비율)
+	빨강 · 청록으로 갈라졌다가(색수차) 하나로 모인다. 위엔 작은 머리글(로마 숫자 등).
+	opts: Top · Big · Dur(초) · Y(화면 세로 자리) · Height(화면 세로 비율). 아랫줄은 없앴다(2026-10-31 질문 답)
 ]]
 local function titleCard(ctx: any, opts: { [string]: any })
 	local gui = screen(ctx, "AttunerTitle", 61)
@@ -273,7 +273,6 @@ local function titleCard(ctx: any, opts: { [string]: any })
 	local red = label(opts.Big, 0.18, 0.56, Enum.Font.Garamond, Color3.fromRGB(255, 70, 110))
 	local cyan = label(opts.Big, 0.18, 0.56, Enum.Font.Garamond, Color3.fromRGB(70, 230, 255))
 	local main = label(opts.Big, 0.18, 0.56, Enum.Font.Garamond, Color3.fromRGB(245, 250, 255))
-	local sub = label(opts.Sub or "", 0.78, 0.2, Enum.Font.GothamMedium, Color3.fromRGB(200, 220, 255))
 	local bar = Instance.new("Frame")
 	bar.BorderSizePixel = 0
 	bar.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -302,7 +301,6 @@ local function titleCard(ctx: any, opts: { [string]: any })
 		red.TextTransparency = 1 - 0.55 * shown
 		cyan.TextTransparency = 1 - 0.55 * shown
 		head.TextTransparency = 1 - 0.85 * shown
-		sub.TextTransparency = 1 - 0.85 * shown
 		local sweep = math.min(1, a / 0.3)
 		bar.Size = UDim2.new(sweep, 0, 0, 2 + 4 * (1 - sweep))
 		bar.BackgroundTransparency = 0.1 + 0.9 * math.clamp((a - 0.3) / 0.35, 0, 1)
@@ -350,21 +348,23 @@ local function night(ctx: any, total: number)
 	CombatVfx.Timed(total, function(t)
 		local a = total * t
 		local k = sine(a / 0.6) * (1 - sine((a - (total - 0.6)) / 0.6))
-		cc.Brightness = -0.14 * k
-		cc.Contrast = 0.18 * k
-		cc.Saturation = -0.35 * k
-		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(175, 195, 255), k)
+		cc.Brightness = -0.24 * k
+		cc.Contrast = 0.25 * k
+		cc.Saturation = -0.45 * k
+		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(150, 175, 255), k)
 	end, function()
 		cc:Destroy()
 	end)
 end
 
 --[[
-	화면 색: preset(Saturation · Contrast · Brightness · Tint)에서 dur 초에 걸쳐 원래대로. Lighting 의 ColorCorrectionEffect 하나를 돌려 쓰고
-	새로 부르면 앞 것은 손을 뗀다. 관전 화면(Quiet)은 손대지 않는다.
+	화면 색: Lighting 의 ColorCorrectionEffect(AttunerGrade) 하나를 돌려 쓴다. preset(Saturation · Contrast · Brightness · Tint)으로 확 들어갔다가
+	0.35초에 걸쳐 hold 배로 가라앉아 머문다 — life 초가 지나면 0.4초에 걸쳐 사라지고, life 가 nil 이면 내 차례가 올 때(CombatVfx.MyTurn —
+	BattleClient) 0.8초에 걸쳐 거둔다. 새 grade 가 오면 앞 것은 손을 뗀다. 관전 화면(Quiet)은 손대지 않는다.
+	2026-10-31 사용자: "감마나 대비 이런거 마음대로 조절해도 되니까 … 막타에 제일 강하게 넣었다가 본인 턴 오면 다시 돌아오게"
 ]]
 local gradeToken: any = nil
-local function grade(ctx: any, p: { [string]: any }, dur: number)
+local function grade(ctx: any, p: { [string]: any }, hold: number, life: number?)
 	if ctx.Quiet then
 		return
 	end
@@ -378,34 +378,55 @@ local function grade(ctx: any, p: { [string]: any }, dur: number)
 	local effect = cc :: ColorCorrectionEffect
 	local token = {}
 	gradeToken = token
+	local t = 0
+	local endAt: number? = life
+	local fade = if life then 0.4 else 0.8
+	if not life then
+		CombatVfx.UntilMyTurn(function()
+			endAt = endAt or t
+		end)
+	end
 	local tint = p.Tint or Color3.new(1, 1, 1)
-	CombatVfx.Timed(dur, function(t)
-		if gradeToken ~= token then
-			return
-		end
-		local k = (1 - t) ^ 2
-		effect.Saturation = (p.Saturation or 0) * k
-		effect.Contrast = (p.Contrast or 0) * k
-		effect.Brightness = (p.Brightness or 0) * k
-		effect.TintColor = Color3.new(1, 1, 1):Lerp(tint, k)
-	end, function()
+	local function finish()
 		if gradeToken == token then
 			effect:Destroy()
 			gradeToken = nil
 		end
-	end)
+	end
+	CombatVfx.Timed(if life then life + fade else 600, function(_, dt)
+		if gradeToken ~= token then
+			return
+		end
+		t += dt
+		local k = hold + (1 - hold) * (1 - sine(t / 0.35))
+		if endAt then
+			local out = (t - endAt) / fade
+			if out >= 1 then
+				finish()
+				return
+			end
+			k *= 1 - sine(out)
+		end
+		effect.Saturation = (p.Saturation or 0) * k
+		effect.Contrast = (p.Contrast or 0) * k
+		effect.Brightness = (p.Brightness or 0) * k
+		effect.TintColor = Color3.new(1, 1, 1):Lerp(tint, k)
+	end, finish)
 end
 
--- 레이저마다 다른 화면 색(사용자: "매 레이저마다 흑백 또는 각종 색깔 연출")
+-- 레이저마다 다른 화면 색(사용자: "매 레이저마다 흑백 또는 각종 색깔 연출") — 갈수록 세지고(대비 · 밝기 · 채도 마음대로),
+-- 다음 레이저까지 40% 로 머문다. 마지막 강타가 가장 세고(SLAM_FLASH → SLAM_GRADE) 내 차례가 올 때까지 남는다
 local LASER_GRADE = {
-	{ Saturation = -1, Contrast = 0.45 },
-	{ Tint = c(255, 120, 150), Contrast = 0.3, Saturation = 0.2 },
-	{ Tint = c(110, 165, 255), Contrast = 0.35 },
-	{ Tint = c(255, 214, 120), Contrast = 0.25, Saturation = 0.25 },
-	{ Tint = c(196, 130, 255), Contrast = 0.3 },
-	{ Tint = c(120, 255, 220), Contrast = 0.3 },
-	{ Saturation = -1, Contrast = 0.9, Brightness = 0.08 },
+	{ Saturation = -1, Contrast = 0.55, Brightness = 0.04 },
+	{ Tint = c(255, 120, 160), Contrast = 0.5, Saturation = 0.35, Brightness = -0.06 },
+	{ Tint = c(110, 160, 255), Contrast = 0.6, Saturation = -0.25, Brightness = -0.1 },
+	{ Tint = c(255, 205, 105), Contrast = 0.65, Saturation = 0.45, Brightness = 0.06 },
+	{ Tint = c(190, 120, 255), Contrast = 0.75, Saturation = 0.25, Brightness = -0.12 },
+	{ Tint = c(105, 255, 215), Contrast = 0.85, Saturation = -0.35, Brightness = 0.08 },
+	{ Saturation = -1, Contrast = 1.1, Brightness = 0.14 },
 }
+local SLAM_FLASH = { Saturation = -1, Contrast = 1.6, Brightness = 0.35 }
+local SLAM_GRADE = { Tint = c(120, 170, 255), Contrast = 1.05, Saturation = 0.55, Brightness = 0.1 }
 
 -- 버릇: 별이 국자를 따라 손잡이 끝(알카이드)부터 국자 입(두베)까지 차례로 푸르게 반짝인다(별은 손을 따라 움직이니 반짝일 때마다 자리를 다시 읽는다)
 local TRACE = { 4, 5, 3, 1, 6, 2, 7 }
@@ -616,7 +637,7 @@ end
 
 local function septOf(ctx: any): any
 	local s = st(ctx)
-	s.sept = s.sept or { Points = dipperGround(ctx), Slammed = false, Fired = {} }
+	s.sept = s.sept or { Points = dipperGround(ctx), Slammed = false, Fired = {}, Pulse = 0 }
 	return s.sept
 end
 
@@ -693,34 +714,27 @@ local function groundRune(ctx: any, sept: any, g: Vector3)
 end
 
 --[[
-	하늘 성반(아스트롤라베): 별자리 뒤(카메라 반대쪽)에 세 겹 고리가 서로 반대로 돈다 — 바깥 눈금 고리 · 가운데 끊긴 고리 · 안쪽 일곱 마디,
-	바깥으로 열두 눈금. 자리는 매 프레임 별 일곱의 가운데, 크기는 별자리 폭을 따른다. 모으면 빨리 돌며 조여 들고, 강타하면 번쩍 커지며 사라진다.
+	하늘 성반(아스트롤라베 — 2026-10-31 질문 답 "더 크고 화려하게"): 바닥과 나란히 누운 별자리 바로 위에 크게 눕는다(아래서 올려다보면 별 뒤).
+	바깥 고리(64 마디) · 끊긴 고리(32) · 바깥 눈금(36, 셋마다 길게) · 금빛 룬 열둘 · 칠각성(7/3)과 꼭짓점 일곱 · 안쪽 고리(24) · 바퀴살 여덟 —
+	고리마다 다른 빠르기로 서로 반대로 돈다. 레이저가 떨어질 때마다(sept.Pulse) 번쩍 밝아지고, 모으면 빨리 돌며 조여 들고, 강타하면 커지며 사라진다.
 ]]
-local ASTRO: { { any } } = { -- 반지름 비 · 마디 수 · 굵기 · 빛 · 도는 빠르기(바퀴/초) · 마디가 채우는 몫
-	{ 1, 48, 0.1, STAR, 0.05, 0.8 },
-	{ 0.84, 24, 0.07, PALE, -0.09, 0.45 },
-	{ 0.58, 7, 0.2, WHITE, 0.14, 0.3 },
-}
 local function astrolabe(ctx: any, sept: any)
-	local r = ctx.Forward:Cross(Vector3.yAxis)
-	local parts, rings, ticks = {}, {}, {}
-	local function piece(color: Color3): Part
-		local p = CombatVfx.Part(Vector3.new(0.1, 0.1, 0.05), CFrame.new(ctx.EnemyCenter), color)
-		p.Transparency = 1
-		table.insert(parts, p)
-		return p
-	end
-	for _, spec in ASTRO do
-		local segs = {}
-		for _ = 1, spec[2] do
-			table.insert(segs, piece(spec[4]))
+	local parts = {}
+	local function many(n: number, color: Color3): { Part }
+		local list = {}
+		for _ = 1, n do
+			local p = CombatVfx.Part(Vector3.new(0.1, 0.1, 0.05), CFrame.new(ctx.EnemyCenter), color)
+			p.Transparency = 1
+			table.insert(parts, p)
+			table.insert(list, p)
 		end
-		table.insert(rings, { Spec = spec, Segs = segs, Turn = 0 })
+		return list
 	end
-	for _ = 1, 12 do
-		table.insert(ticks, piece(PALE))
-	end
+	local outer, dashed, ticks, runes = many(64, STAR), many(32, PALE), many(36, PALE), many(12, GOLD)
+	local star7, marks, inner, spokes = many(7, PALE), many(7, WHITE), many(24, STAR), many(8, STAR)
+	local turnA, turnB, turnC, turnD = 0, 0, 0, 0
 	local radius: number? = nil
+	local seenPulse, pk = sept.Pulse or 0, 0
 	held(sept, parts, function(t, gk, gone, dt)
 		local sum = Vector3.zero
 		for i = 1, 7 do
@@ -731,33 +745,77 @@ local function astrolabe(ctx: any, sept: any)
 		for i = 1, 7 do
 			spread = math.max(spread, (ctx.Star(i) - mid).Magnitude)
 		end
-		local cur = radius or spread + 3
-		cur += (spread + 3 - cur) * math.min(1, dt * 4)
+		local cur = radius or spread + 7
+		cur += (spread + 7 - cur) * math.min(1, dt * 3)
 		radius = cur
-		local appear = sine(t / 0.7)
-		local size = cur * (0.4 + 0.6 * appear) * (1 - 0.45 * gk) * (1 + 1.4 * gone)
+		if (sept.Pulse or 0) ~= seenPulse then
+			seenPulse, pk = sept.Pulse, 1
+		end
+		pk *= math.exp(-dt * 5)
+		local appear = sine(t / 0.9)
+		local R = cur * (0.35 + 0.65 * appear) * (1 - 0.45 * gk) * (1 + 1.4 * gone)
 		local seen = appear * (1 - gone)
-		local center = CFrame.lookAt(mid - r * 1.2, mid - r * 2.2)
-		for _, ring in rings do
-			local spec = ring.Spec
-			ring.Turn += dt * spec[5] * (1 + 6 * gk)
-			local n = #ring.Segs
-			local R = size * spec[1]
-			local chord = math.max(0.05, 2 * math.pi * R / n * spec[6])
-			for k, seg in ring.Segs do
-				local a = (k / n + ring.Turn) * math.pi * 2
-				seg.CFrame = center * CFrame.new(math.cos(a) * R, math.sin(a) * R, 0) * CFrame.Angles(0, 0, a + math.pi / 2)
-				seg.Size = Vector3.new(chord, spec[3] * (1 + 1.5 * gk), 0.05)
-				seg.Transparency = 1 - (0.7 + 0.3 * gk) * seen
+		local spin = 1 + 6 * gk
+		turnA += dt * 0.03 * spin
+		turnB -= dt * 0.06 * spin
+		turnC += dt * 0.1 * spin
+		turnD -= dt * 0.04 * spin
+		-- 바닥과 나란한 판(판의 z = 위아래)
+		local base = CFrame.new(mid + Vector3.new(0, 0.8, 0)) * CFrame.Angles(math.pi / 2, 0, 0)
+		local thick = (1 + 1.5 * gk) * (1 + 0.6 * pk)
+		local function alpha(a: number): number
+			return 1 - math.min(1, a + 0.3 * gk + 0.35 * pk) * seen
+		end
+		-- 고리: 마디를 반지름 r 에 접선으로(fill = 마디가 채우는 몫)
+		local function ring(list: { Part }, r: number, turn: number, fill: number, w: number, a: number)
+			local n = #list
+			local chord = math.max(0.05, 2 * math.pi * r / n * fill)
+			for k, p in list do
+				local ang = (k / n + turn) * math.pi * 2
+				p.CFrame = base * CFrame.Angles(0, 0, ang) * CFrame.new(r, 0, 0) * CFrame.Angles(0, 0, math.pi / 2)
+				p.Size = Vector3.new(chord, w * thick, 0.05)
+				p.Transparency = alpha(a)
 			end
 		end
-		for k, tick in ticks do
-			local a = (k / 12 + rings[1].Turn) * math.pi * 2
-			local long = size * (if k % 3 == 0 then 0.16 else 0.08)
-			local R = size * 1.08 + long / 2
-			tick.CFrame = center * CFrame.new(math.cos(a) * R, math.sin(a) * R, 0) * CFrame.Angles(0, 0, a)
-			tick.Size = Vector3.new(long, 0.06, 0.05)
-			tick.Transparency = 1 - 0.6 * seen
+		-- 바퀴살 · 눈금: 반지름 r0 → r1 로 뻗은 막대(longEvery 마다 두 배 길게)
+		local function radial(list: { Part }, r0: number, r1: number, turn: number, w: number, a: number, longEvery: number?)
+			local n = #list
+			for k, p in list do
+				local ang = (k / n + turn) * math.pi * 2
+				local r1k = if longEvery and k % longEvery == 0 then 2 * r1 - r0 else r1
+				p.CFrame = base * CFrame.Angles(0, 0, ang) * CFrame.new((r0 + r1k) / 2, 0, 0)
+				p.Size = Vector3.new(math.max(0.05, r1k - r0), w * thick, 0.05)
+				p.Transparency = alpha(a)
+			end
+		end
+		ring(outer, R, turnA, 0.85, 0.18, 0.75)
+		ring(dashed, R * 0.92, turnB, 0.45, 0.1, 0.6)
+		radial(ticks, R * 1.03, R * 1.08, turnA, 0.07, 0.6, 3)
+		ring(inner, R * 0.3, turnC, 0.7, 0.1, 0.65)
+		radial(spokes, R * 0.3, R * 0.6, turnC, 0.05, 0.35)
+		-- 금빛 룬: 0.8R 에 제자리에서 도는 마름모 열둘
+		for k, p in runes do
+			local ang = (k / 12 + turnC * 0.5) * math.pi * 2
+			local s = R * 0.035 * thick
+			p.CFrame = base * CFrame.Angles(0, 0, ang) * CFrame.new(R * 0.8, 0, 0) * CFrame.Angles(0, 0, math.pi / 4 + t)
+			p.Size = Vector3.new(s, s, 0.05)
+			p.Transparency = alpha(0.7)
+		end
+		-- 칠각성(7/3)과 꼭짓점 마디: 0.62R
+		local vertex = {}
+		for k, p in marks do
+			local at = base * CFrame.Angles(0, 0, (k / 7 + turnD) * math.pi * 2) * CFrame.new(R * 0.62, 0, 0)
+			local s = R * 0.04 * thick
+			vertex[k] = at.Position
+			p.CFrame = at * CFrame.Angles(0, 0, math.pi / 4)
+			p.Size = Vector3.new(s, s, 0.05)
+			p.Transparency = alpha(0.85)
+		end
+		for k, p in star7 do
+			local a, b = vertex[k], vertex[(k + 2) % 7 + 1]
+			p.CFrame = CFrame.lookAt(a:Lerp(b, 0.5), b)
+			p.Size = Vector3.new(0.08 * thick, 0.05, math.max(0.05, (b - a).Magnitude))
+			p.Transparency = alpha(0.55)
 		end
 	end)
 end
@@ -780,21 +838,42 @@ local function linkLines(ctx: any, sept: any, i: number)
 	end
 end
 
--- 치켜든 손을 따라 별 일곱이 하늘로(Orbs Sky): 레터박스 · 밤하늘 화면 · 하늘 성반이 켜지고(ev.total 초 — 컷신 끝까지),
--- 별마다 번쩍 · 손끝 파문, 카메라가 오르는 별자리를 따라 올라간다(ev.d 초)
+--[[
+	치켜든 손을 따라 별 일곱이 하늘로: 별마다 떨어질 자리 바로 위 SKY 높이로 올라가 별자리가 바닥과 나란히 눕는다(레이저가 수직으로 떨어지게 —
+	2026-10-31 사용자: "더 높이 올라간 채로 완전 눕힌 후에 레이저를 수직으로 떨구는 식"). 별은 이펙트가 몰고(Drive) 강타 0.85초 뒤 놓는다.
+	레터박스 · 밤하늘 화면 · 하늘 성반이 켜지고(ev.total 초 — 컷신 끝까지), 별마다 번쩍 · 손끝 파문, 카메라가 오르는 별자리를 따라 올라간다(ev.d 초)
+]]
+local SKY = 30
 function Fx.SeptRise(ctx: any, ev: any)
 	local s = st(ctx)
 	s.cam = nil
-	s.sept = { Points = dipperGround(ctx), Slammed = false, Fired = {} }
+	local sept = { Points = dipperGround(ctx), Slammed = false, Fired = {}, Pulse = 0 }
+	s.sept = sept
+	local d = (ev and ev.d) or 1
+	if ctx.Weapons and ctx.Weapons.Drive then
+		for i = 1, 7 do
+			local from, goal = ctx.Star(i), sept.Points[i] + Vector3.new(0, SKY, 0)
+			local t, after = -(i - 1) * 0.05, 0
+			ctx.Weapons:Drive(i, function(dt: number): Vector3?
+				t += dt
+				if sept.Slammed then
+					after += dt
+					if after > 0.85 then
+						return nil
+					end
+				end
+				return from:Lerp(goal, sine(t / d)) + Vector3.new(0, math.sin(t * 1.6 + i) * 0.12, 0)
+			end)
+		end
+	end
 	local total = (ev and ev.total) or 9.5
 	letterbox(ctx, total)
 	night(ctx, total)
-	astrolabe(ctx, s.sept)
+	astrolabe(ctx, sept)
 	ripple(ctx, ctx.Hand("R"), 2)
 	for i = 1, 7 do
 		ctx.Vfx.Flash(ctx.Star(i), { Color = STAR, Size = 1.6, Life = 0.3, Brightness = 4 })
 	end
-	local d = (ev and ev.d) or 1
 	local from = camNow(s)
 	local r = ctx.Forward:Cross(Vector3.yAxis)
 	local home = ctx.Actor.Home.Position
@@ -805,7 +884,7 @@ function Fx.SeptRise(ctx: any, ev: any)
 		end
 		local mid = sum / 7
 		local k = sine(t / d)
-		local pos = (home + r * 13 + Vector3.new(0, 2, 0)):Lerp(home:Lerp(mid, 0.45) + r * 16 + Vector3.new(0, 3, 0), k)
+		local pos = (home + r * 13 + Vector3.new(0, 2, 0)):Lerp(home:Lerp(mid, 0.35) + r * 18 + Vector3.new(0, 2, 0), k)
 		local cf = from:Lerp(CFrame.lookAt(pos, mid), sine(t / 0.4))
 		s.cam = cf
 		return cf
@@ -829,7 +908,7 @@ local function laser(ctx: any, i: number, g: Vector3, size: number, grow: number
 		local top = ctx.Star(i)
 		local head = top:Lerp(g, math.min(1, a / grow))
 		local len = math.max(0.05, (head - top).Magnitude)
-		local cf = CFrame.lookAt(top, if len > 0.06 then head else top - Vector3.new(0, 0.1, 0)) * CFrame.new(0, 0, -len / 2)
+		local cf = CFrame.lookAt(top, if len > 0.06 then head else top - Vector3.new(0, 0.1, 0), ctx.Forward) * CFrame.new(0, 0, -len / 2)
 		local fade = math.clamp((a - grow) / life, 0, 1)
 		local w = size * (1 - fade) * (1 + 0.15 * math.sin(a * 50))
 		for k, layer in LAYERS do
@@ -846,7 +925,7 @@ local function laser(ctx: any, i: number, g: Vector3, size: number, grow: number
 		task.delay(grow * k / 3, function()
 			local top = ctx.Star(i)
 			local p = top:Lerp(g, k / 3)
-			ctx.Vfx.Ring(CFrame.lookAt(p, p + (g - top).Unit), {
+			ctx.Vfx.Ring(CFrame.lookAt(p, p + (g - top).Unit, ctx.Forward), {
 				R0 = 0.4 * size,
 				R1 = 2.2 * size,
 				Color = PALE,
@@ -869,7 +948,6 @@ end
 	내려가며 화면 색이 바뀌고 카메라가 레이저 끝을 따라 내려간다 → 떨어진 자리에 룬, 하늘 · 바닥에 별자리 선. 다음 레이저가 다시 별을 올려다본다.
 ]]
 local ROMAN = { "I", "II", "III", "IV", "V", "VI", "VII" }
-local BAYER = { "DELTA", "BETA", "EPSILON", "ETA", "ZETA", "GAMMA", "ALPHA" } -- 큰곰자리 바이어 이름(메그레즈 δ … 두베 α)
 function Fx.SeptLaser(ctx: any, ev: any)
 	local s = st(ctx)
 	local sept = septOf(ctx)
@@ -878,7 +956,6 @@ function Fx.SeptLaser(ctx: any, ev: any)
 	titleCard(ctx, {
 		Top = (ROMAN[k] or "I") .. "  /  VII",
 		Big = spaced(NAMES[i][1]),
-		Sub = BAYER[i] .. " URSAE MAJORIS  ·  " .. NAMES[i][2],
 		Dur = 0.85,
 	})
 	local star = ctx.Star(i)
@@ -894,7 +971,8 @@ function Fx.SeptLaser(ctx: any, ev: any)
 	})
 	task.delay(AIM, function()
 		laser(ctx, i, g, 1, GROW, 0.35)
-		grade(ctx, LASER_GRADE[k] or LASER_GRADE[1], 0.7)
+		sept.Pulse += 1
+		grade(ctx, LASER_GRADE[k] or LASER_GRADE[1], 0.4, 1)
 		ctx.Vfx.Flash(ctx.Star(i), { Color = WHITE, Size = 2.4, Life = 0.25, Brightness = 6 })
 	end)
 	task.delay(AIM + GROW, function()
@@ -906,7 +984,7 @@ function Fx.SeptLaser(ctx: any, ev: any)
 	local from = camNow(s)
 	ctx.Shot(0.95, function(_, t)
 		local top = ctx.Star(i)
-		local below = top + r * 9 - f * 3 + Vector3.new(0, -5, 0)
+		local below = top + r * 10 - f * 4 + Vector3.new(0, -14, 0)
 		local desired
 		if t < AIM then
 			desired = CFrame.lookAt(below, top)
@@ -944,7 +1022,7 @@ function Fx.SeptGather(ctx: any)
 		ctx.Vfx.Implode(p, { Color = WHITE, Radius = 5, Count = 8, Life = 0.35 })
 		ctx.Vfx.Flash(p, { Color = PALE, Size = 3, Life = 0.35, Brightness = 6 })
 	end
-	grade(ctx, { Saturation = -0.7, Contrast = 0.6, Brightness = -0.05 }, 0.4)
+	grade(ctx, { Saturation = -0.85, Contrast = 0.8, Brightness = -0.14 }, 0.7, 0.6)
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
 	local center = ctx.EnemyCenter
@@ -980,7 +1058,7 @@ end
 
 --[[
 	마지막: 별 일곱이 한꺼번에 굵은 빛줄기로 내리꽂히고(북두칠성 꼴) 바닥 밑그림이 선 자국으로 타오르며 진형 전체를 강타 —
-	흑백 임팩트 → 푸른 빛으로 번짐 · 진형 가운데서 큰 충격파 두 겹과 고리 · 제목 카드 SEPTENTRIONES. 성반 · 룬 · 하늘 선은 거둔다.
+	흑백 임팩트 → 강한 푸른 대비로 남아 내 차례가 오면 돌아옴 · 진형 가운데서 큰 충격파 두 겹과 고리 · 제목 카드 SEPTENTRIONES. 성반 · 룬 · 하늘 선은 거둔다.
 	카메라는 진형 위 넓은 구도로 옮겨(선 자국이 다 보이게) 모션이 끝날 때까지 머문다. 큰 연출은 한 번(맞은 적마다 불린다)
 ]]
 function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
@@ -992,14 +1070,14 @@ function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 		titleCard(ctx, {
 			Top = "U R S A   M A J O R",
 			Big = spaced("SEPTENTRIONES"),
-			Sub = "SEPTEM TRIONES  ·  일곱 마리의 소, 북두칠성",
 			Dur = 1.7,
 			Y = 0.42,
 			Height = 0.26,
 		})
-		grade(ctx, { Saturation = -1, Contrast = 1.2, Brightness = 0.25 }, 0.9)
-		task.delay(0.18, function()
-			grade(ctx, { Tint = c(150, 200, 255), Contrast = 0.35, Brightness = 0.12, Saturation = 0.2 }, 1.3)
+		-- 막타가 가장 세다: 흑백 번쩍 → 강한 푸른 대비로 남아 내 차례가 오면 돌아온다
+		grade(ctx, SLAM_FLASH, 1, 0.15)
+		task.delay(0.15, function()
+			grade(ctx, SLAM_GRADE, 0.8)
 		end)
 		for i = 1, 7 do
 			laser(ctx, i, P[i], 2.4, 0.08, 0.5)

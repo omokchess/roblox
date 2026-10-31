@@ -2366,6 +2366,9 @@ function GridBattle.ResolveSkill(
 					-- 맞으면 그로기가 찬다. 패리만큼은 아니지만 누적되면 스턴이 난다.
 					GroggyGauge.AddFrom(target.Groggy, "Hit")
 					fire(state, "Hit", { Target = target, Damage = dealt, Crit = crit, Skill = skill })
+					if effect and effect.EachHit then
+						effect.EachHit(context, target, hitIndex)
+					end
 				end
 				table.insert(eventHits[index], { Id = target.Id, Damage = sum, Crit = anyCrit })
 			end

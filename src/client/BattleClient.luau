@@ -1646,6 +1646,17 @@ function BattleClient:_bindInput()
 			-- 연출이 끝났으면 보이는 체력을 서버 값에 맞춘다(숫자 나눔 끝수·지속 피해까지)
 			self.hud:SetBoss(self:_hpView(self.snapshot))
 		end
+		-- 내 차례(연출이 끝났고 막을 공격 · 기다리는 위협이 없음)면 "내 차례까지" 남겨 둔 화면 효과를 거둔다(조율자 셉텐트리오네스 화면 색)
+		if
+			self.director
+			and not self.director:IsBusy()
+			and not self.qte
+			and not self.threatWaiting
+			and not self.pendingThreat
+			and #((self.snapshot and self.snapshot.Threats) or {}) == 0
+		then
+			CombatVfx.MyTurn()
+		end
 		if self.dragging then
 			-- 칸 사이 틈·중앙선에 커서가 가도 이동이 취소되지 않게, 마지막으로 가리킨 칸을 기억한다
 			local over = self:_tileUnderCursor()
