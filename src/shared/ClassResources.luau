@@ -89,6 +89,7 @@ ClassResources.ALKAID = "StarAlkaid" -- 알카이드(특수 화상, 턴 끝 스�
 ClassResources.MIZAR = "StarMizar" -- 미자르(특수 도발 — 알코르를 그 턴에 못 잡으면 다음 턴 알카이드 1)
 ClassResources.SEVEN = "StarSeven" -- 성위 - 칠성(특수 충전, 최대 7)
 ClassResources.BLINK = "StarBlink" -- 성위 - 점멸(스킬을 맞히지 못하면 얻음 — 효과는 사양 대기)
+ClassResources.STAR_GUARD = "StarGuard" -- 별빛 가호(솔로 별자리 칸 — 이번 턴 받는 피해 −30%)
 
 --=== 상한 ===--
 
@@ -133,6 +134,7 @@ local CAPS: { [string]: number } = {
 	[ClassResources.ALKAID] = 15,
 	[ClassResources.MIZAR] = 1,
 	[ClassResources.SEVEN] = 7,
+	[ClassResources.STAR_GUARD] = 1,
 }
 
 function ClassResources.Cap(id: string): number?
@@ -208,6 +210,7 @@ local LABELS: { [string]: string } = {
 	[ClassResources.MIZAR] = "미자르",
 	[ClassResources.SEVEN] = "성위 - 칠성",
 	[ClassResources.BLINK] = "성위 - 점멸",
+	[ClassResources.STAR_GUARD] = "별빛 가호",
 }
 
 function ClassResources.Label(id: string): string

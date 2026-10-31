@@ -75,13 +75,12 @@ do
 	check(stack(ally, ClassResources.SYMBERASMA) > 0, "심베라즈마 디버프")
 	local b = boss(s)
 	local t3 = playTurn(s)
-	-- 연타 무늬가 달라 서 있는 칸에 따라 몇 대 맞는지가 다르다(예고는 늘 3개)
 	check(#b.Plans == 3 and #t3 >= 1 and t3[1] == "CallistoSynthesis", "3턴 성위가 없어 신데시 톤 아스트론 3연타 — " .. table.concat(t3, ","))
 	local t4 = playTurn(s)
 	check(t4[1] == "CallistoSlash", "4턴(짝수 바퀴) 세시 파라티리시 — " .. tostring(t4[1]))
 	check(stack(ally, ClassResources.SEONGWI) == 2, "세시 파라티리시 성위 2 — " .. stack(ally, ClassResources.SEONGWI))
 	local t5 = playTurn(s)
-	check(#b.Plans == 5 and #t5 >= 2 and t5[1] == "CallistoTrohia", "5턴 트로히아 5연타 — 별자리 칸이 아니면 2대 이상 — " .. table.concat(t5, ","))
+	check(#b.Plans == 5 and #t5 >= 2 and t5[1] == "CallistoTrohia", "5턴 트로히아 5연타(추적 — 다 맞음) — " .. table.concat(t5, ","))
 	check(stack(ally, ClassResources.SEONGWI) == 2 + #t5, "트로히아 타당 성위 1 — " .. stack(ally, ClassResources.SEONGWI))
 	check(BattleStatus.Total(ally.Status, "DamageTaken") >= stack(ally, ClassResources.SEONGWI) * 0.01 - 1e-6, "성위 1당 받는 피해 +1%")
 	local ripe = stack(ally, ClassResources.SEONGWI) >= 6
@@ -285,7 +284,7 @@ do
 	print("9 점멸 OK (" .. blink .. ")")
 end
 
---=== 10. 유도: 별자리 칸·연타 무늬·추적 행열·비숍 대각 이동·심베라즈마 내던지기 ===--
+--=== 10. 추적·별자리 칸(솔로 회복+가호 / 파티 비껴감)·추적 행열·비숍 대각 이동·심베라즈마 내던지기 ===--
 do
 	local function has(cells, x, y)
 		for _, c in cells do
@@ -295,7 +294,15 @@ do
 		end
 		return false
 	end
-	local pocketSeen, strikeSeen = 0, 0
+	local function guarded(unit): boolean
+		for _, m in unit.Status.Modifiers do
+			if m.Source == "별빛 가호" then
+				return true
+			end
+		end
+		return false
+	end
+	local seekSeen = 0
 	for trial = 1, 12 do
 		local s = battle()
 		local b = boss(s)
@@ -312,38 +319,38 @@ do
 			check(dx == dy, string.format("비숍처럼 대각선으로만 — (%d,%d)→(%d,%d)", before.X, before.Y, after.X, after.Y))
 		end
 		local here = BattleGrid.CellOf(s.Grid, GridBattle.ALLY_ID)
-		local lure = s.Callisto.Lure
+		local stars = s.Callisto.Lure
 		local plans = b.Plans or {}
-		if lure and #plans > 0 and here then
-			local l = lure[1]
-			check(math.abs(l[1] - here.X) + math.abs(l[2] - here.Y) >= 3, "별자리 칸은 아군 자리에서 3칸 이상")
-			-- 칸마다 맞는 횟수: 별자리 칸이 가장 적고, 빈칸이 없다
-			local hitsAt = function(x, y)
-				local n = 0
-				for _, p in plans do
-					if has(p.Cells, x, y) then
-						n += 1
-					end
-				end
-				return n
+		if stars and #plans > 0 and here then
+			seekSeen += 1
+			check(#stars == 3 or #stars == 4, "별자리 칸 3~4개 — " .. #stars)
+			for _, st in stars do
+				check(math.abs(st[1] - here.X) + math.abs(st[2] - here.Y) >= 2, "별자리 칸은 아군 자리·바로 옆이 아니다")
 			end
-			local lureHits = hitsAt(l[1], l[2])
+			-- 추적: 별 밖 어느 칸으로 옮겨도 연타가 다 따라온다
 			for x = 1, 6 do
 				for y = 1, 3 do
-					if not has(lure, x, y) then
-						check(hitsAt(x, y) > lureHits, string.format("별자리 칸이 아닌 (%d,%d) 는 더 맞는다", x, y))
+					if not has(stars, x, y) then
+						GridBattle.MoveAlly(s, x, y)
+						check(#GridBattle.PlannedThreatList(s) == #plans, string.format("추적 — (%d,%d) 에서도 다 맞는다", x, y))
 					end
 				end
 			end
-			if #plans > 1 then
-				strikeSeen += 1
-			else
-				pocketSeen += 1
-			end
-			-- 별자리 칸으로 옮기면: 맞는 횟수가 가장 적고 턴 끝에 성위
-			GridBattle.MoveAlly(s, l[1], l[2])
-			local threats = #GridBattle.PlannedThreatList(s)
-			check(threats == lureHits, "별자리 칸에서는 그 칸 몫만 맞는다")
+			check(not guarded(ally), "별 밖에선 가호 없음")
+			-- 솔로 별자리 칸: 올라서면 회복 + 별빛 가호, 찾아갈 사람이 없어 그대로 맞는다
+			local st = stars[1]
+			ally.Health = math.floor(ally.MaxHealth / 2)
+			local hp = ally.Health
+			local taken = BattleStatus.Total(ally.Status, "DamageTaken")
+			GridBattle.MoveAlly(s, st[1], st[2])
+			check(ally.Health - hp >= math.floor(ally.MaxHealth * GridBattle.STAR_HEAL) - 1, string.format("솔로 별자리 칸 — 최대 체력 20%% 회복(%d → %d)", hp, ally.Health))
+			check(math.abs(BattleStatus.Total(ally.Status, "DamageTaken") - (taken - GridBattle.STAR_GUARD)) < 1e-6, "별빛 가호 — 받는 피해 −30%")
+			check(stack(ally, ClassResources.STAR_GUARD) == 1, "별빛 가호 표시")
+			check(#GridBattle.PlannedThreatList(s) == #plans, "솔로는 별 위에서도 맞는다")
+			local hp2 = ally.Health
+			GridBattle.MoveAlly(s, here.X, here.Y)
+			GridBattle.MoveAlly(s, st[1], st[2])
+			check(ally.Health == hp2, "별자리 칸 보상은 한 턴 한 번")
 			local sw = stack(ally, ClassResources.SEONGWI) + stack(ally, ClassResources.MUTBYEOL) * 100
 			for _, t in GridBattle.PlannedThreatList(s) do
 				GridBattle.ResolveDodge(s, t.Unit.Id, "Success", t.Index)
@@ -351,9 +358,45 @@ do
 			GridBattle.EndTurn(s)
 			local now = stack(ally, ClassResources.SEONGWI) + stack(ally, ClassResources.MUTBYEOL) * 100
 			check(now > sw, "별자리 칸에서 턴을 마치면 성위")
+			check(not guarded(ally) and stack(ally, ClassResources.STAR_GUARD) == 0, "별빛 가호는 그 턴만")
 		end
 	end
-	check(pocketSeen > 0 and strikeSeen > 0, string.format("한 방·연타 유도 둘 다 나옴(%d · %d)", pocketSeen, strikeSeen))
+	check(seekSeen > 0, "추적 공격이 나옴")
+	-- 파티: 노린 아군이 별 위면 별 밖의 다른 아군을 찾아간다(둘째 아군을 붙여 본다 — 파티 전투는 아직 없다)
+	do
+		local s = battle()
+		local b = boss(s)
+		local ally = GridBattle.Ally(s)
+		local friend = table.clone(ally)
+		friend.Id = "player2"
+		s.Units.player2 = friend
+		local mine = BattleGrid.CellOf(s.Grid, GridBattle.ALLY_ID)
+		BattleGrid.Place(s.Grid, "player2", "Ally", if mine.X == 6 then 1 else 6, mine.Y)
+		local stars
+		for _ = 1, 10 do
+			GridBattle.EnemyPlan(s, rng)
+			stars = s.Callisto.Lure
+			if stars and b.Plans and #b.Plans > 0 then
+				break
+			end
+			GridBattle.EndTurn(s)
+		end
+		check(stars ~= nil, "파티 시험: 추적 공격이 나옴")
+		local plans = #b.Plans
+		local fc = BattleGrid.CellOf(s.Grid, "player2")
+		check(not has(stars, fc.X, fc.Y), "별자리 칸은 둘째 아군 자리도 피한다")
+		ally.Health = math.floor(ally.MaxHealth / 2)
+		local hp = ally.Health
+		GridBattle.MoveAlly(s, stars[1][1], stars[1][2])
+		check(ally.Health == hp and not s.Callisto.StarUsed, "파티면 별자리 칸 회복 없음")
+		check(#GridBattle.PlannedThreatList(s) == 0, "별 위에 선 나는 안 맞는다")
+		s.AllyId = "player2"
+		check(#GridBattle.PlannedThreatList(s) == plans, "공격이 별 밖의 다른 아군을 찾아간다")
+		BattleGrid.Move(s.Grid, "player2", stars[2][1], stars[2][2])
+		check(#GridBattle.PlannedThreatList(s) == 0, "둘 다 별 위면 둘째는 안 맞고")
+		s.AllyId = GridBattle.ALLY_ID
+		check(#GridBattle.PlannedThreatList(s) == plans, "처음 노린 아군이 맞는다")
+	end
 	-- 추적: 메라크(행)·페크다(열)는 어디 서도 닿는다
 	local s = toPage2()
 	local b = boss(s)
@@ -378,7 +421,7 @@ do
 	if used[1] == "CallistoSymberasma" and from and to then
 		check(math.abs(to.X - from.X) + math.abs(to.Y - from.Y) >= 3, "심베라즈마가 멀리 내던짐")
 	end
-	print(string.format("10 유도 OK (한 방 %d · 연타 %d)", pocketSeen, strikeSeen))
+	print(string.format("10 추적·별자리 칸 OK (%d)", seekSeen))
 end
 
 print("칼리스토 규칙: 모두 통과")

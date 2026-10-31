@@ -58,7 +58,7 @@ local TILE_BUFF = BattleStage.BOARD.Buff
 local TILE_DEBUFF = BattleStage.BOARD.Debuff
 local TILE_HEAL = BattleStage.BOARD.Heal
 local TILE_DELETE = BattleStage.BOARD.Pending
--- 칼리스토 예고 범위 색(별빛) · 별자리 칸(유도 — 가장 덜 맞는 칸)
+-- 칼리스토 예고 범위 색(별빛) · 별자리 칸(추적 공격이 비껴가는 칸 / 솔로면 회복+별빛 가호)
 local CALLISTO_RANGE = Color3.fromRGB(120, 175, 255)
 local CALLISTO_LURE = Color3.fromRGB(255, 226, 120)
 
@@ -1449,9 +1449,7 @@ function BattleClient:_paintTiles()
 		end
 	end
 	local planSeen: { [string]: number } = {}
-	-- 칼리스토: 칸마다 이번 턴 맞는 횟수 · 연타 수 · 별자리 칸
-	local callistoHits: { [string]: number } = {}
-	local callistoStrikes = 0
+	-- 칼리스토: 별자리 칸
 	local lureAt: { [string]: boolean } = {}
 	for _, c in (snapshot.Callisto and snapshot.Callisto.Lure) or {} do
 		lureAt[c[1] .. "," .. c[2]] = true
@@ -1464,19 +1462,11 @@ function BattleClient:_paintTiles()
 			local planSkill = BattleSkills.ById(plan.SkillId)
 			local damaging = planSkill ~= nil and ((planSkill.Damage or 0) > 0 or planSkill.HpRatio ~= nil or planSkill.Inflicts == true) and not plan.Canceled
 			local callisto = unit.DefId == "Callisto"
-			if callisto and damaging then
-				-- 칼리스토 유도(2026-10-31): 연타마다 칸이 달라 칸마다 몇 대 맞는지 센다(별자리 칸 글자 옆에 보인다)
-				for _, c in plan.Cells do
-					local key = c[1] .. "," .. c[2]
-					callistoHits[key] = (callistoHits[key] or 0) + 1
-				end
-				callistoStrikes = math.max(callistoStrikes, planSeen[enemyId])
-			end
 			if damaging and (unit.Part or callisto) then
-				-- 칼리스토 연타는 묶음 하나("×N"), 연타마다 칸이 달라 모든 계획의 칸을 합친다 · 추적 행열은 꼬리표로
+				-- 칼리스토 연타는 묶음 하나("×N") · 추적(어디로 옮겨도 따라옴)·행열은 꼬리표로
 				local group = if callisto then enemyId .. ":" .. plan.SkillId else unit.Part .. ":" .. planSeen[enemyId]
 				local strikes = if callisto and unit.Plans and #unit.Plans > 1 then string.format(" ×%d", #unit.Plans) else ""
-				local track = if plan.Track == "Row" then " · 서 있는 행을 노림" elseif plan.Track == "Column" then " · 서 있는 열을 노림" else ""
+				local track = if plan.Track == "Row" then " · 서 있는 행을 노림" elseif plan.Track == "Column" then " · 서 있는 열을 노림" elseif plan.Seek then " · 옮겨도 따라옴" else ""
 				local label = (planSkill :: any).Name .. strikes .. track .. (if planSkill and planSkill.Unavoidable then " · 회피 불가" elseif planSkill and planSkill.GuardOnly then " · 막기만" elseif planSkill and planSkill.DodgeOnly then " · 회피만" else "")
 				for _, c in plan.Cells do
 					local key = c[1] .. "," .. c[2]
@@ -1601,13 +1591,14 @@ function BattleClient:_paintTiles()
 			local cellKey = x .. "," .. y
 			local mod = modAt[cellKey]
 			-- 검수 칸(검수됨!·검수 준비중)은 칸 글자 대신 덩어리마다 글자 하나 + 칸 위 효과(아래 GroupMarks, 2026-10-02 요청)
-			-- 칼리스토 유도: 별자리 칸(★ — 가장 덜 맞는 칸, 턴을 마치면 성위) · 연타면 칸마다 맞는 횟수
-			local hits = callistoHits[cellKey] or 0
+			-- 칼리스토 별자리 칸(★): 파티면 추적 공격이 비껴가고, 솔로면 올라설 때 회복+[별빛 가호] · 턴을 마치면 성위
 			local callistoTag = nil
 			if lureAt[cellKey] then
-				callistoTag = string.format("★ 별자리%s\n+성위 %d", if callistoStrikes > 1 then string.format(" ×%d", hits) else "", (snapshot.Callisto and snapshot.Callisto.LureSeongwi) or 2)
-			elseif callistoStrikes > 1 and hits > 0 then
-				callistoTag = string.format("×%d", hits)
+				local cs = snapshot.Callisto
+				local gift = if cs.Party then "공격이 비껴감"
+					elseif cs.StarUsed and isMe then "회복함 · 가호"
+					else string.format("회복 %d%% · 피해 −%d%%", math.floor(cs.StarHeal * 100 + 0.5), math.floor(cs.StarGuard * 100 + 0.5))
+				callistoTag = string.format("★ %s\n+성위 %d", gift, cs.LureSeongwi or 2)
 			end
 			BattleStage.Tag(
 				ally,

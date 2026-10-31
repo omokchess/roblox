@@ -819,6 +819,16 @@ local LIST: { Keyword } = {
 		Unit = "",
 		Color = "#e8f0ff",
 	},
+	{
+		Id = "StarGuard",
+		Name = "별빛 가호",
+		Kind = "Buff",
+		Description = "- 혼자 싸울 때 칼리스토의 별자리 칸에 올라서면 얻음(체력 20% 회복과 함께).\n"
+			.. "- 이번 턴 받는 피해 30% 감소.",
+		Scalable = false,
+		Unit = "",
+		Color = "#bfe3ff",
+	},
 }
 
 local byId: { [string]: Keyword } = {}

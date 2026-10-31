@@ -128,8 +128,10 @@ export type CallistoState = {
 	AlcorId: string?,
 	AlcorCount: number,
 	Swing: { Hit: boolean }?,
-	-- 이번 턴 별자리 칸(유도 — 가장 덜 맞는 칸. 여기서 턴을 마치면 [성위] LURE_SEONGWI)
+	-- 이번 턴 별자리 칸 3~4개(추적 공격이 비껴가는 칸 · 솔로면 올라설 때 회복+[별빛 가호]. 여기서 턴을 마치면 [성위] LURE_SEONGWI)
 	Lure: { { number } }?,
+	-- 이번 턴 솔로 별자리 칸 보상을 받았나(한 턴 한 번)
+	StarUsed: boolean?,
 }
 
 --[[
@@ -1800,6 +1802,9 @@ function GridBattle.MoveAlly(state: State, x: number, y: number): (boolean, stri
 		state.Moved = true
 		local watch = watchBegin(state)
 		fire(state, "Move", { FromX = from.X, FromY = from.Y, ToX = x, ToY = y })
+		if state.Callisto then
+			GridBattle.CallistoStar(state)
+		end
 		watchEnd(state, watch)
 	end
 	return ok, reason
@@ -2636,67 +2641,39 @@ local SEVEN_MAX = 7
 -- 칠성군: [성위 - 칠성]을 주는 스킬(북두칠성·평타·소환은 빠진다)
 local SEVEN_SKILLS = { CallistoAlioth = true, CallistoMegrez = true, CallistoPhecda = true, CallistoMerak = true }
 --[[
-	겨누는 방식(2026-10-31 사용자: "칼리스토 스킬 피하기가 많이 쉽다 — 플레이어 위치를 유도해서 공격하도록").
-	예전엔 아군이 선 칸 둘레만 쳐서 예고를 보고 아무 칸으로나 옮기면 다 피했다(이동은 어디로든 한 번).
-	  Pocket n   아군 칸 전부를 치되 별자리 칸 n 개만 비운다 — 별자리 칸은 아군 자리에서 3칸 넘게 떨어진 곳(꼭 옮겨야 한다)
-	  Strikes    연타마다 무늬가 다르다(앞뒤 절반·체크·사선·줄) — 모든 칸이 적어도 한 번 맞고, 가장 덜 맞는 칸이 별자리 칸
-	             (3연타는 그 칸만 0번, 5연타는 그 칸도 마지막 한 대 — 다른 칸은 그보다 많이)
-	  All        아군 칸 전부 · TrackRow/TrackColumn  맞는 순간 서 있는 행·열(어디 서도 닿는다 — 사양 "해당 행·열 전체")
-	별자리 칸에서 턴을 마치면 [성위] LURE_SEONGWI — 피하면 별이 쌓여 [뭇별]·강타로 돌아오고, 안 피하면 맞는다.
+	겨누는 방식(2026-10-31 사용자: "턴 중에 플레이어가 칸을 바꿔도 공격이 그 칸으로 이동하게" · "별 칸은 3~4개만").
+	  Seek       추적 — 노린 아군이 어디로 옮겨도 따라가 맞는다. 별자리 칸 3~4개가 깔린다:
+	               파티  노린 아군이 별자리 칸 위면 별 밖의 다른 아군을 찾아간다(callistoSeek)
+	               솔로  찾아갈 사람이 없어 그대로 맞지만, 올라서는 순간 최대 체력 STAR_HEAL 회복 + [별빛 가호](이번 턴 받는 피해 −STAR_GUARD)
+	  All        아군 칸 전부(별자리 칸 없음 — 장판·던지기·궁극기) · TrackRow/TrackColumn  맞는 순간 서 있는 행·열
+	별자리 칸에서 턴을 마치면 [성위] LURE_SEONGWI — 별 밑에 숨은 값.
 ]]
-local CALLISTO_FORM: { [string]: { Kind: string, Size: number? } } = {
-	CallistoSlash = { Kind = "Pocket", Size = 2 },
-	CallistoPhoto = { Kind = "Pocket", Size = 3 },
-	CallistoTrohia = { Kind = "Strikes" },
-	CallistoSymberasma = { Kind = "All" },
-	CallistoSynthesis = { Kind = "Strikes" },
-	CallistoArktos = { Kind = "All" },
-	CallistoAstro = { Kind = "All" },
-	CallistoResonance = { Kind = "Pocket", Size = 3 },
-	CallistoArtificial = { Kind = "Pocket", Size = 2 },
-	CallistoShower = { Kind = "Strikes" },
-	CallistoSubmerge = { Kind = "All" },
-	CallistoBuried = { Kind = "Pocket", Size = 3 },
-	CallistoAlioth = { Kind = "All" },
-	CallistoMegrez = { Kind = "Pocket", Size = 2 },
-	CallistoPhecda = { Kind = "TrackColumn" },
-	CallistoMerak = { Kind = "TrackRow" },
-	CallistoDipper = { Kind = "All" },
+local CALLISTO_FORM: { [string]: string } = {
+	CallistoSlash = "Seek",
+	CallistoPhoto = "Seek",
+	CallistoTrohia = "Seek",
+	CallistoSymberasma = "All",
+	CallistoSynthesis = "Seek",
+	CallistoArktos = "All",
+	CallistoAstro = "All",
+	CallistoResonance = "Seek",
+	CallistoArtificial = "Seek",
+	CallistoShower = "Seek",
+	CallistoSubmerge = "All",
+	CallistoBuried = "Seek",
+	CallistoAlioth = "All",
+	CallistoMegrez = "Seek",
+	CallistoPhecda = "TrackColumn",
+	CallistoMerak = "TrackRow",
+	CallistoDipper = "All",
 }
 GridBattle.CALLISTO_FORM = CALLISTO_FORM
 -- 별자리 칸에서 턴을 마치면 얻는 [성위]
 local LURE_SEONGWI = 2
 GridBattle.LURE_SEONGWI = LURE_SEONGWI
--- 연타 무늬(칸 x 1 = 가운데 선 쪽 · 6 = 맨 뒤 / y 1~3)
-local STRIKE_FORMS: { (number, number) -> boolean } = {
-	function(x, _y)
-		return x <= 3
-	end,
-	function(x, _y)
-		return x >= 4
-	end,
-	function(x, y)
-		return (x + y) % 2 == 0
-	end,
-	function(x, y)
-		return (x + y) % 2 == 1
-	end,
-	function(x, y)
-		return (x + y) % 3 == 0
-	end,
-	function(x, y)
-		return (x + y) % 3 == 1
-	end,
-	function(x, y)
-		return (x + y) % 3 == 2
-	end,
-	function(_x, y)
-		return y ~= 2
-	end,
-	function(x, y)
-		return y == 2 or x == 1 or x == 6
-	end,
-}
+-- 솔로 별자리 칸: 올라서면 최대 체력의 STAR_HEAL 회복 · [별빛 가호] 이번 턴 받는 피해 −STAR_GUARD(사양에 수치 없음 — 정함)
+local STAR_HEAL, STAR_GUARD = 0.2, 0.3
+GridBattle.STAR_HEAL, GridBattle.STAR_GUARD = STAR_HEAL, STAR_GUARD
 
 local function stackOf(unit: Unit, id: string): number
 	return BattleStatus.Stack(unit.Status, id)
@@ -2918,115 +2895,81 @@ local function hasCell(list: { { number } }, x: number, y: number): boolean
 	return false
 end
 
--- 별자리 칸 고르기: 아군 자리에서 맨해튼 3칸 이상 떨어진 칸 하나 + 이웃으로 size 칸까지(아군 칸은 빼고)
-local NEIGHBORS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
-local function pickLure(state: State, rng: () -> number, here: BattleGrid.Cell, size: number): { { number } }
-	local far = {}
-	for _, c in allCells(state) do
-		if math.abs(c[1] - here.X) + math.abs(c[2] - here.Y) >= 3 then
-			table.insert(far, c)
+-- list 의 칸 가운데 (x, y) 에서 맨해튼 d 칸 안에 있는 게 있나
+local function nearAny(list: { { number } }, x: number, y: number, d: number): boolean
+	for _, c in list do
+		if math.abs(c[1] - x) + math.abs(c[2] - y) <= d then
+			return true
 		end
 	end
-	if #far == 0 then
-		far = allCells(state)
-	end
-	local lure = { far[math.floor(rng() * #far) + 1] }
-	for _ = 1, 24 do
-		if #lure >= size then
-			break
-		end
-		local base = lure[math.floor(rng() * #lure) + 1]
-		local d = NEIGHBORS[math.floor(rng() * 4) + 1]
-		local x, y = base[1] + d[1], base[2] + d[2]
-		local inside = x >= 1 and x <= state.Grid.Width and y >= 1 and y <= state.Grid.Height
-		if inside and not (x == here.X and y == here.Y) and not hasCell(lure, x, y) then
-			table.insert(lure, { x, y })
-		end
-	end
-	return lure
+	return false
 end
 
 --[[
-	연타 무늬: count 타마다 STRIKE_FORMS 중 하나(겹치지 않게). 별자리 칸(lure 첫 칸)은 3연타면 한 번도, 5연타면 마지막 한 대만 맞고
-	다른 칸은 그보다 한 번 이상 더 맞게 메운다(가장 작은 무늬부터) — 빈틈이 없어 위치만으로는 다 못 피한다.
+	별자리 칸 3~4개: 아군이 선 칸과 그 바로 옆은 빼고(옮겨야 닿게) 서로 붙지 않게 흩는다. 자리가 모자라면 붙여서라도,
+	그래도 모자라면 아군 바로 옆까지 쓴다(아군이 선 칸은 끝까지 뺀다).
 ]]
-local function strikeCells(state: State, rng: () -> number, count: number, lure: { number }): { { { number } } }
-	local w, h = state.Grid.Width, state.Grid.Height
-	local order = {}
-	for i = 1, #STRIKE_FORMS do
-		table.insert(order, i)
-	end
-	for i = #order, 2, -1 do
-		local j = math.floor(rng() * i) + 1
-		order[i], order[j] = order[j], order[i]
-	end
-	local sets: { { [number]: boolean } } = {}
-	for k = 1, count do
-		local form = STRIKE_FORMS[order[(k - 1) % #order + 1]]
-		local set = {}
-		for x = 1, w do
-			for y = 1, h do
-				if form(x, y) then
-					set[x * 10 + y] = true
-				end
-			end
+local function pickStars(state: State, rng: () -> number): { { number } }
+	local taken = {}
+	for _, a in GridBattle.Allies(state) do
+		local at = BattleGrid.CellOf(state.Grid, a.Id)
+		if at then
+			table.insert(taken, { at.X, at.Y })
 		end
-		sets[k] = set
 	end
-	local lk = lure[1] * 10 + lure[2]
-	local lureHits = if count >= 5 then 1 else 0
-	for k = 1, count do
-		sets[k][lk] = nil
-	end
-	if lureHits == 1 then
-		sets[count][lk] = true
-	end
-	local function size(set: { [number]: boolean }): number
-		local n = 0
-		for _ in set do
-			n += 1
+	local pool, spare = {}, {}
+	for _, c in allCells(state) do
+		if not nearAny(taken, c[1], c[2], 1) then
+			table.insert(pool, c)
+		elseif not nearAny(taken, c[1], c[2], 0) then
+			table.insert(spare, c)
 		end
-		return n
 	end
-	for x = 1, w do
-		for y = 1, h do
-			local key = x * 10 + y
-			if key ~= lk then
-				local hits = 0
-				for k = 1, count do
-					if sets[k][key] then
-						hits += 1
-					end
-				end
-				while hits < lureHits + 1 do
-					local best, bestSize = nil, math.huge
-					for k = 1, count do
-						if not sets[k][key] and size(sets[k]) < bestSize then
-							best, bestSize = k, size(sets[k])
-						end
-					end
-					if not best then
-						break
-					end
-					sets[best][key] = true
-					hits += 1
-				end
+	for _, list in { pool, spare } do
+		for i = #list, 2, -1 do
+			local j = math.floor(rng() * i) + 1
+			list[i], list[j] = list[j], list[i]
+		end
+	end
+	local want = if rng() < 0.5 then 3 else 4
+	local stars = {}
+	for _, c in pool do
+		if #stars < want and not nearAny(stars, c[1], c[2], 1) then
+			table.insert(stars, c)
+		end
+	end
+	for _, list in { pool, spare } do
+		for _, c in list do
+			if #stars < want and not hasCell(stars, c[1], c[2]) then
+				table.insert(stars, c)
 			end
 		end
 	end
-	local out = {}
-	for k = 1, count do
-		local cells = {}
-		for x = 1, w do
-			for y = 1, h do
-				if sets[k][x * 10 + y] then
-					table.insert(cells, { x, y })
-				end
+	return stars
+end
+
+--[[
+	추적 공격이 찾아갈 아군 Id(2026-10-31 사용자: "파티에선 별 칸으로 옮기면 다른 플레이어를 찾아가게").
+	노린 아군이 별자리 칸 위면 별 밖에 선 다른 아군 중 가장 가까운 쪽(같으면 Id 순) — 별 밖에 아무도 없으면(솔로면 늘) 노린 아군 그대로.
+]]
+local function callistoSeek(state: State, plan: any): string
+	local stars = (state.Callisto and state.Callisto.Lure) or {}
+	local target = plan.Target or ALLY_ID
+	local at = BattleGrid.CellOf(state.Grid, target)
+	if not at or not hasCell(stars, at.X, at.Y) then
+		return target
+	end
+	local best, bestD = nil, math.huge
+	for _, a in GridBattle.Allies(state) do
+		local c = BattleGrid.CellOf(state.Grid, a.Id)
+		if a.Id ~= target and c and not hasCell(stars, c.X, c.Y) then
+			local d = math.abs(c.X - at.X) + math.abs(c.Y - at.Y)
+			if d < bestD then
+				best, bestD = a.Id, d
 			end
 		end
-		out[k] = cells
 	end
-	return out
+	return best or target
 end
 
 --[[
@@ -3090,37 +3033,17 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 			pushLog(state, string.format("알리오스 — 아군 필드에 장판 %d턴", ALIOTH_TURNS))
 		end
 	end
-	local form = CALLISTO_FORM[id] or { Kind = "All" }
-	bishopMove(state, rng, unit, if form.Kind == "TrackRow" then here.Y else nil)
+	local form = CALLISTO_FORM[id] or "All"
+	bishopMove(state, rng, unit, if form == "TrackRow" then here.Y else nil)
 	local count = math.max(1, skill.Strikes or 1)
-	local sets: { { { number } } } = {}
-	c.Lure = nil
-	if form.Kind == "Pocket" then
-		local lure = pickLure(state, rng, here, form.Size or 2)
-		c.Lure = lure
-		local cells = {}
-		for _, cell in allCells(state) do
-			if not hasCell(lure, cell[1], cell[2]) then
-				table.insert(cells, cell)
-			end
-		end
-		for k = 1, count do
-			sets[k] = cells
-		end
-	elseif form.Kind == "Strikes" then
-		local lure = pickLure(state, rng, here, 1)
-		c.Lure = lure
-		sets = strikeCells(state, rng, count, lure[1])
-	else
-		local cells = allCells(state)
-		for k = 1, count do
-			sets[k] = cells
-		end
-	end
-	local track = if form.Kind == "TrackRow" then "Row" elseif form.Kind == "TrackColumn" then "Column" else nil
+	-- 추적이면 별자리 칸을 깐다. 칸은 늘 판 전체(추적·행열은 맞는 순간 정해진다 — EnemyThreatensAlly)
+	c.Lure = if form == "Seek" then pickStars(state, rng) else nil
+	c.StarUsed = nil
+	local cells = allCells(state)
+	local track = if form == "TrackRow" then "Row" elseif form == "TrackColumn" then "Column" else nil
 	local plans = {}
 	for k = 1, count do
-		table.insert(plans, { SkillId = id, Cells = sets[k], Track = track, Strike = k })
+		table.insert(plans, { SkillId = id, Cells = cells, Track = track, Strike = k, Seek = form == "Seek" or nil, Target = ALLY_ID })
 		table.insert(state.Planned, unit.Id)
 	end
 	unit.Plans = plans
@@ -3245,6 +3168,26 @@ local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: U
 end
 
 --[[
+	솔로에서 별자리 칸에 올라서면(2026-10-31 사용자): 최대 체력 STAR_HEAL 회복 + [별빛 가호] 이번 턴 받는 피해 −STAR_GUARD. 한 턴 한 번.
+	파티면 이 보상 대신 추적 공격이 다른 아군을 찾아간다(callistoSeek). MoveAlly 가 부른다.
+]]
+function GridBattle.CallistoStar(state: State)
+	local c = state.Callisto
+	local ally = state.Units[state.AllyId]
+	local at = BattleGrid.CellOf(state.Grid, state.AllyId)
+	if not c or c.StarUsed or not c.Lure or not ally or not ally.Alive or not at or not hasCell(c.Lure, at.X, at.Y) then
+		return
+	end
+	if #GridBattle.Allies(state) > 1 then
+		return
+	end
+	c.StarUsed = true
+	local gained = heal(state, ally, ally.MaxHealth * STAR_HEAL)
+	timedDebuff(ally, ClassResources.STAR_GUARD, "별빛 가호", 1, { { "DamageTaken", -STAR_GUARD } })
+	pushLog(state, string.format("별자리 칸 — 체력 %d 회복 · [별빛 가호] 이번 턴 받는 피해 −%d%%", gained, math.floor(STAR_GUARD * 100 + 0.5)))
+end
+
+--[[
 	칼리스토 턴 끝(EndTurn — 지속 피해·보정값 기한을 깎은 뒤): 고찰 화상 · 남은 턴 숫자 맞추기 · 재사용 대기 ·
 	장판(깐 턴 끝은 건너뜀) · [작은 곰 자리].
 ]]
@@ -3264,7 +3207,7 @@ local function callistoEndTurn(state: State, c: CallistoState)
 		pushLog(state, string.format("별자리 칸 — %s [성위] %d", ally.Name, LURE_SEONGWI))
 	end
 	c.Lure = nil
-	for id, source in { [ClassResources.MUTBYEOL] = "뭇별", [ClassResources.SYMBERASMA] = "심베라즈마", [ClassResources.BLADE_SCAR] = "칼춤 상처" } do
+	for id, source in { [ClassResources.MUTBYEOL] = "뭇별", [ClassResources.SYMBERASMA] = "심베라즈마", [ClassResources.BLADE_SCAR] = "칼춤 상처", [ClassResources.STAR_GUARD] = "별빛 가호" } do
 		local left = 0
 		for _, m in ally.Status.Modifiers do
 			if m.Source == source then
@@ -3431,6 +3374,10 @@ function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?
 		local foeSkill = GridBattle.EnemySkill(enemy, index)
 		if not here or plan.Canceled or (foeSkill.Damage <= 0 and not foeSkill.HpRatio and not foeSkill.Inflicts) then
 			return false
+		end
+		-- 칼리스토 추적: 어디 서 있든 찾아간 아군이면 맞는다
+		if plan.Seek then
+			return callistoSeek(state, plan) == state.AllyId
 		end
 		for _, c in plan.Cells do
 			if c[1] == here.X and c[2] == here.Y then
@@ -4050,9 +3997,13 @@ function GridBattle.Snapshot(state: State): any
 			AlcorId = if alcorAlive(state, callisto) then callisto.AlcorId else nil,
 			Dipper = callisto.Dipper,
 			Chilseong = callisto.Page == 2 and unit ~= nil and unit.Health < unit.MaxHealth * CHILSEONG_RATIO,
-			-- 별자리 칸(유도 — 가장 덜 맞는 칸, 여기서 턴을 마치면 성위)
+			-- 별자리 칸(추적 공격이 비껴감 / 솔로면 올라서면 회복+별빛 가호 — 여기서 턴을 마치면 성위)
 			Lure = if callisto.Lure then table.clone(callisto.Lure) else nil,
 			LureSeongwi = LURE_SEONGWI,
+			Party = #GridBattle.Allies(state) > 1,
+			StarHeal = STAR_HEAL,
+			StarGuard = STAR_GUARD,
+			StarUsed = callisto.StarUsed == true,
 		}
 	end
 	--[[
