@@ -16,17 +16,29 @@
 	  카드    이 직업 카드 전부 — 레벨 올리고 내리기·빼기, 무작위 빌드, 등급 거르기, 마우스 올리면 카드 미리보기
 
 	모든 것은 서버에 **의도만** 보낸다(BattleAction). 판정·값 검사는 `BattleService` 가 한다.
+
+	오른쪽 곁 창(2026-10-31 사용자: "직업 액티브·패시브 설명을 바로 못 읽는다 · 카드 설명을 더 직관적으로 ·
+	어느 카드에 마우스를 올렸는지 보이게 · 가끔 호버해도 카드가 안 보인다")
+	  편성 탭  고른 직업의 액티브·패시브·전용 상태가 늘 보이고, 다른 직업 버튼에 올리면 그 직업으로 바뀐다
+	  카드 탭  올린 줄을 칠하고 카드 + 지금/다음 레벨 값 + 레벨별 수치 + 키워드 풀이
+	호버는 MouseEnter/Leave 대신 매 프레임 마우스 자리로 판정한다 — 줄을 옮길 때 옛 줄의 Leave 가 새 줄의 Enter
+	뒤에 와서 미리보기를 끄고, 서버 상태가 올 때마다 줄을 다시 만들면 마우스가 가만히 있는 줄엔 Enter 가 안 왔다.
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local AbilityCardDefinitions = require(ReplicatedStorage.Shared.AbilityCardDefinitions)
 local AbilityCards = require(ReplicatedStorage.Shared.AbilityCards)
 local BattleGrid = require(ReplicatedStorage.Shared.BattleGrid)
+local BattleSkills = require(ReplicatedStorage.Shared.BattleSkills)
 local CardAxes = require(ReplicatedStorage.Shared.CardAxes)
+local CharacterDefinitions = require(ReplicatedStorage.Shared.CharacterDefinitions)
+local ClassPassives = require(ReplicatedStorage.Shared.ClassPassives)
 local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
+local Keywords = require(ReplicatedStorage.Shared.Keywords)
 local StatDefinitions = require(ReplicatedStorage.Shared.StatDefinitions)
 
 local BattleStore = require(script.Parent.BattleStore)
@@ -35,6 +47,7 @@ local CardView = require(script.Parent.CardView)
 local make = CardView.Make
 
 local PANEL_WIDTH = 452
+local SIDE_WIDTH = 340
 local C = Color3.fromRGB
 local BG = C(16, 17, 22)
 local CARD = C(26, 28, 36)
@@ -65,9 +78,17 @@ function DebugBattlePanel.new(remotes: Folder)
 	self.open = false
 	self.cardFilter = "All"
 	self.statusTarget = "Enemies"
+	-- 곁 창 호버 대상({ Gui, Key, Show, Paint? }) — 탭을 다시 그릴 때마다 새로 채운다
+	self.hoverTargets = {} :: { any }
+	self.hoverGui = nil :: GuiObject?
+	self.hoverPaint = nil :: ((boolean) -> ())?
+	self.sideKey = nil :: string?
 	-- 클라이언트에도 카드 풀을 등록한다(순수 자료). 카드 탭이 직업 카드 전부를 보여 준다.
 	AbilityCards.Register()
 	self:_build()
+	RunService.RenderStepped:Connect(function()
+		self:_pollHover()
+	end)
 
 	BattleStore.Subscribe(function(state)
 		-- 전투가 시작되면 패널을 접는다(아군 격자를 가린다). 전투 중 명령은 위쪽 빠른 줄로.
@@ -285,19 +306,32 @@ function DebugBattlePanel:_build()
 	end
 	self.quickBar = quick
 
-	-- 카드 미리보기(카드 탭에서 줄에 마우스를 올리면 패널 오른쪽에)
-	self.preview = make("Frame", {
-		Size = UDim2.fromOffset(250, 380),
-		Position = UDim2.fromOffset(12 + PANEL_WIDTH + 12, 120),
-		BackgroundTransparency = 1,
+	-- 곁 창(패널 오른쪽): 편성 탭 = 직업 정보, 카드 탭 = 올린 카드
+	local side = make("ScrollingFrame", {
+		Name = "Side",
+		Size = UDim2.new(0, SIDE_WIDTH, 1, -120),
+		Position = UDim2.fromOffset(12 + PANEL_WIDTH + 10, 100),
+		BackgroundColor3 = BG,
+		BackgroundTransparency = 0.04,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 5,
+		ScrollBarImageColor3 = LINE,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		Visible = false,
 	}, gui)
+	make("UICorner", { CornerRadius = UDim.new(0, 10) }, side)
+	make("UIStroke", { Color = LINE, Thickness = 1 }, side)
+	self.side = side
+	self.sideBody = make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, side)
 end
 
 function DebugBattlePanel:SetOpen(open: boolean)
 	self.open = open
 	self.panel.Visible = open
-	self.preview.Visible = false
+	self.side.Visible = false
+	self.sideKey = nil
+	self.hoverGui = nil
 	if open then
 		self:_refresh(true)
 	end
@@ -464,6 +498,7 @@ function DebugBattlePanel:_refresh(resetScroll: boolean?)
 	for _, child in self.body:GetChildren() do
 		child:Destroy()
 	end
+	self.hoverTargets = {}
 	local section = column(self.body)
 	if self.tab == "Setup" then
 		self:_setupTab(section)
@@ -518,6 +553,14 @@ function DebugBattlePanel:_setupTab(section: (string?, number?) -> Frame)
 		if picked then
 			make("UIStroke", { Color = entry.Color, Thickness = 2 }, b)
 		end
+		-- 올리면 곁 창이 그 직업 정보로(떼면 고른 직업으로 돌아온다)
+		table.insert(self.hoverTargets, {
+			Gui = b,
+			Key = "class:" .. entry.Id,
+			Show = function()
+				self:_showClass(entry.Id)
+			end,
+		})
 	end
 
 	-- 전장
@@ -846,6 +889,10 @@ function DebugBattlePanel:_cardsTab(section: (string?, number?) -> Frame)
 			local maxLevel = AbilityCardDefinitions.MaxLevelFor(card)
 			local level = have and have.Level or 0
 			local line = row(box, index, 30)
+			-- 마우스를 올린 줄: 보라 바탕 + 금색 테두리(곁 창에 뜬 카드가 어느 줄인지)
+			line.BackgroundColor3 = C(70, 58, 112)
+			make("UICorner", { CornerRadius = UDim.new(0, 5) }, line)
+			local lit = make("UIStroke", { Color = GOLD, Thickness = 1.5, Enabled = false }, line)
 			local thumbHolder = make("Frame", { Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, LayoutOrder = 1 }, line)
 			CardView.Thumb(thumbHolder, card, 28)
 			-- ✎ 그림 있음 · 파 파티 전제 · 배 전직 배타(함께 못 드는 필수가 있다)
@@ -867,35 +914,336 @@ function DebugBattlePanel:_cardsTab(section: (string?, number?) -> Frame)
 			button(line, "최대", 44, nil, function()
 				send({ Kind = "AddCard", CardId = card.Id, Level = maxLevel })
 			end, 6)
-			-- 줄에 마우스를 올리면 카드 미리보기
-			local hover = make("TextButton", { Size = UDim2.new(0, 190, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 5 }, name)
-			hover.Position = UDim2.fromOffset(-32, 0)
-			hover.MouseEnter:Connect(function()
-				self:_showPreview(card, level, maxLevel)
-			end)
-			hover.MouseLeave:Connect(function()
-				self.preview.Visible = false
-			end)
+			-- 줄 전체(− + 최대 버튼 포함)가 호버 자리. 레벨이 바뀌면 키가 달라져 곁 창을 다시 그린다
+			table.insert(self.hoverTargets, {
+				Gui = line,
+				Key = string.format("card:%s:%d", card.Id, level),
+				Show = function()
+					self:_showCard(card, level, maxLevel)
+				end,
+				Paint = function(on: boolean)
+					line.BackgroundTransparency = if on then 0.2 else 1
+					lit.Enabled = on
+					name.TextColor3 = if on then Color3.new(1, 1, 1) elseif have then TEXT else DIM
+				end,
+			})
 		end
 	end
 end
 
-function DebugBattlePanel:_showPreview(card: any, level: number, maxLevel: number)
-	for _, child in self.preview:GetChildren() do
+--=== 곁 창 ===--
+
+local function inside(gui: GuiObject, point: Vector2): boolean
+	local at, size = gui.AbsolutePosition, gui.AbsoluteSize
+	return point.X >= at.X and point.X < at.X + size.X and point.Y >= at.Y and point.Y < at.Y + size.Y
+end
+
+-- 매 프레임: 마우스 아래 호버 대상을 칠하고, 곁 창에 보일 것(키)이 바뀌면 다시 그린다
+function DebugBattlePanel:_pollHover()
+	if not self.open then
+		return
+	end
+	-- 패널·곁 창 둘 다 IgnoreGuiInset 이라 AbsolutePosition 과 GetMouseLocation 이 같은 화면 좌표다
+	local mouse = UserInputService:GetMouseLocation()
+	local found = nil
+	if inside(self.body, mouse) then
+		for _, target in self.hoverTargets do
+			if target.Gui.Parent and inside(target.Gui, mouse) then
+				found = target
+				break
+			end
+		end
+	end
+	local gui = found and found.Gui
+	if gui ~= self.hoverGui then
+		if self.hoverPaint then
+			self.hoverPaint(false)
+		end
+		self.hoverGui = gui
+		self.hoverPaint = found and found.Paint
+		if self.hoverPaint then
+			self.hoverPaint(true)
+		end
+	end
+	local key, show = nil, nil
+	if found then
+		key, show = found.Key, found.Show
+	elseif self.tab == "Setup" and self.state then
+		local classId = self.state.Config.ClassId
+		key, show = "class:" .. classId, function()
+			self:_showClass(classId)
+		end
+	end
+	if key ~= self.sideKey then
+		self.sideKey = key
+		if show then
+			show()
+		else
+			self.side.Visible = false
+		end
+	end
+end
+
+-- 곁 창을 비우고 세로 목록 하나를 연다
+function DebugBattlePanel:_sideReset(): Frame
+	for _, child in self.sideBody:GetChildren() do
 		child:Destroy()
 	end
-	CardView.Build(self.preview, {
-		Id = card.Id,
-		Name = card.Name,
-		Grade = card.Grade,
-		ClassId = card.ClassId,
-		Tags = card.Tags,
-		Art = card.Art,
+	make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, self.sideBody)
+	make("UIPadding", {
+		PaddingLeft = UDim.new(0, 12),
+		PaddingRight = UDim.new(0, 8),
+		PaddingTop = UDim.new(0, 12),
+		PaddingBottom = UDim.new(0, 14),
+	}, self.sideBody)
+	self.side.CanvasPosition = Vector2.zero
+	self.side.Visible = true
+	return self.sideBody
+end
+
+-- 폭을 다 쓰고 높이는 글에 맞추는 글 한 덩이
+local function text(parent: Instance, content: string, order: number, size: number?, color: Color3?, bold: boolean?): TextLabel
+	return make("TextLabel", {
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Text = content,
+		TextColor3 = color or TEXT,
+		Font = if bold then Enum.Font.GothamBold else Enum.Font.Gotham,
+		TextSize = size or 13,
+		TextWrapped = true,
+		RichText = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		LineHeight = 1.1,
+		LayoutOrder = order,
+	}, parent)
+end
+
+-- 어두운 상자(색 테두리). 안에 text 를 차례로 붙인다
+local function tile(parent: Instance, order: number, accent: Color3): Frame
+	local box = make("Frame", {
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = CARD,
+		BorderSizePixel = 0,
+		LayoutOrder = order,
+	}, parent)
+	make("UICorner", { CornerRadius = UDim.new(0, 7) }, box)
+	make("UIStroke", { Color = accent, Thickness = 1, Transparency = 0.55 }, box)
+	make("UIPadding", {
+		PaddingLeft = UDim.new(0, 10),
+		PaddingRight = UDim.new(0, 9),
+		PaddingTop = UDim.new(0, 7),
+		PaddingBottom = UDim.new(0, 8),
+	}, box)
+	make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, box)
+	return box
+end
+
+local function heading(parent: Instance, content: string, order: number)
+	text(parent, content, order, 14, GOLD, true)
+end
+
+local function hexOf(color: Color3): string
+	return "#" .. color:ToHex()
+end
+
+local function dim(content: string): string
+	return string.format('<font color="%s">%s</font>', hexOf(DIM), content)
+end
+
+-- 스킬·패시브 글: [키워드] 하늘색 · `스킬` 굵게 · 숫자 노랑(CardView 와 같은 칠)
+local function rich(content: string): string
+	return CardView.Highlight(content)
+end
+
+-- 직업 정보: 액티브(1·2·3번 · 강화 · [집중력] 변형) · 패시브 · 전용 상태
+function DebugBattlePanel:_showClass(classId: string)
+	if not CharacterDefinitions.IsValid(classId) then
+		self.side.Visible = false
+		return
+	end
+	local def = CharacterDefinitions.Get(classId)
+	local body = self:_sideReset()
+	local picked = self.state and self.state.Config.ClassId == classId
+	text(body, string.format('<font color="%s">%s</font>  <font size="13" color="%s">%s</font>', hexOf(def.Color), def.Name, hexOf(DIM), def.Role), 1, 20, TEXT, true)
+	text(body, string.format("%s체력 %d · 무기 %d%s", if picked then "" else dim("(미리보기) "), def.MaxHealth, def.BasicPower, if def.Conditional then dim(" · 🔒 " .. (def.Hall or "조건부 획득")) else ""), 2, 12, DIM)
+	text(body, def.Description, 3, 13, TEXT)
+
+	local skills: { { any } } = {}
+	for index, skill in BattleSkills.ForClass(classId) do
+		table.insert(skills, { skill, string.format("%d번", index) })
+	end
+	for _, skill in BattleSkills.Upgrades() do
+		if skill.ClassId == classId then
+			table.insert(skills, { skill, "강화" })
+		end
+	end
+	for _, skill in BattleSkills.Focus() do
+		if skill.ClassId == classId then
+			table.insert(skills, { skill, "변형" })
+		end
+	end
+	heading(body, string.format("액티브  %s", dim(string.format("%d개", #skills))), 10)
+	for index, entry in skills do
+		local skill = entry[1]
+		local box = tile(body, 10 + index, def.Color)
+		text(box, string.format('<font color="%s">%s</font>  %s', hexOf(def.Color), entry[2], skill.Name), 1, 14, TEXT, true)
+		local stats = { BattleSkills.RangeLabel(skill), BattleSkills.ShapeText(skill) }
+		if (skill.Damage or 0) > 0 then
+			table.insert(stats, string.format('피해 <font color="%s"><b>%s</b></font>%s', hexOf(GOLD), fmt(skill.Damage), if skill.HitWeights then string.format(" (%d연타)", #skill.HitWeights) else ""))
+		end
+		if (skill.Cooldown or 0) > 0 then
+			table.insert(stats, string.format("재사용 %d턴", skill.Cooldown))
+		end
+		if ((skill :: any).Stamina or 0) > 0 then
+			table.insert(stats, string.format("스테미나 %d", (skill :: any).Stamina))
+		end
+		text(box, table.concat(stats, "  ·  "), 2, 12, DIM)
+		if skill.Description and skill.Description ~= "" then
+			text(box, rich(skill.Description), 3, 13, TEXT)
+		end
+	end
+
+	local kit = ClassPassives.Get(classId)
+	local passives = kit and kit.Passives or {}
+	heading(body, string.format("패시브  %s", dim(string.format("%d개", #passives))), 100)
+	for index, passive in passives do
+		local box = tile(body, 100 + index, GOLD)
+		text(box, passive.Name, 1, 14, TEXT, true)
+		text(box, rich(passive.Description), 2, 13, TEXT)
+	end
+
+	local statuses = kit and kit.StatusKeywords or {}
+	if #statuses > 0 then
+		heading(body, "전용 상태", 200)
+		for index, id in statuses do
+			local keyword = Keywords.Get(id)
+			if keyword then
+				local box = tile(body, 200 + index, C(120, 200, 255))
+				text(box, keyword.Name, 1, 13, C(120, 200, 255), true)
+				text(box, keyword.Description, 2, 12, DIM)
+			end
+		end
+	end
+end
+
+--[[
+	카드 글을 칠한다: 지금 레벨 값은 노랑, 다음 레벨 값은 초록 "▸값", [키워드] 하늘색, `스킬` 굵게.
+	`AbilityCardDefinitions.Describe` 는 대괄호를 벗겨 키워드 색이 사라지므로 여기서 따로 칠한다.
+	없는 카드(level 0)는 Lv1 값을 보인다.
+]]
+local function cardText(entry: any, level: number, maxLevel: number): string
+	local now = math.max(level, 1)
+	local nextLevel = if level >= 1 and level < maxLevel then level + 1 else nil
+	local content = CardView.BreakSentences(entry.Description or "")
+	content = content:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+	local slot = 0
+	content = content:gsub("{([%d%.%-]+)}(%%?)", function(shown: string, unit: string): string
+		slot += 1
+		local ladder = entry.Levels and entry.Levels[slot]
+		if not ladder or #ladder == 0 then
+			return string.format('<font color="%s"><b>%s%s</b></font>', hexOf(GOLD), shown, unit)
+		end
+		local out = string.format('<font color="%s"><b>%s%s</b></font>', hexOf(GOLD), fmt(ladder[math.min(now, #ladder)]), unit)
+		if nextLevel and ladder[nextLevel] then
+			out ..= string.format('<font color="rgb(120,220,140)" size="12"> ▸%s%s</font>', fmt(ladder[nextLevel]), unit)
+		end
+		return out
+	end)
+	content = content:gsub("%[([^%]]+)%]", '<font color="rgb(120,200,255)">%1</font>')
+	content = content:gsub("`([^`]+)`", "<b>%1</b>")
+	return content
+end
+
+-- 사다리마다 글에서 그 자리 바로 앞 몇 글자(무엇의 값인지)와 뒤 단위(%)
+local function ladderLabels(description: string): { { string } }
+	local labels = {}
+	local last = 1
+	for start, finish in description:gmatch("(){[%d%.%-]+}()") do
+		local before = description:sub(last, start - 1):gsub("[%[%]`]", ""):gsub("^%s+", ""):gsub("%s+$", "")
+		local length = utf8.len(before) or #before
+		if length > 12 then
+			before = "…" .. before:sub(utf8.offset(before, length - 11) or 1)
+		end
+		table.insert(labels, { before, if description:sub(finish, finish) == "%" then "%" else "" })
+		last = finish
+	end
+	return labels
+end
+
+-- 카드: 실제 카드 모양 + 지금/다음 값 칠한 효과 + 레벨별 수치 + 키워드 풀이 + 배타·파티
+function DebugBattlePanel:_showCard(entry: any, level: number, maxLevel: number)
+	local body = self:_sideReset()
+	local holder = make("Frame", { Size = UDim2.fromOffset(250, 350), BackgroundTransparency = 1, LayoutOrder = 1 }, body)
+	CardView.Build(holder, {
+		Id = entry.Id,
+		Name = entry.Name,
+		Grade = entry.Grade,
+		ClassId = entry.ClassId,
+		Tags = entry.Tags,
+		Art = entry.Art,
 		Level = level,
 		MaxLevel = maxLevel,
-		Description = AbilityCardDefinitions.Describe(card, math.max(level, 1)),
+		Description = AbilityCardDefinitions.Describe(entry, math.max(level, 1)),
 	}, { TextSize = 15 })
-	self.preview.Visible = true
+
+	local state = if level == 0 then "보유 안 함 — Lv1 값" elseif level >= maxLevel then string.format("Lv %d/%d 최대", level, maxLevel) else string.format("Lv %d/%d · 초록 ▸ = Lv %d", level, maxLevel, level + 1)
+	local effect = tile(body, 2, CardView.GRADE_STYLE[entry.Grade] and CardView.GRADE_STYLE[entry.Grade].Edge or GOLD)
+	text(effect, string.format("효과  %s", dim(state)), 1, 13, GOLD, true)
+	text(effect, cardText(entry, level, maxLevel), 2, 14, TEXT)
+
+	local ladders = entry.Levels or {}
+	if #ladders > 0 then
+		local table_ = tile(body, 3, GOLD)
+		text(table_, "레벨별 수치", 1, 13, GOLD, true)
+		local labels = ladderLabels(entry.Description or "")
+		for slot, ladder in ladders do
+			local cells = {}
+			for at, value in ladder do
+				local shown = fmt(value) .. (labels[slot] and labels[slot][2] or "")
+				if at == level then
+					shown = string.format('<font color="%s"><b><u>%s</u></b></font>', hexOf(GOLD), shown)
+				elseif at == level + 1 then
+					shown = string.format('<font color="rgb(120,220,140)">%s</font>', shown)
+				else
+					shown = dim(shown)
+				end
+				table.insert(cells, shown)
+			end
+			local caption = labels[slot] and labels[slot][1] or ""
+			text(table_, dim(if caption ~= "" then caption else "수치 " .. slot), 2 * slot, 11, DIM)
+			text(table_, table.concat(cells, dim("  ·  ")), 2 * slot + 1, 13, TEXT)
+		end
+	end
+
+	local shown = 0
+	for _, name in Keywords.Mentioned(entry.Description or "") do
+		local keyword = Keywords.ByName(name)
+		if keyword and shown < 6 then
+			shown += 1
+			local box = tile(body, 10 + shown, C(120, 200, 255))
+			text(box, keyword.Name, 1, 13, C(120, 200, 255), true)
+			text(box, keyword.Description, 2, 12, DIM)
+		end
+	end
+
+	local notes = {}
+	if entry.Party then
+		table.insert(notes, "파티 전제 — 혼자면 효과가 없거나 약하다.")
+	end
+	if entry.Excludes and #entry.Excludes > 0 then
+		local names = {}
+		for _, id in entry.Excludes do
+			local other = AbilityCardDefinitions.Get(id)
+			table.insert(names, other and other.Name or id)
+		end
+		table.insert(notes, "배타 — 함께 들 수 없음: " .. table.concat(names, ", "))
+	end
+	if #notes > 0 then
+		local box = tile(body, 30, BAD)
+		text(box, table.concat(notes, "\n"), 1, 12, TEXT)
+	end
 end
 
 return DebugBattlePanel

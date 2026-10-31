@@ -947,6 +947,11 @@ function BattleSkills.Upgrades(): { Skill }
 	return upgradeSkills
 end
 
+-- [집중력] 변형 스킬(청의 검사 1·3번 자리를 갈아 끼움). 디버그 패널 직업 정보가 쓴다.
+function BattleSkills.Focus(): { Skill }
+	return focusSkills
+end
+
 -- 모든 직업이 함께 쓰는 스킬(가드·명상).
 function BattleSkills.Common(): { Skill }
 	return commonSkills
