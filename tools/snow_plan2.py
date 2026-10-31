@@ -325,11 +325,8 @@ LAMPS_EXTRA = [(-4763, -3766, -90), (-4642, -3760, 90), (-4765, -3702, 180), (-4
 
 # ── 동쪽 고원 바깥: 차펜 공방이 불태운 옛 설 공방 폐허와 그을린 마당(1판 OUTSIDE 와 같은 자리, 땅 높이 43.8) ──
 RUIN = (-3084.8, -3921.0)
-BUILD += [
-    ("Sel_Werk_Ruin", RUIN[0], RUIN[1], 200, "설공방", "sel", 1.0),   # 들어가는 폐허(옛 1.3 배를 겉에 구움)
-    ("Boiler_Tank", RUIN[0] + 28, RUIN[1] - 18, 20, "설공방", "", 1.0),
-    ("Big_Gear", RUIN[0] - 30, RUIN[1] + 22, 35, "설공방", "", 1.0),
-]
+# 2026-10-31 사용자 "폐허 재구성" → 폐허는 Snow_Field(snow_field_plan.py 의 (구)설공방 폐허 — 부서진 벽·그을린 들보·불씨 남은 화덕)가 짓는다.
+# 옛 Sel_Werk_Ruin · 보일러 · 큰 톱니는 여기서 뺐다(Studio 의 옛것은 Snow_Field 가 ServerStorage.Snow_SelRuin_Old 로 옮김)
 
 
 def ring_pts(r, a0, a1, step=10):

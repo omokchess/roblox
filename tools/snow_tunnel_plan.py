@@ -43,7 +43,7 @@ TUNNELS = [
 # 입구 바위 언덕(굴 몸 좌표: lx 옆(+ 동), lz 굴 안쪽으로(+ 남), ly 땅 위) { lx0, lx1, lz0, lz1, ly0, ly1, 돌림, 색 1/2 }
 # 굴 안(|lx| < 7, ly < 16 - lz/2)을 침범하면 안 된다 — 덮개는 앞 끝의 굴 천장 높이에서 시작해 계단처럼 내려간다.
 PORTAL_ROCKS = [
-    (-12, 12, -1, 10, 16.5, 29.0, 0, 1),     # 덮개 1(입구 위 — 갱목 윗보 바로 위)
+    (-12, 12, -1.3, 10, 16.5, 29.0, 0, 1),   # 덮개 1(입구 위 — 갱목 윗보 바로 위 · 앞면을 오른 어깨와 어긋나게)
     (-12.5, 11.5, 10, 20, 11.2, 25.4, 0, 2),  # 덮개 2
     (-11.5, 12.5, 20, 30, 6.1, 20.6, 0, 1),   # 덮개 3
     (-12, 12, 30, 40, 1.2, 13.8, 0, 2),       # 덮개 4
@@ -131,7 +131,7 @@ for name, X, roomName, hole, locked in TUNNELS:
         return my + h * CO - lz * SI, mz + h * SI + lz * CO
 
     y, z = slope(HC + 1.5)
-    P("Ceil", xc, y, z, W + 2 * T, 3, L + 4, deg)
+    P("Ceil", xc, y, z, W + 2 * T - 0.2, 3, L + 4, deg)   # 벽 바깥면과 한 평면이 되지 않게 0.2 좁게(벽이 덮는다)
     y, z = slope((HC - 1) / 2)
     for s in (-1, 1):
         P("Wall", xc + s * (W / 2 + T / 2), y, z, T, HC + 7, L + 4, deg)
@@ -158,7 +158,7 @@ for name, X, roomName, hole, locked in TUNNELS:
     # ── 바닥 -70 평지(벽 북쪽 면까지 — 벽 안은 판 벽이 굴 몸) ──
     a, b = zl - 2, zwall
     P("Floor", xc, FLOOR - 1.5, (a + b) / 2, W, 3, b - a)
-    P("Ceil", xc, FLOOR + HV + 1.5, (a + b) / 2, W + 2 * T, 3, b - a)
+    P("Ceil", xc, FLOOR + HV + 1.5, (a + b) / 2, W + 2 * T - 0.2, 3, b - a)
     for s in (-1, 1):
         P("Wall", xc + s * (W / 2 + T / 2), FLOOR + HV / 2, (a + b) / 2, T, HV + 6, b - a)
     for zz in (zl + 4, zwall - 1):

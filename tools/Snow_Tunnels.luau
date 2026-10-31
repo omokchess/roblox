@@ -235,7 +235,7 @@ local ok, err = pcall(function()
 		m.Parent = folder("Gate")
 	end
 	-- 순간이동 명소(PlayerService 가 태그로 찾는다)
-	for _, s in SPOTS do
+	for i, s in SPOTS do
 		local p = Instance.new("Part")
 		p.Name = "Spot_" .. s[1]
 		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch = true, false, false, false
@@ -244,6 +244,7 @@ local ok, err = pcall(function()
 		p.CFrame = CFrame.lookAt(Vector3.new(s[2], s[3], s[4]), Vector3.new(s[5], s[3], s[6]))
 		p:SetAttribute("SpotName", s[1])
 		p:SetAttribute("Region", "설원")
+		p:SetAttribute("Order", 3 + i) -- 보스룸 1 · 폐허 2 · 휴식처 3(Snow_Field) 다음
 		CS:AddTag(p, "TeleportSpot")
 		p.Parent = folder("Spots")
 	end

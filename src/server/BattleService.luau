@@ -30,6 +30,7 @@
 	  클라 → GridAction   {Kind="Move"|"Skill"|"Dodge"}   서버 → GridState (GridBattle.Snapshot)
 ]]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -142,10 +143,12 @@ function BattleService.new(remotes: Folder, returnHome: ((Player) -> ())?)
 	encounters.Parent = workspace
 	self.Encounters = encounters
 
-	-- 만남 몹에 닿았는지 0.2초마다 본다(Touched 는 고정 파트끼리 안 뜨고, 스치기만 해도 여러 번 뜬다)
+	-- 만남 몹에 닿았는지 · 들판 보스 자리에 들어왔는지 0.2초마다 본다(Touched 는 고정 파트끼리 안 뜨고, 스치기만 해도 여러 번 뜬다)
+	self.BossInside = setmetatable({}, { __mode = "k" }) :: { [Player]: { [Instance]: boolean } }
 	task.spawn(function()
 		while self.Encounters.Parent do
 			self:_checkEncounters()
+			self:_checkBossTriggers()
 			task.wait(0.2)
 		end
 	end)
@@ -620,7 +623,8 @@ end
 	설정대로 전투를 연다.
 	fieldAt 이 오면(만남 몹) 그 자리에서, 아니면 설정의 전장(Sky/Field)에서.
 ]]
-function BattleService:StartBattle(player: Player, fieldAt: CFrame?): (boolean, string?)
+-- enemyIds: 들판 보스 자리처럼 편성을 정해 여는 싸움(없으면 F2 편성)
+function BattleService:StartBattle(player: Player, fieldAt: CFrame?, enemyIds: { string }?): (boolean, string?)
 	local session = self:_session(player)
 	local root = rootOf(player)
 	if not root then
@@ -686,8 +690,8 @@ function BattleService:StartBattle(player: Player, fieldAt: CFrame?): (boolean, 
 		nil,
 		session.Run.Cards,
 		{
-			Name = if fieldAt then "필드 만남" else "시험 전투",
-			Enemies = table.clone(config.Enemies),
+			Name = if enemyIds then "들판 보스" elseif fieldAt then "필드 만남" else "시험 전투",
+			Enemies = table.clone(enemyIds or config.Enemies),
 			HealthScale = config.HealthScale,
 			PowerScale = config.PowerScale,
 			Cells = table.clone(config.Cells),
@@ -1297,6 +1301,43 @@ function BattleService:_checkEncounters()
 			local ok, reason = self:StartBattle(owner, at)
 			if not ok then
 				self:_publish(owner, reason)
+			end
+		end
+	end
+end
+
+--[[
+	들판 보스 자리(2026-10-31 사용자: "보스룸이라고 표시하기보다 지형 하나를 놓고 들어갔을 때 보스가 등장하게").
+	태그 BossTrigger 파트(Snow_Field 의 얼어붙은 호수 등) — 속성 EnemyId(보스 적 Id, 비면 아무 일 없음) · Radius(가운데에서 수평 거리).
+	자리 밖에서 안으로 들어오는 순간 그 보스와 필드 전장을 연다(가운데를 보게). 싸운 뒤엔 자리를 벗어났다 다시 들어와야 또 열린다.
+]]
+function BattleService:_checkBossTriggers()
+	for _, trigger in CollectionService:GetTagged("BossTrigger") do
+		local enemyId = trigger:GetAttribute("EnemyId")
+		if not trigger:IsA("BasePart") or type(enemyId) ~= "string" or not EnemyDefinitions.IsValid(enemyId) then
+			continue
+		end
+		local radius = trigger:GetAttribute("Radius") or 100
+		for _, player in Players:GetPlayers() do
+			local root = rootOf(player)
+			if not root then
+				continue
+			end
+			local offset = root.Position - trigger.Position
+			local flat = Vector3.new(offset.X, 0, offset.Z)
+			local inside = flat.Magnitude <= radius and math.abs(offset.Y) < 40
+			local seen = self.BossInside[player] or {}
+			self.BossInside[player] = seen
+			local was = seen[trigger]
+			seen[trigger] = inside or nil
+			local session = self.Sessions[player]
+			if inside and not was and not (session and session.Battle) then
+				local toCenter = if flat.Magnitude > 1 then -flat.Unit else Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+				local front = root.Position + toCenter * 14
+				local ok, reason = self:StartBattle(player, CFrame.lookAt(front, front + toCenter), { enemyId })
+				if not ok then
+					self:_publish(player, reason)
+				end
 			end
 		end
 	end
