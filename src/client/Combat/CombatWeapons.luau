@@ -158,9 +158,9 @@ export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown" | "Sky"
 ]]
 export type Glow = { Gui: BillboardGui, Size: UDim2, Layers: { { Frame: Frame, Alpha: number } }, Ring: UIStroke, Dot: Frame, Light: PointLight }
 local GLOW_SIZE = 0.5 -- 가장 밝은 별 빛무리 지름(스터드) — 2026-10-30 키패드만 하게(옛 1.5)
--- 하늘 별자리(Sky — 셉텐트리오네스)는 높이 40 에 떠서 멀다 → 빛무리를 8배(약 4 스터드)로 키운다
--- (2026-10-31 사용자: "마법진에 북두칠성이 가려져서 안 보여")
-local SKY_GLOW = 8
+-- 하늘 별자리(Sky — 셉텐트리오네스)는 높이 40 에 떠서 멀다 → 빛무리를 11배(약 5.5 스터드)로 키운다
+-- (2026-10-31 사용자: "마법진에 북두칠성이 가려져서 안 보여" → 8배, 같은 날 "각 별마다 크기를 조금 더 키운" → 11배)
+local SKY_GLOW = 11
 local function makeGlow(core: BasePart, scale: number): Glow
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "StarGlow"

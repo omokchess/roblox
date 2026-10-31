@@ -616,6 +616,9 @@ end
 ]]
 
 -- 일곱 별이 레이저로 떨어질 자리: 북두칠성 꼴을 적 진영 바닥에 펼친다(화면 가로 = 앞 F 로 −z, 화면 세로 = 카메라에서 먼 쪽 −R 로 y)
+-- 2026-10-31 사용자: "북두칠성이 더 넓게 펼쳐지고 … 진형쪽으로 약간 들어가듯이" → 진영 상자보다 WIDE 배 넓게, 앞 가장자리는 진영 앞에 두고
+-- 진영 뒤쪽으로 더 깊이 들어간다(하늘의 별은 이 자리 바로 위라 레이저는 그대로 수직)
+local WIDE = 1.4
 local function dipperGround(ctx: any): { Vector3 }
 	local box = Common.FieldBox(ctx)
 	local cu, cv = (box.U0 + box.U1) / 2, (box.V0 + box.V1) / 2
@@ -624,9 +627,10 @@ local function dipperGround(ctx: any): { Vector3 }
 	for _, p in POINTS do
 		zmax, ymax = math.max(zmax, math.abs(p[3])), math.max(ymax, math.abs(p[2]))
 	end
+	local deep = cu + (WIDE - 1) * hu
 	local out = {}
 	for i, p in POINTS do
-		out[i] = Common.BoxWorld(box, Vector3.new(cu - p[3] / zmax * hu, cv - p[2] / ymax * hv, 0.1))
+		out[i] = Common.BoxWorld(box, Vector3.new(deep - p[3] / zmax * hu * WIDE, cv - p[2] / ymax * hv * WIDE, 0.1))
 	end
 	return out
 end
@@ -1008,7 +1012,8 @@ function Fx.SeptLaserHit(ctx: any, _ev: any, at: Vector3?)
 end
 
 -- 모으기(강타 직전, 팔을 내리치기 시작할 때): 별자리 선이 굵게 타오르고 성반이 빨리 돌며 조여 들고 별 일곱에 빛이 빨려 든다.
--- 카메라는 진형 옆 낮은 데서 하늘의 별자리를 올려다본다
+-- 카메라는 별자리 위(내 쪽으로 물러나)로 올라가 별 너머로 진형을 내려다본다 — 강타가 이 자리에서 터진다
+-- (2026-10-31 사용자: "한번에 쾅 하고 찍을 땐 별 위에서 진형쪽을 바라보게")
 function Fx.SeptGather(ctx: any)
 	local s = st(ctx)
 	local sept = s.sept
@@ -1026,9 +1031,10 @@ function Fx.SeptGather(ctx: any)
 	grade(ctx, { Saturation = -0.85, Contrast = 0.8, Brightness = -0.14 }, 0.7, 0.6)
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
-	local center = ctx.EnemyCenter
+	local mid = sum / 7
 	local from = camNow(s)
-	local goal = CFrame.lookAt(center + r * 22 - f * 6 + Vector3.new(0, 1.5, 0), center:Lerp(sum / 7, 0.6))
+	local goal = CFrame.lookAt(mid + Vector3.new(0, 12, 0) - f * 20 + r * 6, ctx.EnemyCenter:Lerp(mid, 0.5))
+	s.slamLook = ctx.EnemyCenter:Lerp(mid, 0.5)
 	ctx.Shot(0.4, function(_, t)
 		local cf = from:Lerp(goal, sine(t / 0.4))
 		s.cam = cf
@@ -1060,7 +1066,7 @@ end
 --[[
 	마지막: 별 일곱이 한꺼번에 굵은 빛줄기로 내리꽂히고(북두칠성 꼴) 바닥 밑그림이 선 자국으로 타오르며 진형 전체를 강타 —
 	흑백 임팩트 → 강한 붉은 빛으로 남아 내 차례가 오면 돌아옴 · 진형 가운데서 큰 충격파 두 겹과 고리 · 제목 카드 SEPTENTRIONES. 성반 · 룬 · 하늘 선은 거둔다.
-	카메라는 진형 위 넓은 구도로 옮겨(선 자국이 다 보이게) 모션이 끝날 때까지 머문다. 큰 연출은 한 번(맞은 적마다 불린다)
+	카메라는 모으기 때 오른 별자리 위 자리에서 진형 쪽으로 천천히 다가가며 모션이 끝날 때까지 머문다. 큰 연출은 한 번(맞은 적마다 불린다)
 ]]
 function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 	local s = st(ctx)
@@ -1098,12 +1104,11 @@ function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 		end)
 		ctx.Vfx.Ring(CFrame.new(floor + Vector3.new(0, 0.2, 0)), { R0 = 4, R1 = 26, Color = WHITE, Life = 1.2, Width = 0.6, Height = 0.3, Segments = 40 })
 		ctx.Vfx.Burst(floor + Vector3.new(0, 1, 0), { Count = 24, Colors = { STAR, WHITE, MELT }, Size = 0.3, Speed = 30, Gravity = 30, Life = 0.9 })
-		local f = ctx.Forward
-		local r = f:Cross(Vector3.yAxis)
-		local from = camNow(s)
-		local goal = CFrame.lookAt(center + r * 24 - f * 2 + Vector3.new(0, 22, 0), center)
-		ctx.Shot(1.5, function(_, t)
-			local cf = from:Lerp(goal, sine(t / 0.45))
+		local from = camNow(s).Position
+		local look = s.slamLook or center
+		local into = from:Lerp(look, 0.15)
+		ctx.Shot(1.7, function(_, t)
+			local cf = CFrame.lookAt(from:Lerp(into, sine(t / 1.7)), look)
 			s.cam = cf
 			return cf
 		end)
