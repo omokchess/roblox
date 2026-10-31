@@ -23,6 +23,7 @@ local TweenService = game:GetService("TweenService")
 
 local CardAxes = require(ReplicatedStorage.Shared.CardAxes)
 local StatDefinitions = require(ReplicatedStorage.Shared.StatDefinitions)
+local StatTooltip = require(script.Parent.StatTooltip)
 
 local BattleStore = require(script.Parent.BattleStore)
 local CardView = require(script.Parent.CardView)
@@ -368,8 +369,64 @@ function LevelUpUi:_buildStatPanel(parent: Instance)
 		plus.Activated:Connect(function()
 			BattleStore.Send({ Kind = "SpendStat", StatId = id, Amount = 1 })
 		end)
+		-- 마우스를 올리면 옆에 이 스탯의 효과·영향 받는 직업(2026-10-31 사용자). 줄 위 + 단추 위 둘 다 —
+		-- 들어간 수를 세어 둘 다에서 나갔을 때만 닫는다(줄 → 단추로 옮길 때 Leave·Enter 순서가 뒤섞여도 안 꺼지게)
+		self.statHover = self.statHover or {}
+		for _, gui in { rowFrame, plus } do
+			gui.MouseEnter:Connect(function()
+				self.statHover[id] = (self.statHover[id] or 0) + 1
+				self:_showStatTip(id, index)
+			end)
+			gui.MouseLeave:Connect(function()
+				self.statHover[id] = math.max(0, (self.statHover[id] or 0) - 1)
+				task.defer(function()
+					if (self.statHover[id] or 0) == 0 and self.statTipFor == id then
+						self:_hideStatTip()
+					end
+				end)
+			end)
+		end
 		self.statRows[id] = { Name = name, Plus = plus, Definition = definition }
 	end
+	self.statPanel = panel
+end
+
+-- 스탯 툴팁: 스탯 패널 오른쪽, 그 줄 높이에(내용은 StatTooltip — 디버그 패널과 같은 글)
+function LevelUpUi:_showStatTip(id: string, index: number)
+	if not self.statTip then
+		local tip = make("Frame", {
+			Name = "StatTip",
+			Size = UDim2.fromOffset(340, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundColor3 = C(18, 19, 26),
+			BackgroundTransparency = 0.04,
+			BorderSizePixel = 0,
+			Visible = false,
+			ZIndex = 29,
+		}, self.statPanel)
+		make("UICorner", { CornerRadius = UDim.new(0, 10) }, tip)
+		make("UIStroke", { Color = GOLD, Thickness = 1, Transparency = 0.4 }, tip)
+		make("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 12) }, tip)
+		self.statTip = tip
+	end
+	local tip = self.statTip
+	for _, child in tip:GetChildren() do
+		if child:IsA("TextLabel") then
+			child:Destroy()
+		end
+	end
+	local state = self.state or {}
+	StatTooltip.Fill(tip, id, (state.Stats and state.Stats[id]) or 0, state.Config and state.Config.ClassId)
+	tip.Position = UDim2.new(1, 10, 0, 44 + (index - 1) * 62)
+	tip.Visible = true
+	self.statTipFor, self.statTipIndex = id, index
+end
+
+function LevelUpUi:_hideStatTip()
+	if self.statTip then
+		self.statTip.Visible = false
+	end
+	self.statTipFor = nil
 end
 
 function LevelUpUi:_buildBuildPanel(parent: Instance)
@@ -581,6 +638,10 @@ function LevelUpUi:_refreshPick()
 	for id, entry in self.statRows do
 		entry.Name.Text = string.format('%s  <font color="rgb(255,205,90)">%d</font>', entry.Definition and entry.Definition.Name or id, state.Stats and state.Stats[id] or 0)
 		entry.Plus.Visible = (state.Points or 0) > 0
+	end
+	-- 툴팁이 떠 있으면 새 점수로 다시
+	if self.statTipFor and self.statTipIndex then
+		self:_showStatTip(self.statTipFor, self.statTipIndex)
 	end
 
 	-- 내 빌드: 축별 장수 막대 + 보유 카드

@@ -44,6 +44,7 @@ local StatDefinitions = require(ReplicatedStorage.Shared.StatDefinitions)
 
 local BattleStore = require(script.Parent.BattleStore)
 local CardView = require(script.Parent.CardView)
+local StatTooltip = require(script.Parent.StatTooltip)
 
 local make = CardView.Make
 
@@ -451,7 +452,7 @@ local function toggle(parent: Instance, order: number, text: string, value: bool
 end
 
 -- 이름 · 값 · 버튼 여러 개(증감)
-local function stepper(parent: Instance, order: number, text: string, value: string, steps: { { any } }, onStep: (any) -> ())
+local function stepper(parent: Instance, order: number, text: string, value: string, steps: { { any } }, onStep: (any) -> ()): Frame
 	local line = row(parent, order)
 	label(line, text, 118, 1, DIM)
 	label(line, value, 62, 2, GOLD, Enum.TextXAlignment.Center)
@@ -460,6 +461,7 @@ local function stepper(parent: Instance, order: number, text: string, value: str
 			onStep(step[1])
 		end, 2 + index)
 	end
+	return line
 end
 
 local function fmt(n: number): string
@@ -801,9 +803,25 @@ function DebugBattlePanel:_growTab(section: (string?, number?) -> Frame)
 	local stats = section(string.format('스탯  <font color="rgb(255,205,90)">포인트 %d</font>', state.Points))
 	for index, id in StatDefinitions.Order do
 		local definition = StatDefinitions.Get(id)
-		stepper(stats, index, definition and definition.Name or id, tostring(state.Stats[id] or 0), { { -5, "−5" }, { -1, "−1" }, { 1, "+1" }, { 5, "+5" } }, function(step)
+		local points = state.Stats[id] or 0
+		local line = stepper(stats, index, definition and definition.Name or id, tostring(points), { { -5, "−5" }, { -1, "−1" }, { 1, "+1" }, { 5, "+5" } }, function(step)
 			send({ Kind = "SpendStat", StatId = id, Amount = step })
 		end)
+		-- 올리면 곁 창에 이 스탯의 효과와 영향 받는 직업(카드 줄과 같은 칠)
+		line.BackgroundColor3 = C(70, 58, 112)
+		make("UICorner", { CornerRadius = UDim.new(0, 5) }, line)
+		local lit = make("UIStroke", { Color = GOLD, Thickness = 1.5, Enabled = false }, line)
+		table.insert(self.hoverTargets, {
+			Gui = line,
+			Key = string.format("stat:%s:%d", id, points),
+			Show = function()
+				self:_showStat(id, points)
+			end,
+			Paint = function(on: boolean)
+				line.BackgroundTransparency = if on then 0.2 else 1
+				lit.Enabled = on
+			end,
+		})
 	end
 	local reset = row(stats, 10, 30)
 	button(reset, "스탯 되돌리기", 140, nil, function()
@@ -1175,6 +1193,13 @@ local function ladderLabels(description: string): { { string } }
 end
 
 -- 카드: 실제 카드 모양 + 지금/다음 값 칠한 효과 + 레벨별 수치 + 키워드 풀이 + 배타·파티
+-- 스탯: 효과(1점당 → 지금)와 영향 받는 직업(Shared.StatInfo — 그리는 건 StatTooltip)
+function DebugBattlePanel:_showStat(statId: string, points: number)
+	local body = self:_sideReset()
+	local box = tile(body, 1, GOLD)
+	StatTooltip.Fill(box, statId, points, self.state and self.state.Config.ClassId)
+end
+
 function DebugBattlePanel:_showCard(entry: any, level: number, maxLevel: number)
 	local body = self:_sideReset()
 	local holder = make("Frame", { Size = UDim2.fromOffset(250, 350), BackgroundTransparency = 1, LayoutOrder = 1 }, body)
