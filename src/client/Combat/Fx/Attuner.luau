@@ -14,7 +14,7 @@
 	  알리오스       별을 적 진영 위로 띄우고(AliothLaunch) 허공에 팔을 휘두를 때마다 별이 진형을 곧게 가로지른다(AliothStrike 10타,
 	                 0.5 · 0.45 · 0.2 · 0.15 … 초 간격으로 빨라짐 — 사용자 원안의 두 배 빠르기) → 손으로 돌아온다(AliothReturn)
 	  셉텐트리오네스 컷신 — 왼 허리로 손을 모았다 치켜들면 별 일곱이 하늘 높이 올라 바닥과 나란히 눕고 카메라가 따라간다(SeptRise — 레터박스 ·
-	                 밤하늘 화면 · 누운 성반, 레이저는 수직으로) → 별이 하나씩 적 진영으로 레이저(SeptLaser — 별 이름표, 매번 다른 화면 색, 카메라는 별을 보다 레이저 끝을 따라 아래로,
+	                 밤하늘 화면 · 누운 성반, 진영보다 넓게 펼친 별에서 레이저가 진영 안으로 모여 떨어진다) → 별이 하나씩 적 진영으로 레이저(SeptLaser — 별 이름표, 매번 다른 화면 색, 카메라는 별을 보다 레이저 끝을 따라 아래로,
 	                 떨어진 자리에 룬 · 하늘과 바닥에 별자리 선이 한 줄씩) → 모으기(SeptGather) → 일곱 빛줄기가 한꺼번에 내리꽂혀 진형 전체를 강타
 	                 (SeptSlam — 화면 효과 · 제목 카드 "SEPTENTRIONES" · 별을 잇는 선 자국이 남는다)
 ]]
@@ -616,9 +616,6 @@ end
 ]]
 
 -- 일곱 별이 레이저로 떨어질 자리: 북두칠성 꼴을 적 진영 바닥에 펼친다(화면 가로 = 앞 F 로 −z, 화면 세로 = 카메라에서 먼 쪽 −R 로 y)
--- 2026-10-31 사용자: "북두칠성이 더 넓게 펼쳐지고 … 진형쪽으로 약간 들어가듯이" → 진영 상자보다 WIDE 배 넓게, 앞 가장자리는 진영 앞에 두고
--- 진영 뒤쪽으로 더 깊이 들어간다(하늘의 별은 이 자리 바로 위라 레이저는 그대로 수직)
-local WIDE = 1.4
 local function dipperGround(ctx: any): { Vector3 }
 	local box = Common.FieldBox(ctx)
 	local cu, cv = (box.U0 + box.U1) / 2, (box.V0 + box.V1) / 2
@@ -627,10 +624,28 @@ local function dipperGround(ctx: any): { Vector3 }
 	for _, p in POINTS do
 		zmax, ymax = math.max(zmax, math.abs(p[3])), math.max(ymax, math.abs(p[2]))
 	end
-	local deep = cu + (WIDE - 1) * hu
 	local out = {}
 	for i, p in POINTS do
-		out[i] = Common.BoxWorld(box, Vector3.new(deep - p[3] / zmax * hu * WIDE, cv - p[2] / ymax * hv * WIDE, 0.1))
+		out[i] = Common.BoxWorld(box, Vector3.new(cu - p[3] / zmax * hu, cv - p[2] / ymax * hv, 0.1))
+	end
+	return out
+end
+
+--[[
+	하늘의 별 자리: 떨어질 자리(진영 안 북두칠성 꼴)를 그 가운데에서 WIDE 배로 넓혀 SKY 높이에 눕힌다 — 레이저가 넓게 펼친 별에서
+	진영 안으로 부채꼴처럼 모여 떨어진다(2026-10-31 사용자: "북두칠성이 더 넓게 펼쳐지고 … 진형쪽으로 약간 들어가듯이", 질문 3 답: 그림처럼 · 1.4배)
+]]
+local SKY = 40 -- 질문 2 답
+local WIDE = 1.4
+local function dipperSky(ground: { Vector3 }): { Vector3 }
+	local mid = Vector3.zero
+	for _, g in ground do
+		mid += g
+	end
+	mid /= #ground
+	local out = {}
+	for i, g in ground do
+		out[i] = mid + (g - mid) * WIDE + Vector3.new(0, SKY, 0)
 	end
 	return out
 end
@@ -844,11 +859,11 @@ local function linkLines(ctx: any, sept: any, i: number)
 end
 
 --[[
-	치켜든 손을 따라 별 일곱이 하늘로: 별마다 떨어질 자리 바로 위 SKY 높이로 올라가 별자리가 바닥과 나란히 눕는다(레이저가 수직으로 떨어지게 —
-	2026-10-31 사용자: "더 높이 올라간 채로 완전 눕힌 후에 레이저를 수직으로 떨구는 식"). 별은 이펙트가 몰고(Drive) 강타 0.85초 뒤 놓는다.
+	치켜든 손을 따라 별 일곱이 하늘로: SKY 높이에 진영보다 넓게(dipperSky) 올라가 별자리가 바닥과 나란히 눕는다
+	(2026-10-31 사용자: "더 높이 올라간 채로 완전 눕힌 후에 레이저를 수직으로" → 같은 날 그림: 넓게 펼친 별에서 진영 안으로 모여 떨어지게).
+	별은 이펙트가 몰고(Drive) 강타 0.85초 뒤 놓는다.
 	레터박스 · 밤하늘 화면 · 하늘 성반이 켜지고(ev.total 초 — 컷신 끝까지), 별마다 번쩍 · 손끝 파문, 카메라가 오르는 별자리를 따라 올라간다(ev.d 초)
 ]]
-local SKY = 40 -- 질문 2 답
 function Fx.SeptRise(ctx: any, ev: any)
 	local s = st(ctx)
 	s.cam = nil
@@ -856,8 +871,9 @@ function Fx.SeptRise(ctx: any, ev: any)
 	s.sept = sept
 	local d = (ev and ev.d) or 1
 	if ctx.Weapons and ctx.Weapons.Drive then
+		local sky = dipperSky(sept.Points)
 		for i = 1, 7 do
-			local from, goal = ctx.Star(i), sept.Points[i] + Vector3.new(0, SKY, 0)
+			local from, goal = ctx.Star(i), sky[i]
 			local t, after = -(i - 1) * 0.05, 0
 			ctx.Weapons:Drive(i, function(dt: number): Vector3?
 				t += dt

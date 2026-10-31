@@ -313,7 +313,7 @@ return {
 				{ t = 8.62, k = "Fx", n = "SeptGather" },
 				{ t = 9.05, k = "Hit", i = 8, fx = "SeptSlam" },
 				{ t = 9.06, k = "Stop", d = 0.12 },
-				{ t = 9.07, k = "Shake", a = 2.2, d = 1.1 },
+				{ t = 9.07, k = "Shake", a = 3, d = 1.3 },
 				{ t = 9.9, k = "Orbs", mode = "Orbit" },
 			},
 		},
