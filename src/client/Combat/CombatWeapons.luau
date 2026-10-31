@@ -158,6 +158,9 @@ export type OrbMode = "Orbit" | "Gather" | "Shield" | "Spread" | "Crown" | "Sky"
 ]]
 export type Glow = { Gui: BillboardGui, Size: UDim2, Layers: { { Frame: Frame, Alpha: number } }, Ring: UIStroke, Dot: Frame, Light: PointLight }
 local GLOW_SIZE = 0.5 -- 가장 밝은 별 빛무리 지름(스터드) — 2026-10-30 키패드만 하게(옛 1.5)
+-- 하늘 별자리(Sky — 셉텐트리오네스)는 높이 40 에 떠서 멀다 → 빛무리를 8배(약 4 스터드)로 키운다
+-- (2026-10-31 사용자: "마법진에 북두칠성이 가려져서 안 보여")
+local SKY_GLOW = 8
 local function makeGlow(core: BasePart, scale: number): Glow
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "StarGlow"
@@ -435,7 +438,7 @@ local function shine(self: any, i: number, dt: number)
 	star.Ring.Transparency = 1 - 0.35 * k
 	star.Dot.BackgroundTransparency = 0.55 * (1 - k)
 	star.Dot.Size = UDim2.fromScale(0.1 + 0.05 * k, 0.1 + 0.05 * k)
-	local grow = 1 + 0.8 * swell
+	local grow = (1 + 0.8 * swell) * (self.SkyK or 1)
 	star.Gui.Size = UDim2.fromScale(star.Size.X.Scale * grow, star.Size.Y.Scale * grow)
 	star.Light.Brightness = 1.4 * k + 3 * swell
 end
@@ -450,6 +453,8 @@ function CombatWeapons:Update(dt: number)
 	end
 	local orbit = self.Def.Orbit or { Count = 3, Radius = 2.6, Height = 1.6, Speed = 1 }
 	local mode = self.OrbMode
+	local sky = self.SkyK or 1
+	self.SkyK = sky + ((if mode == "Sky" then SKY_GLOW else 1) - sky) * (1 - math.exp(-dt * 3))
 	local speed = orbit.Speed * (if mode == "Spread" then 3.2 elseif mode == "Gather" then 2.4 else 1)
 	self.OrbT += dt * speed
 	local cf = root.CFrame

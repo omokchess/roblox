@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local CombatDirector = require(script.Parent.CombatDirector)
+local CombatVfx = require(script.Parent.CombatVfx)
 local WeaponDefinitions = require(ReplicatedStorage.Shared.Combat.WeaponDefinitions)
 local BattleSkills = require(ReplicatedStorage.Shared.BattleSkills)
 
@@ -108,6 +109,8 @@ function CombatShowcase.Start()
 				task.wait(0.1)
 			end
 		until gen ~= generation or (os.clock() - t0 >= minimum and not director:IsBusy())
+		-- 전시장엔 차례가 없다 → 동작이 끝나면 "내 차례까지" 남긴 화면 효과(셉텐트리오네스 막타 화면 색)를 거둔다
+		CombatVfx.MyTurn()
 		return gen == generation
 	end
 

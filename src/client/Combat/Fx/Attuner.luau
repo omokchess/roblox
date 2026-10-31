@@ -760,8 +760,9 @@ local function astrolabe(ctx: any, sept: any)
 		turnB -= dt * 0.06 * spin
 		turnC += dt * 0.1 * spin
 		turnD -= dt * 0.04 * spin
-		-- 바닥과 나란한 판(판의 z = 위아래)
-		local base = CFrame.new(mid + Vector3.new(0, 0.8, 0)) * CFrame.Angles(math.pi / 2, 0, 0)
+		-- 바닥과 나란한 판(판의 z = 위아래). 별 빛무리(하늘에선 지름 약 4)가 판에 잘리지 않게 별보다 6 위
+		-- (2026-10-31 사용자: "마법진에 북두칠성이 가려져서 안 보여. 아마 높이가 같거나")
+		local base = CFrame.new(mid + Vector3.new(0, 6, 0)) * CFrame.Angles(math.pi / 2, 0, 0)
 		local thick = (1 + 1.5 * gk) * (1 + 0.6 * pk)
 		local function alpha(a: number): number
 			return 1 - math.min(1, a + 0.3 * gk + 0.35 * pk) * seen
