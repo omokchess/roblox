@@ -1,7 +1,7 @@
 -- 섬·명소 이동을 받아 처리한다. 자리는 요청받은 이름으로 그때그때 잰다(Studio 전용 ServerScriptService.PlayerService — 사본 tools/studio_only)
 -- 2026-10-31 사용자: "재구성한 맵들에도 M 키로 순간이동" → 섬 땅 폴더를 옛 타일(Surface.World.G_<섬>)뿐 아니라 재구성한 지형
 -- (Surface.R_<섬>… · Swamp2_늪지대 · Ruins2_탑의성역 · Roman_칼로도르 …)에서도 찾고, 재구성판이 있으면 그쪽에 내린다.
--- 명소 = CollectionService 태그 "TeleportSpot" 이 붙은 표지 파트(속성 SpotName · Region) — 요청 "spot:<이름>". 짓기 스크립트가 표지를 놓는다.
+-- 명소 = CollectionService 태그 "TeleportSpot" 이 붙은 표지 파트(속성 SpotName · Region) — 요청 "spot:<지역>/<이름>"(다른 지역에 같은 이름이 있어도 되게). 짓기 스크립트가 표지를 놓는다.
 local RS = game:GetService("ReplicatedStorage")
 local CS = game:GetService("CollectionService")
 local remote = RS:WaitForChild("TeleportRequest")
@@ -93,9 +93,9 @@ local function arrival(islandName)
 	return nil
 end
 
-local function spot(name)
+local function spot(region, name)
 	for _, p in ipairs(CS:GetTagged("TeleportSpot")) do
-		if p:IsA("BasePart") and p:GetAttribute("SpotName") == name then
+		if p:IsA("BasePart") and p:GetAttribute("Region") == region and p:GetAttribute("SpotName") == name then
 			return p.Position + Vector3.new(0, 4, 0), p
 		end
 	end
@@ -117,9 +117,9 @@ remote.OnServerEvent:Connect(function(plr, name)
 		return
 	end
 	local pos, marker
-	local spotName = name:match("^spot:(.+)$")
+	local region, spotName = name:match("^spot:([^/]+)/(.+)$")
 	if spotName then
-		pos, marker = spot(spotName)
+		pos, marker = spot(region, spotName)
 	else
 		pos = arrival(name)
 	end
@@ -157,7 +157,7 @@ local function publish()
 	end
 	local spots = {}
 	for _, p in ipairs(CS:GetTagged("TeleportSpot")) do
-		if p:IsA("BasePart") and p:GetAttribute("SpotName") and not p:GetAttribute("Arrival") then
+		if p:IsA("BasePart") and p:GetAttribute("SpotName") and p:GetAttribute("Region") and not p:GetAttribute("Arrival") then
 			table.insert(spots, p)
 		end
 	end
@@ -169,7 +169,7 @@ local function publish()
 		return a:GetAttribute("SpotName") < b:GetAttribute("SpotName")
 	end)
 	for _, p in ipairs(spots) do
-		table.insert(region(p:GetAttribute("Region") or "기타").Spots, p:GetAttribute("SpotName"))
+		table.insert(region(p:GetAttribute("Region")).Spots, p:GetAttribute("SpotName"))
 	end
 	local rank = {}
 	for i, k in ipairs(KNOWN) do

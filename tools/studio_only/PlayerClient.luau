@@ -196,7 +196,7 @@ local function rebuild()
 		end
 		for j, spot in ipairs(region.Spots) do
 			button(card, spot, j, 16, 34, Color3.fromRGB(44, 44, 52)).MouseButton1Click:Connect(function()
-				go("spot:" .. spot)
+				go("spot:" .. region.Name .. "/" .. spot)
 			end)
 		end
 	end
