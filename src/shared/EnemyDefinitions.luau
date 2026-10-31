@@ -42,7 +42,7 @@ export type EnemyDefinition = {
 	]]
 	Humanoid: boolean?,
 	Solo: boolean?,
-	-- 전투 페이지(칼리스토). 페이지마다 이름·체력·무기·행동·패시브. 번호가 빠진 페이지(2)는 사양을 아직 못 받은 것
+	-- 전투 페이지(칼리스토). 페이지마다 이름·체력·무기·행동·패시브. 번호가 빠진 페이지는 건너뛴다(GridBattle callistoNextPage)
 	Pages: { [number]: { Name: string, Health: number, Weapon: string, Moves: { BossMove }, Passives: { { Name: string, Description: string } }, Gimmick: string? } }?,
 	-- 정보 창 [이야기] 칸
 	Lore: { { Name: string, Description: string } }?,
@@ -189,7 +189,7 @@ local definitions: { [string]: EnemyDefinition } = {
 		히든 보스 칼리스토(2026-10-31 사용자 사양 — 밸런스는 사용자도 모른다고 해 사양 숫자 그대로).
 		큰곰자리 · 천문학자 · 시인. 사람 모양이라 칸을 옮겨 다니고 적 칸이 보인다.
 		규칙은 GridBattle "보스: 칼리스토" 절, 스킬은 BattleSkills 의 Callisto* 스킬.
-		페이지 2 는 사양을 아직 못 받아 1페이지 체력이 다하면 바로 3페이지로 넘어간다.
+		페이지 2(성위 품은 자)는 같은 날 사양을 받아 넣었다 — 1 → 2 → 3.
 		공격력 0: 스킬 피해 = 사양 숫자(디버그 패널 적 공격력 배율만 곱한다).
 	]]
 	Callisto = {
@@ -213,7 +213,8 @@ local definitions: { [string]: EnemyDefinition } = {
 		Gimmicks = {
 			{ Name = "성위 → 뭇별", Description = "- [성위]가 15스택이 되면 [성위]가 사라지고 [뭇별]을 얻음(5턴).\n- [뭇별]: 방어력 −20% · 공격력 −10%." },
 			{ Name = "칸 이동", Description = "- 사람 모양이라 매 턴 적 칸을 옮겨 다님.\n- 줄 공격을 할 땐 아군이 선 줄로 옮겨 섬." },
-			{ Name = "페이지", Description = "- 1페이지 체력이 다하면 다음 페이지로(쓰러지지 않음).\n- 2페이지는 아직 사양이 없어 3페이지로 바로 넘어감." },
+			{ Name = "페이지", Description = "- 1·2페이지 체력이 다하면 다음 페이지로(쓰러지지 않음).\n- 1페이지 관찰자 → 2페이지 성위 품은 자 → 3페이지 뭇별의 어머니." },
+			{ Name = "알코르", Description = "- 2페이지 소환체. 공격하지 않음.\n- 살아 있는 동안 대상의 [미자르]가 남아 턴마다 [알카이드] 1.\n- 칼리스토가 다음 페이지로 넘어가면 사라짐." },
 		},
 		Pages = {
 			[1] = {
@@ -235,10 +236,31 @@ local definitions: { [string]: EnemyDefinition } = {
 					{ Id = "CallistoAstro", When = "[작은 곰 자리] · 바퀴 끝(4번 자리)" },
 				},
 			},
+			[2] = {
+				Name = "성위 품은 자 칼리스토",
+				Health = 200000,
+				Weapon = "북두칠성 모양 망치",
+				Passives = {
+					{ Name = "성위 품은 자", Description = "- 스킬을 써서 적중시키지 못하면 자신에게 [성위 - 점멸]." },
+					{ Name = "타들어가는 성위", Description = "- 턴 시작 시 대상의 [화상]을 수치와 상관없이 특수 화상 [알카이드] 1로 바꾸고 [두베] 1 부여." },
+					{ Name = "칠성군", Description = "- 체력 65% 미만이면 켜짐.\n- `북두칠성`·`수많은 성위 아래 파묻혀`·`성위는 떠돌이, 갈 곳 잃은 아이를 바로잡아`를 뺀 스킬을 쓰면 자신에게 [성위 - 칠성] 1.\n  - 스킬마다 `북두칠성`을 쓰기 전까지 한 번만.\n- [두베]·[알카이드]·[미자르]를 처음 걸 때도 별마다 한 번씩 [성위 - 칠성] 1(북두칠성 일곱 별)." },
+					{ Name = "메갈리 아르크토스", Description = "- [성위 - 칠성]을 7스택 모으면 다음 턴 쓸 스킬을 `북두칠성`으로 고정." },
+				},
+				-- 행동 박자(사양에 쿨타임만 있어 차례를 정함): 북두칠성 고정 → 소환 → 장판 → 페크다 → 메라크 → 메그레즈 → 평타
+				Moves = {
+					{ Id = "CallistoDipper", When = "[성위 - 칠성] 7스택 다음 턴 · 고정" },
+					{ Id = "CallistoAlcor", When = "`알코르`가 없으면 먼저(재사용 6턴)" },
+					{ Id = "CallistoAlioth", When = "장판이 없으면(재사용 4턴)" },
+					{ Id = "CallistoPhecda", When = "대상에게 [성위] 4 이상이거나 [뭇별](재사용 8턴)" },
+					{ Id = "CallistoMerak", When = "재사용 3턴" },
+					{ Id = "CallistoMegrez", When = "대상에게 [알카이드]가 있으면(재사용 3턴)" },
+					{ Id = "CallistoBuried", When = "평타 · 모두 대기 중이면" },
+				},
+			},
 			[3] = {
 				Name = "뭇별의 어머니 칼리스토",
 				Health = 300000,
-				Weapon = "의체(2페이지와 같음 — 2페이지 사양을 받으면 맞출 것)",
+				Weapon = "북두칠성 모양 망치(2페이지와 같음)",
 				Gimmick = "10턴 동안 광역 장판 피해 버티기",
 				Passives = {
 					{ Name = "잊혀져가는 성위", Description = "- `뭇별 아래에 잠기리`로 받는 피해를 자기 최대 체력의 10%씩 고정으로 받음." },

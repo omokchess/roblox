@@ -803,8 +803,8 @@ do
 		if unit and unit.Alive and not director:Has(cid) then
 			table.insert(failures, "칼리스토 통합: 살아 있는 칼리스토의 몸이 없음")
 		end
-		if not pages[3] then
-			table.insert(failures, "칼리스토 통합: 3페이지까지 가지 못함")
+		if not pages[2] or not pages[3] then
+			table.insert(failures, "칼리스토 통합: 2·3페이지까지 가지 못함")
 		end
 		local names = {}
 		for id in seenSkills do

@@ -681,26 +681,47 @@ function BattleClient:_callistoAlerts(snapshot: any)
 		self.hud:Flash("뭇별 아래에 잠기리", string.format("장판 %d턴 — 매 턴 최대 체력 5%%", view.Field + 1), CALLISTO_FLASH)
 	end
 	seen.Field = view.Field
+	-- 2페이지
+	if view.Chilseong and not seen.Chilseong then
+		self.hud:Flash("칠성군", "칼리스토 체력 65% 미만 — 일곱 별이 [성위 - 칠성]을 모은다", Color3.fromRGB(255, 224, 138))
+	end
+	seen.Chilseong = view.Chilseong
+	if view.Dipper and not seen.Dipper then
+		self.hud:Flash("메갈리 아르크토스", "[성위 - 칠성] 7 — 다음 턴 북두칠성!", Color3.fromRGB(255, 120, 100))
+	end
+	seen.Dipper = view.Dipper
+	if view.AlcorId and view.AlcorId ~= seen.Alcor then
+		self.hud:Flash("알코르", "이번 턴에 처치하지 못하면 [미자르] — 다음 턴 [알카이드] 1", Color3.fromRGB(214, 160, 255))
+	end
+	seen.Alcor = view.AlcorId
 end
 
 --[[
 	장판(뭇별 아래에 잠기리)이 남아 있는 동안 양 진영 칸 위에 밤하늘 막 + 별 점. 장판이 끝나면 걷는다(전투가 끝나면 folder 와 함께 사라진다).
 ]]
 function BattleClient:_callistoField(snapshot: any)
-	local on = snapshot.Callisto ~= nil and (snapshot.Callisto.Field or 0) > 0
+	local view = snapshot.Callisto
+	self:_callistoSheet("callistoField", view ~= nil and (view.Field or 0) > 0, { "Ally", "Enemy" }, Color3.fromRGB(40, 54, 140), true)
+	-- 알리오스 장판(2페이지): 아군 칸만, 금빛
+	self:_callistoSheet("aliothField", view ~= nil and (view.Aliot or 0) > 0, { "Ally" }, Color3.fromRGB(255, 200, 110), false)
+end
+
+-- 칸 위에 얇은 빛 막(+ 별 점) 한 겹. key = self 에 둘 이름, on 이 거짓이면 걷는다
+function BattleClient:_callistoSheet(key: string, on: boolean, sides: { string }, color: Color3, specks: boolean)
+	local current = (self :: any)[key]
 	if not on then
-		if self.callistoField then
-			self.callistoField:Destroy()
-			self.callistoField = nil
+		if current then
+			current:Destroy()
+			;(self :: any)[key] = nil
 		end
 		return
 	end
-	if self.callistoField and self.callistoField.Parent or not self.tiles or not self.folder then
+	if current and current.Parent or not self.tiles or not self.folder then
 		return
 	end
 	local folder = Instance.new("Folder")
-	folder.Name = "CallistoField"
-	for _, side in { "Ally", "Enemy" } do
+	folder.Name = key
+	for _, side in sides do
 		for y = 1, GRID_HEIGHT do
 			for x = 1, GRID_WIDTH do
 				local tile = self.tiles[side][y][x]
@@ -708,12 +729,12 @@ function BattleClient:_callistoField(snapshot: any)
 				sheet.Name = "Night"
 				sheet.Anchored, sheet.CanCollide, sheet.CanQuery, sheet.CanTouch, sheet.CastShadow = true, false, false, false, false
 				sheet.Material = Enum.Material.Neon
-				sheet.Color = Color3.fromRGB(40, 54, 140)
+				sheet.Color = color
 				sheet.Transparency = 0.82
 				sheet.Size = Vector3.new(tile.Size.X * 0.98, 0.04, tile.Size.Z * 0.98)
 				sheet.CFrame = tile.CFrame + Vector3.new(0, tile.Size.Y / 2 + 0.06, 0)
 				sheet.Parent = folder
-				if (x + y * 2) % 3 == 0 then
+				if specks and (x + y * 2) % 3 == 0 then
 					local speck = Instance.new("Part")
 					speck.Name = "Star"
 					speck.Anchored, speck.CanCollide, speck.CanQuery, speck.CanTouch, speck.CastShadow = true, false, false, false, false
@@ -728,7 +749,7 @@ function BattleClient:_callistoField(snapshot: any)
 		end
 	end
 	folder.Parent = self.folder
-	self.callistoField = folder
+	;(self :: any)[key] = folder
 end
 
 function BattleClient:_bossAlerts(snapshot: any)
@@ -853,6 +874,9 @@ function BattleClient:_consumeEvents(snapshot: any)
 		elseif ev.Kind == "EnemyAttack" and self.pendingAttackPlay then
 			self.pendingAttackPlay:SetResult(ev)
 			self.pendingAttackPlay = nil
+		elseif ev.Kind == "Cast" and self.director and self.director:Has(ev.Actor) then
+			-- 공격이 아닌 보스 행동(칼리스토 알코르 소환): 모션만
+			self.director:PlaySkill(ev.Actor, ev.SkillId, { {} })
 		end
 	end
 end
@@ -1137,6 +1161,10 @@ function BattleClient:_renderUnits()
 			home += Vector3.new(0, FLOAT_HEIGHT - 0.4, 0)
 		end
 		self:_ensureEnemyModel(id, unit.Name, home, unit.Part, unit.DefId)
+		-- 칼리스토 2·3페이지 무기: 북두칠성 망치(1페이지는 의체 칼날)
+		if unit.DefId == "Callisto" and snapshot.Callisto and snapshot.Callisto.Page >= 2 then
+			director:SwapWeapon(id, "CallistoHammer")
+		end
 		director:SetHome(id, home)
 		self:_setEnemyInfo(id, unit)
 	end

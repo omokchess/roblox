@@ -141,7 +141,9 @@ do
 	local b = boss(s)
 	local ally = GridBattle.Ally(s)
 	GridBattle.DebugHitPart(s, b.Id, 999999)
-	check(b.Alive and s.Callisto.Page == 3 and b.MaxHealth == 300000 and b.Health == 300000, "1페이지가 다하면 3페이지 체력 300000 — " .. s.Callisto.Page .. " " .. b.Health)
+	check(b.Alive and s.Callisto.Page == 2 and b.MaxHealth == 200000 and b.Health == 200000, "1페이지가 다하면 2페이지 체력 200000 — " .. s.Callisto.Page .. " " .. b.Health)
+	GridBattle.DebugHitPart(s, b.Id, 999999)
+	check(b.Alive and s.Callisto.Page == 3 and b.MaxHealth == 300000 and b.Health == 300000, "2페이지가 다하면 3페이지 체력 300000 — " .. s.Callisto.Page .. " " .. b.Health)
 	check(s.Outcome == "Ongoing", "페이지 넘김은 승리가 아님")
 	GridBattle.EndTurn(s)
 	local first = playTurn(s)
@@ -191,6 +193,91 @@ do
 	end
 	check(s.Callisto.Page == 3, "축소 체력으로 3페이지까지 감")
 	print("7 결투사 OK")
+end
+
+--=== 8. 2페이지 성위 품은 자: 소환·미자르·알리오스 장판·타들어가는 성위·칠성 일곱 별 → 북두칠성·점멸 ===--
+local function toPage2(scale: number?)
+	local s = battle(scale)
+	GridBattle.DebugHitPart(s, s.Callisto.UnitId, 999999)
+	check(s.Callisto.Page == 2, "2페이지로")
+	GridBattle.EndTurn(s)
+	return s
+end
+do
+	local s = toPage2()
+	local b = boss(s)
+	local ally = GridBattle.Ally(s)
+	local t1 = playTurn(s)
+	check(#t1 == 0, "2페이지 첫 턴은 소환(예고 칸 없음) — " .. table.concat(t1, ","))
+	local alcor = s.Units[s.Callisto.AlcorId :: string]
+	check(alcor and alcor.Alive and alcor.DefId == "Alcor" and alcor.MaxHealth == 20000, "알코르 소환(체력 2페이지의 10%)")
+	check(stack(ally, ClassResources.ALKAID) == 1, "알코르를 못 잡아 미자르 → 알카이드 1 — " .. stack(ally, ClassResources.ALKAID))
+	local t2 = playTurn(s)
+	check(t2[1] == "CallistoAlioth", "다음은 알리오스 — " .. tostring(t2[1]))
+	check(s.Callisto.Aliot == 4, "알리오스 장판 5턴(이번 턴 끝에 하나) — " .. s.Callisto.Aliot)
+	check(stack(ally, ClassResources.DUBHE) >= 1 and stack(ally, ClassResources.SEONGWI) >= 2, "장판: 두베 1 · 성위 2")
+	-- 타들어가는 성위: 화상 → 알카이드 1 + 두베 1
+	BattleStatus.AddBurn(ally.Status, 9)
+	local alk, dub = stack(ally, ClassResources.ALKAID), stack(ally, ClassResources.DUBHE)
+	GridBattle.EnemyPlan(s, rng)
+	s.Planned = {}
+	GridBattle.EndTurn(s)
+	check(ally.Status.Burn == 0, "화상이 사라짐 — " .. ally.Status.Burn)
+	check(stack(ally, ClassResources.ALKAID) >= alk + 1 and stack(ally, ClassResources.DUBHE) >= dub + 1, "알카이드·두베가 오름")
+	check(BattleStatus.Total(ally.Status, "DamageTaken") >= stack(ally, ClassResources.DUBHE) * 0.02 - 1e-6, "두베 1당 받는 피해 +2%")
+	-- 알코르를 잡으면 미자르가 사라지고 승리 판정에 안 셈
+	GridBattle.DebugHitPart(s, alcor.Id, 999999)
+	GridBattle.EndTurn(s)
+	check(stack(ally, ClassResources.MIZAR) == 0, "알코르가 쓰러지면 미자르 사라짐")
+	-- 칼리스토가 쓰러지면 알코르가 남아 있어도 승리
+	local s2 = toPage2(0.01)
+	playTurn(s2)
+	check(s2.Callisto.AlcorId and s2.Units[s2.Callisto.AlcorId].Alive, "알코르 살아 있음")
+	GridBattle.DebugSetHealth(s2, s2.Callisto.UnitId, 0)
+	check(s2.Outcome == "Victory", "소환체만 남으면 승리 — " .. s2.Outcome)
+	-- 2 → 3 넘어가면 알코르 사라짐
+	local s3 = toPage2()
+	playTurn(s3)
+	local id3 = s3.Callisto.AlcorId :: string
+	GridBattle.DebugHitPart(s3, s3.Callisto.UnitId, 999999)
+	check(s3.Callisto.Page == 3 and not s3.Units[id3].Alive and stack(GridBattle.Ally(s3), ClassResources.MIZAR) == 0, "3페이지로 가면 알코르·미자르 거둠")
+	print("8 2페이지 소환·미자르·장판·타들어가는 성위 OK")
+end
+
+--=== 9. 칠성군(65% 미만): 일곱 별 → 메갈리 아르크토스 → 북두칠성, 쓰면 초기화 · 점멸 ===--
+do
+	local s = toPage2()
+	local b = boss(s)
+	b.Health = math.floor(b.MaxHealth * 0.6)
+	local order = {}
+	local dipperAt = nil
+	for turn = 1, 30 do
+		local ally = GridBattle.Ally(s)
+		ally.Health = ally.MaxHealth
+		local used = playTurn(s, "Partial")
+		table.insert(order, used[1] or "소환")
+		if used[1] == "CallistoDipper" and not dipperAt then
+			dipperAt = turn
+			-- 쓰면 초기화(같은 턴 끝 미자르·장판으로 새 바퀴 별이 몇 개 켜질 수는 있다)
+			check(stack(b, ClassResources.SEVEN) < 7 and not s.Callisto.Dipper, "북두칠성을 쓰면 칠성 초기화 — " .. stack(b, ClassResources.SEVEN))
+		end
+		-- 알코르를 잡아 소환이 다시 돌게
+		if s.Callisto.AlcorId and s.Units[s.Callisto.AlcorId].Alive and turn % 3 == 0 then
+			GridBattle.DebugHitPart(s, s.Callisto.AlcorId, 999999)
+		end
+	end
+	check(dipperAt ~= nil, "일곱 별이 다 빛나 북두칠성을 씀 — " .. table.concat(order, ","))
+	print("9 칠성 → 북두칠성 OK (" .. tostring(dipperAt) .. "턴째) — " .. table.concat(order, ",", 1, math.min(#order, 10)))
+	-- 점멸: 회피 가능한 공격을 전부 피하면 쌓인다
+	local s2 = toPage2()
+	local b2 = boss(s2)
+	local blink = 0
+	for _ = 1, 8 do
+		playTurn(s2, "Success")
+		blink = stack(b2, ClassResources.BLINK)
+	end
+	check(blink > 0, "다 피하면 [성위 - 점멸] — " .. blink)
+	print("9 점멸 OK (" .. blink .. ")")
 end
 
 print("칼리스토 규칙: 모두 통과")

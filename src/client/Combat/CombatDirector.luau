@@ -45,6 +45,8 @@ local CombatVfx = require(script.Parent.CombatVfx)
 local Slime = require(script.Parent.Slime)
 local DebugBoss = require(script.Parent.DebugBoss)
 local Callisto = require(script.Parent.Callisto)
+local Alcor = require(script.Parent.Alcor)
+local CallistoMotions = require(Shared.Motions.Callisto)
 local FxCommon = require(script.Parent.Fx.Common)
 
 local FX: { [string]: { [string]: any } } = {}
@@ -330,12 +332,70 @@ function CombatDirector:AddCallisto(id: string, parent: Instance, home: CFrame)
 	return actor
 end
 
--- 적 하나: 보스 부위면 부위 몸, 사람 모양 적(defId)이면 그 몸, 아니면 슬라임
+-- 칼리스토 2페이지 소환체 알코르: 떠 있는 작은 별(Combat/Alcor). 슬라임과 같은 틀(고정 부품 · Pivot), 모션 Motions/Callisto.Alcor
+function CombatDirector:AddAlcor(id: string, parent: Instance, home: CFrame)
+	self:Remove(id)
+	local model = Alcor.Build("Alcor_" .. id)
+	model:PivotTo(home)
+	model.Parent = parent
+	local rig = Alcor.new(model)
+	local motions = CallistoMotions.Alcor
+	local animator = CombatAnimator.new(rig)
+	animator:SetBase(motions.Idle)
+	local actor: Actor = {
+		Id = id,
+		Kind = "Slime",
+		Model = model,
+		Rig = rig,
+		Animator = animator,
+		Weapons = nil,
+		ClassId = "Alcor",
+		WeaponType = nil,
+		Home = home,
+		Pos = home,
+		Chest = 2.6,
+		Ground = 0,
+		Dash = nil,
+		Held = false,
+		HeldAt = nil,
+		PendingDeath = false,
+		Dying = false,
+		Idle = motions.Idle,
+		Motions = motions,
+	}
+	self.Actors[id] = actor
+	return actor
+end
+
+--[[
+	사람 배우의 무기를 바꿔 든다(칼리스토 2페이지: 의체 칼날 → 북두칠성 망치). 대기 자세도 새 무기 종류(CombatMotions.ByType)로.
+]]
+function CombatDirector:SwapWeapon(id: string, weaponId: string)
+	local a = self.Actors[id]
+	if not a or a.Kind ~= "Humanoid" or (a.Weapons and a.Weapons.Def.Id == weaponId) then
+		return
+	end
+	if a.Weapons then
+		a.Weapons:Destroy()
+	end
+	a.Weapons = CombatWeapons.Attach(a.Model, a.Rig, weaponId, a.ClassId)
+	a.WeaponType = a.Weapons.Type
+	a.Idle = CombatMotions.Get(a.ClassId, "Idle", a.WeaponType)
+	a.Fidgets = CombatMotions.Get(a.ClassId, "Fidgets", a.WeaponType)
+	if not a.Animator:IsBusy() then
+		a.Animator:SetBase(a.Idle)
+	end
+	CombatVfx.Flash(a.Pos.Position, { Color = Color3.fromRGB(150, 200, 255), Size = 7, Life = 0.4, Brightness = 5 })
+end
+
+-- 적 하나: 보스 부위면 부위 몸, 사람 모양 적·소환체(defId)면 그 몸, 아니면 슬라임
 function CombatDirector:AddEnemy(id: string, part: string?, parent: Instance, home: CFrame, defId: string?)
 	if part then
 		return self:AddBossPart(id, part, parent, home)
 	elseif defId == "Callisto" then
 		return self:AddCallisto(id, parent, home)
+	elseif defId == "Alcor" then
+		return self:AddAlcor(id, parent, home)
 	end
 	return self:AddSlime(id, parent, home)
 end

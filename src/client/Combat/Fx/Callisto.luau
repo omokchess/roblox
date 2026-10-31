@@ -219,4 +219,143 @@ function Fx.Submerge(ctx: any)
 	end)
 end
 
+--=== 2페이지 성위 품은 자 — 북두칠성 망치 ===--
+
+local GOLDEN = c(255, 214, 130)
+
+-- 대상과 같은 열(앞뒤 같은 칸 = 칼리스토가 보는 방향 성분이 같다) · 같은 행(옆 성분이 같다)의 아군 칸
+local function lineCells(ctx: any, along: "Column" | "Row"): { Vector3 }
+	local axis = if along == "Column" then ctx.Forward else ctx.Forward:Cross(Vector3.yAxis)
+	local out = {}
+	for _, p in allyCells(ctx) do
+		local d = p - ctx.Target
+		if math.abs(Vector3.new(d.X, 0, d.Z):Dot(axis)) < 2.6 then
+			table.insert(out, p)
+		end
+	end
+	return out
+end
+
+-- 망치 머리가 닿은 자리: 금빛 충격 고리 + 별 파편
+local function smash(ctx: any, at: Vector3, size: number)
+	local ground = Vector3.new(at.X, ctx.Ground + 0.15, at.Z)
+	ctx.Vfx.Ring(CFrame.new(ground), { R0 = 0.6, R1 = 4 * size, Color = GOLDEN, Life = 0.4, Width = 0.3, Height = 0.08 })
+	ctx.Vfx.Flash(at, { Color = STAR_CORE, Size = 5 * size, Life = 0.2, Brightness = 6 })
+	ctx.Vfx.Burst(ground + Vector3.new(0, 0.3, 0), { Count = math.floor(10 * size), Colors = { STAR, STAR_CORE, GOLDEN }, Size = 0.4, Speed = 18, Life = 0.55, Gravity = 40, Material = Enum.Material.Neon })
+end
+
+-- 평타: 대상 앞에 내려찍기
+function Fx.HammerSmash(ctx: any)
+	smash(ctx, ctx.Tip("W") or ctx.Target, 1)
+end
+
+-- 알리오스: 내려찍은 자리에서 아군 필드로 별빛 장판이 번진다(남는 장판은 전투 화면이 snapshot.Callisto.Aliot 로 그린다)
+function Fx.AliothField(ctx: any)
+	local Vfx = ctx.Vfx
+	smash(ctx, ctx.Tip("W") or (ctx.Root.Position + ctx.Forward * 3), 1.2)
+	local cells = allyCells(ctx)
+	local mid = center(cells)
+	Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = 20, Color = GOLDEN, Life = 0.8, Width = 0.35, Height = 0.06 })
+	for i, p in cells do
+		task.delay(0.03 * i, function()
+			Vfx.Flash(p + Vector3.new(0, 0.4, 0), { Color = if i % 2 == 0 then GOLDEN else STAR, Size = 3, Life = 0.5, Brightness = 2 })
+		end)
+	end
+end
+
+-- 메그레즈: 가로 후려치기 원호 + 별 파편
+function Fx.MegrezSwing(ctx: any)
+	Common.Arc(ctx, ctx.Target - ctx.Forward * 1.5, 88, 120, -100, { Radius = 4.2, Color = GOLDEN, Core = STAR_CORE, Life = 0.32, Width = 0.9 })
+	smash(ctx, ctx.Target, 0.8)
+end
+
+-- 소환: 하늘에서 작은 별 하나가 적 진영으로 떨어진다(그 자리에 알코르가 선다)
+function Fx.SummonStar(ctx: any)
+	local Vfx = ctx.Vfx
+	local tiles = ctx.EnemyTiles or {}
+	local land = if #tiles > 0 then tiles[math.random(1, #tiles)].Position + Vector3.new(0, 2.6, 0) else ctx.Root.Position + ctx.Forward * -4
+	local from = land + Vector3.new(0, 22, 0)
+	star(ctx, ctx.Tip("W") or ctx.Root.Position, 3, 0.4, STAR_CORE)
+	Vfx.Projectile(from, land, { Time = 0.45, Color = STAR_CORE, TrailColor = STAR })
+	task.delay(0.45, function()
+		Vfx.Flash(land, { Color = STAR_CORE, Size = 6, Life = 0.4, Brightness = 6 })
+		Vfx.Ring(CFrame.new(land - Vector3.new(0, 2.4, 0)), { R0 = 0.5, R1 = 4, Color = STAR, Life = 0.5, Width = 0.2, Height = 0.05 })
+	end)
+end
+
+-- 페크다: 대상이 선 열을 따라 위에서 별빛 기둥이 차례로 내리꽂힌다
+function Fx.PhecdaColumn(ctx: any)
+	local Vfx = ctx.Vfx
+	smash(ctx, ctx.Tip("W") or ctx.Target, 1.3)
+	for i, p in lineCells(ctx, "Column") do
+		task.delay(0.05 * i, function()
+			Vfx.Projectile(p + Vector3.new(0, 16, 0), p + Vector3.new(0, 0.4, 0), { Time = 0.1, Color = STAR_CORE, TrailColor = STAR })
+			Vfx.Pillar(p, { Color = STAR, Life = 0.5, Height = 8, Width = 2.2 })
+		end)
+	end
+end
+
+-- 메라크: 휘두른 자리에서 대상이 선 행을 따라 금빛 충격파가 끝까지 달린다
+function Fx.MerakRow(ctx: any)
+	local Vfx = ctx.Vfx
+	local cells = lineCells(ctx, "Row")
+	local mid = center(cells)
+	local from = ctx.Tip("W") or ctx.Root.Position
+	Vfx.Beam(from, mid + Vector3.new(0, 0.6, 0), { Color = GOLDEN, Width = 1.6, Life = 0.4 })
+	for i, p in cells do
+		task.delay(0.04 * i, function()
+			Vfx.Shockwave(p + Vector3.new(0, 0.2, 0), { Color = GOLDEN, Radius = 3.5, Life = 0.35 })
+			Vfx.Burst(p + Vector3.new(0, 0.4, 0), { Count = 5, Colors = { GOLDEN, STAR_CORE }, Size = 0.35, Speed = 14, Life = 0.45, Material = Enum.Material.Neon })
+		end)
+	end
+end
+
+-- 북두칠성: 아군 진영 하늘의 일곱 별 자리(국자 넷 + 손잡이 셋 — 알카이드가 칼리스토 쪽 끝)
+local function dipperStars(ctx: any): { Vector3 }
+	local cells = allyCells(ctx)
+	local mid = center(cells) + Vector3.new(0, 15, 0)
+	local f = ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	local shape = { { 6, 1 }, { 3, 2 }, { 0.5, 1.5 }, { -1.5, 0 }, { -1.5, -3.5 }, { -6, -3 }, { -5.5, 0.5 } }
+	local out = {}
+	for i, s in shape do
+		out[i] = mid + f * (-s[1]) + r * s[2]
+	end
+	return out
+end
+
+-- 북두칠성 1: 하늘에 별 일곱이 차례로 켜지고 선으로 이어진다
+function Fx.Dipper(ctx: any)
+	local Vfx = ctx.Vfx
+	local stars = dipperStars(ctx)
+	for i, p in stars do
+		task.delay(0.12 * i, function()
+			Vfx.Flash(p, { Color = STAR_CORE, Size = 4, Life = 1.4, Brightness = 5 })
+			if i > 1 then
+				Vfx.Beam(stars[i - 1], p, { Color = STAR, Width = 0.25, Life = 1.2 })
+			end
+		end)
+	end
+end
+
+-- 북두칠성 2: 망치가 닿는 순간 별이 아군 칸 전부로 쏟아진다
+function Fx.DipperCrash(ctx: any)
+	local Vfx = ctx.Vfx
+	local stars = dipperStars(ctx)
+	smash(ctx, ctx.Tip("W") or ctx.Target, 1.6)
+	for i, p in allyCells(ctx) do
+		local from = stars[(i - 1) % #stars + 1]
+		task.delay(0.02 * i, function()
+			Vfx.Projectile(from, p + Vector3.new(0, 0.4, 0), { Time = 0.14, Color = STAR_CORE, TrailColor = STAR })
+			task.delay(0.14, function()
+				Vfx.Pillar(p, { Color = if i % 3 == 0 then GOLDEN else STAR, Life = 0.55, Height = 7, Width = 2.2 })
+			end)
+		end)
+	end
+	local mid = center(allyCells(ctx))
+	task.delay(0.3, function()
+		Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = 24, Color = STAR_CORE, Life = 0.7, Width = 0.5, Height = 0.08 })
+	end)
+end
+
 return Fx

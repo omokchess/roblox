@@ -761,6 +761,62 @@ local LIST: { Keyword } = {
 		Unit = "",
 		Color = "#7fe3d0",
 	},
+	-- 칼리스토 2페이지 성위 품은 자
+	{
+		Id = "StarDubhe",
+		Name = "두베",
+		Kind = "Debuff",
+		Description = "- 칼리스토가 건다.\n"
+			.. "- 1스택당 방어력 2% 감소([받는 피해량] +2%). 최대 20스택.",
+		Scalable = false,
+		Unit = "",
+		Color = "#9ab0d8",
+	},
+	{
+		Id = "StarAlkaid",
+		Name = "알카이드",
+		Kind = "Debuff",
+		Description = "- 특수 화상(칼리스토). 최대 15스택.\n"
+			.. "- 턴 종료 시 (알카이드 스택 × 3)만큼 피해.\n"
+			.. "  - 해당 효과로 사망할 수 없음.",
+		Scalable = false,
+		Unit = "",
+		Color = "#ff8a5c",
+	},
+	{
+		Id = "StarMizar",
+		Name = "미자르",
+		Kind = "Debuff",
+		Description = "- 특수 도발(칼리스토).\n"
+			.. "- 그 턴에 `알코르`를 처치하지 못하면 다음 턴 [알카이드] 1.\n"
+			.. "- `알코르`가 쓰러지면 사라짐.",
+		Scalable = false,
+		Unit = "",
+		Color = "#d6a0ff",
+	},
+	{
+		Id = "StarSeven",
+		Name = "성위 - 칠성",
+		Kind = "Resource",
+		Description = "- 특수 충전(칼리스토). 최대 7스택.\n"
+			.. "- [칠성군]이 켜진 동안 북두칠성의 일곱 별이 하나씩 줌.\n"
+			.. "  - `알리오스`·`메그레즈`·`페크다`·`메라크`를 쓰거나, [두베]·[알카이드]·[미자르]를 처음 걸 때.\n"
+			.. "  - 별마다 `북두칠성`을 쓰기 전까지 한 번만.\n"
+			.. "- 7스택이면 다음 턴 `북두칠성`([메갈리 아르크토스]). 쓰면 초기화.",
+		Scalable = false,
+		Unit = "",
+		Color = "#ffe08a",
+	},
+	{
+		Id = "StarBlink",
+		Name = "성위 - 점멸",
+		Kind = "Buff",
+		Description = "- 칼리스토가 스킬을 써서 적중시키지 못하면 얻음([성위 품은 자]).\n"
+			.. "- 효과는 아직 사양이 없음.",
+		Scalable = false,
+		Unit = "",
+		Color = "#e8f0ff",
+	},
 }
 
 local byId: { [string]: Keyword } = {}

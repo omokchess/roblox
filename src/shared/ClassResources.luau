@@ -83,6 +83,12 @@ ClassResources.GOCHAL = "Gochal" -- 고찰(특수 도발)
 ClassResources.SYMBERASMA = "Symberasma" -- 심베라즈마(방어력 −20%, 남은 턴)
 ClassResources.BLADE_SCAR = "BladeScar" -- 칼춤 상처(아스트로 세시 — 방어력 −15%, 남은 턴)
 ClassResources.URSA_MINOR = "UrsaMinor" -- 작은 곰 자리(칼리스토 자신)
+-- 칼리스토 2페이지(성위 품은 자) — 아군에게: 두베·알카이드·미자르 / 칼리스토 자신: 성위 - 칠성 · 성위 - 점멸
+ClassResources.DUBHE = "StarDubhe" -- 두베(1스택당 방어력 −2%, 최대 20)
+ClassResources.ALKAID = "StarAlkaid" -- 알카이드(특수 화상, 턴 끝 스택 × 3 피해, 최대 15)
+ClassResources.MIZAR = "StarMizar" -- 미자르(특수 도발 — 알코르를 그 턴에 못 잡으면 다음 턴 알카이드 1)
+ClassResources.SEVEN = "StarSeven" -- 성위 - 칠성(특수 충전, 최대 7)
+ClassResources.BLINK = "StarBlink" -- 성위 - 점멸(스킬을 맞히지 못하면 얻음 — 효과는 사양 대기)
 
 --=== 상한 ===--
 
@@ -123,6 +129,10 @@ local CAPS: { [string]: number } = {
 	[ClassResources.SYMBERASMA] = 3,
 	[ClassResources.BLADE_SCAR] = 3,
 	[ClassResources.URSA_MINOR] = 1,
+	[ClassResources.DUBHE] = 20,
+	[ClassResources.ALKAID] = 15,
+	[ClassResources.MIZAR] = 1,
+	[ClassResources.SEVEN] = 7,
 }
 
 function ClassResources.Cap(id: string): number?
@@ -193,6 +203,11 @@ local LABELS: { [string]: string } = {
 	[ClassResources.SYMBERASMA] = "심베라즈마",
 	[ClassResources.BLADE_SCAR] = "칼춤 상처",
 	[ClassResources.URSA_MINOR] = "작은 곰 자리",
+	[ClassResources.DUBHE] = "두베",
+	[ClassResources.ALKAID] = "알카이드",
+	[ClassResources.MIZAR] = "미자르",
+	[ClassResources.SEVEN] = "성위 - 칠성",
+	[ClassResources.BLINK] = "성위 - 점멸",
 }
 
 function ClassResources.Label(id: string): string

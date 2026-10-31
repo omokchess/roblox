@@ -2163,6 +2163,9 @@ function BattleHud:SetCallisto(snapshot: any?)
 	if view.Page == 1 then
 		-- 아들을 위한 자리(50%) 눈금
 		make("Frame", { Position = UDim2.fromScale(0.5, 0), Size = UDim2.new(0, 2, 1, 0), BackgroundColor3 = GOLD, BorderSizePixel = 0 }, track)
+	elseif view.Page == 2 then
+		-- 칠성군(65%) 눈금
+		make("Frame", { Position = UDim2.fromScale(0.65, 0), Size = UDim2.new(0, 2, 1, 0), BackgroundColor3 = GOLD, BorderSizePixel = 0 }, track)
 	elseif view.Page >= 3 then
 		-- 시험 종료(1%) 눈금
 		make("Frame", { Position = UDim2.fromScale(0.01, 0), Size = UDim2.new(0, 2, 1, 0), BackgroundColor3 = TEAL, BorderSizePixel = 0 }, track)
@@ -2179,6 +2182,21 @@ function BattleHud:SetCallisto(snapshot: any?)
 	end
 	if (view.Field or 0) > 0 then
 		add(string.format("뭇별 아래에 잠기리 — 장판 %d턴", view.Field), STARLIGHT)
+	end
+	if view.Page == 2 then
+		if view.Dipper then
+			add("다음 턴 북두칠성!", RED)
+		end
+		add(string.format("성위 - 칠성 %d/7%s", view.Seven or 0, if view.Chilseong then "" else " (칠성군 꺼짐 · 65%↓)"), if view.Chilseong then GOLD else MUTED)
+		if (view.Aliot or 0) > 0 then
+			add(string.format("알리오스 장판 %d턴", view.Aliot), GOLD)
+		end
+		if view.AlcorId then
+			add("알코르 — 처치하라", Color3.fromRGB(214, 160, 255))
+		end
+		if (view.Blink or 0) > 0 then
+			add(string.format("성위 - 점멸 %d", view.Blink), STEEL)
+		end
 	end
 	local plans = unit.Plans or {}
 	if #plans > 0 then
