@@ -57,6 +57,8 @@ local TILE_BUFF = BattleStage.BOARD.Buff
 local TILE_DEBUFF = BattleStage.BOARD.Debuff
 local TILE_HEAL = BattleStage.BOARD.Heal
 local TILE_DELETE = BattleStage.BOARD.Pending
+-- 칼리스토 예고 범위 색(별빛)
+local CALLISTO_RANGE = Color3.fromRGB(120, 175, 255)
 
 -- 보스 부위 이름표 높이(부위 바닥 기준)
 -- 먼 라인(1)일수록 화면에서 위로 올라가 보이므로 서브코어-삭제는 낮게, 머리는 높게 달아 겹치지 않게 한다
@@ -554,6 +556,8 @@ function BattleClient:_onGridState(snapshot: any)
 	if self.hud and self.hud:IsBossInfoOpen() then
 		if snapshot and snapshot.Boss then
 			self.hud:ShowBossInfo(snapshot, self.hud.bossFocus)
+		elseif snapshot and snapshot.Callisto then
+			self.hud:ShowCallistoInfo(snapshot, self.hud.bossFocus)
 		else
 			self.hud:HideBossInfo()
 		end
@@ -593,7 +597,10 @@ function BattleClient:_onGridState(snapshot: any)
 	end
 	-- 보스 체력바(부위별 체력·페이즈·스테미나·버프·이번 턴 예고). 체력은 맞는 순간마다 줄어드는 보이는 값(_hpView)
 	self.hud:SetBoss(self:_hpView(snapshot))
+	self.hud:SetCallisto(self:_hpView(snapshot))
 	self:_bossAlerts(snapshot)
+	self:_callistoAlerts(snapshot)
+	self:_callistoField(snapshot)
 	self:_refreshSkillBar(snapshot)
 	self:_refreshStance(snapshot)
 	self:_refreshStatusLine(snapshot)
@@ -646,6 +653,84 @@ local PHASE_FLASH = {
 	[3] = { "3페이즈", "ERROR 0x03 — 멀티스레드 · 부위마다 두 번 행동" },
 	[4] = { "4페이즈", "FATAL — 커널 모드 · 가하는 피해 +30%" },
 }
+--[[
+	칼리스토 알림(2026-10-31): 처음 · 페이지가 바뀔 때 · [작은 곰 자리]를 얻을 때 · 장판을 깔 때 한 번씩 화면 가운데 글.
+]]
+local CALLISTO_FLASH = Color3.fromRGB(150, 190, 255)
+function BattleClient:_callistoAlerts(snapshot: any)
+	local view = snapshot.Callisto
+	if not view then
+		self.callistoSeen = nil
+		return
+	end
+	local seen = self.callistoSeen
+	if not seen then
+		self.callistoSeen = { Page = view.Page, Ursa = view.UrsaMinor, Field = view.Field }
+		self.hud:Flash("칼리스토 — " .. view.PageName, "큰곰자리의 천문학자 · 몸을 누르면 정보", CALLISTO_FLASH)
+		return
+	end
+	if view.Page ~= seen.Page then
+		seen.Page = view.Page
+		self.hud:Flash(string.format("%d페이지 — %s", view.Page, view.PageName), if view.Page >= 3 then "10턴 동안 장판을 버텨라 · 체력 1% 이하면 시험 종료" else nil, CALLISTO_FLASH)
+	end
+	if view.UrsaMinor and not seen.Ursa then
+		self.hud:Flash("작은 곰 자리", "아들을 위한 자리 — 아스트로 세시가 열렸다", Color3.fromRGB(236, 186, 78))
+	end
+	seen.Ursa = view.UrsaMinor
+	if (view.Field or 0) > 0 and (seen.Field or 0) == 0 then
+		self.hud:Flash("뭇별 아래에 잠기리", string.format("장판 %d턴 — 매 턴 최대 체력 5%%", view.Field + 1), CALLISTO_FLASH)
+	end
+	seen.Field = view.Field
+end
+
+--[[
+	장판(뭇별 아래에 잠기리)이 남아 있는 동안 양 진영 칸 위에 밤하늘 막 + 별 점. 장판이 끝나면 걷는다(전투가 끝나면 folder 와 함께 사라진다).
+]]
+function BattleClient:_callistoField(snapshot: any)
+	local on = snapshot.Callisto ~= nil and (snapshot.Callisto.Field or 0) > 0
+	if not on then
+		if self.callistoField then
+			self.callistoField:Destroy()
+			self.callistoField = nil
+		end
+		return
+	end
+	if self.callistoField and self.callistoField.Parent or not self.tiles or not self.folder then
+		return
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "CallistoField"
+	for _, side in { "Ally", "Enemy" } do
+		for y = 1, GRID_HEIGHT do
+			for x = 1, GRID_WIDTH do
+				local tile = self.tiles[side][y][x]
+				local sheet = Instance.new("Part")
+				sheet.Name = "Night"
+				sheet.Anchored, sheet.CanCollide, sheet.CanQuery, sheet.CanTouch, sheet.CastShadow = true, false, false, false, false
+				sheet.Material = Enum.Material.Neon
+				sheet.Color = Color3.fromRGB(40, 54, 140)
+				sheet.Transparency = 0.82
+				sheet.Size = Vector3.new(tile.Size.X * 0.98, 0.04, tile.Size.Z * 0.98)
+				sheet.CFrame = tile.CFrame + Vector3.new(0, tile.Size.Y / 2 + 0.06, 0)
+				sheet.Parent = folder
+				if (x + y * 2) % 3 == 0 then
+					local speck = Instance.new("Part")
+					speck.Name = "Star"
+					speck.Anchored, speck.CanCollide, speck.CanQuery, speck.CanTouch, speck.CastShadow = true, false, false, false, false
+					speck.Material = Enum.Material.Neon
+					speck.Color = Color3.fromRGB(200, 225, 255)
+					speck.Size = Vector3.new(0.3, 0.3, 0.3)
+					speck.Shape = Enum.PartType.Ball
+					speck.CFrame = tile.CFrame + Vector3.new((x % 2 - 0.5) * 1.6, 5 + (y % 3), ((x + y) % 2 - 0.5) * 1.6)
+					speck.Parent = folder
+				end
+			end
+		end
+	end
+	folder.Parent = self.folder
+	self.callistoField = folder
+end
+
 function BattleClient:_bossAlerts(snapshot: any)
 	local boss = snapshot.Boss
 	if not boss then
@@ -839,6 +924,7 @@ function BattleClient:_setupBattle()
 		end
 		self.hpShown[id] = math.max(unit.Health, shown - dmg)
 		self.hud:SetBoss(self:_hpView(self.snapshot))
+		self.hud:SetCallisto(self:_hpView(self.snapshot))
 		self:_setEnemyInfo(id, unit)
 	end
 	-- 적 진영 맨 뒷줄 가운데(결투사 강화 스킬이 그 너머까지 꿰뚫고 지나간다)
@@ -854,6 +940,13 @@ function BattleClient:_setupBattle()
 		end
 	end
 	self.director.EnemyTiles = enemyTiles
+	local allyTiles = {}
+	for y = 1, GRID_HEIGHT do
+		for x = 1, GRID_WIDTH do
+			table.insert(allyTiles, self.tiles.Ally[y][x])
+		end
+	end
+	self.director.AllyTiles = allyTiles
 	-- 새 전투의 사건은 여기부터 센다(이전 전투 번호와 섞이지 않게)
 	self.lastEventSeq = 0
 	self.goneCells = {}
@@ -936,7 +1029,7 @@ end
 	적(슬라임). 서버 스냅샷에 있는 유닛 수만큼 만든다(1기 가정이 없다).
 	모양·움직임은 연출(CombatDirector)이 맡고, 여기서는 이름표만 붙인다.
 ]]
-function BattleClient:_ensureEnemyModel(id: string, name: string, home: CFrame, part: string?): Model?
+function BattleClient:_ensureEnemyModel(id: string, name: string, home: CFrame, part: string?, defId: string?): Model?
 	local director = self.director
 	if not director then
 		return nil
@@ -944,12 +1037,13 @@ function BattleClient:_ensureEnemyModel(id: string, name: string, home: CFrame, 
 	if director:Has(id) then
 		return director:Model(id)
 	end
-	local actor = director:AddEnemy(id, part, self.folder, home)
+	local actor = director:AddEnemy(id, part, self.folder, home, defId)
 	local model = actor.Model
 	local billboard = make("BillboardGui", {
 		Name = "Info",
 		Size = UDim2.fromOffset(if part then 200 else 160, 34),
-		StudsOffset = Vector3.new(0, if part then BOSS_LABEL[part] or 8 else 4.2, 0),
+		-- 칼리스토는 주교관이 높다(머리 위 1.9)
+		StudsOffset = Vector3.new(0, if part then BOSS_LABEL[part] or 8 elseif defId == "Callisto" then 5.4 else 4.2, 0),
 		AlwaysOnTop = true,
 	}, model.PrimaryPart)
 	model:SetAttribute("Label", name)
@@ -1038,7 +1132,11 @@ function BattleClient:_renderUnits()
 		local home = if unit.Cells
 			then BattleStage.BlockHome(self.layout, unit.Cells, GRID_WIDTH, GRID_HEIGHT, self.rayParams)
 			else self:_home("Enemy", unit.X, unit.Y)
-		self:_ensureEnemyModel(id, unit.Name, home, unit.Part)
+		-- 사람 모양 적(칼리스토)은 아군처럼 칸 위 FLOAT_HEIGHT(_home 이 이미 0.4 올렸다)
+		if unit.DefId and EnemyDefinitions.IsValid(unit.DefId) and EnemyDefinitions.Get(unit.DefId).Humanoid then
+			home += Vector3.new(0, FLOAT_HEIGHT - 0.4, 0)
+		end
+		self:_ensureEnemyModel(id, unit.Name, home, unit.Part, unit.DefId)
 		director:SetHome(id, home)
 		self:_setEnemyInfo(id, unit)
 	end
@@ -1298,16 +1396,19 @@ function BattleClient:_paintTiles()
 		local plan = unit and ((unit.Plans and unit.Plans[planSeen[enemyId]]) or (planSeen[enemyId] == 1 and unit.Plan))
 		if unit and unit.Alive and plan then
 			local planSkill = BattleSkills.ById(plan.SkillId)
-			local damaging = planSkill ~= nil and ((planSkill.Damage or 0) > 0 or planSkill.HpRatio ~= nil) and not plan.Canceled
-			if damaging and unit.Part then
-				local group = unit.Part .. ":" .. planSeen[enemyId]
-				local label = (planSkill :: any).Name .. (if planSkill and planSkill.Unavoidable then " · 회피 불가" elseif planSkill and planSkill.GuardOnly then " · 막기만" elseif planSkill and planSkill.DodgeOnly then " · 회피만" else "")
+			local damaging = planSkill ~= nil and ((planSkill.Damage or 0) > 0 or planSkill.HpRatio ~= nil or planSkill.Inflicts == true) and not plan.Canceled
+			local callisto = unit.DefId == "Callisto"
+			if damaging and (unit.Part or (callisto and planSeen[enemyId] == 1)) then
+				-- 칼리스토 연타(Strikes)는 같은 칸 예고가 여럿 — 묶음 하나에 "×N"
+				local group = if callisto then enemyId .. ":" .. plan.SkillId else unit.Part .. ":" .. planSeen[enemyId]
+				local strikes = if callisto and unit.Plans and #unit.Plans > 1 then string.format(" ×%d", #unit.Plans) else ""
+				local label = (planSkill :: any).Name .. strikes .. (if planSkill and planSkill.Unavoidable then " · 회피 불가" elseif planSkill and planSkill.GuardOnly then " · 막기만" elseif planSkill and planSkill.DodgeOnly then " · 회피만" else "")
 				for _, c in plan.Cells do
 					local key = c[1] .. "," .. c[2]
 					partRanges[key] = partRanges[key] or {}
 					table.insert(partRanges[key], {
 						Group = group,
-						Color = partColor[unit.Part] or Color3.fromRGB(255, 150, 40),
+						Color = if callisto then CALLISTO_RANGE else partColor[unit.Part] or Color3.fromRGB(255, 150, 40),
 						Label = label,
 						Unavoid = planSkill ~= nil and planSkill.Unavoidable == true,
 						Source = enemyId,
@@ -1466,7 +1567,7 @@ function BattleClient:_paintTiles()
 	local threatKeys: { [string]: { any } } = {}
 	if not self.layers.Range then
 		threatKeys = {}
-	elseif snapshot.Boss then
+	elseif snapshot.Boss or snapshot.Callisto then
 		threatKeys = partRanges
 	else
 		for key in threatened do
@@ -1527,14 +1628,16 @@ function BattleClient:_bossPartUnderCursor(): string?
 	local director = self.director
 	local camera = workspace.CurrentCamera
 	local snapshot = self.snapshot
-	if not director or not camera or not (snapshot and snapshot.Boss) then
+	if not director or not camera or not (snapshot and (snapshot.Boss or snapshot.Callisto)) then
 		return nil
 	end
 	local mouse = UserInputService:GetMouseLocation()
 	local best, bestArea = nil, math.huge
 	for id, actor in director.Actors do
 		local unit = snapshot.Units[id]
-		if actor.Kind ~= "Boss" or not unit or not unit.Part or not actor.Model or not actor.Model.Parent then
+		-- 보스 부위, 또는 칼리스토 몸("Callisto" 를 돌려준다)
+		local callisto = actor.Foe == true and unit ~= nil and unit.DefId == "Callisto"
+		if not (callisto or (actor.Kind == "Boss" and unit and unit.Part)) or not actor.Model or not actor.Model.Parent then
 			continue
 		end
 		local cf, size = actor.Model:GetBoundingBox()
@@ -1553,7 +1656,7 @@ function BattleClient:_bossPartUnderCursor(): string?
 		if front and mx >= minX and mx <= maxX and my >= minY and my <= maxY then
 			local area = (maxX - minX) * (maxY - minY)
 			if area < bestArea then
-				best, bestArea = unit.Part, area
+				best, bestArea = if callisto then "Callisto" else unit.Part, area
 			end
 		end
 	end
@@ -1569,7 +1672,10 @@ function BattleClient:_bindInput()
 		-- 열린 채 창 밖을 누르면 닫고 그 누름은 평소대로(드래그) 쓴다
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			local part = if self:_tileUnderCursor() then nil else self:_bossPartUnderCursor()
-			if part then
+			if part == "Callisto" then
+				self.hud:ShowCallistoInfo(self.snapshot)
+				return
+			elseif part then
 				self.hud:ShowBossInfo(self.snapshot, part)
 				return
 			end
@@ -1645,6 +1751,7 @@ function BattleClient:_bindInput()
 			self:_paintTiles()
 			-- 연출이 끝났으면 보이는 체력을 서버 값에 맞춘다(숫자 나눔 끝수·지속 피해까지)
 			self.hud:SetBoss(self:_hpView(self.snapshot))
+			self.hud:SetCallisto(self:_hpView(self.snapshot))
 		end
 		-- 내 차례(연출이 끝났고 막을 공격 · 기다리는 위협이 없음)면 "내 차례까지" 남겨 둔 화면 효과를 거둔다(조율자 셉텐트리오네스 화면 색)
 		if

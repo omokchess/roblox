@@ -44,6 +44,7 @@ local CombatWeapons = require(script.Parent.CombatWeapons)
 local CombatVfx = require(script.Parent.CombatVfx)
 local Slime = require(script.Parent.Slime)
 local DebugBoss = require(script.Parent.DebugBoss)
+local Callisto = require(script.Parent.Callisto)
 local FxCommon = require(script.Parent.Fx.Common)
 
 local FX: { [string]: { [string]: any } } = {}
@@ -87,6 +88,8 @@ type Actor = {
 	BossKey: string?,
 	TileHome: CFrame?,
 	Reach: number?,
+	-- 적 쪽 사람 모양(칼리스토): Humanoid 로 움직이되 적으로 센다(모델은 연출이 만들었으니 치울 때 지운다)
+	Foe: boolean?,
 }
 
 -- 관전용 연출기(Quiet)는 화면을 흔들지 않고, 치울 때 남(내 전투)의 효과까지 지우지 않는다
@@ -105,6 +108,8 @@ function CombatDirector.new(opts: { Quiet: boolean? }?)
 	self.FarEnd = nil :: Vector3?
 	-- 적 진영 칸 부품들(BattleClient). 필드 전체를 덮는 이펙트가 칸 경계를 안다(청의 검사 공간의 이해 격자). 없으면 nil
 	self.EnemyTiles = nil :: { BasePart }?
+	-- 아군 진영 칸 부품들(BattleClient). 칼리스토가 아군 칸 전부를 덮는 기술이 쓴다
+	self.AllyTiles = nil :: { BasePart }?
 	-- 피해 숫자를 띄울 때마다 부른다(id, 피해). BattleClient 가 체력바를 그 순간 깎는다
 	self.OnDamage = nil :: ((string, number) -> ())?
 	-- 보스 위성 셋이 함께 도는 바퀴의 각(라디안, _bossHomes)
@@ -310,10 +315,27 @@ function CombatDirector:_bossHomes(dt: number)
 	end
 end
 
--- 적 하나: 보스 부위면 부위 몸, 아니면 슬라임
-function CombatDirector:AddEnemy(id: string, part: string?, parent: Instance, home: CFrame)
+--[[
+	히든 보스 칼리스토(2026-10-31): 블록으로 지은 R6 몸(Combat/Callisto) + 의체 무기(CallistoArms) + 모션 Motions/Callisto.
+	사람 배우(Humanoid)와 같이 움직이고(관절 모션·돌진·무기), Foe 라 적으로 센다. home = 서 있을 자리(HumanoidRootPart — 바닥 위 3.4)
+]]
+function CombatDirector:AddCallisto(id: string, parent: Instance, home: CFrame)
+	self:Remove(id)
+	local model = Callisto.Build("Callisto_" .. id)
+	model:PivotTo(home)
+	model.Parent = parent
+	local actor = self:AddHumanoid(id, model, "Callisto", home, "CallistoArms")
+	actor.Foe = true
+	actor.Pos = home
+	return actor
+end
+
+-- 적 하나: 보스 부위면 부위 몸, 사람 모양 적(defId)이면 그 몸, 아니면 슬라임
+function CombatDirector:AddEnemy(id: string, part: string?, parent: Instance, home: CFrame, defId: string?)
 	if part then
 		return self:AddBossPart(id, part, parent, home)
+	elseif defId == "Callisto" then
+		return self:AddCallisto(id, parent, home)
 	end
 	return self:AddSlime(id, parent, home)
 end
@@ -342,6 +364,9 @@ function CombatDirector:SetHome(id: string, home: CFrame, instant: boolean?)
 	if instant then
 		a.Pos = home
 		a.Away = nil
+	elseif a.Foe and moved > 1 and not a.Dash and not a.Dying and not a.Animator:IsBusy() then
+		-- 칼리스토: 칸을 옮길 땐 낮게 미끄러지듯 한달음(사람 모양이라 통 튀지 않는다)
+		a.Dash = { From = a.Pos, To = home, T = 0, D = 0.32, Ease = "sineInOut", Arc = 0.4 }
 	elseif a.Kind == "Slime" and moved > 1 and not a.Dash and not a.Dying then
 		-- 슬라임은 미끄러지지 않고 통 튀어서 옮긴다
 		a.Dash = { From = a.Pos, To = home, T = 0, D = 0.35, Ease = "sineInOut", Arc = 1.8 }
@@ -365,7 +390,7 @@ function CombatDirector:Remove(id: string)
 	if a.Weapons then
 		a.Weapons:Destroy()
 	end
-	if a.Kind ~= "Humanoid" then
+	if a.Kind ~= "Humanoid" or a.Foe then
 		a.Model:Destroy()
 	end
 end
@@ -407,7 +432,7 @@ end
 function CombatDirector:_enemyCenter(a: Actor): Vector3
 	local sum, n = Vector3.zero, 0
 	for _, o in self.Actors do
-		if o.Kind ~= "Humanoid" and not o.Dying then
+		if (o.Kind ~= "Humanoid" or o.Foe) and not o.Dying then
 			sum += o.Home.Position
 			n += 1
 		end
@@ -466,6 +491,7 @@ function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 	end
 	ctx.EnemyCenter = self:_enemyCenter(a)
 	ctx.EnemyTiles = self.EnemyTiles
+	ctx.AllyTiles = self.AllyTiles
 	-- 관전 화면(남의 전투) — 화면 색·소리·카메라 같은 내 화면 효과는 하지 않는다
 	ctx.Quiet = self.Quiet
 	-- 컷신 카메라: fn(진행도 0~1, 지난 초) → 카메라 CFrame. fn 없이 부르면 전투 카메라로 돌려준다(모션이 끝나도 돌려준다)
@@ -750,7 +776,8 @@ function CombatDirector:_showNumbers(play: any)
 				if nth == share then
 					dmg = (h.Damage or 0) - dmg * (share - 1)
 				end
-				local enemy = self.Actors[h.Id] and self.Actors[h.Id].Kind ~= "Humanoid"
+				local hit = self.Actors[h.Id]
+				local enemy = hit ~= nil and (hit.Kind ~= "Humanoid" or hit.Foe == true)
 				local label = tostring(dmg)
 				local color = if enemy then Color3.fromRGB(255, 244, 214) else Color3.fromRGB(255, 90, 80)
 				if h.Grade and GRADE_TEXT[h.Grade] and dmg <= 0 then
@@ -944,7 +971,7 @@ function CombatDirector:_die(a: Actor)
 		if a.Kind ~= "Humanoid" and fade > 0.7 then
 			a.Rig.Fade = math.clamp((fade - 0.7) / 0.5, 0, 1)
 		end
-		if fade > 1.3 then
+		if fade > (if a.Foe then 2.4 else 1.3) then
 			conn:Disconnect()
 			if self.Actors[a.Id] == a then
 				self:Remove(a.Id)

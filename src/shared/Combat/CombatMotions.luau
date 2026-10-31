@@ -32,6 +32,8 @@ CombatMotions.Sets = {
 	Berserker = require(Motions.Berserker),
 	Attuner = require(Motions.Attuner),
 	AzureBlade = require(Motions.AzureBlade),
+	-- 적이지만 사람 모양(히든 보스 칼리스토, 2026-10-31) — 연출이 Humanoid 배우로 다룬다
+	Callisto = require(Motions.Callisto),
 }
 -- 무기 종류별 묶음(직업과 다른 종류의 무기를 들었을 때)
 CombatMotions.ByType = {}

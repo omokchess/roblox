@@ -666,6 +666,8 @@ do
 			selectedSkill = 1,
 			skillButtons = {},
 			goneCells = {},
+			-- 판 층(2026-10-09 BattleClient: 기믹 · 공격 범위)
+			layers = { Gimmick = true, Range = true },
 		}, { __index = BattleClient })
 		GridBattle.EnemyPlan(state, rng)
 		for turn = 1, 12 do
@@ -718,6 +720,105 @@ do
 		end
 	end)
 	print(string.format("%-12s %s", "보스 통합", if #failures == before then "통과" else "오류 " .. (#failures - before)))
+end
+
+-- 칼리스토 통합(2026-10-31): 사람 모양 적 몸(R6 + 의체)·칸 옮김·연타 예고(계획마다 한 번씩)·페이지 넘김·장판이 연출과 맞물리는지
+do
+	local before = #failures
+	try("칼리스토 통합", function()
+		local BattleStage = fakeRequire(client.BattleStage)
+		local state = GridBattle.New(1, "시험", 5000, 20, "Berserker", 5, nil, {}, { Name = "칼리스토", Enemies = { "Callisto" }, HealthScale = 0.002, PowerScale = 0.5 })
+		local seed = 5
+		local function rng()
+			seed = (seed * 48271) % 2147483647
+			return seed / 2147483647
+		end
+		local layout = BattleArena.NewLayout(CFrame.new(0, 0, 0))
+		layout.FlatY = 0
+		local tiles = BattleStage.Build(folder, layout, nil, 6, 3, nil)
+		local self = setmetatable({
+			active = true,
+			director = director,
+			layout = layout,
+			folder = folder,
+			tiles = tiles,
+			player = { Character = char },
+			snapshot = GridBattle.Snapshot(state),
+			lastEventSeq = 0,
+			selectedSkill = 1,
+			skillButtons = {},
+			goneCells = {},
+			layers = { Gimmick = true, Range = true },
+		}, { __index = BattleClient })
+		director.AllyTiles = {}
+		for y = 1, 3 do
+			for x = 1, 6 do
+				table.insert(director.AllyTiles, tiles.Ally[y][x])
+			end
+		end
+		local seenSkills: { [string]: boolean } = {}
+		local pages: { [number]: boolean } = {}
+		GridBattle.EnemyPlan(state, rng)
+		for turn = 1, 40 do
+			if state.Outcome ~= "Ongoing" then
+				break
+			end
+			GridBattle.Ally(state).Health = GridBattle.Ally(state).MaxHealth
+			self.snapshot = GridBattle.Snapshot(state)
+			self.allySkills = self.snapshot.AllySkills
+			self:_renderUnits()
+			self:_paintTiles()
+			self:_callistoField(self.snapshot)
+			step(0.2)
+			local chosen = self.snapshot.AllySkills[1]
+			self.pendingSkillPlay = director:PlaySkill("player", chosen.Id, self:_predictTargets(chosen.Id))
+			step(0.1)
+			GridBattle.ResolveSkill(state, chosen.Index, "Success", rng, chosen.Id)
+			self.snapshot = GridBattle.Snapshot(state)
+			self:_consumeEvents(self.snapshot)
+			self:_renderUnits()
+			settle(director, "칼리스토 통합 스킬", 8)
+			for _, t in GridBattle.PlannedThreatList(state) do
+				local skill = GridBattle.EnemySkill(t.Unit, t.Index)
+				seenSkills[skill.Id] = true
+				local grade = if (turn + t.Index) % 3 == 0 then "Success" elseif (turn + t.Index) % 3 == 1 then "Partial" else "Fail"
+				self.pendingAttackPlay = director:PlayEnemyAttack(t.Unit.Id, skill.Id, "player", grade)
+				step(0.1)
+				GridBattle.ResolveDodge(state, t.Unit.Id, grade :: any, t.Index)
+				self.snapshot = GridBattle.Snapshot(state)
+				self:_consumeEvents(self.snapshot)
+				self:_renderUnits()
+				settle(director, "칼리스토 통합 적 공격 " .. skill.Id, 8)
+			end
+			if state.Callisto then
+				pages[state.Callisto.Page] = true
+			end
+			GridBattle.EndTurn(state)
+			if state.Outcome == "Ongoing" then
+				GridBattle.EnemyPlan(state, rng)
+			end
+		end
+		local cid = state.Callisto and state.Callisto.UnitId
+		local unit = cid and state.Units[cid]
+		if unit and unit.Alive and not director:Has(cid) then
+			table.insert(failures, "칼리스토 통합: 살아 있는 칼리스토의 몸이 없음")
+		end
+		if not pages[3] then
+			table.insert(failures, "칼리스토 통합: 3페이지까지 가지 못함")
+		end
+		local names = {}
+		for id in seenSkills do
+			table.insert(names, id)
+		end
+		table.sort(names)
+		print(string.format("칼리스토 통합: %s, %d턴, 쓴 스킬 %d — %s", state.Outcome, state.Turn, #names, table.concat(names, ",")))
+		for id in director.Actors do
+			if id ~= "player" then
+				director:Remove(id)
+			end
+		end
+	end)
+	print(string.format("%-12s %s", "칼리스토 통합", if #failures == before then "통과" else "오류 " .. (#failures - before)))
 end
 
 if director.ForcedDone > 0 then

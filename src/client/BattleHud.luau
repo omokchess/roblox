@@ -1009,6 +1009,9 @@ function BattleHud:SetActive(on: boolean)
 	if not on and self.bossBar then
 		self.bossBar.Visible = false
 	end
+	if not on and self.callistoBar then
+		self.callistoBar.Visible = false
+	end
 	self.dock.Visible = on
 	self.exit.Visible = on
 	self.layerBar.Visible = on
@@ -2085,6 +2088,237 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 		end
 	end
 
+	self.boss.Visible = true
+	self:_fitBossInfo()
+	self.bossBody.CanvasPosition = if keep then scrollAt else Vector2.zero
+end
+
+--=== 칼리스토(2026-10-31 히든 보스) — 체력바 · 정보 창 ===--
+
+local STARLIGHT = Color3.fromRGB(150, 190, 255)
+
+--[[
+	위 가운데 체력바: 이름 · 페이지 · 체력, 큰 체력바, 꼬리표(작은 곰 자리 · 장판 남은 턴 · 이번 턴 예고).
+	snapshot.Callisto 가 없으면 숨긴다. 체력은 맞는 순간마다 줄어드는 보이는 값(BattleClient._hpView).
+]]
+function BattleHud:SetCallisto(snapshot: any?)
+	local view = snapshot and snapshot.Callisto
+	if not self.callistoBar then
+		self.callistoBar = make("Frame", {
+			Name = "CallistoBar",
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 104),
+			Size = UDim2.fromOffset(BOSS_BAR_W, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundColor3 = INK,
+			BackgroundTransparency = 0.18,
+			BorderSizePixel = 0,
+			Visible = false,
+		}, self.gui)
+		stroke(self.callistoBar, STARLIGHT, 0.5)
+		make("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }, self.callistoBar)
+		make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5) }, self.callistoBar)
+		self.callistoBarScale = make("UIScale", {}, self.callistoBar)
+	end
+	local bar = self.callistoBar
+	local unit = view and snapshot.Units and snapshot.Units[view.UnitId]
+	bar.Visible = self.active and view ~= nil and unit ~= nil
+	if not bar.Visible then
+		return
+	end
+	self.callistoBarScale.Scale = self.scale
+	for _, child in bar:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	local def = EnemyDefinitions.Get("Callisto")
+	local hp, maxHp = math.max(0, unit.Health or 0), math.max(1, unit.MaxHealth or 1)
+	local top = make("Frame", { Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, LayoutOrder = 1 }, bar)
+	make("TextLabel", {
+		Size = UDim2.new(0, 420, 1, 0),
+		BackgroundTransparency = 1,
+		Text = string.format('<b>%s</b>   <font color="%s">%d페이지 · %s</font>', def.Name, hex(STARLIGHT), view.Page, view.PageName),
+		RichText = true,
+		TextColor3 = BONE,
+		Font = Enum.Font.GothamBold,
+		TextSize = 15,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+	}, top)
+	make("TextLabel", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(1, 0),
+		Size = UDim2.new(0, 220, 1, 0),
+		BackgroundTransparency = 1,
+		Text = string.format("체력  %s / %s  (%d%%)", comma(hp), comma(maxHp), math.floor(hp / maxHp * 100 + 0.5)),
+		TextColor3 = BODY,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, top)
+	local track = make("Frame", { Size = UDim2.new(1, 0, 0, 12), BackgroundColor3 = Color3.fromRGB(30, 27, 34), BorderSizePixel = 0, LayoutOrder = 2 }, bar)
+	stroke(track, BONE, 0.85)
+	make("Frame", { Size = UDim2.fromScale(math.clamp(hp / maxHp, 0, 1), 1), BackgroundColor3 = STARLIGHT, BorderSizePixel = 0 }, track)
+	if view.Page == 1 then
+		-- 아들을 위한 자리(50%) 눈금
+		make("Frame", { Position = UDim2.fromScale(0.5, 0), Size = UDim2.new(0, 2, 1, 0), BackgroundColor3 = GOLD, BorderSizePixel = 0 }, track)
+	elseif view.Page >= 3 then
+		-- 시험 종료(1%) 눈금
+		make("Frame", { Position = UDim2.fromScale(0.01, 0), Size = UDim2.new(0, 2, 1, 0), BackgroundColor3 = TEAL, BorderSizePixel = 0 }, track)
+	end
+	local chips = make("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = 3 }, bar)
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, chips)
+	local order = 0
+	local function add(text: string, color: Color3)
+		order += 1
+		chip(chips, text, color, order)
+	end
+	if view.UrsaMinor then
+		add("작은 곰 자리 — 아스트로 세시", GOLD)
+	end
+	if (view.Field or 0) > 0 then
+		add(string.format("뭇별 아래에 잠기리 — 장판 %d턴", view.Field), STARLIGHT)
+	end
+	local plans = unit.Plans or {}
+	if #plans > 0 then
+		local skill = BattleSkills.ById(plans[1].SkillId)
+		if skill then
+			add(string.format("이번 턴: %s%s", skill.Name, if #plans > 1 then string.format(" ×%d (한 번씩 회피)", #plans) else ""), RED)
+		end
+	end
+	if unit.Stunned then
+		add("그로기", TEAL)
+	end
+	add("몸을 누르면 정보", MUTED)
+end
+
+--[[
+	정보 창(보스 정보 창 틀을 같이 쓴다): 위 줄 = 페이지 탭(사양이 있는 페이지만), 아래 줄 = 액티브 · 패시브 · 기믹 · 이야기.
+	focus = "Callisto:<페이지>"(없으면 지금 페이지).
+]]
+function BattleHud:ShowCallistoInfo(snapshot: any, focus: string?)
+	local view = snapshot and snapshot.Callisto
+	if not view then
+		return
+	end
+	local def = EnemyDefinitions.Get("Callisto")
+	local pages = def.Pages or {}
+	local page = tonumber(focus and focus:match("^Callisto:(%d+)$")) or view.Page
+	if not pages[page] then
+		page = view.Page
+	end
+	focus = "Callisto:" .. page
+	if not self.boss.Visible or self.bossFocus ~= focus then
+		self.bossTab = "Active"
+	end
+	local keep = self.boss.Visible and self.bossFocus == focus and self.bossTabShown == self.bossTab
+	local scrollAt = self.bossBody.CanvasPosition
+	self.bossFocus = focus
+	self.bossTabShown = self.bossTab
+	self.bossSnapshot = snapshot
+	local unit = snapshot.Units and snapshot.Units[view.UnitId]
+	local pageDef = pages[page]
+	self.bossName.Text = string.format("%s — %s", def.Name, pageDef.Name)
+	local sep = string.format('<font color="%s">   |   </font>', hex(Color3.fromRGB(80, 74, 66)))
+	self.bossStats.Text = table.concat({
+		statPart("체력", if unit then string.format("%s / %s", comma(math.max(0, unit.Health or 0)), comma(unit.MaxHealth or 0)) else "-"),
+		statPart("", string.format("%d턴 · 지금 %d페이지", snapshot.Turn or 1, view.Page)),
+		statPart("무기", pageDef.Weapon),
+	}, sep)
+
+	for _, row in { self.bossTabRow, self.bossPartRow } do
+		for _, child in row:GetChildren() do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
+	end
+	local numbers = {}
+	for n in pages do
+		table.insert(numbers, n)
+	end
+	table.sort(numbers)
+	for i, n in numbers do
+		local key = "Callisto:" .. n
+		local label = string.format("%d페이지 %s%s", n, pages[n].Name, if n == view.Page then string.format(' <font color="%s">●</font>', hex(RED)) else "")
+		tabButton(self.bossPartRow, label, key == focus, STARLIGHT, i, n < view.Page, true).Activated:Connect(function()
+			if self.bossFocus ~= key and self.bossSnapshot then
+				self:ShowCallistoInfo(self.bossSnapshot, key)
+			end
+		end)
+	end
+	local passives = table.clone(def.Passives or {})
+	for _, p in pageDef.Passives do
+		table.insert(passives, p)
+	end
+	local gimmicks = table.clone(def.Gimmicks or {})
+	if pageDef.Gimmick then
+		table.insert(gimmicks, 1, { Name = "페이지 기믹", Description = pageDef.Gimmick })
+	end
+	local TABS = {
+		{ "Active", "액티브", CRIMSON, #pageDef.Moves },
+		{ "Passive", "패시브", GOLD, #passives },
+		{ "Gimmick", "기믹", TEAL, #gimmicks },
+		{ "Story", "이야기", STARLIGHT, #(def.Lore or {}) },
+	}
+	for i, t in TABS do
+		local label = string.format('%s <font color="%s">%d</font>', t[2], hex(MUTED), t[4])
+		tabButton(self.bossTabRow, label, self.bossTab == t[1], t[3], i, t[4] == 0).Activated:Connect(function()
+			if self.bossTab ~= t[1] and self.bossSnapshot then
+				self.bossTab = t[1]
+				self:ShowCallistoInfo(self.bossSnapshot, self.bossFocus)
+			end
+		end)
+	end
+
+	for _, child in self.bossBody:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	local order = 0
+	local function nextOrder(): number
+		order += 1
+		return order
+	end
+	local function entries(list: { any }, accent: Color3)
+		for _, entry in list do
+			local box = make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody)
+			make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, box)
+			make("UIPadding", { PaddingLeft = UDim.new(0, 4) }, box)
+			richRow(box, string.format('<font color="%s"><b>%s</b></font>', hex(BONE), entry.Name), BONE, 0)
+			describe(box, entry.Description, accent, 1)
+		end
+	end
+	if self.bossTab == "Active" then
+		local planned: { [string]: boolean } = {}
+		if page == view.Page and unit then
+			for _, p in unit.Plans or {} do
+				planned[p.SkillId] = true
+			end
+		end
+		local box = make("Frame", {
+			Size = UDim2.new(1, -6, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundColor3 = INK_2,
+			BackgroundTransparency = 0.45,
+			BorderSizePixel = 0,
+			LayoutOrder = nextOrder(),
+		}, self.bossBody)
+		stroke(box, BONE, 0.8)
+		make("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 9), PaddingBottom = UDim.new(0, 10) }, box)
+		make("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, box)
+		for i, move in pageDef.Moves do
+			self:_bossMove(box, move, i, planned, unit ~= nil and unit.Alive == true, 1, nil)
+		end
+	elseif self.bossTab == "Passive" then
+		entries(passives, GOLD)
+	elseif self.bossTab == "Gimmick" then
+		entries(gimmicks, TEAL)
+	else
+		entries(def.Lore or {}, STARLIGHT)
+	end
 	self.boss.Visible = true
 	self:_fitBossInfo()
 	self.bossBody.CanvasPosition = if keep then scrollAt else Vector2.zero
