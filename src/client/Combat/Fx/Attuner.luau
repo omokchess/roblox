@@ -26,7 +26,6 @@ local CombatVfx = require(script.Parent.Parent.CombatVfx)
 local WeaponDefinitions = require(ReplicatedStorage.Shared.Combat.WeaponDefinitions)
 local c = Common.c
 
-local GOLD = c(255, 226, 140)
 local WHITE = c(255, 250, 235)
 local PALE = c(190, 214, 255)
 local STAR = c(110, 180, 255) -- 별빛(파랑) — 무기 빛무리와 같은 결
@@ -440,27 +439,52 @@ function Fx.StarTwinkle(ctx: any)
 	end
 end
 
+-- 옛 조율자의 금빛(노란 원)은 별빛(파랑 · 흰)으로 바꿨다 — 2026-10-31 사용자: "아직 옛날 조율자의 흔적이 남아있어(내려놨을 때 노란 원, 가드했을 때 노란 원 등)"
+-- 내려놓임: 발밑에 별빛 고리 두 겹이 퍼지고 빛 조각이 오른다
 function Fx.Touchdown(ctx: any)
 	local feet = Common.Feet(ctx)
-	ctx.Vfx.Ring(CFrame.new(feet + Vector3.new(0, 0.12, 0)), { R0 = 0.5, R1 = 4, Color = GOLD, Life = 0.5, Width = 0.18, Height = 0.05 })
-	ctx.Vfx.Sparks(feet + Vector3.new(0, 0.3, 0), { Color = WHITE, Count = 10, Accel = Vector3.new(0, 4, 0) })
+	ctx.Vfx.Ring(CFrame.new(feet + Vector3.new(0, 0.12, 0)), { R0 = 0.5, R1 = 4, Color = STAR, Life = 0.5, Width = 0.18, Height = 0.05 })
+	ctx.Vfx.Ring(CFrame.new(feet + Vector3.new(0, 0.14, 0)), { R0 = 0.3, R1 = 2.4, Color = WHITE, Life = 0.4, Width = 0.1, Height = 0.05 })
+	ctx.Vfx.Sparks(feet + Vector3.new(0, 0.3, 0), { Color = PALE, Count = 10, Accel = Vector3.new(0, 4, 0) })
 end
 
 function Fx.StarShield(ctx: any)
 	local front = ctx.Root.Position + ctx.Forward * 2.4 + Vector3.new(0, 0.6, 0)
 	local cf = CFrame.lookAt(front, front + ctx.Forward)
-	ctx.Vfx.Ring(cf, { R0 = 0.5, R1 = 2.6, Color = GOLD, Life = 0.5, Width = 0.22, Facing = true })
+	ctx.Vfx.Ring(cf, { R0 = 0.5, R1 = 2.6, Color = STAR, Life = 0.5, Width = 0.22, Facing = true })
 	ctx.Vfx.Ring(cf, { R0 = 0.3, R1 = 1.6, Color = WHITE, Life = 0.35, Width = 0.12, Facing = true })
 end
 
 function Fx.StarBlink(ctx: any)
 	local at = ctx.Root.Position
-	ctx.Vfx.Flash(at, { Color = GOLD, Size = 6, Life = 0.25, Brightness = 4 })
+	ctx.Vfx.Flash(at, { Color = PALE, Size = 6, Life = 0.25, Brightness = 4 })
 	ctx.Vfx.Burst(at, { Count = 10, Color = WHITE, Size = 0.18, Speed = 8, Gravity = 0, Life = 0.4 })
 end
 
 function Fx.Meditate(ctx: any)
-	Common.Meditate(ctx.Vfx, Common.Feet(ctx), GOLD)
+	Common.Meditate(ctx.Vfx, Common.Feet(ctx), STAR)
+end
+
+-- 피격: 별자리가 충격에 흩어졌다가(0.45초) 제자리로 — 돌지 않는다(옛 Spread 대형 — 몸 둘레를 빠르게 돌던 것 — 대신)
+function Fx.StarScatter(ctx: any)
+	local weapons = ctx.Weapons
+	if not weapons or not weapons.Drive then
+		return
+	end
+	local rng = Random.new()
+	for i = 1, 7 do
+		local from = ctx.Star(i)
+		local off = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-0.6, 1), rng:NextNumber(-1, 1)).Unit * rng:NextNumber(0.4, 0.9)
+		local t = 0
+		ctx.Vfx.Flash(from, { Color = PALE, Size = 0.8, Life = 0.2, Brightness = 3 })
+		weapons:Drive(i, function(dt: number): Vector3?
+			t += dt
+			if t >= 0.45 then
+				return nil
+			end
+			return from + off * math.sin(math.pi * t / 0.45)
+		end)
+	end
 end
 
 --=== 별 꺼내기(공통) ===--
@@ -635,9 +659,11 @@ end
 	하늘의 별 자리: 떨어질 자리(진영 안 북두칠성 꼴)를 그 가운데에서 WIDE 배로 넓혀 SKY 높이에 눕힌다 — 레이저가 넓게 펼친 별에서
 	진영 안으로 부채꼴처럼 모여 떨어진다(2026-10-31 사용자: "북두칠성이 더 넓게 펼쳐지고 … 진형쪽으로 약간 들어가듯이", 질문 3 답: 그림처럼 · 1.4배)
 ]]
+-- 가운데 가까운 별은 넓혀도 제자리라 레이저가 수직이 되므로 별마다 바깥으로 PUSH 만큼 더 민다(모든 레이저가 안쪽으로 비스듬히 —
+-- 2026-10-31 사용자: "도중에 몇몇개가 그냥 수직으로 쭉 떨구는데, 이것도 안쪽으로 들어가도록")
 local SKY = 40 -- 질문 2 답
-local WIDE = 1.4
-local function dipperSky(ground: { Vector3 }): { Vector3 }
+local WIDE, PUSH = 1.4, 8
+local function dipperSky(ctx: any, ground: { Vector3 }): { Vector3 }
 	local mid = Vector3.zero
 	for _, g in ground do
 		mid += g
@@ -645,7 +671,9 @@ local function dipperSky(ground: { Vector3 }): { Vector3 }
 	mid /= #ground
 	local out = {}
 	for i, g in ground do
-		out[i] = mid + (g - mid) * WIDE + Vector3.new(0, SKY, 0)
+		local d = Vector3.new(g.X - mid.X, 0, g.Z - mid.Z)
+		local dir = if d.Magnitude > 0.3 then d.Unit else ctx.Forward:Cross(Vector3.yAxis)
+		out[i] = Vector3.new(mid.X, g.Y + SKY, mid.Z) + dir * (d.Magnitude * WIDE + PUSH)
 	end
 	return out
 end
@@ -749,7 +777,7 @@ local function astrolabe(ctx: any, sept: any)
 		end
 		return list
 	end
-	local outer, dashed, ticks, runes = many(64, STAR), many(32, PALE), many(36, PALE), many(12, GOLD)
+	local outer, dashed, ticks, runes = many(64, STAR), many(32, PALE), many(36, PALE), many(12, WHITE)
 	local star7, marks, inner, spokes = many(7, PALE), many(7, WHITE), many(24, STAR), many(8, STAR)
 	local turnA, turnB, turnC, turnD = 0, 0, 0, 0
 	local radius: number? = nil
@@ -871,7 +899,7 @@ function Fx.SeptRise(ctx: any, ev: any)
 	s.sept = sept
 	local d = (ev and ev.d) or 1
 	if ctx.Weapons and ctx.Weapons.Drive then
-		local sky = dipperSky(sept.Points)
+		local sky = dipperSky(ctx, sept.Points)
 		for i = 1, 7 do
 			local from, goal = ctx.Star(i), sky[i]
 			local t, after = -(i - 1) * 0.05, 0

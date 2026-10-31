@@ -86,7 +86,7 @@ return {
 		},
 	},
 
-	-- 들림: 별을 올려다보며 느슨히 매달려 천천히 흔들린다. 별은 머리 위 작은 원으로
+	-- 들림: 별을 올려다보며 느슨히 매달려 천천히 흔들린다. 별자리는 오른손 곁에 그대로
 	Held = {
 		Duration = 3.0,
 		Loop = true,
@@ -96,7 +96,7 @@ return {
 			K(1.5, nil, DANGLE, { Root = { 0, 0.84, 0, -4, -14, -2 }, Head = { 20, 16, 0 } }),
 		},
 		Events = {
-			{ t = 0, k = "Orbs", mode = "Crown" },
+			{ t = 0, k = "Orbs", mode = "Orbit" },
 		},
 	},
 
@@ -127,8 +127,7 @@ return {
 			K(0.75, "sineInOut", STANCE),
 		},
 		Events = {
-			{ t = 0.02, k = "Orbs", mode = "Spread" },
-			{ t = 0.5, k = "Orbs", mode = "Orbit" },
+			{ t = 0.02, k = "Fx", n = "StarScatter" },
 		},
 	},
 
@@ -334,7 +333,7 @@ return {
 			},
 		},
 
-		-- 호흡: 두 손을 가슴 앞에 모으고 별을 올려다보며 크게 들이쉬고 길게 내쉰다 — 별은 머리 위 원으로 돈다
+		-- 호흡: 두 손을 가슴 앞에 모으고 별을 올려다보며 크게 들이쉬고 길게 내쉰다 — 별자리는 손 곁에 그대로(돌지 않는다)
 		Meditate = {
 			Duration = 2.6,
 			Keys = {
@@ -345,9 +344,7 @@ return {
 				K(2.6, "cubicInOut", STANCE),
 			},
 			Events = {
-				{ t = 0.2, k = "Orbs", mode = "Crown" },
 				{ t = 0.5, k = "Fx", n = "Meditate" },
-				{ t = 2.3, k = "Orbs", mode = "Orbit" },
 			},
 		},
 	},
