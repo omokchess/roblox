@@ -76,6 +76,14 @@ ClassResources.BIND = "Bind" -- 묶임(미자르 — 그 턴 움직이지 못한
 -- 청의 검사(조건부 획득)
 ClassResources.CONCENTRATION = "Concentration" -- 집중력(도발로 얻고, 2턴 뒤 사라진다)
 
+-- 히든 보스 칼리스토(2026-10-31)가 아군에게 거는 것 · 칼리스토 자신의 버프. 규칙은 GridBattle "보스: 칼리스토" 절
+ClassResources.SEONGWI = "Seongwi" -- 성위(특수 화상, 1스택당 방어력 −1%, 15에서 뭇별로)
+ClassResources.MUTBYEOL = "Mutbyeol" -- 뭇별(특수 화상, 남은 턴)
+ClassResources.GOCHAL = "Gochal" -- 고찰(특수 도발)
+ClassResources.SYMBERASMA = "Symberasma" -- 심베라즈마(방어력 −20%, 남은 턴)
+ClassResources.BLADE_SCAR = "BladeScar" -- 칼춤 상처(아스트로 세시 — 방어력 −15%, 남은 턴)
+ClassResources.URSA_MINOR = "UrsaMinor" -- 작은 곰 자리(칼리스토 자신)
+
 --=== 상한 ===--
 
 --[[
@@ -109,6 +117,12 @@ local CAPS: { [string]: number } = {
 	[ClassResources.FUSION] = 1,
 	[ClassResources.BIND] = 1,
 	[ClassResources.CONCENTRATION] = 1,
+	[ClassResources.SEONGWI] = 15,
+	[ClassResources.MUTBYEOL] = 5,
+	[ClassResources.GOCHAL] = 1,
+	[ClassResources.SYMBERASMA] = 3,
+	[ClassResources.BLADE_SCAR] = 3,
+	[ClassResources.URSA_MINOR] = 1,
 }
 
 function ClassResources.Cap(id: string): number?
@@ -173,6 +187,12 @@ local LABELS: { [string]: string } = {
 	[ClassResources.FUSION] = "핵융합 반응",
 	[ClassResources.BIND] = "묶임",
 	[ClassResources.CONCENTRATION] = "집중력",
+	[ClassResources.SEONGWI] = "성위",
+	[ClassResources.MUTBYEOL] = "뭇별",
+	[ClassResources.GOCHAL] = "고찰",
+	[ClassResources.SYMBERASMA] = "심베라즈마",
+	[ClassResources.BLADE_SCAR] = "칼춤 상처",
+	[ClassResources.URSA_MINOR] = "작은 곰 자리",
 }
 
 function ClassResources.Label(id: string): string

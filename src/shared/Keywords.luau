@@ -694,6 +694,73 @@ local LIST: { Keyword } = {
 		Unit = "",
 		Color = "#5aa8ff",
 	},
+
+	--=== 히든 보스 칼리스토 (2026-10-31) — 아군에게 걸리는 것 · 칼리스토 버프. "방어력 N% 감소"는 [받는 피해량] +N% 로 셈 ===--
+	{
+		Id = "Seongwi",
+		Name = "성위",
+		Kind = "Debuff",
+		Description = "- 특수 화상(칼리스토).\n"
+			.. "- 1스택당 방어력 1% 감소([받는 피해량] +1%). 최대 15스택.\n"
+			.. "- 15스택이 되면 [성위]가 사라지고 [뭇별]을 얻음.",
+		Scalable = false,
+		Unit = "",
+		Color = "#8fb4ff",
+	},
+	{
+		Id = "Mutbyeol",
+		Name = "뭇별",
+		Kind = "Debuff",
+		Description = "- 특수 화상(칼리스토).\n"
+			.. "- 방어력 20% 감소([받는 피해량] +20%), 공격력 10% 감소([가하는 피해량] −10%).\n"
+			.. "- 얻고 5턴 뒤 사라짐. 다시 얻으면 5턴부터.",
+		Scalable = false,
+		Unit = "",
+		Color = "#c9d6ff",
+	},
+	{
+		Id = "Gochal",
+		Name = "고찰",
+		Kind = "Debuff",
+		Description = "- 특수 도발(칼리스토).\n"
+			.. "- 방어력 20% 감소([받는 피해량] +20%).\n"
+			.. "- 턴이 끝날 때마다 [화상] 1을 얻음.\n"
+			.. "- `심베라즈마`가 지움.",
+		Scalable = false,
+		Unit = "",
+		Color = "#e0c38a",
+	},
+	{
+		Id = "Symberasma",
+		Name = "심베라즈마",
+		Kind = "Debuff",
+		Description = "- 칼리스토가 멱살을 잡고 찍어 던졌다.\n"
+			.. "- 방어력 20% 감소([받는 피해량] +20%). 3턴.",
+		Scalable = false,
+		Unit = "",
+		Color = "#d98a6a",
+	},
+	{
+		Id = "BladeScar",
+		Name = "칼춤 상처",
+		Kind = "Debuff",
+		Description = "- `아스트로 세시`에 [성위]를 지닌 채 맞았다.\n"
+			.. "- 방어력 15% 감소([받는 피해량] +15%). 3턴.",
+		Scalable = false,
+		Unit = "",
+		Color = "#b07cff",
+	},
+	{
+		Id = "UrsaMinor",
+		Name = "작은 곰 자리",
+		Kind = "Buff",
+		Description = "- 칼리스토 체력이 50% 미만이면 얻음(1페이지).\n"
+			.. "- `아스트로 세시`를 쓸 수 있음.\n"
+			.. "- `미크리 아르크토스 하라시`가 [화상] 5를 더 부여.",
+		Scalable = false,
+		Unit = "",
+		Color = "#7fe3d0",
+	},
 }
 
 local byId: { [string]: Keyword } = {}

@@ -36,6 +36,16 @@ export type EnemyDefinition = {
 	-- 속성 저항(0~1). 부위 유닛에 그대로 붙는다
 	Resist: { [string]: number }?,
 	Gimmicks: { { Name: string, Description: string, Part: string? } }?,
+	--[[
+		사람 모양 적(2026-10-31 칼리스토). 클라이언트가 R6 몸(Combat/<MotionId>.luau)·전용 모션·무기로 그리고, 적 칸을 그대로 보이며
+		칸을 옮겨 다닌다. Solo = 편성에 있으면 이것 하나만 세운다(보스).
+	]]
+	Humanoid: boolean?,
+	Solo: boolean?,
+	-- 전투 페이지(칼리스토). 페이지마다 이름·체력·무기·행동·패시브. 번호가 빠진 페이지(2)는 사양을 아직 못 받은 것
+	Pages: { [number]: { Name: string, Health: number, Weapon: string, Moves: { BossMove }, Passives: { { Name: string, Description: string } }, Gimmick: string? } }?,
+	-- 정보 창 [이야기] 칸
+	Lore: { { Name: string, Description: string } }?,
 }
 
 local CORE_CELLS = {}
@@ -172,6 +182,74 @@ local definitions: { [string]: EnemyDefinition } = {
 					{ Id = "InfiniteRecursion", When = "4페이즈 해금", Phase = 4 },
 				},
 				Break = "- 디버그가 무너짐 — 승리.",
+			},
+		},
+	},
+	--[[
+		히든 보스 칼리스토(2026-10-31 사용자 사양 — 밸런스는 사용자도 모른다고 해 사양 숫자 그대로).
+		큰곰자리 · 천문학자 · 시인. 사람 모양이라 칸을 옮겨 다니고 적 칸이 보인다.
+		규칙은 GridBattle "보스: 칼리스토" 절, 스킬은 BattleSkills 의 Callisto* 스킬.
+		페이지 2 는 사양을 아직 못 받아 1페이지 체력이 다하면 바로 3페이지로 넘어간다.
+		공격력 0: 스킬 피해 = 사양 숫자(디버그 패널 적 공격력 배율만 곱한다).
+	]]
+	Callisto = {
+		Id = "Callisto",
+		Name = "칼리스토",
+		MaxHealth = 50000,
+		Power = 0,
+		Color = Color3.fromRGB(150, 175, 255),
+		MotionId = "Callisto",
+		Behavior = "Boss",
+		Humanoid = true,
+		Solo = true,
+		Lore = {
+			{ Name = "컨셉", Description = "큰곰자리 · 천문학자 · 시인." },
+			{ Name = "이야기", Description = "슈네라이히의 천문학자였고 기물군의 비숍이었다.\n아들 아르카스가 반란을 주동했다는 누명을 쓰고 화형당하는 것을 보았다.\n그 충격으로 기물군을 나와, 아들의 별자리를 만들어 주려고 천문대에 틀어박혔다." },
+			{ Name = "조우", Description = "- 성위 3개를 얻으면 천문대 입구가 열림.\n- 천문대 안에서 칼리스토와 대화한 뒤 선택지로 전투.\n- 성위를 조사하러 천문대에 들어간 길이다." },
+		},
+		Passives = {
+			{ Name = "그날의 기억", Description = "- 모든 페이지 공통.\n- 칼리스토는 [화상] 피해를 두 배로 받음." },
+		},
+		Gimmicks = {
+			{ Name = "성위 → 뭇별", Description = "- [성위]가 15스택이 되면 [성위]가 사라지고 [뭇별]을 얻음(5턴).\n- [뭇별]: 방어력 −20% · 공격력 −10%." },
+			{ Name = "칸 이동", Description = "- 사람 모양이라 매 턴 적 칸을 옮겨 다님.\n- 줄 공격을 할 땐 아군이 선 줄로 옮겨 섬." },
+			{ Name = "페이지", Description = "- 1페이지 체력이 다하면 다음 페이지로(쓰러지지 않음).\n- 2페이지는 아직 사양이 없어 3페이지로 바로 넘어감." },
+		},
+		Pages = {
+			[1] = {
+				Name = "관찰자 칼리스토",
+				Health = 50000,
+				Weapon = "의체 — 손에서 칼날이 나오고 손목에서 카메라가 나옴",
+				Passives = {
+					{ Name = "뭇별의 시선", Description = "- 대상에게 [뭇별]이 있으면 칼리스토가 주는 피해 +15%." },
+					{ Name = "아들을 위한 자리", Description = "- 체력 50% 미만이면 자신에게 [작은 곰 자리]." },
+				},
+				-- 행동 박자(사양에 없어 정함): 1번 → 2번 → 3번 자리를 차례로, [작은 곰 자리]면 바퀴 끝에 강화 스킬
+				Moves = {
+					{ Id = "CallistoPhoto", When = "1번 자리 · 홀수 바퀴" },
+					{ Id = "CallistoSlash", When = "1번 자리 · 짝수 바퀴" },
+					{ Id = "CallistoSymberasma", When = "2번 자리 · 대상에게 [고찰]이 있으면" },
+					{ Id = "CallistoTrohia", When = "2번 자리 · [고찰]이 없으면" },
+					{ Id = "CallistoArktos", When = "3번 자리 · [뭇별]이 있거나 [성위] 6 이상" },
+					{ Id = "CallistoSynthesis", When = "3번 자리 · 그 밖" },
+					{ Id = "CallistoAstro", When = "[작은 곰 자리] · 바퀴 끝(4번 자리)" },
+				},
+			},
+			[3] = {
+				Name = "뭇별의 어머니 칼리스토",
+				Health = 300000,
+				Weapon = "의체(2페이지와 같음 — 2페이지 사양을 받으면 맞출 것)",
+				Gimmick = "10턴 동안 광역 장판 피해 버티기",
+				Passives = {
+					{ Name = "잊혀져가는 성위", Description = "- `뭇별 아래에 잠기리`로 받는 피해를 자기 최대 체력의 10%씩 고정으로 받음." },
+					{ Name = "시험 종료", Description = "- 칼리스토 체력이 1% 이하가 되면 전투 종료(승리)." },
+				},
+				Moves = {
+					{ Id = "CallistoSubmerge", When = "3페이지 첫 턴 바로 · 한 번만" },
+					{ Id = "CallistoArtificial", When = "재사용 대기가 끝나면 먼저(4턴)" },
+					{ Id = "CallistoShower", When = "그다음(2턴)" },
+					{ Id = "CallistoResonance", When = "평타 · 둘 다 대기 중이면" },
+				},
 			},
 		},
 	},

@@ -99,6 +99,27 @@ export type Unit = {
 	-- 2026-10-03: 3페이즈부터 부위마다 두 번 행동 → Plans 에 차례로. Safe = 비켜 간 칸, Canceled = 충전이 끊겨 안 나감
 	Plan: { SkillId: string, Cells: { { number } } }?,
 	Plans: { any }?,
+	-- 적 정의 Id(EnemyDefinitions). 클라이언트가 모양을 고른다(칼리스토 = 사람 모양)
+	DefId: string?,
+}
+
+--[[
+	보스 칼리스토 상태(2026-10-31). 유닛은 Units[UnitId] 에 그대로 있고(칸 하나, 칸을 옮겨 다님), 여기는 페이지·행동 박자만.
+	  Page 1 관찰자 → (2 사양 없음) → 3 뭇별의 어머니. Cycle/Slot = 1페이지 바퀴·자리(1·2·3, [작은 곰 자리]면 4 = 강화)
+	  Field = 3페이지 장판 남은 턴, FieldTurn = 장판을 깐 턴(그 턴 끝엔 안 깎는다) · Opened = 3페이지 첫 턴 장판을 깔았나
+	  PowerScale/HealthScale = 편성 배율(칼리스토는 공격력 0 이라 스킬 피해에 곱한다 · 다음 페이지 체력에 곱한다)
+]]
+export type CallistoState = {
+	UnitId: string,
+	Page: number,
+	Cycle: number,
+	Slot: number,
+	Field: number,
+	FieldTurn: number?,
+	Opened: boolean,
+	Cooldowns: { [string]: number },
+	PowerScale: number,
+	HealthScale: number,
 }
 
 --[[
@@ -224,6 +245,8 @@ export type State = {
 	RandomState: number,
 	-- 보스전이면 있다(디버그). 보통 전투는 nil
 	Boss: BossState?,
+	-- 칼리스토전이면 있다
+	Callisto: CallistoState?,
 }
 
 export type DebugFlags = {
@@ -1477,18 +1500,41 @@ function GridBattle.New(
 	if bossDef then
 		spawnBoss(state, bossDef, healthScale, powerScale)
 	end
+	-- 혼자 서는 보스(칼리스토)가 편성에 있으면 그것 하나만
+	for _, enemyId in enemyIds do
+		if EnemyDefinitions.IsValid(enemyId) and EnemyDefinitions.Get(enemyId).Solo then
+			enemyIds = { enemyId }
+			break
+		end
+	end
 
 	for index, enemyId in (if bossDef then {} else enemyIds) do
 		local enemy = EnemyDefinitions.Get(enemyId)
 		local id = string.format("enemy%d", index)
 		local health = math.max(1, math.floor(enemy.MaxHealth * healthScale))
+		local callistoDef = enemy.Id == "Callisto" and enemy.Pages ~= nil
+		if callistoDef then
+			state.Callisto = {
+				UnitId = id,
+				Page = 1,
+				Cycle = 1,
+				Slot = 1,
+				Field = 0,
+				Opened = false,
+				Cooldowns = {},
+				PowerScale = powerScale,
+				HealthScale = healthScale,
+			}
+		end
 		state.Units[id] = {
 			Id = id,
 			Name = enemy.Name,
 			Side = "Enemy",
+			DefId = enemy.Id,
 			Health = health,
 			MaxHealth = health,
-			Power = math.max(1, math.floor(enemy.Power * powerScale)),
+			-- 칼리스토는 공격력 0(스킬 피해 = 사양 숫자 × 배율 — callistoBase)
+			Power = if callistoDef then 0 else math.max(1, math.floor(enemy.Power * powerScale)),
 			Groggy = GroggyGauge.New(),
 			Taunt = 0,
 			Status = BattleStatus.New(),
@@ -1743,6 +1789,49 @@ function GridBattle.MoveAlly(state: State, x: number, y: number): (boolean, stri
 	return ok, reason
 end
 
+--=== 보스: 칼리스토 — 페이지 넘김(damageUnit 이 부른다. 나머지 규칙은 "적 턴" 앞의 칼리스토 절) ===--
+
+-- 3페이지 [시험 종료]: 체력이 이 비율 이하면 전투가 끝난다(쓰러진다)
+local CALLISTO_END_RATIO = 0.01
+
+local function callistoOf(state: State, unit: Unit): CallistoState?
+	local c = state.Callisto
+	if c and c.UnitId == unit.Id then
+		return c
+	end
+	return nil
+end
+
+--[[
+	1페이지 체력이 다하면 쓰러지지 않고 다음 페이지로 넘어간다(damageUnit 이 체력 1에서 붙든다).
+	2페이지는 사양이 아직 없어 건너뛴다 — EnemyDefinitions.Callisto.Pages 에 [2] 가 생기면 그대로 들른다.
+	이번 턴에 남은 예고는 그대로 둔다(대기열이 계획 번호로 집는다 — 지우면 슬라임 스킬로 접힌다).
+]]
+local function callistoNextPage(state: State, unit: Unit, c: CallistoState)
+	local pages = EnemyDefinitions.Get("Callisto").Pages or {}
+	local nextPage = c.Page + 1
+	while not pages[nextPage] and nextPage < 3 do
+		nextPage += 1
+	end
+	local page = pages[nextPage]
+	if not page then
+		return
+	end
+	c.Page = nextPage
+	c.Cycle, c.Slot, c.Opened, c.Cooldowns = 1, 1, false, {}
+	local health = math.max(1, math.floor(page.Health * c.HealthScale))
+	unit.MaxHealth, unit.Health = health, health
+	-- 1페이지 것 정리: 작은 곰 자리 · 아군 고찰(심베라즈마가 3페이지엔 없다)
+	BattleStatus.SpendAll(unit.Status, ClassResources.URSA_MINOR)
+	local ally = state.Units[ALLY_ID]
+	if ally then
+		BattleStatus.SpendAll(ally.Status, ClassResources.GOCHAL)
+		BattleStatus.RemoveBySource(ally.Status, "고찰")
+	end
+	pushLog(state, string.format("%s — %d페이지 %s (체력 %d)", unit.Name, nextPage, page.Name, health))
+	pushEvent(state, { Kind = "Page", Actor = unit.Id, Page = nextPage, Name = page.Name })
+end
+
 --=== 대미지 ===--
 
 --[[
@@ -1799,11 +1888,21 @@ local function damageUnit(
 
 	local dealt = math.max(0, math.floor(remaining))
 	local locked = coreLocked(state, unit)
-	local floorHealth = if canKill == false or locked then 1 else 0
+	-- 칼리스토는 마지막 페이지 전엔 쓰러지지 않고 다음 페이지로
+	local callisto = callistoOf(state, unit)
+	local floorHealth = if canKill == false or locked or (callisto and callisto.Page < 3) then 1 else 0
 	if locked and unit.Health - dealt < 1 then
 		pushLog(state, "다른 부위가 남아 있어 디버그 코어는 부서지지 않는다")
 	end
 	unit.Health = math.max(floorHealth, unit.Health - dealt)
+	if callisto and unit.Alive then
+		if callisto.Page < 3 and unit.Health <= 1 then
+			callistoNextPage(state, unit, callisto)
+		elseif callisto.Page >= 3 and unit.Health <= unit.MaxHealth * CALLISTO_END_RATIO then
+			unit.Health = 0
+			pushLog(state, "시험 종료 — 칼리스토 체력 1% 이하")
+		end
+	end
 	--[[
 		아군이 쓰러지기 직전 — 카드(재기·불굴)가 막을 수 있다. Cancel 이면 Health 로 버틴다.
 	]]
@@ -2457,6 +2556,318 @@ function GridBattle.PullEnemies(state: State, columns: number, ids: { [string]: 
 	return moved
 end
 
+--=== 보스: 칼리스토 ===--
+--[[
+	히든 보스 칼리스토(2026-10-31 사용자 사양 — "밸런스는 모르니 사양 그대로"). 정의 EnemyDefinitions.Callisto, 스킬 BattleSkills Callisto*.
+	사람 모양: 적 칸 하나에 서서 매 턴 칸을 옮겨 다닌다(줄 공격이면 아군이 선 줄로). 디버그와 달리 부위·판 기믹이 없다.
+
+	아군에게 거는 것(ClassResources · Keywords). "방어력 N% 감소"는 [받는 피해량] +N%, "공격력 N% 감소"는 [가하는 피해량] −N%.
+	  [성위]   특수 화상. 1스택당 받는 피해 +1%(보정값 "성위"를 스택에 맞춰 다시 건다), 15스택이면 사라지고 [뭇별]
+	  [뭇별]   특수 화상. 받는 피해 +20% · 가하는 피해 −10%, 5턴(보정값 기한 = 스택 숫자). 다시 얻으면 5턴부터
+	  [고찰]   특수 도발. 받는 피해 +20%, 턴 끝마다 화상 1. `심베라즈마`가 지운다(1페이지를 넘기면 지운다)
+	  [심베라즈마]·[칼춤 상처]  받는 피해 +20% · +15%. 사양에 기한이 없어 DEBUFF_TURNS 로 정함
+	칼리스토 자신: [작은 곰 자리](1페이지 체력 50% 미만 — 턴 끝에 본다) · 그날의 기억(화상 피해 ×2 — EndTurn 지속 피해)
+
+	행동 박자(사양에 없어 정함 — EnemyDefinitions Pages[].Moves 의 When 과 맞출 것)
+	  1페이지  1번 → 2번 → 3번 자리를 한 턴에 하나씩, [작은 곰 자리]면 바퀴 끝에 4번(아스트로 세시)
+	           1번 = 홀수 바퀴 파라티리시 / 짝수 바퀴 세시 파라티리시 · 2번 = 고찰이 있으면 심베라즈마 아니면 트로히아 ·
+	           3번 = 뭇별이 있거나 성위 6 이상이면 미크리 아르크토스 하라시 아니면 신데시 톤 아스트론
+	  3페이지  첫 턴 뭇별 아래에 잠기리(장판 10턴) → 인위적 별자리(재사용 4) → 쏟아지는 뭇별(재사용 2) → 둘 다 대기 중이면 공명적 성위
+	연타(Strikes)는 예고를 그 수만큼 줄 세워 한 번씩 따로 회피한다(대기열이 계획 번호로 집는다).
+]]
+local SEONGWI_MAX = 15
+local MUTBYEOL_TURNS = 5
+local CALLISTO_DEBUFF_TURNS = 3
+local URSA_RATIO = 0.5
+local FIELD_TURNS = 10
+-- 장판: 아군 최대 체력 5% · 칼리스토 최대 체력 10%(잊혀져가는 성위) 고정 피해
+local FIELD_ALLY, FIELD_SELF = 0.05, 0.10
+-- 뭇별의 시선(1페이지): 뭇별이 있는 대상에게 주는 피해 +15%
+local GAZE_BONUS = 0.15
+-- 겨누는 모양: Row = 아군이 선 줄(칼리스토도 그 줄로 옮겨 섬) · Cross/Square = 아군 칸 둘레 · Column = 아군이 선 열 · All = 아군 칸 전부
+local CALLISTO_AIM: { [string]: string } = {
+	CallistoSlash = "Row",
+	CallistoPhoto = "Cross",
+	CallistoTrohia = "Square",
+	CallistoSymberasma = "All",
+	CallistoSynthesis = "Row",
+	CallistoArktos = "All",
+	CallistoAstro = "All",
+	CallistoResonance = "Row",
+	CallistoArtificial = "Square",
+	CallistoShower = "Column",
+	CallistoSubmerge = "All",
+}
+GridBattle.CALLISTO_AIM = CALLISTO_AIM
+
+local function stackOf(unit: Unit, id: string): number
+	return BattleStatus.Stack(unit.Status, id)
+end
+
+-- [성위] 스택만큼 받는 피해 보정을 다시 건다
+local function syncSeongwi(unit: Unit)
+	BattleStatus.RemoveBySource(unit.Status, "성위")
+	local n = stackOf(unit, ClassResources.SEONGWI)
+	if n > 0 then
+		BattleStatus.AddModifier(unit.Status, "DamageTaken", n * 0.01, -1, "성위")
+	end
+end
+
+-- 기한 있는 디버프 하나(같은 이름이면 새로 건다). 스택 = 남은 턴(상태 아이콘 숫자)
+local function timedDebuff(unit: Unit, id: string, source: string, turns: number, mods: { { any } })
+	BattleStatus.RemoveBySource(unit.Status, source)
+	for _, m in mods do
+		BattleStatus.AddModifier(unit.Status, m[1], m[2], turns, source)
+	end
+	unit.Status.Stacks[id] = turns
+end
+
+local function giveMutbyeol(state: State, unit: Unit)
+	BattleStatus.SpendAll(unit.Status, ClassResources.SEONGWI)
+	syncSeongwi(unit)
+	timedDebuff(unit, ClassResources.MUTBYEOL, "뭇별", MUTBYEOL_TURNS, { { "DamageTaken", 0.2 }, { "DamageDealt", -0.1 } })
+	pushLog(state, unit.Name .. " — [뭇별] (방어력 −20% · 공격력 −10%, 5턴)")
+end
+
+local function addSeongwi(state: State, unit: Unit, n: number)
+	if n <= 0 then
+		return
+	end
+	BattleStatus.AddStack(unit.Status, ClassResources.SEONGWI, n)
+	if stackOf(unit, ClassResources.SEONGWI) >= SEONGWI_MAX then
+		giveMutbyeol(state, unit)
+	else
+		syncSeongwi(unit)
+	end
+end
+
+local function setGochal(unit: Unit, on: boolean)
+	BattleStatus.RemoveBySource(unit.Status, "고찰")
+	BattleStatus.SpendAll(unit.Status, ClassResources.GOCHAL)
+	if on then
+		unit.Status.Stacks[ClassResources.GOCHAL] = 1
+		BattleStatus.AddModifier(unit.Status, "DamageTaken", 0.2, -1, "고찰")
+	end
+end
+
+-- 이번 턴 쓸 스킬(행동 박자 — 위 설명). 고르면서 바퀴·자리·재사용 대기를 넘긴다
+local function callistoPick(c: CallistoState, unit: Unit, ally: Unit): string
+	if c.Page >= 3 then
+		local id
+		if not c.Opened then
+			c.Opened = true
+			id = "CallistoSubmerge"
+		elseif (c.Cooldowns.CallistoArtificial or 0) <= 0 then
+			id = "CallistoArtificial"
+		elseif (c.Cooldowns.CallistoShower or 0) <= 0 then
+			id = "CallistoShower"
+		else
+			id = "CallistoResonance"
+		end
+		local skill = BattleSkills.ById(id)
+		if skill and skill.BossCooldown then
+			c.Cooldowns[id] = skill.BossCooldown
+		end
+		return id
+	end
+	local id
+	if c.Slot >= 4 then
+		id = "CallistoAstro"
+	elseif c.Slot == 1 then
+		id = if c.Cycle % 2 == 1 then "CallistoPhoto" else "CallistoSlash"
+	elseif c.Slot == 2 then
+		id = if stackOf(ally, ClassResources.GOCHAL) > 0 then "CallistoSymberasma" else "CallistoTrohia"
+	else
+		local ripe = stackOf(ally, ClassResources.MUTBYEOL) > 0 or stackOf(ally, ClassResources.SEONGWI) >= 6
+		id = if ripe then "CallistoArktos" else "CallistoSynthesis"
+	end
+	if c.Slot == 3 and stackOf(unit, ClassResources.URSA_MINOR) > 0 then
+		c.Slot = 4
+	elseif c.Slot >= 3 then
+		c.Slot, c.Cycle = 1, c.Cycle + 1
+	else
+		c.Slot += 1
+	end
+	return id
+end
+
+-- 겨눈 아군 칸들(예고 때 아군이 선 칸 기준)
+local function callistoCells(state: State, aim: string, at: BattleGrid.Cell): { { number } }
+	local w, h = state.Grid.Width, state.Grid.Height
+	local cells = {}
+	for x = 1, w do
+		for y = 1, h do
+			local dx, dy = math.abs(x - at.X), math.abs(y - at.Y)
+			local hit = aim == "All"
+				or (aim == "Row" and y == at.Y)
+				or (aim == "Column" and x == at.X)
+				or (aim == "Square" and dx <= 1 and dy <= 1)
+				or (aim == "Cross" and dx + dy <= 1)
+			if hit then
+				table.insert(cells, { x, y })
+			end
+		end
+	end
+	return cells
+end
+
+--[[
+	칼리스토 예고: 칸을 옮기고(줄 공격이면 아군이 선 줄의 앞쪽 세 칸 가운데, 아니면 아무 빈 칸) 스킬을 고르고,
+	연타면 그 수만큼 예고를 줄 세운다.
+]]
+local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: CallistoState, planned: { Unit })
+	local ally = state.Units[ALLY_ID]
+	local here = BattleGrid.CellOf(state.Grid, ALLY_ID)
+	unit.Plans, unit.Plan = nil, nil
+	if not ally or not ally.Alive or not here then
+		return
+	end
+	local id = callistoPick(c, unit, ally)
+	local skill = BattleSkills.ById(id)
+	if not skill then
+		return
+	end
+	local aim = CALLISTO_AIM[id] or "Row"
+	for _ = 1, 8 do
+		local x = if aim == "Row" then math.floor(rng() * 3) + 1 else math.floor(rng() * state.Grid.Width) + 1
+		local y = if aim == "Row" then here.Y else math.floor(rng() * state.Grid.Height) + 1
+		if BattleGrid.Move(state.Grid, unit.Id, x, y) then
+			break
+		end
+	end
+	local cells = callistoCells(state, aim, here)
+	local plans = {}
+	for _ = 1, math.max(1, skill.Strikes or 1) do
+		table.insert(plans, { SkillId = id, Cells = cells })
+		table.insert(state.Planned, unit.Id)
+	end
+	unit.Plans = plans
+	unit.Plan = plans[1]
+	table.insert(planned, unit)
+	pushLog(state, string.format("%s — %s 예고%s", unit.Name, skill.Name, if #plans > 1 then string.format(" (%d연타)", #plans) else ""))
+end
+
+--[[
+	칼리스토 공격 한 번의 위력(회피·막기·치명·받는 피해 보정 전). fixed 가 있으면 그 값을 고정 피해로 그대로(장판).
+]]
+local function callistoBase(c: CallistoState, ally: Unit, skill: BattleSkills.Skill): (number, number?)
+	if skill.Id == "CallistoSubmerge" then
+		return 0, ally.MaxHealth * FIELD_ALLY
+	end
+	local mutbyeol = stackOf(ally, ClassResources.MUTBYEOL) > 0
+	local base = skill.Damage
+	if skill.Id == "CallistoSynthesis" and stackOf(ally, ClassResources.SEONGWI) > 0 then
+		base *= 1.3
+	elseif skill.Id == "CallistoArktos" then
+		base = if mutbyeol then 40 else 0
+	elseif skill.Id == "CallistoAstro" and mutbyeol then
+		base *= 1.4
+	end
+	if c.Page == 1 and mutbyeol then
+		base *= 1 + GAZE_BONUS
+	end
+	return base * c.PowerScale, nil
+end
+
+--[[
+	맞은 뒤 효과(ResolveDodge 가 피해를 넣은 다음). 회피(Success)한 공격은 아무것도 안 건다 —
+	피해 없는 회피 불가 스킬(사진·멱살·렌즈·장판)은 늘 걸린다(결투사가 패리해도).
+]]
+local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: Unit, skill: BattleSkills.Skill, grade: string)
+	local landed = grade ~= "Success" or (skill.Inflicts == true and skill.Damage <= 0)
+	if not landed or not ally.Alive then
+		return
+	end
+	local id = skill.Id
+	local mutbyeol = stackOf(ally, ClassResources.MUTBYEOL) > 0
+	local seongwi = stackOf(ally, ClassResources.SEONGWI)
+	if id == "CallistoSlash" then
+		if mutbyeol then
+			BattleStatus.AddBurn(ally.Status, 6)
+		else
+			addSeongwi(state, ally, 2)
+			BattleStatus.AddBurn(ally.Status, 4)
+		end
+	elseif id == "CallistoPhoto" then
+		setGochal(ally, true)
+		BattleStatus.AddBurn(ally.Status, 4)
+		pushLog(state, ally.Name .. " — [고찰] (방어력 −20%, 턴마다 화상 1)")
+	elseif id == "CallistoTrohia" then
+		if mutbyeol then
+			BattleStatus.AddBurn(ally.Status, 3)
+		else
+			addSeongwi(state, ally, 1)
+		end
+	elseif id == "CallistoSymberasma" then
+		setGochal(ally, false)
+		timedDebuff(ally, ClassResources.SYMBERASMA, "심베라즈마", CALLISTO_DEBUFF_TURNS, { { "DamageTaken", 0.2 } })
+		pushLog(state, ally.Name .. " — 고찰이 지워지고 [심베라즈마] (방어력 −20%)")
+	elseif id == "CallistoSynthesis" then
+		if seongwi > 0 then
+			BattleStatus.AddBurn(ally.Status, 5)
+		end
+	elseif id == "CallistoArktos" then
+		if not mutbyeol and seongwi > 0 then
+			giveMutbyeol(state, ally)
+		end
+		if stackOf(unit, ClassResources.URSA_MINOR) > 0 then
+			BattleStatus.AddBurn(ally.Status, 5)
+		end
+	elseif id == "CallistoAstro" then
+		if seongwi > 0 then
+			timedDebuff(ally, ClassResources.BLADE_SCAR, "칼춤 상처", CALLISTO_DEBUFF_TURNS, { { "DamageTaken", 0.15 } })
+		end
+	elseif id == "CallistoArtificial" then
+		addSeongwi(state, ally, 4)
+	elseif id == "CallistoShower" then
+		addSeongwi(state, ally, 1)
+	elseif id == "CallistoSubmerge" then
+		-- 아군 몫(최대 체력 5%)은 ResolveDodge 가 이미 넣었다. 칼리스토 몫(10%)과 남은 장판 턴
+		c.Field = FIELD_TURNS - 1
+		c.FieldTurn = state.Turn
+		local lost = damageUnit(state, unit, unit.MaxHealth * FIELD_SELF, "True", true)
+		pushLog(state, string.format("뭇별 아래에 잠기리 — 장판 %d턴 · 칼리스토도 %d 잃음(잊혀져가는 성위)", FIELD_TURNS, lost))
+	end
+end
+
+--[[
+	칼리스토 턴 끝(EndTurn — 지속 피해·보정값 기한을 깎은 뒤): 고찰 화상 · 남은 턴 숫자 맞추기 · 재사용 대기 ·
+	장판(깐 턴 끝은 건너뜀) · [작은 곰 자리].
+]]
+local function callistoEndTurn(state: State, c: CallistoState)
+	local unit = state.Units[c.UnitId]
+	local ally = state.Units[ALLY_ID]
+	if not unit or not ally then
+		return
+	end
+	if ally.Alive and stackOf(ally, ClassResources.GOCHAL) > 0 then
+		BattleStatus.AddBurn(ally.Status, 1)
+	end
+	for id, source in { [ClassResources.MUTBYEOL] = "뭇별", [ClassResources.SYMBERASMA] = "심베라즈마", [ClassResources.BLADE_SCAR] = "칼춤 상처" } do
+		local left = 0
+		for _, m in ally.Status.Modifiers do
+			if m.Source == source then
+				left = math.max(left, m.Turns)
+			end
+		end
+		ally.Status.Stacks[id] = left
+	end
+	for id, n in c.Cooldowns do
+		c.Cooldowns[id] = math.max(0, n - 1)
+	end
+	if c.Field > 0 and c.FieldTurn ~= state.Turn and unit.Alive then
+		c.Field -= 1
+		local hurt = if ally.Alive then damageUnit(state, ally, ally.MaxHealth * FIELD_ALLY, "True", true) else 0
+		local lost = damageUnit(state, unit, unit.MaxHealth * FIELD_SELF, "True", true)
+		pushLog(state, string.format("뭇별 아래에 잠기리 — %s %d · 칼리스토 %d (장판 %d턴 남음)", ally.Name, hurt, lost, c.Field))
+		pushEvent(state, { Kind = "Field", Actor = unit.Id, Ally = hurt, Self = lost, Left = c.Field })
+	end
+	if c.Page == 1 and unit.Alive and stackOf(unit, ClassResources.URSA_MINOR) == 0 and unit.Health < unit.MaxHealth * URSA_RATIO then
+		BattleStatus.AddStack(unit.Status, ClassResources.URSA_MINOR, 1, 1)
+		pushLog(state, "아들을 위한 자리 — 칼리스토가 [작은 곰 자리]를 얻었다")
+	end
+end
+
 --=== 적 턴 ===--
 
 --[[
@@ -2484,7 +2895,10 @@ function GridBattle.EnemyPlan(state: State, rng: () -> number): { Unit }
 		if enemy.Part then
 			continue
 		elseif GroggyGauge.IsStunned(enemy.Groggy) then
+			enemy.Plans, enemy.Plan = nil, nil
 			pushLog(state, string.format("%s 그로기 — 행동 불가", enemy.Name))
+		elseif callistoOf(state, enemy) then
+			callistoPlan(state, rng, enemy, state.Callisto :: CallistoState, planned)
 		else
 			-- 빈 칸을 찾을 때까지 몇 번만 시도한다. 격자가 꽉 찰 일이 없어 금방 끝난다.
 			-- [도발]은 여기에 개입하지 않는다. 라인 선택은 순수하게 유지한다.
@@ -2553,7 +2967,7 @@ function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?
 	if plan then
 		local here = BattleGrid.CellOf(state.Grid, state.AllyId)
 		local foeSkill = GridBattle.EnemySkill(enemy, index)
-		if not here or plan.Canceled or (foeSkill.Damage <= 0 and not foeSkill.HpRatio) then
+		if not here or plan.Canceled or (foeSkill.Damage <= 0 and not foeSkill.HpRatio and not foeSkill.Inflicts) then
 			return false
 		end
 		for _, c in plan.Cells do
@@ -2675,10 +3089,17 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		multiplier *= math.max(1, before.CritMult)
 		pushLog(state, enemy.Name .. " 치명타")
 	end
+	-- 공격 한 방의 위력. 칼리스토는 공격력 0 에 사양 조건(성위·뭇별)을 먹인 값, 장판은 고정 피해(fixed)
+	local callisto = callistoOf(state, enemy)
+	local base: number = enemy.Power + skill.Damage
+	local fixed: number? = nil
+	if callisto then
+		base, fixed = callistoBase(callisto, ally, skill)
+	end
 	-- 적에게 걸린 주는 피해 보정(광신·섬광·중력)을 먹인다. 보스는 보스 버프(감시식·오버클럭·커널 모드)도
-	local incoming = BattleStatus.OutgoingDamage(enemy.Status, (enemy.Power + skill.Damage) * multiplier)
+	local incoming = BattleStatus.OutgoingDamage(enemy.Status, base * multiplier)
 	-- 공격 자체의 위력(회피·막기·치명·보호막·무적을 따지기 전) — 조율자 두베가 "14 이상의 피해"를 이것으로도 센다
-	local raw = BattleStatus.OutgoingDamage(enemy.Status, (enemy.Power + skill.Damage) * math.max(0, before.Mult))
+	local raw = BattleStatus.OutgoingDamage(enemy.Status, base * math.max(0, before.Mult))
 	local boss = if enemy.Part then state.Boss else nil
 	if boss then
 		incoming *= 1 + bossBuffTotal(boss, "Damage")
@@ -2692,7 +3113,14 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		raw = ally.Health * ratio
 		element = "True"
 	end
+	if fixed then
+		-- 칼리스토 장판(뭇별 아래에 잠기리): 최대 체력 비례 고정 피해 — 회피·막기·보정 없음
+		incoming, raw, element = fixed, fixed, "True"
+	end
 	local taken = damageUnit(state, ally, incoming, element, true)
+	if callisto then
+		callistoOnHit(state, callisto, enemy, ally, skill, grade)
+	end
 	if boss and skill.NoHealTurns and taken > 0 then
 		boss.NoHeal = math.max(boss.NoHeal, skill.NoHealTurns)
 		pushLog(state, string.format("%s — %d턴 동안 회복 불가", skill.Name, skill.NoHealTurns))
@@ -2703,7 +3131,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	end
 	local parryBack = 0
 	if parried and enemy.Alive then
-		local full = BattleStatus.OutgoingDamage(enemy.Status, (enemy.Power + skill.Damage) * math.max(0, before.Mult))
+		local full = BattleStatus.OutgoingDamage(enemy.Status, base * math.max(0, before.Mult))
 		parryBack = damageUnit(state, enemy, full * PARRY_REFLECT, "Physical", true)
 	end
 
@@ -2904,6 +3332,10 @@ function GridBattle.EndTurn(state: State)
 				tick.Fire *= keep
 				tick.True *= keep
 			end
+			-- 칼리스토 [그날의 기억]: 화상 피해를 두 배로 받는다
+			if callistoOf(state, unit) then
+				tick.Fire *= 2
+			end
 			local total = 0
 			total += damageUnit(state, unit, tick.Physical, "Physical", false)
 			total += damageUnit(state, unit, tick.Fire, "Fire", false, burnIgnore)
@@ -2970,6 +3402,11 @@ function GridBattle.EndTurn(state: State)
 		local dealt = damageUnit(state, unit, burst, "True", false)
 		pushLog(state, string.format("%s — 융해 %d 폭발 (%d 피해 · 화상 +%d)", unit.Name, melt, dealt, melt * 3))
 		fire(state, "MeltBurst", { Target = unit, Melt = melt, Damage = dealt })
+	end
+
+	-- 칼리스토: 고찰 화상 · 남은 턴 숫자 · 재사용 대기 · 장판 · 작은 곰 자리
+	if state.Callisto then
+		callistoEndTurn(state, state.Callisto)
 	end
 
 	-- 직업 자원 자동 회복. 아군만 해당한다(적은 직업이 없다).
@@ -3116,6 +3553,25 @@ function GridBattle.Snapshot(state: State): any
 			Cells = if unit.Alive then unit.Block else nil,
 			Plan = unit.Plan,
 			Plans = unit.Plans,
+			-- 적 정의 Id: 클라이언트가 모양을 고른다(칼리스토 = 사람 모양)
+			DefId = unit.DefId,
+		}
+	end
+	-- 칼리스토전: 페이지·장판·박자(체력바·정보 창)
+	local callisto = state.Callisto
+	local callistoView = nil
+	if callisto then
+		local page = (EnemyDefinitions.Get("Callisto").Pages or {})[callisto.Page]
+		local unit = state.Units[callisto.UnitId]
+		callistoView = {
+			UnitId = callisto.UnitId,
+			Page = callisto.Page,
+			PageName = page and page.Name or "",
+			Field = callisto.Field,
+			Cycle = callisto.Cycle,
+			Slot = callisto.Slot,
+			UrsaMinor = unit ~= nil and stackOf(unit, ClassResources.URSA_MINOR) > 0,
+			Cooldowns = table.clone(callisto.Cooldowns),
 		}
 	end
 	--[[
@@ -3216,6 +3672,7 @@ function GridBattle.Snapshot(state: State): any
 		Planned = table.clone(state.Planned),
 		-- 보스전 판: 지워진 아군 칸 {X, Y, Turns}, 버프/버그 칸 {X, Y, Kind}, 지금 선 칸의 효과
 		Boss = if state.Boss then bossSnapshot(state) else nil,
+		Callisto = callistoView,
 		Log = table.clone(state.Log),
 		Events = table.clone(state.Events),
 	}

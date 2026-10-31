@@ -136,6 +136,10 @@ export type Skill = {
 	HitWeights: { number }?,
 	MaxTargets: number?,
 	Element: string?,
+	-- 칼리스토(2026-10-31): 피해가 없어도 맞으면 상태를 건다(위협으로 친다 — 예고 칸에 서 있으면 QTE·판정이 돈다)
+	Inflicts: boolean?,
+	-- 칼리스토: 한 번씩 따로 회피하는 연타 수("5번 회피 기믹"). 예고(Plans)를 이 수만큼 줄 세운다
+	Strikes: number?,
 }
 
 -- 적 전용. 적은 직업이 없으므로 이 중에서 무작위로 고른다. 지금은 슬라임 공격 둘뿐이다.
@@ -407,6 +411,127 @@ local bossSkills: { Skill } = {
 		BossCooldown = 6,
 		HpRatio = 0.5,
 		NoHealTurns = 3,
+	},
+
+	--[[
+		히든 보스 칼리스토(2026-10-31 사용자 사양 그대로 — 밸런스는 아직 손대지 않음). 겨누는 칸은 GridBattle "보스: 칼리스토" 절의
+		callistoCells 가 예고 때 정한다(Shape 는 설명용). 피해 = 이 Damage 그대로(칼리스토 Power 0 — 디버그 적 공격력 배율만 곱한다).
+		괄호 안 연출 메모(블레이드 댄서 칼춤 등)는 사용자가 아케인 리니지에서 따온 레퍼런스.
+	]]
+	-- 1페이지 관찰자 칼리스토
+	{
+		Id = "CallistoSlash",
+		Name = "세시 파라티리시",
+		Description = "- 팔에서 나온 칼날로 벰.\n- 맞으면 [성위] 2 · [화상] 4.\n- 대상에게 [뭇별]이 있으면 [성위] 대신 [화상] 2를 더(화상 6).",
+		Damage = 15,
+		Range = "Melee",
+		Shape = { Kind = "Row" },
+		BossKind = "Attack",
+	},
+	{
+		Id = "CallistoPhoto",
+		Name = "파라티리시",
+		Description = "- 손목에서 나온 카메라로 찍음. 피해 없음.\n- 회피 불가.\n- [고찰]과 [화상] 4 부여.",
+		Damage = 0,
+		Range = "Ranged",
+		Shape = { Kind = "Cross", Radius = 1 },
+		Unavoidable = true,
+		Inflicts = true,
+		BossKind = "Attack",
+	},
+	{
+		Id = "CallistoTrohia",
+		Name = "트로히아",
+		Description = "- 팔등에서 나온 칼날로 5번 연달아 벰(5 × 5).\n- 한 번씩 따로 회피(5번 회피).\n- 맞을 때마다 [성위] 1.\n- 대상에게 [뭇별]이 있으면 한 번마다 [성위] 대신 [화상] 3.",
+		Damage = 5,
+		Range = "Melee",
+		Shape = { Kind = "Square", Radius = 1 },
+		Strikes = 5,
+		BossKind = "Attack",
+	},
+	{
+		Id = "CallistoSymberasma",
+		Name = "심베라즈마",
+		Description = "- 대상에게 [고찰]이 있을 때만 씀. 피해 없음.\n- 회피 불가 · [고찰]로 붙잡혀 어디 있든 닿음.\n- 멱살을 잡고 카메라로 찍은 뒤 내던짐.\n- [고찰]을 지우고 [심베라즈마](방어력 −20%, 3턴)를 부여.",
+		Damage = 0,
+		Range = "Melee",
+		Shape = { Kind = "All" },
+		Unavoidable = true,
+		Inflicts = true,
+		BossKind = "Attack",
+	},
+	{
+		Id = "CallistoSynthesis",
+		Name = "신데시 톤 아스트론",
+		Description = "- 손을 칼날로 바꿔 3번 찌름(12 × 3).\n- 한 번씩 따로 회피(3번 회피).\n- 대상에게 [성위]가 있으면 피해 +30% · 찌를 때마다 [화상] 5.",
+		Damage = 12,
+		Range = "Melee",
+		Shape = { Kind = "Row" },
+		Strikes = 3,
+		BossKind = "Attack",
+	},
+	{
+		Id = "CallistoArktos",
+		Name = "미크리 아르크토스 하라시",
+		Description = "- 카메라 렌즈를 넓게 쏴 아군 칸 전부를 태움.\n- 회피 불가 · 막기 가능.\n- 맞으면 [성위]를 바로 [뭇별]로 바꿈.\n- 이미 [뭇별]이 있으면 대신 40 피해.\n- [작은 곰 자리]: [화상] 5 추가.",
+		Damage = 0,
+		Range = "Ranged",
+		Shape = { Kind = "All" },
+		GuardOnly = true,
+		Inflicts = true,
+		BossKind = "Attack",
+	},
+	{
+		Id = "CallistoAstro",
+		Name = "아스트로 세시",
+		Description = "- 강화 스킬. [작은 곰 자리]일 때만 씀.\n- 고속으로 돌며 사방을 벰(아군 칸 전부).\n- 회피 불가.\n- 대상에게 [뭇별]이 있으면 피해 +40%.\n- [성위]를 지닌 채 맞으면 [칼춤 상처](방어력 −15%, 3턴).",
+		Damage = 30,
+		Range = "Melee",
+		Shape = { Kind = "All" },
+		Unavoidable = true,
+		BossKind = "Ultimate",
+	},
+	-- 3페이지 뭇별의 어머니 칼리스토
+	{
+		Id = "CallistoResonance",
+		Name = "공명적 성위",
+		Description = "- 평타. 재사용 대기 없음.",
+		Damage = 15,
+		Range = "Ranged",
+		Shape = { Kind = "Row" },
+		BossKind = "Attack",
+	},
+	{
+		Id = "CallistoArtificial",
+		Name = "인위적 별자리",
+		Description = "- 맞으면 [성위] 4.",
+		Damage = 20,
+		Range = "Ranged",
+		Shape = { Kind = "Square", Radius = 1 },
+		BossKind = "Attack",
+		BossCooldown = 4,
+	},
+	{
+		Id = "CallistoShower",
+		Name = "쏟아지는 뭇별",
+		Description = "- 별을 쏟아 3번 때림(5 × 3). 한 번씩 따로 회피.\n- 맞을 때마다 [성위] 1.",
+		Damage = 5,
+		Range = "Ranged",
+		Shape = { Kind = "Column" },
+		Strikes = 3,
+		BossKind = "Attack",
+		BossCooldown = 2,
+	},
+	{
+		Id = "CallistoSubmerge",
+		Name = "뭇별 아래에 잠기리",
+		Description = "- 3페이지 첫 턴에 바로 한 번만 씀.\n- 아군·적 가리지 않는 장판(10턴) — 회피 불가.\n- 장판 위 모두가 매 턴 최대 체력 5% 고정 피해.\n- 칼리스토는 매 턴 최대 체력 10%를 고정으로 잃음([잊혀져가는 성위]).",
+		Damage = 0,
+		Range = "Ranged",
+		Shape = { Kind = "All" },
+		Unavoidable = true,
+		Inflicts = true,
+		BossKind = "Gimmick",
 	},
 }
 
