@@ -1339,7 +1339,7 @@ local function lightStar(ctx: Context, source: string)
 	end
 end
 
-local SEPT_BURN = { 1, 1, 1, 1, 1, 1, 1, 3 } -- 셉텐트리오네스 타격마다 거는 화상(레이저 7발 · 강타)
+local SEPT_BURN = { 1, 1, 1, 1, 1, 1, 1, 10 } -- 셉텐트리오네스 타격마다 거는 화상(레이저 7발 · 강타) — 질문 2 답으로 강타 10
 
 local attunerEffects: { [string]: Effect } = {
 	-- 메그레즈: 사용 시 칠성(별마다 한 번). 적중 시 화상 3, 융해 1.
@@ -1382,7 +1382,7 @@ local attunerEffects: { [string]: Effect } = {
 	]]
 	--[[
 		2026-10-31 사용자: "대상의 화상 1당 이 스킬의 피해량 +10%(최대 400%)". 같은 날 질문 답: 레이저가 맞을 때마다 화상을 걸고 그것까지 센다
-		(레이저 1씩 · 강타 3 — 합 10 은 그대로, 뒤 타격일수록 세짐), 다 맞힌 뒤 대상의 화상을 전부 한 번 발동(화상 % 만큼 최대 체력 화염 피해, 화상은 남는다).
+		(레이저 1씩 · 강타 10 — 질문 2 답, 뒤 타격일수록 세짐), 다 맞힌 뒤 대상의 화상을 전부 한 번 발동(화상 % 만큼 최대 체력 화염 피해, 화상은 남는다).
 	]]
 	Septentriones = {
 		TargetBonus = function(ctx, target)

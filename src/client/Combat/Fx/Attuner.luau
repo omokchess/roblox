@@ -415,7 +415,7 @@ local function grade(ctx: any, p: { [string]: any }, hold: number, life: number?
 end
 
 -- 레이저마다 다른 화면 색(사용자: "매 레이저마다 흑백 또는 각종 색깔 연출") — 갈수록 세지고(대비 · 밝기 · 채도 마음대로),
--- 다음 레이저까지 40% 로 머문다. 마지막 강타가 가장 세고(SLAM_FLASH → SLAM_GRADE) 내 차례가 올 때까지 남는다
+-- 0.35초에 걸쳐 원래대로 돌아왔다가 다음 레이저에 다시 바뀐다(질문 2 답). 마지막 강타가 가장 세고(SLAM_FLASH → 붉은 SLAM_GRADE) 내 차례가 올 때까지 남는다
 local LASER_GRADE = {
 	{ Saturation = -1, Contrast = 0.55, Brightness = 0.04 },
 	{ Tint = c(255, 120, 160), Contrast = 0.5, Saturation = 0.35, Brightness = -0.06 },
@@ -426,7 +426,7 @@ local LASER_GRADE = {
 	{ Saturation = -1, Contrast = 1.1, Brightness = 0.14 },
 }
 local SLAM_FLASH = { Saturation = -1, Contrast = 1.6, Brightness = 0.35 }
-local SLAM_GRADE = { Tint = c(120, 170, 255), Contrast = 1.05, Saturation = 0.55, Brightness = 0.1 }
+local SLAM_GRADE = { Tint = c(255, 110, 100), Contrast = 1.05, Saturation = 0.5, Brightness = 0.06 }
 
 -- 버릇: 별이 국자를 따라 손잡이 끝(알카이드)부터 국자 입(두베)까지 차례로 푸르게 반짝인다(별은 손을 따라 움직이니 반짝일 때마다 자리를 다시 읽는다)
 local TRACE = { 4, 5, 3, 1, 6, 2, 7 }
@@ -843,7 +843,7 @@ end
 	2026-10-31 사용자: "더 높이 올라간 채로 완전 눕힌 후에 레이저를 수직으로 떨구는 식"). 별은 이펙트가 몰고(Drive) 강타 0.85초 뒤 놓는다.
 	레터박스 · 밤하늘 화면 · 하늘 성반이 켜지고(ev.total 초 — 컷신 끝까지), 별마다 번쩍 · 손끝 파문, 카메라가 오르는 별자리를 따라 올라간다(ev.d 초)
 ]]
-local SKY = 30
+local SKY = 40 -- 질문 2 답
 function Fx.SeptRise(ctx: any, ev: any)
 	local s = st(ctx)
 	s.cam = nil
@@ -972,7 +972,7 @@ function Fx.SeptLaser(ctx: any, ev: any)
 	task.delay(AIM, function()
 		laser(ctx, i, g, 1, GROW, 0.35)
 		sept.Pulse += 1
-		grade(ctx, LASER_GRADE[k] or LASER_GRADE[1], 0.4, 1)
+		grade(ctx, LASER_GRADE[k] or LASER_GRADE[1], 0, 0.6)
 		ctx.Vfx.Flash(ctx.Star(i), { Color = WHITE, Size = 2.4, Life = 0.25, Brightness = 6 })
 	end)
 	task.delay(AIM + GROW, function()
@@ -1058,7 +1058,7 @@ end
 
 --[[
 	마지막: 별 일곱이 한꺼번에 굵은 빛줄기로 내리꽂히고(북두칠성 꼴) 바닥 밑그림이 선 자국으로 타오르며 진형 전체를 강타 —
-	흑백 임팩트 → 강한 푸른 대비로 남아 내 차례가 오면 돌아옴 · 진형 가운데서 큰 충격파 두 겹과 고리 · 제목 카드 SEPTENTRIONES. 성반 · 룬 · 하늘 선은 거둔다.
+	흑백 임팩트 → 강한 붉은 빛으로 남아 내 차례가 오면 돌아옴 · 진형 가운데서 큰 충격파 두 겹과 고리 · 제목 카드 SEPTENTRIONES. 성반 · 룬 · 하늘 선은 거둔다.
 	카메라는 진형 위 넓은 구도로 옮겨(선 자국이 다 보이게) 모션이 끝날 때까지 머문다. 큰 연출은 한 번(맞은 적마다 불린다)
 ]]
 function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
@@ -1074,7 +1074,7 @@ function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 			Y = 0.42,
 			Height = 0.26,
 		})
-		-- 막타가 가장 세다: 흑백 번쩍 → 강한 푸른 대비로 남아 내 차례가 오면 돌아온다
+		-- 막타가 가장 세다: 흑백 번쩍 → 강한 붉은 빛으로 남아 내 차례가 오면 돌아온다
 		grade(ctx, SLAM_FLASH, 1, 0.15)
 		task.delay(0.15, function()
 			grade(ctx, SLAM_GRADE, 0.8)
