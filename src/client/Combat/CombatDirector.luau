@@ -913,6 +913,14 @@ function CombatDirector:SetMood(id: string, mood: string)
 	end
 end
 
+-- 칼리스토 페이지 모습(2 = 우주 머리, 3 = 우주 몸 — Combat/Callisto.SetPage). 칼리스토가 아니면 아무 일도 없다
+function CombatDirector:SetCallistoPage(id: string, page: number)
+	local a = self.Actors[id]
+	if a and a.Model then
+		Callisto.SetPage(a.Model, page)
+	end
+end
+
 -- 적이 공격을 예고하는 동안(회피 QTE 중) 웅크려 떤다
 function CombatDirector:Windup(id: string, on: boolean)
 	local a = self.Actors[id]

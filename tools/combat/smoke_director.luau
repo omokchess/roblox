@@ -792,6 +792,8 @@ do
 			end
 			if state.Callisto then
 				pages[state.Callisto.Page] = true
+				-- 페이지 모습(우주 머리·몸)도 돌려 본다
+				director:SetCallistoPage(state.Callisto.UnitId, state.Callisto.Page)
 			end
 			GridBattle.EndTurn(state)
 			if state.Outcome == "Ongoing" then

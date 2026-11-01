@@ -689,6 +689,7 @@ function BattleClient:_callistoAlerts(snapshot: any)
 	end
 	if self.director then
 		self.director:SetMood(view.UnitId, CALLISTO_PAGE_MOOD[view.Page] or "Observe")
+		self.director:SetCallistoPage(view.UnitId, view.Page)
 	end
 	local seen = self.callistoSeen
 	if not seen then
