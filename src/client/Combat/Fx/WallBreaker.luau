@@ -47,6 +47,7 @@ function Fx.PickSlam(ctx: any, _ev: any, at: Vector3?)
 		Common.Crack(Vfx, ground, CFrame.fromAxisAngle(Vector3.new(0, 1, 0), k / 5 * math.pi * 2) * ctx.Forward, 3.5, ROCK)
 	end
 	Common.Arc(ctx, ctx.Root.Position + ctx.Forward * 1.5 + Vector3.new(0, 1, 0), 0, 150, -50, { Radius = 3.6, Color = EMBER, Core = HOT, Width = 0.9, Sweep = 0.05 })
+	Vfx.Pack("Big/Big-Crack-01", CFrame.new(ground + Vector3.new(0, 0.3, 0)), { Color = EMBER, Size = 0.35 })
 end
 
 function Fx.Yank(ctx: any)

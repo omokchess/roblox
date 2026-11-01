@@ -65,6 +65,7 @@ function Fx.NoteHit(ctx: any, _ev: any, at: Vector3?)
 	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.3, R1 = 2.4, Color = GOLD, Life = 0.3, Width = 0.18, Facing = true })
 	ctx.Vfx.Notes(p, { Count = 4, Color = WARM, Spread = 1 })
 	ctx.Vfx.Sparks(p, { Color = GOLD, Count = 12 })
+	ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(p), { Color = GOLD, Size = 0.7 })
 end
 
 function Fx.Raise(ctx: any)

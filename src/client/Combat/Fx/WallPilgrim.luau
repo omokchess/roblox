@@ -68,6 +68,8 @@ function Fx.NailDown(ctx: any, _ev: any, at: Vector3?)
 	Vfx.Sparks(p, { Color = CANDLE, Count = 22, Speed = 24 })
 	Common.Blood(Vfx, p, Vector3.new(0, 1, 0) - ctx.Forward * 0.3, 12, 18)
 	crossMark(Vfx, Vector3.new(p.X, ctx.Ground, p.Z), ctx.Forward)
+	Vfx.Pack("Anime/Punch-02", CFrame.new(p), { Color = CANDLE, Size = 0.8 })
+	Vfx.Pack("Anime/Blood-Punch-01", CFrame.new(p), { Color = RUST, Size = 0.8 })
 end
 
 -- 갈라진 신도: X 로 긋는 두 줄기

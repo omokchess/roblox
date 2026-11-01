@@ -77,6 +77,9 @@ function Fx.CollapseSlam(ctx: any, _ev: any, at: Vector3?)
 		Common.Crack(Vfx, ground, dir, 6, DEEP, 1.2)
 	end
 	Common.Arc(ctx, ctx.Root.Position + ctx.Forward * 2 + Vector3.new(0, 1, 0), 0, 150, -40, { Radius = 4.5, Color = VIOLET, Core = STAR, Width = 1.4, Sweep = 0.05 })
+	-- 마켓 팩 질감: 땅 갈라짐 + 중력 소용돌이
+	Vfx.Pack("Anime/Crack-01", CFrame.new(ground + Vector3.new(0, 0.2, 0)), { Color = VIOLET, Size = 1.5 })
+	Vfx.Pack("Loose/Swirling", CFrame.new(p), { Color = VIOLET, Size = 0.5 })
 end
 
 -- 붕괴 차징: 앞쪽 적 칸들에서 보랏빛이 시전자 쪽으로 끌려온다

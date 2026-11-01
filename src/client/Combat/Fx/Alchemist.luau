@@ -99,6 +99,8 @@ function Fx.Shatter(ctx: any, _ev: any, at: Vector3?)
 	Vfx.Flash(p, { Color = GREEN, Size = 9, Life = 0.3 })
 	Vfx.Ring(CFrame.new(Vector3.new(p.X, ctx.Ground + 0.12, p.Z)), { R0 = 0.5, R1 = 3.6, Color = GREEN, Life = 0.5, Width = 0.3, Height = 0.05 })
 	Vfx.Dust(p - Vector3.new(0, 1, 0), { Count = 10, Color = c(170, 230, 150), Size = 1.2 })
+	Vfx.Pack("Anime/Splash-01", CFrame.new(p), { Color = GREEN, Size = 1.2 })
+	Vfx.Pack("Anime/Smoke-01", CFrame.new(p - Vector3.new(0, 0.5, 0)), { Color = c(170, 230, 150), Size = 0.8 })
 end
 
 function Fx.Pop(ctx: any)

@@ -52,6 +52,8 @@ function Fx.ChiselHit(ctx: any, _ev: any, at: Vector3?)
 	Vfx.Sparks(p, { Color = SPARK, Count = 28, Speed = 30 })
 	Common.Rubble(Vfx, p, 10, STONE)
 	Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.3, R1 = 2.4, Color = GOLD, Life = 0.3, Width = 0.18, Facing = true })
+	Vfx.Pack("Anime/Punch-03", CFrame.new(p), { Color = GOLD, Size = 0.9 })
+	Vfx.Pack("Anime/Smoke-01", CFrame.new(p), { Color = STONE, Size = 0.6 })
 end
 
 -- 뒷벽 허물기: 땅을 친 자리에서 금이 대상과 그 뒤까지 달려가며 돌이 솟구친다

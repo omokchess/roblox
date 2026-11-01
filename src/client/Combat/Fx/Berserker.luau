@@ -69,6 +69,9 @@ function Fx.BloodCrash(ctx: any, _ev: any, at: Vector3?)
 	for k = 0, 6 do
 		Common.Crack(Vfx, ground, CFrame.fromAxisAngle(Vector3.new(0, 1, 0), k / 7 * math.pi * 2) * ctx.Forward, 5, DARK, 1.3)
 	end
+	-- 마켓 팩 질감: 초승달·돌·땅 충격(검은 층은 그대로) + 피 튐
+	Vfx.Pack("vfx pack/f", CFrame.new(ground + Vector3.new(0, 0.3, 0)), { Color = BLOOD, Size = 0.45 })
+	Vfx.Pack("Anime/Blood-Punch-01", CFrame.new(p), { Color = BLOOD, Size = 1.4 })
 end
 
 function Fx.AxeSlashA(ctx: any, _ev: any, at: Vector3?)

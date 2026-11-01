@@ -71,6 +71,8 @@ function Fx.BeamHit(ctx: any, _ev: any, at: Vector3?)
 	ctx.Vfx.Flash(p, { Color = CYAN, Size = 8, Life = 0.25 })
 	ctx.Vfx.Sparks(p, { Color = WHITE, Count = 18, Speed = 24 })
 	ctx.Vfx.Lightning(p + Vector3.new(0, 1.5, 0), p - Vector3.new(0, 1.2, 0), { Color = CYAN })
+	ctx.Vfx.Pack("Anime/Lighting-03", CFrame.new(p), { Color = CYAN, Size = 0.9 })
+	ctx.Vfx.Pack("Anime/Shoot-01", CFrame.new(p), { Color = CYAN })
 end
 
 function Fx.FlareGather(ctx: any)

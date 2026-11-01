@@ -668,9 +668,14 @@ function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boo
 	end
 	copy.Parent = holder
 	local life = 0.5
+	local function tint(seq: ColorSequence): boolean
+		local first = seq.Keypoints[1].Value
+		return o.Color ~= nil and first.R + first.G + first.B > 0.15 -- 검은 그림자 층은 다시 칠하지 않는다
+	end
 	for _, d in copy:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.Anchored, d.CanCollide, d.CanQuery, d.CanTouch = true, false, false, false
+			d.Transparency = 1
 		elseif d:IsA("ParticleEmitter") then
 			if k ~= 1 then
 				local keys = {}
@@ -680,7 +685,7 @@ function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boo
 				d.Size = NumberSequence.new(keys)
 				d.Speed = NumberRange.new(d.Speed.Min * k, d.Speed.Max * k)
 			end
-			if o.Color then
+			if tint(d.Color) then
 				d.Color = ColorSequence.new(o.Color)
 			end
 			local count = d:GetAttribute("EmitCount")
@@ -694,7 +699,7 @@ function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boo
 					d:Emit(count)
 				end
 			end)
-		elseif (d:IsA("Beam") or d:IsA("Trail")) and o.Color then
+		elseif (d:IsA("Beam") or d:IsA("Trail")) and tint(d.Color) then
 			d.Color = ColorSequence.new(o.Color)
 		end
 	end
