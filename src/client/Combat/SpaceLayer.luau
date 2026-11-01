@@ -3,14 +3,15 @@
 	SpaceLayer — 칼리스토 '우주를 담은 몸'(2026-11-01 사용자: "우주를 담은 느낌은 모델링보다 레이어 같은 걸 이용해서
 	특정 공간에 우주 이미지 자체를 갖다 때려박은 느낌" — 샘플로 2페이즈 머리·오른팔).
 
-	몸 부품마다 카메라를 보는 판(BillboardGui) 하나. 매 프레임 그 부품이 화면에 그리는 자리·각도·길이·굵기대로 둥근 틀(CanvasGroup)을
-	맞추고, 그 안에 우주 그림(이음매 없는 타일)을 **화면에 고정**해 깐다 — 몸이 움직여도 별은 화면에 박힌 채, 몸 윤곽만 그 위를
+	화면 위 겹(ScreenGui — 카메라를 보는 판 안에선 CanvasGroup 이 오려 내지 못해 그림이 통째로 나왔다) 하나에, 몸 부품마다
+	매 프레임 그 부품이 화면에 그리는 자리·각도·길이·굵기대로 둥근 틀(CanvasGroup)을 맞추고, 그 안에 우주 그림(이음매 없는 타일)을 **화면에 고정**해 깐다 — 몸이 움직여도 별은 화면에 박힌 채, 몸 윤곽만 그 위를
 	지나가는 '오려 낸 창'(포토샵 클리핑 레이어처럼). 앞 겹(작은 타일, 반투명)은 몸을 조금 따라가 깊이감, 둘 다 아주 천천히 흐른다.
 	  SpaceLayer.Add(part, shape, width?) → 걷는 함수. shape = "Disc"(머리 — 지름 width 스터드) | "Limb"(팔·다리 — 끝이 둥근 막대,
 	    굵기 = 화면에 비친 상자 폭 × width) | "Box"(몸통 — 모서리 둥근 판)
 	그림 = ReplicatedStorage.CallistoAssets 속성 SpaceLayerImage(models/build_space_layer.py → tools/Callisto_SpaceLayer.luau). 없으면 짙은 남색 틀만.
 ]]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -19,10 +20,32 @@ local SpaceLayer = {}
 export type Shape = "Disc" | "Limb" | "Box"
 
 type Tile = { Label: ImageLabel, Size: number, Follow: number, Drift: Vector2 }
-type Layer = { Part: BasePart, Shape: Shape, Width: number, Gui: BillboardGui, Group: CanvasGroup, Tiles: { Tile } }
+type Layer = { Part: BasePart, Shape: Shape, Width: number, Group: CanvasGroup, Tiles: { Tile } }
 
 local layers: { Layer } = {}
 local conn: RBXScriptConnection? = nil
+local params = RaycastParams.new()
+params.FilterType = Enum.RaycastFilterType.Exclude
+local screen: ScreenGui? = nil
+
+-- 화면 위 겹(전투 화면·HUD 보다 아래)
+local function overlay(): ScreenGui?
+	if screen and screen.Parent then
+		return screen
+	end
+	local playerGui = Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if not playerGui then
+		return nil
+	end
+	local s = Instance.new("ScreenGui")
+	s.Name = "CallistoSpaceLayer"
+	s.IgnoreGuiInset = true -- 좌표 = WorldToViewportPoint 그대로
+	s.ResetOnSpawn = false
+	s.DisplayOrder = -5
+	s.Parent = playerGui
+	screen = s
+	return s
+end
 local EDGE = Color3.fromRGB(176, 208, 255)
 
 local function image(): string
@@ -56,14 +79,17 @@ local function step()
 	for i = #layers, 1, -1 do
 		local L = layers[i]
 		local part, group = L.Part, L.Group
-		if not part.Parent or not L.Gui.Parent then
-			L.Gui:Destroy()
+		if not part:IsDescendantOf(workspace) or not group.Parent then
+			group:Destroy()
 			table.remove(layers, i)
 			continue
 		end
 		local c = part.Position
 		local depth = (c - camCf.Position):Dot(camCf.LookVector)
-		if depth < 0.5 then
+		-- 화면 위 겹이라 3D 에 가려지지 않는다 — 카메라 뒤 · 멀리(남의 전투) · 무엇에 가려졌으면 감춘다
+		local model = part:FindFirstAncestorOfClass("Model")
+		params.FilterDescendantsInstances = { model or part, cam, Players.LocalPlayer and Players.LocalPlayer.Character or part }
+		if depth < 0.5 or depth > 260 or workspace:Raycast(camCf.Position, c - camCf.Position, params) then
 			group.Visible = false
 			continue
 		end
@@ -99,10 +125,7 @@ local function step()
 		h = math.max(h, w)
 		local angle = if len > 1e-3 then math.deg(math.atan2(-d.X, d.Y)) else 0
 		local mid = (a + b) / 2
-		-- 판(정사각, 픽셀 고정 크기)은 부품 가운데에 놓이므로 틀 자리는 판 안에서 (mid - g0)
-		local box = math.max(w, h) * 1.6 + 8
-		L.Gui.Size = UDim2.fromOffset(box, box)
-		group.Position = UDim2.fromOffset(mid.X - g0.X + box / 2, mid.Y - g0.Y + box / 2)
+		group.Position = UDim2.fromOffset(mid.X, mid.Y)
 		group.Size = UDim2.fromOffset(w, h)
 		group.Rotation = angle
 		-- 타일: 틀 안에서 거꾸로 돌려 화면과 나란히, 왼쪽 위 모서리가 화면 기준 격자(+ 흐름 · 따라가기)에 오도록 민다
@@ -126,19 +149,14 @@ local function step()
 end
 
 function SpaceLayer.Add(part: BasePart, shape: Shape, width: number?): () -> ()
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "SpaceLayer"
-	gui.Adornee = part
-	gui.AlwaysOnTop = false
-	gui.LightInfluence = 0
-	gui.MaxDistance = 2000
-	gui.Size = UDim2.fromOffset(1, 1)
-	gui.Parent = part
+	local parent = overlay()
 	local group = Instance.new("CanvasGroup")
+	group.Name = part.Name
 	group.AnchorPoint = Vector2.new(0.5, 0.5)
 	group.BackgroundColor3 = Color3.fromRGB(8, 7, 22)
 	group.BorderSizePixel = 0
-	group.Parent = gui
+	group.Visible = false
+	group.Parent = parent
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(if shape == "Box" then 0.2 else 0.5, 0)
 	corner.Parent = group
@@ -151,7 +169,6 @@ function SpaceLayer.Add(part: BasePart, shape: Shape, width: number?): () -> ()
 		Part = part,
 		Shape = shape,
 		Width = width or (if shape == "Disc" then 1.3 else 1),
-		Gui = gui,
 		Group = group,
 		Tiles = {
 			tile(group, 560, 0, 0, Vector2.new(5, 3), 1),
@@ -163,7 +180,7 @@ function SpaceLayer.Add(part: BasePart, shape: Shape, width: number?): () -> ()
 		conn = RunService.RenderStepped:Connect(step)
 	end
 	return function()
-		gui:Destroy()
+		group:Destroy()
 	end
 end
 

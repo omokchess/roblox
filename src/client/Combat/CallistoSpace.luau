@@ -7,6 +7,10 @@
 
 	블렌더 우주(ReplicatedStorage.CallistoAssets.Space · Galaxy — models/build_callisto_space.py)를 이 사람 카메라 아래에 복제해 둔다
 	(카메라 밑 물체는 그 사람 화면에만 그려진다 — 전투 칸 위에 선 사람만 부른다). 빛·하늘은 RegionAtmosphere 의 "우주" 분위기로 덮는다.
+	2026-11-01 사용자: "2페 돌입하면 날이 어두워지게, 우주 사진도 배경에 깔아 주고" —
+	  · 이 사람 화면만 밤으로(Lighting.ClockTime → 자정, 걷으면 되돌림)
+	  · 우주 사진(CallistoAssets 속성 SpaceLayerImage) 판을 카메라 앞 BACKDROP 거리에 화면을 덮게 둔다(카메라를 보는 판 — 스카이박스·하늘 구 아님).
+	    그보다 가까운 것(전투 판·블렌더 별·행성)은 앞에, 먼 지형·하늘은 뒤로 가려진다. 우주가 도는 만큼 옆으로 흐른다.
 	  SetCenter(pos)          전투 필드 가운데(전투 화면이 스냅숏마다 알려 준다)
 	  Show(fade?)             우주를 띄운다(이미 떠 있으면 아무 일 없음). fade = 초(서서히)
 	  Spin(rate, ramp)        도는 빠르기(라디안/초)를 ramp 초에 걸쳐 그쪽으로
@@ -15,6 +19,7 @@
 	들여온 것이 없으면(시험 환경) 아무 일도 하지 않는다.
 ]]
 
+local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -34,11 +39,15 @@ type State = {
 	SpinTarget: number,
 	Ramp: number,
 	Conn: RBXScriptConnection,
+	Clock: number,
 }
 
 local center = Vector3.zero
 local state: State? = nil
 local GALAXY_DROP = 26
+local BACKDROP = 460 -- 우주 사진 판까지 거리(블렌더 별 반지름 140~360 보다 멀리)
+local BACKDROP_TILE = 760
+local BACKDROP_BIND = "CallistoBackdrop"
 
 function CallistoSpace.SetCenter(pos: Vector3)
 	center = pos
@@ -97,6 +106,37 @@ function CallistoSpace.Show(fadeTime: number?)
 		galaxy = g
 	end
 	RegionAtmosphere.SetOverride("우주")
+	-- 우주 사진 판: 보이지 않는 닻을 매 프레임 카메라 앞 BACKDROP 에 두고, 그 닻의 판을 화면보다 조금 크게
+	local anchor = Instance.new("Part")
+	anchor.Name = "BackdropAnchor"
+	anchor.Size = Vector3.new(1, 1, 1)
+	anchor.Transparency = 1
+	anchor.Anchored, anchor.CanCollide, anchor.CanQuery, anchor.CanTouch = true, false, false, false
+	anchor.Parent = folder
+	local board = Instance.new("BillboardGui")
+	board.Name = "Backdrop"
+	board.Adornee = anchor
+	board.AlwaysOnTop = false
+	board.LightInfluence = 0
+	board.ClipsDescendants = true
+	board.MaxDistance = math.huge
+	board.Parent = folder
+	local photo = Instance.new("ImageLabel")
+	photo.BackgroundColor3 = Color3.fromRGB(4, 4, 14)
+	photo.BorderSizePixel = 0
+	local kitImage = kit and kit:GetAttribute("SpaceLayerImage")
+	photo.Image = if type(kitImage) == "string" then kitImage else ""
+	photo.ScaleType = Enum.ScaleType.Tile
+	photo.TileSize = UDim2.fromOffset(BACKDROP_TILE, BACKDROP_TILE)
+	photo.Size = UDim2.new(1, BACKDROP_TILE, 1, BACKDROP_TILE)
+	photo.ImageTransparency = 1
+	photo.BackgroundTransparency = 1
+	photo.Parent = board
+	local fadeIn = TweenInfo.new(math.max(fadeTime or 0, 0.05), Enum.EasingStyle.Sine)
+	TweenService:Create(photo, fadeIn, { ImageTransparency = 0.05, BackgroundTransparency = 0 }):Play()
+	-- 날이 저문다: 오후면 해 질 녘을 지나 자정(24)으로, 오전이면 거꾸로 0 시로
+	local clock = Lighting.ClockTime
+	TweenService:Create(Lighting, TweenInfo.new(math.max(fadeTime or 0, 1.5), Enum.EasingStyle.Sine), { ClockTime = if clock >= 12 then 24 else 0 }):Play()
 	local s: State = {
 		Folder = folder,
 		Space = space,
@@ -108,7 +148,18 @@ function CallistoSpace.Show(fadeTime: number?)
 		SpinTarget = 0.08,
 		Ramp = 1,
 		Conn = nil :: any,
+		Clock = clock,
 	}
+	RunService:BindToRenderStep(BACKDROP_BIND, Enum.RenderPriority.Camera.Value + 1, function()
+		local cam = workspace.CurrentCamera
+		if not cam or not anchor.Parent then
+			return
+		end
+		anchor.CFrame = cam.CFrame * CFrame.new(0, 0, -BACKDROP)
+		board.Size = UDim2.fromOffset(cam.ViewportSize.X * 1.15, cam.ViewportSize.Y * 1.15)
+		local scroll = s.Angle * 320 + os.clock() * 4
+		photo.Position = UDim2.fromOffset(-(scroll % BACKDROP_TILE), -((os.clock() * 2) % BACKDROP_TILE))
+	end)
 	s.Conn = RunService.Heartbeat:Connect(function(dt: number)
 		if not folder.Parent then
 			return
@@ -163,8 +214,11 @@ function CallistoSpace.Hide()
 	end
 	state = nil
 	s.Conn:Disconnect()
+	RunService:UnbindFromRenderStep(BACKDROP_BIND)
 	s.Folder:Destroy()
 	RegionAtmosphere.SetOverride(nil)
+	Lighting.ClockTime %= 24
+	TweenService:Create(Lighting, TweenInfo.new(1.5, Enum.EasingStyle.Sine), { ClockTime = s.Clock }):Play()
 end
 
 return CallistoSpace
