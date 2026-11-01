@@ -155,6 +155,7 @@ function SpaceLayer.Add(part: BasePart, shape: Shape, width: number?): () -> ()
 	group.AnchorPoint = Vector2.new(0.5, 0.5)
 	group.BackgroundColor3 = Color3.fromRGB(8, 7, 22)
 	group.BorderSizePixel = 0
+	group.ClipsDescendants = true -- 이것이 꺼져 있으면 CanvasGroup 도 오려 내지 않는다(그림이 네모로 통째로 나왔다)
 	group.Visible = false
 	group.Parent = parent
 	local corner = Instance.new("UICorner")

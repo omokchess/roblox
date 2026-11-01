@@ -20,6 +20,7 @@
 ]]
 
 local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -40,6 +41,7 @@ type State = {
 	Ramp: number,
 	Conn: RBXScriptConnection,
 	Clock: number,
+	Board: BillboardGui,
 }
 
 local center = Vector3.zero
@@ -120,7 +122,8 @@ function CallistoSpace.Show(fadeTime: number?)
 	board.LightInfluence = 0
 	board.ClipsDescendants = true
 	board.MaxDistance = math.huge
-	board.Parent = folder
+	-- 판은 PlayerGui 에(닻은 카메라 밑) — 카메라 밑 BillboardGui 는 그려지지 않을 수 있다
+	board.Parent = Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui") or folder
 	local photo = Instance.new("ImageLabel")
 	photo.BackgroundColor3 = Color3.fromRGB(4, 4, 14)
 	photo.BorderSizePixel = 0
@@ -149,6 +152,7 @@ function CallistoSpace.Show(fadeTime: number?)
 		Ramp = 1,
 		Conn = nil :: any,
 		Clock = clock,
+		Board = board,
 	}
 	RunService:BindToRenderStep(BACKDROP_BIND, Enum.RenderPriority.Camera.Value + 1, function()
 		local cam = workspace.CurrentCamera
@@ -215,6 +219,7 @@ function CallistoSpace.Hide()
 	state = nil
 	s.Conn:Disconnect()
 	RunService:UnbindFromRenderStep(BACKDROP_BIND)
+	s.Board:Destroy()
 	s.Folder:Destroy()
 	RegionAtmosphere.SetOverride(nil)
 	Lighting.ClockTime %= 24

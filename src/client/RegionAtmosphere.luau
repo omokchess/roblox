@@ -167,7 +167,8 @@ local MOOD: { [string]: Mood } = {
 	-- 빛을 낮춰 블렌더 별·성운이 뜨게. 스카이박스·Sky 는 건드리지 않는다(2026-11-01 사용자)
 	["우주"] = {
 		Brightness = 0.9, Ambient = RGB(46, 44, 78), Outdoor = RGB(60, 58, 104),
-		Density = 0.42, Offset = 0, Fog = RGB(10, 9, 26), Decay = RGB(34, 22, 70), Haze = 0, Glare = 0,
+		-- 안개는 옅게: 멀리 깐 우주 사진 판(CallistoSpace 배경)과 블렌더 별이 안개에 묻혀 검게 보이지 않게
+		Density = 0.06, Offset = 0, Fog = RGB(10, 9, 26), Decay = RGB(34, 22, 70), Haze = 0, Glare = 0,
 		Tint = RGB(214, 214, 255), Saturation = 0.1, Contrast = 0.2, Bloom = 1.6, Rays = 0, RaySpread = 0.5,
 		Particles = {},
 	},
