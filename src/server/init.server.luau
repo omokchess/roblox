@@ -54,6 +54,9 @@ for _, name in Constants.REMOTES do
 	end
 end
 
+-- 설원 굴 광차 타기(태그 MineCart 광차의 ProximityPrompt)
+require(script.MineCartService).Start(remoteFolder:FindFirstChild(Constants.REMOTES.MineCart) :: RemoteEvent)
+
 local plaza = PlazaService.new()
 local sessionProfiles: { [number]: any } = {}
 local creatingCharacters: { [Player]: boolean } = {}

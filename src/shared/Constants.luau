@@ -19,6 +19,8 @@ local Constants = {
 		GridState = "GridState",
 		-- 남의 전투를 보여 주는 요약(BattleService._publishSpectate → BattleSpectator)
 		BattleSpectate = "BattleSpectate",
+		-- 설원 굴 광차 타기: 서버 → "Ride"(레일 점들) / 클라이언트 → "Done" (MineCartService · MineCartClient)
+		MineCart = "MineCart",
 	},
 	MAX_MOTION_FRAMES = 300,
 	MAX_MOTION_DURATION = 30,
