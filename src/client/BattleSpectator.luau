@@ -19,6 +19,7 @@ local BattleArena = require(ReplicatedStorage.Shared.BattleArena)
 local BattleGrid = require(ReplicatedStorage.Shared.BattleGrid)
 local BattleStage = require(script.Parent.BattleStage)
 local CombatDirector = require(script.Parent.Combat.CombatDirector)
+local CallistoSpace = require(script.Parent.Combat.CallistoSpace)
 
 local W = BattleGrid.DEFAULT_WIDTH
 local H = BattleGrid.DEFAULT_HEIGHT
@@ -243,6 +244,13 @@ local function render(view: View)
 			director:AddEnemy(id, unit.Part, view.Folder, h, unit.DefId)
 		end
 		director:SetHome(id, h)
+		-- 칼리스토 페이즈 모습·무기(관전 화면은 컷신 없이 바로)
+		if unit.DefId == "Callisto" and packet.CallistoPage then
+			director:SetCallistoPage(id, packet.CallistoPage)
+			if packet.CallistoPage >= 2 then
+				director:SwapWeapon(id, "CallistoHammer")
+			end
+		end
 		local model = director:Model(id)
 		if model then
 			-- 보스 부위 이름표: 다면체 가운데 기준(코어 반지름 6, 위성 2.3)
@@ -379,6 +387,39 @@ local function playEvent(view: View, ev: any)
 	end
 end
 
+-- 칼리스토 2·3페이즈 판의 전투 칸 위에 서 있으면 그 판의 우주가 내 화면에도, 내려서면 걷힌다(2026-11-01 사용자).
+-- 내가 싸우는 중(hiddenAll)이면 내 전투 화면(BattleClient)이 맡는다
+local spaceView: View? = nil
+local function watchSpace()
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local on: View? = nil
+	if root and not hiddenAll then
+		for _, view in views do
+			local page = view.Packet.CallistoPage
+			if page and page >= 2 and BattleArena.CellFromWorld(view.Layout, root.Position, W, H) then
+				on = view
+				break
+			end
+		end
+	end
+	if on ~= spaceView then
+		if spaceView then
+			CallistoSpace.Hide()
+		end
+		spaceView = on
+		if on then
+			CallistoSpace.SetCenter(on.Layout.Origin.Position)
+			CallistoSpace.Show(1)
+		end
+	end
+	if spaceView then
+		local page = spaceView.Packet.CallistoPage or 2
+		CallistoSpace.Spin(if page >= 3 then 1.6 else 0.12, 1)
+		CallistoSpace.Galaxy(page >= 3, 2)
+	end
+end
+
 function BattleSpectator.Start(remotes: Folder)
 	local remote = remotes:WaitForChild("BattleSpectate", 10)
 	if not remote or not remote:IsA("RemoteEvent") then
@@ -386,6 +427,7 @@ function BattleSpectator.Start(remotes: Folder)
 	end
 	remote.OnClientEvent:Connect(onPacket)
 	RunService.Heartbeat:Connect(function()
+		watchSpace()
 		for _, view in views do
 			if view.Director:IsBusy() then
 				continue

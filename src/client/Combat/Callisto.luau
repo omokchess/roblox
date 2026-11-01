@@ -15,9 +15,12 @@
 	  작은 코, 아래로 내린 작은 입, 크고 둥근 볼터치(데포르메), 띠 밑으로 흐르는 눈물.
 	  Callisto.FaceOf(model) → face:Set(mood, 초?) 잠깐 표정 · face:SetBase(mood) 기본 표정
 	  표정: Observe(1) · Resolve(2) · Sorrow(3, 눈물) · Attack · Aim · Cast · Hit · Guard · Dodge · Death · Smile
-	페이즈 — Callisto.SetPage(model, page)(한 번 넘어가면 되돌리지 않는다)
-	  2  얼굴·머리·머리카락을 감추고 우주 머리: 유리 껍질 속 깊은 밤 + 성운 빛 + 별 입자 · 비스듬한 은하 원반 · 도는 별 셋 · 뒤로 흐르는 별빛 머리칼
-	  3  옷·머리카락을 다 감추고 몸 관절이 밤하늘 유리(별 입자)로 — 몸통 앞엔 큰곰자리, 팔다리엔 별 셋과 빛줄(별자리)
+	페이즈 — Callisto.SetPage(model, page, fade?)(한 번 넘어가면 되돌리지 않는다 — 컷신이 그 순간에 부른다)
+	  2  얼굴·머리·머리카락·별무리·표정이 사라지고 우주 머리(유리 껍질 속 깊은 밤 + 성운 빛 + 별 입자 · 은하 원반 · 도는 별 셋 · 뒤로 흐르는 별빛 머리칼),
+	     의수가 부서져 그 자리를 우주를 담은 팔이 채운다(2026-11-01 컷신 사양)
+	  3  옷이 모두 사라지고(fade 초에 걸쳐) 몸 관절이 밤하늘 유리(별 입자)로 — 몸통 앞엔 큰곰자리, 팔다리엔 별 셋과 빛줄(별자리)
+	의수 칼날 — Callisto.Blade(model, out, 초?) 의수 손이 쥔 검(무기 CallistoArms Main)의 날이 손 속에서 미끄러져 나오고 들어간다
+	  (Weld C0 를 날 축(+Z)으로 밀고, 들어가면 감춘다). 시작 컷신이 시험하고, 전투 중엔 기술을 쓸 때만 나온다(CombatDirector).
 	등 뒤 혼천의(고리 셋 + 별 핵 + 행성)와 둘레의 별가루는 그대로(천문학자).
 ]]
 
@@ -351,6 +354,49 @@ function Callisto.FaceOf(model: Model): Face?
 	return faces[model]
 end
 
+--=== 의수 칼날 ===--
+
+local BLADE_PARTS = { Blade = true, Fuller = true, Edge = true, Point = true }
+local BLADE_SLIDE = 3.6 -- 들어가면 날 축(+Z — 팔 쪽)으로 이만큼 밀려 손·팔 속에 숨는다
+
+function Callisto.Blade(model: Model, out: boolean, time: number?)
+	local folder = model:FindFirstChild("CombatWeapon")
+	local piece = folder and folder:FindFirstChild("W")
+	if not piece then
+		return
+	end
+	model:SetAttribute("BladeOut", out)
+	for _, p in piece:GetChildren() do
+		local joint = p:FindFirstChildOfClass("Weld")
+		if not p:IsA("BasePart") or not BLADE_PARTS[p.Name] or not joint then
+			continue
+		end
+		local home = p:GetAttribute("BladeHome")
+		if typeof(home) ~= "CFrame" then
+			home = joint.C0
+			p:SetAttribute("BladeHome", home)
+		end
+		local goal = if out then home :: CFrame else (home :: CFrame) * CFrame.new(0, 0, BLADE_SLIDE)
+		local t = time or 0
+		if t <= 0 then
+			joint.C0 = goal
+			p.Transparency = if out then 0 else 1
+			continue
+		end
+		if out then
+			p.Transparency = 0
+		end
+		TweenService:Create(joint, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { C0 = goal }):Play()
+		if not out then
+			task.delay(t, function()
+				if p.Parent and model:GetAttribute("BladeOut") == false then
+					p.Transparency = 1
+				end
+			end)
+		end
+	end
+end
+
 --=== 페이즈 모습 ===--
 
 -- 2페이즈: 얼굴·머리·머리카락을 감추고 우주 머리(머리 관절에 붙어 모션을 따라간다)
@@ -364,6 +410,12 @@ local function cosmicHead(model: Model, look: Look, head: BasePart)
 	local hair = model:FindFirstChild("Hair")
 	if hair and hair:IsA("BasePart") then
 		hair.Transparency = 1
+	end
+	-- 의수가 부서지고(쇠·놋쇠·구리·별빛 조각을 감춘다 — 부서지는 파편은 컷신 이펙트) 그 자리를 우주를 담은 팔이 채운다
+	for _, p in look.Dressed do
+		if p.Name:match("^CalRA_(%a+)$") and ({ Iron = true, Brass = true, Copper = true, StarGlow = true })[p.Name:match("^CalRA_(%a+)$")] then
+			p.Transparency = 1
+		end
 	end
 	local function attach(name: string, size: Vector3, color: Color3, material: Enum.Material, shape: string?, c0: CFrame): (Part, Motor6D)
 		local p = part(name, size, color, material, shape)
@@ -412,15 +464,14 @@ local CONSTELLATIONS: { [string]: { { number } } } = {
 	["Left Leg"] = { { -0.12, 0.55 }, { 0.1, -0.15 }, { -0.14, -0.65 } },
 }
 
-local function cosmicBody(model: Model, look: Look)
-	for _, p in look.Dressed do
-		p.Transparency = 1
+local function cosmicLimb(model: Model, name: string)
+	local dots = CONSTELLATIONS[name]
+	local body = model:FindFirstChild(name)
+	if not dots or not body or not body:IsA("BasePart") or body:GetAttribute("Cosmic") then
+		return
 	end
-	for name, dots in CONSTELLATIONS do
-		local body = model:FindFirstChild(name)
-		if not body or not body:IsA("BasePart") then
-			continue
-		end
+	body:SetAttribute("Cosmic", true)
+	do
 		body.Transparency = 0.12
 		body.Material = Enum.Material.Glass
 		body.Color = NIGHT
@@ -444,10 +495,23 @@ local function cosmicBody(model: Model, look: Look)
 	end
 end
 
+local function cosmicBody(model: Model, look: Look, fadeTime: number?)
+	for _, p in look.Dressed do
+		if (fadeTime or 0) > 0 and p.Transparency < 1 then
+			TweenService:Create(p, TweenInfo.new(fadeTime :: number, Enum.EasingStyle.Sine), { Transparency = 1 }):Play()
+		else
+			p.Transparency = 1
+		end
+	end
+	for name in CONSTELLATIONS do
+		cosmicLimb(model, name)
+	end
+end
+
 --[[
 	페이즈 모습을 맞춘다(2 = 우주 머리, 3 = 우주 몸). 전투 화면이 스냅숏마다 부른다 — 이미 그 페이즈면 아무 일도 없고, 되돌리지 않는다.
 ]]
-function Callisto.SetPage(model: Model, page: number)
+function Callisto.SetPage(model: Model, page: number, fadeTime: number?)
 	local look = looks[model]
 	local head = model:FindFirstChild("Head")
 	if not look or not head or not head:IsA("BasePart") or page <= look.Page then
@@ -455,9 +519,10 @@ function Callisto.SetPage(model: Model, page: number)
 	end
 	if look.Page < 2 and page >= 2 then
 		cosmicHead(model, look, head)
+		cosmicLimb(model, "Right Arm")   -- 의수 자리를 채우는 우주 팔
 	end
 	if look.Page < 3 and page >= 3 then
-		cosmicBody(model, look)
+		cosmicBody(model, look, fadeTime)
 	end
 	look.Page = page
 end

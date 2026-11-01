@@ -758,6 +758,7 @@ do
 		end
 		local seenSkills: { [string]: boolean } = {}
 		local pages: { [number]: boolean } = {}
+		local cutscenes: { [string]: boolean } = {}
 		GridBattle.EnemyPlan(state, rng)
 		for turn = 1, 40 do
 			if state.Outcome ~= "Ongoing" then
@@ -792,8 +793,16 @@ do
 			end
 			if state.Callisto then
 				pages[state.Callisto.Page] = true
-				-- 페이즈 모습(우주 머리·몸)도 돌려 본다
-				director:SetCallistoPage(state.Callisto.UnitId, state.Callisto.Page)
+				-- 등장·2·3페이즈 컷신(왼발 → 칼날 시험 / 의수 휘두름 → 우주 머리·팔 / 옷이 사라지고 우리은하)과 그 뒤 모습도 돌려 본다
+				local want = state.Callisto.Page
+				if self.callistoShown ~= want and director:Has(state.Callisto.UnitId) then
+					local skill = if not self.callistoShown then "CallistoIntro" elseif want >= 3 then "CallistoPhase3" else "CallistoPhase2"
+					cutscenes[skill] = true
+					director:PlaySkill(state.Callisto.UnitId, skill, { {} })
+					settle(director, "칼리스토 컷신 " .. skill, 8)
+					self.callistoShown = want
+					self:_callistoLook(state.Callisto.UnitId)
+				end
 			end
 			GridBattle.EndTurn(state)
 			if state.Outcome == "Ongoing" then
@@ -807,6 +816,11 @@ do
 		end
 		if not pages[2] or not pages[3] then
 			table.insert(failures, "칼리스토 통합: 2·3페이즈까지 가지 못함")
+		end
+		for _, skill in { "CallistoIntro", "CallistoPhase2", "CallistoPhase3" } do
+			if not cutscenes[skill] then
+				table.insert(failures, "칼리스토 통합: 컷신을 틀지 못함 " .. skill)
+			end
 		end
 		local names = {}
 		for id in seenSkills do

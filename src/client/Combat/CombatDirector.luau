@@ -106,8 +106,10 @@ local SKILL_MOOD: { [string]: string } = {
 	CallistoShower = "Cast",
 	CallistoSubmerge = "Cast",
 	CallistoResonance = "Cast",
-	CallistoIntro = "Smile",
+	CallistoIntro = "Observe",
 	CallistoPageShift = "Cast",
+	CallistoPhase2 = "Resolve",
+	CallistoPhase3 = "Sorrow",
 }
 
 -- 관전용 연출기(Quiet)는 화면을 흔들지 않고, 치울 때 남(내 전투)의 효과까지 지우지 않는다
@@ -343,6 +345,7 @@ function CombatDirector:AddCallisto(id: string, parent: Instance, home: CFrame)
 	model:PivotTo(home)
 	model.Parent = parent
 	local actor = self:AddHumanoid(id, model, "Callisto", home, "CallistoArms")
+	Callisto.Blade(model, false) -- 의수 칼날은 넣어 둔 채로 시작(등장 컷신이 시험하고, 기술을 쓸 때만 나온다)
 	actor.Foe = true
 	actor.Pos = home
 	actor.Face = Callisto.FaceOf(model)
@@ -888,16 +891,27 @@ function CombatDirector:PlaySkill(id: string, skillId: string, targetsByHit: { {
 	return self:_play(a, self:_skillMotion(a, skillId), targetsByHit, { OnDone = self:_moodFor(a, skillId, onDone), Stage = stage })
 end
 
--- 그린 얼굴이 있으면 스킬 표정을 짓고, 모션이 끝나면 기본 표정으로(끝 콜백을 감싸 돌려준다)
+-- 칼리스토 컷신(의수 칼날을 제 사건 BladeOut/BladeIn 으로 다룬다)
+local CALLISTO_CUTSCENE = { CallistoIntro = true, CallistoPageShift = true, CallistoPhase2 = true, CallistoPhase3 = true }
+
+-- 그린 얼굴이 있으면 스킬 표정을 짓고, 모션이 끝나면 기본 표정으로(끝 콜백을 감싸 돌려준다).
+-- 칼리스토 1페이즈(의수 칼날)면 기술 동안만 날이 나왔다가 끝나면 들어간다
 function CombatDirector:_moodFor(a: Actor, skillId: string, onDone: (() -> ())?): (() -> ())?
 	local face = a.Face
 	if not face then
 		return onDone
 	end
 	face:Set(SKILL_MOOD[skillId] or "Attack")
+	local bladed = a.Weapons ~= nil and a.Weapons.Def.Id == "CallistoArms" and not CALLISTO_CUTSCENE[skillId]
+	if bladed then
+		Callisto.Blade(a.Model, true, 0.12)
+	end
 	return function()
 		if not a.Dying then
 			face:Set(nil)
+			if bladed and a.Weapons and a.Weapons.Def.Id == "CallistoArms" then
+				Callisto.Blade(a.Model, false, 0.3)
+			end
 		end
 		if onDone then
 			onDone()

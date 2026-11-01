@@ -38,6 +38,7 @@ local BattleHud = require(script.Parent.BattleHud)
 local BattleSpectator = require(script.Parent.BattleSpectator)
 local CombatDirector = require(script.Parent.Combat.CombatDirector)
 local CombatVfx = require(script.Parent.Combat.CombatVfx)
+local CallistoSpace = require(script.Parent.Combat.CallistoSpace)
 local BattleStore = require(script.Parent.BattleStore)
 
 local BattleClient = {}
@@ -667,7 +668,8 @@ local CALLISTO_FLASH = Color3.fromRGB(150, 190, 255)
 -- 페이즈마다 기본 표정(그린 얼굴 — Combat/Callisto): 1 관찰자 · 2 결의 · 3 슬픔(눈물)
 local CALLISTO_PAGE_MOOD = { [1] = "Observe", [2] = "Resolve", [3] = "Sorrow" }
 
--- 미뤄 둔 컷신: 처음 나타날 때 등장(비숍의 인사), 페이즈가 바뀌면 페이즈 전환 — 연출이 한가해지면 튼다
+-- 미뤄 둔 컷신: 처음 나타날 때 등장(왼발 → 의수 칼날 시험), 페이즈가 바뀌면 2·3페이즈 컷신 — 연출이 한가해지면 튼다.
+-- 페이즈 모습·우주는 컷신이 그 순간에 바꾸고, 끝나면 보이는 페이즈(callistoShown)를 올린다(그 전엔 스냅숏이 앞질러 바꾸지 않게)
 function BattleClient:_callistoCutscene()
 	local want = self.callistoCutscene
 	local director = self.director
@@ -678,7 +680,31 @@ function BattleClient:_callistoCutscene()
 		return
 	end
 	self.callistoCutscene = nil
-	director:PlaySkill(want.Id, want.Skill, { {} })
+	director:PlaySkill(want.Id, want.Skill, { {} }, function()
+		if self.director == director then
+			self.callistoShown = math.max(self.callistoShown or 1, want.Page)
+			self:_callistoLook(want.Id)
+		end
+	end)
+end
+
+-- 보이는 페이즈대로 칼리스토 표정·모습·무기·배경 우주를 맞춘다(컷신 없이 들어온 경우 — 재접속·중간 합류 — 도 여기서)
+function BattleClient:_callistoLook(id: string)
+	local director = self.director
+	local page = self.callistoShown or 1
+	if not director then
+		return
+	end
+	director:SetMood(id, CALLISTO_PAGE_MOOD[page] or "Observe")
+	director:SetCallistoPage(id, page)
+	if page >= 2 then
+		director:SwapWeapon(id, "CallistoHammer")
+		if not CallistoSpace.IsShown() then
+			CallistoSpace.Show(1)
+			CallistoSpace.Spin(if page >= 3 then 1.6 else 0.12, 1)
+		end
+		CallistoSpace.Galaxy(page >= 3, 2)
+	end
 end
 
 function BattleClient:_callistoAlerts(snapshot: any)
@@ -687,22 +713,24 @@ function BattleClient:_callistoAlerts(snapshot: any)
 		self.callistoSeen = nil
 		return
 	end
-	if self.director then
-		self.director:SetMood(view.UnitId, CALLISTO_PAGE_MOOD[view.Page] or "Observe")
-		self.director:SetCallistoPage(view.UnitId, view.Page)
-	end
+	-- 배경 우주는 전투 필드 가운데에(이 사람 카메라 아래 — 전투 칸 위에 선 사람에게만)
+	CallistoSpace.SetCenter(self.layout.Origin.Position)
 	local seen = self.callistoSeen
 	if not seen then
 		self.callistoSeen = { Page = view.Page, Ursa = view.UrsaMinor, Field = view.Field }
+		-- 처음 본 페이즈는 컷신 없이 그대로(1페이즈면 등장 컷신이 따로)
+		self.callistoShown = view.Page
+		self:_callistoLook(view.UnitId)
 		self.hud:Flash("칼리스토 — " .. view.PageName, "큰곰자리의 천문학자 · 몸을 누르면 정보", CALLISTO_FLASH)
 		if (snapshot.Turn or 1) <= 1 then
-			self.callistoCutscene = { Id = view.UnitId, Skill = "CallistoIntro" }
+			self.callistoCutscene = { Id = view.UnitId, Skill = "CallistoIntro", Page = 1 }
 		end
 		return
 	end
+	self:_callistoLook(view.UnitId)
 	if view.Page ~= seen.Page then
 		seen.Page = view.Page
-		self.callistoCutscene = { Id = view.UnitId, Skill = "CallistoPageShift" }
+		self.callistoCutscene = { Id = view.UnitId, Skill = if view.Page >= 3 then "CallistoPhase3" else "CallistoPhase2", Page = view.Page }
 		self.hud:Flash(string.format("%d페이즈 — %s", view.Page, view.PageName), if view.Page >= 3 then "10턴 동안 장판을 버텨라 · 체력 1% 이하면 시험 종료" else nil, CALLISTO_FLASH)
 	end
 	if view.UrsaMinor and not seen.Ursa then
@@ -1050,6 +1078,10 @@ function BattleClient:_teardownBattle()
 	self.pendingAttackPlay = nil
 	self.threatWaiting = false
 	self.pendingRender = false
+	self.callistoSeen = nil
+	self.callistoShown = nil
+	self.callistoCutscene = nil
+	CallistoSpace.Hide()
 	self:_setBattlePose(false)
 	if self.folder then
 		self.folder:Destroy()
@@ -1193,9 +1225,9 @@ function BattleClient:_renderUnits()
 			home += Vector3.new(0, FLOAT_HEIGHT - 0.4, 0)
 		end
 		self:_ensureEnemyModel(id, unit.Name, home, unit.Part, unit.DefId)
-		-- 칼리스토 2·3페이즈 무기: 북두칠성 망치(1페이즈는 의체 칼날)
-		if unit.DefId == "Callisto" and snapshot.Callisto and snapshot.Callisto.Page >= 2 then
-			director:SwapWeapon(id, "CallistoHammer")
+		-- 칼리스토: 보이는 페이즈대로 모습·무기(2·3페이즈 북두칠성 망치, 1페이즈는 의수 칼날)
+		if unit.DefId == "Callisto" then
+			self:_callistoLook(id)
 		end
 		director:SetHome(id, home)
 		self:_setEnemyInfo(id, unit)

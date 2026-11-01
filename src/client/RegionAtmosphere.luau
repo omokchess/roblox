@@ -163,6 +163,14 @@ local MOOD: { [string]: Mood } = {
 			{ Where = "Air", Texture = SPARK, Color = RGB(255, 255, 255), Size = { 0.3, 0.25 }, Alpha = { 0.1, 0.4 }, Life = { 7, 10 }, Rate = 90, Speed = { 3, 6 }, Accel = Vector3.new(1.2, -0.6, 0.4), Spread = 30, Dir = Enum.NormalId.Bottom, Rot = { -90, 90 } },
 		},
 	},
+	-- 우주(칼리스토 2·3페이즈 — Combat/CallistoSpace 가 전투 칸 위의 그 사람 화면에만 덮는다): 하늘을 어두운 남색 연무로 가리고
+	-- 빛을 낮춰 블렌더 별·성운이 뜨게. 스카이박스·Sky 는 건드리지 않는다(2026-11-01 사용자)
+	["우주"] = {
+		Brightness = 0.9, Ambient = RGB(46, 44, 78), Outdoor = RGB(60, 58, 104),
+		Density = 0.42, Offset = 0, Fog = RGB(10, 9, 26), Decay = RGB(34, 22, 70), Haze = 0, Glare = 0,
+		Tint = RGB(214, 214, 255), Saturation = 0.1, Contrast = 0.2, Bloom = 1.6, Rays = 0, RaySpread = 0.5,
+		Particles = {},
+	},
 	-- 바다: 맑고 멀리 푸른 연무
 	["바다"] = {
 		Brightness = 2.9, Ambient = RGB(116, 128, 132), Outdoor = RGB(150, 166, 172),
@@ -235,6 +243,16 @@ local function anchorPart(name: string, size: Vector3): BasePart
 	return p
 end
 
+-- 지역 대신 덮어 쓸 분위기(예: "우주" — 칼리스토 2·3페이즈 전투 칸 위). nil 이면 지역대로 돌아간다
+local override: string? = nil
+local applyNow: ((string) -> ())? = nil
+function RegionAtmosphere.SetOverride(name: string?)
+	override = name
+	if applyNow then
+		applyNow(name or "")
+	end
+end
+
 function RegionAtmosphere.Start()
 	-- 옛 스튜디오 전용 스크립트가 켜져 있으면 둘이 다투므로 여기서 멈추게 한다(대개 편집 모드에서 이미 꺼 둠)
 	local old = Players.LocalPlayer:FindFirstChild("PlayerScripts") and Players.LocalPlayer.PlayerScripts:FindFirstChild("BiomeAtmosphere")
@@ -267,6 +285,9 @@ function RegionAtmosphere.Start()
 	local current: string? = nil
 	local function apply(name: string)
 		local m = MOOD[name]
+		if not m then
+			return
+		end
 		TweenService:Create(Lighting, info, { Brightness = m.Brightness, Ambient = m.Ambient, OutdoorAmbient = m.Outdoor }):Play()
 		TweenService:Create(atmo, info, { Density = m.Density, Offset = m.Offset, Color = m.Fog, Decay = m.Decay, Haze = m.Haze, Glare = m.Glare }):Play()
 		if grade and grade:IsA("ColorCorrectionEffect") then
@@ -285,6 +306,15 @@ function RegionAtmosphere.Start()
 		end
 	end
 
+	-- 덮어 쓰기가 바뀌면 다음 판정을 기다리지 않고 곧바로(풀면 지역 판정이 다시 고른다)
+	applyNow = function(name: string)
+		if name ~= "" then
+			current = name
+			apply(name)
+		else
+			current = nil
+		end
+	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.IgnoreWater = false
@@ -306,7 +336,7 @@ function RegionAtmosphere.Start()
 			local character = Players.LocalPlayer.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 			local at = if root then root.Position else pos
-			local name = RegionAtmosphere.RegionAt(at.X, at.Z)
+			local name = override or RegionAtmosphere.RegionAt(at.X, at.Z)
 			if name ~= current then
 				current = name
 				apply(name)

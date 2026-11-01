@@ -5,6 +5,8 @@
 	아군 칸 전부를 덮는 기술(렌즈·칼춤·장판)은 ctx.AllyTiles(전투 화면이 넘겨준다 — 없으면 대상 둘레를 어림).
 ]]
 local Common = require(script.Parent.Common)
+local CallistoBody = require(script.Parent.Parent.Callisto)
+local CallistoSpace = require(script.Parent.Parent.CallistoSpace)
 local c = Common.c
 
 local STAR = c(150, 200, 255)
@@ -247,13 +249,135 @@ local function faceShot(ctx: any, d: number, from: number, to: number, side: num
 	end)
 end
 
+-- 시작 컷신 카메라(2026-11-01): 마주 본 채 왼발 클로즈업(0 ~ 0.26) → 왼쪽 위(칼리스토의 오른쪽 = 의수 쪽)로 올라가며 의수 칼날 시험을 비춤
+local function smooth(k: number): number
+	k = math.clamp(k, 0, 1)
+	return k * k * (3 - 2 * k)
+end
+
 function Fx.IntroShot(ctx: any, ev: any)
-	faceShot(ctx, (ev and ev.d) or 3.2, 10, 4.6, 1.3)
+	local model = ctx.Actor and ctx.Actor.Model
+	local leg = model and model:FindFirstChild("Left Leg") :: BasePart?
+	local arm = model and model:FindFirstChild("Right Arm") :: BasePart?
+	local head = model and model:FindFirstChild("Head") :: BasePart?
+	if not leg or not arm or not head then
+		return
+	end
+	ctx.Shot((ev and ev.d) or 4.6, function(alpha: number)
+		local f = ctx.Forward
+		local r = f:Cross(Vector3.yAxis)
+		local foot = leg.Position - Vector3.new(0, 0.85, 0)
+		local footEye = foot + f * 3.0 - r * 0.6 + Vector3.new(0, 0.45, 0)
+		local hand = arm.CFrame * Vector3.new(0, -0.9, 0)
+		local armEye = head.Position + f * 6.2 + r * 3.4 + Vector3.new(0, 1.4, 0)
+		local armLook = hand:Lerp(head.Position, 0.35)
+		if alpha < 0.26 then
+			return CFrame.lookAt(footEye, foot)
+		end
+		local k = smooth((alpha - 0.26) / 0.34)
+		local eye = footEye:Lerp(armEye, k) + Vector3.new(0, math.sin(k * math.pi) * 0.8, 0)
+		local look = foot:Lerp(armLook, k)
+		if alpha > 0.6 then
+			eye = armEye + (armLook - armEye).Unit * ((alpha - 0.6) * 2.4)
+		end
+		return CFrame.lookAt(eye, look)
+	end)
 	ctx.Vfx.Ring(CFrame.new(Common.Feet(ctx) + Vector3.new(0, 0.12, 0)), { R0 = 0.5, R1 = 6, Color = STAR, Life = 1.2, Width = 0.2, Height = 0.05 })
+end
+
+-- 의수 칼날: 손 속에서 미끄러져 나옴(날을 따라 별빛 한 줄기) · 다시 들어감
+function Fx.BladeOut(ctx: any)
+	local model = ctx.Actor and ctx.Actor.Model
+	if model then
+		CallistoBody.Blade(model, true, 0.28)
+	end
+	local tip, base = ctx.Tip("W"), ctx.Base and ctx.Base("W")
+	if tip then
+		ctx.Vfx.Flash(tip, { Color = STAR_CORE, Size = 1.6, Life = 0.25, Brightness = 5 })
+		if base then
+			ctx.Vfx.Burst(base, { Count = 8, Colors = { STAR, STAR_CORE }, Size = 0.18, Speed = 6, Life = 0.4, Gravity = 4, Material = Enum.Material.Neon })
+		end
+	end
+end
+
+function Fx.BladeIn(ctx: any)
+	local model = ctx.Actor and ctx.Actor.Model
+	if model then
+		CallistoBody.Blade(model, false, 0.3)
+	end
 end
 
 function Fx.PageShot(ctx: any, ev: any)
 	faceShot(ctx, (ev and ev.d) or 2.7, 8, 4.2, -1.4)
+end
+
+-- 2·3페이즈 컷신 카메라: 2 = 앞에서 휘두르는 팔을 보다가 물러서며 둘레를 돌아 우주를 크게 / 3 = 몸을 보다가 위로 물러나 내려다봄(필드 아래 우리은하)
+function Fx.PhaseShot(ctx: any, ev: any)
+	local phase = (ev and ev.p) or 2
+	ctx.Shot((ev and ev.d) or 4.4, function(alpha: number)
+		local f = ctx.Forward
+		local r = f:Cross(Vector3.yAxis)
+		local chest = ctx.Root.Position + Vector3.new(0, 1.2, 0)
+		if phase == 2 then
+			local k = smooth((alpha - 0.2) / 0.6)
+			local ang = math.rad(-25 + 70 * k)
+			local dist = 7 + 9 * k
+			local dir = (f * math.cos(ang) + r * math.sin(ang)).Unit
+			return CFrame.lookAt(chest + dir * dist + Vector3.new(0, 1.5 + 3 * k, 0), chest + Vector3.new(0, 1.5 * k, 0))
+		end
+		local k = smooth((alpha - 0.35) / 0.55)
+		local eye = chest + f * (6 - 2 * k) + r * (2 + 4 * k) + Vector3.new(0, 1 + 16 * k, 0)
+		local look = chest:Lerp(ctx.Root.Position - Vector3.new(0, 18, 0), k * 0.6)
+		return CFrame.lookAt(eye, look)
+	end)
+end
+
+-- 2페이즈 전환 순간: 의수가 부서지고(놋쇠·쇠 파편) 우주 팔 · 우주 머리, 배경이 우주로 — 빠르게 돌다 느려진다
+function Fx.PhaseTwo(ctx: any)
+	local model = ctx.Actor and ctx.Actor.Model
+	local arm = model and model:FindFirstChild("Right Arm") :: BasePart?
+	local Vfx = ctx.Vfx
+	if arm then
+		local at = arm.CFrame * Vector3.new(0, -0.6, 0)
+		Vfx.Burst(at, { Count = 22, Colors = { c(184, 145, 63), c(58, 60, 66), c(176, 106, 63) }, Size = 0.3, Speed = 22, Life = 1.0, Gravity = 30, Material = Enum.Material.Metal })
+		Vfx.Burst(at, { Count = 16, Colors = { STAR, STAR_CORE }, Size = 0.25, Speed = 14, Life = 0.9, Gravity = -4, Material = Enum.Material.Neon })
+		Vfx.Flash(at, { Color = STAR_CORE, Size = 6, Life = 0.35, Brightness = 7 })
+	end
+	if model then
+		CallistoBody.SetPage(model, 2)
+		-- 의수에 끼운 검도 같이 부서진다(망치는 컷신이 끝나면 손에 — BattleClient)
+		local weapon = model:FindFirstChild("CombatWeapon")
+		for _, p in (if weapon then weapon:GetDescendants() else {}) do
+			if p:IsA("BasePart") then
+				p.Transparency = 1
+			end
+		end
+	end
+	CallistoSpace.Show(0.6)
+	CallistoSpace.Spin(4.5, 0.05)
+	task.delay(0.35, function()
+		CallistoSpace.Spin(0.12, 2.4)
+	end)
+end
+
+-- 3페이즈 전환 순간: 옷이 1.1 초에 걸쳐 사라지고 우주 몸
+function Fx.PhaseThree(ctx: any)
+	local model = ctx.Actor and ctx.Actor.Model
+	if model then
+		CallistoBody.SetPage(model, 3, 1.1)
+	end
+	CallistoSpace.Show(0)
+	ctx.Vfx.Flash(ctx.Root.Position + Vector3.new(0, 1, 0), { Color = STAR_CORE, Size = 8, Life = 0.6, Brightness = 5 })
+end
+
+-- 우주 회전이 서서히 빨라진다(옷이 다 바뀐 뒤)
+function Fx.SpinUp(_ctx: any)
+	CallistoSpace.Spin(1.6, 3.5)
+end
+
+-- 우리은하가 전투 필드 아래에서 떠오른다
+function Fx.GalaxyRise(_ctx: any)
+	CallistoSpace.Galaxy(true, 2.2)
 end
 
 -- 일어서며 별빛이 터진다(무기가 바뀌는 순간과 함께)

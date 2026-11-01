@@ -495,6 +495,8 @@ local function spectatePacket(player: Player, session: Session, snapshot: any): 
 		Arena = session.Arena,
 		Board = board,
 		ClassId = snapshot.AllyClassId,
+		-- 칼리스토 페이즈(관전 화면 모습 · 전투 칸 위에 선 구경꾼의 배경 우주)
+		CallistoPage = snapshot.Callisto and snapshot.Callisto.Page,
 		Units = units,
 		Events = snapshot.Events,
 		Outcome = snapshot.Outcome,

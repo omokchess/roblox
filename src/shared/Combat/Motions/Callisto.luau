@@ -284,23 +284,67 @@ return {
 			},
 		},
 		--=== 등장 · 페이즈 전환(전투 화면이 튼다 — 얼굴 클로즈업 컷신) ===--
-		-- 등장: 비숍의 인사 — 가슴의 작은곰자리 펜던트에 손을 얹고 무릎을 굽혀 고개 숙임 → 고개 들어 미소 → 카메라를 들어 찰칵
+		-- 등장(2026-11-01 사용자 사양): 마주 본 채 왼발 클로즈업 → 카메라가 왼쪽 위로 올라가며, 의수 칼날이 잘 나오는지 시험하는 모습
+		-- (팔을 들어 보고 → 날이 미끄러져 나옴 → 손목을 비틀어 날을 봄 → 허공을 한 번 그음) → 날을 다시 넣고 전투 시작
 		CallistoIntro = {
-			Duration = 3.2,
+			Duration = 4.6,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.7, "sineOut", OBS, { Root = { 0, -0.35, 0, 0, 20, 0 }, Torso = { -22, -6, 0 }, Head = { -18, -10, 0 }, RArm = { 30, 0, 20 }, LArm = { 72, 34, 22 }, RLeg = { -14, 0, 4 }, LLeg = { 22, 0, -4 } }),
-				K(1.4, nil, OBS, { Root = { 0, -0.38, 0, 0, 20, 0 }, Torso = { -24, -6, 0 }, Head = { -20, -10, 0 }, RArm = { 30, 0, 20 }, LArm = { 72, 34, 22 }, RLeg = { -14, 0, 4 }, LLeg = { 22, 0, -4 } }),
-				K(1.95, "sineInOut", OBS, { Head = { -2, -6, 10 } }),
-				K(2.35, "sineOut", AIM),
-				K(2.55, nil, AIM),
-				K(3.2, "sineInOut", OBS),
+				K(1.2, nil, OBS),
+				K(1.6, "sineOut", OBS, { Torso = { 0, 12, 0 }, Head = { -14, 26, 0 }, RArm = { 82, 0, -34 }, W = { 0, 0, 0, 0, 0, 0 } }),
+				K(2.1, nil, OBS, { Torso = { 0, 12, 0 }, Head = { -16, 28, 0 }, RArm = { 84, 0, -32 } }),
+				K(2.45, "sineInOut", OBS, { Torso = { 0, 14, 0 }, Head = { -12, 30, 4 }, RArm = { 90, 0, -26 }, W = { 0, 0, 0, 0, 80, 0 } }),
+				K(2.75, "sineInOut", OBS, { Torso = { 0, 10, 0 }, Head = { -12, 26, 0 }, RArm = { 84, 0, -36 }, W = { 0, 0, 0, 0, 0, 0 } }),
+				K(3.0, "expoOut", OBS, { Root = { 0, -0.1, 0, 0, -10, 0 }, Torso = { -4, -16, 0 }, Head = { -6, 10, 0 }, RArm = { 96, 0, 46 } }),
+				K(3.25, "sineOut", OBS, { Torso = { 0, 6, 0 }, Head = { -10, 18, 0 }, RArm = { 80, 0, -10 } }),
+				K(3.75, "sineInOut", OBS, { Head = { -4, 6, 0 }, RArm = { 40, 0, 6 } }),
+				K(4.6, "sineInOut", OBS),
 			},
 			Events = {
-				{ t = 0, k = "Fx", n = "IntroShot", d = 3.2 },
-				{ t = 0.1, k = "Fx", n = "Mood", m = "Smile", d = 1.8 },
-				{ t = 2.3, k = "Fx", n = "Mood", m = "Aim", d = 0.8 },
-				{ t = 2.45, k = "Fx", n = "Flash" },
+				{ t = 0, k = "Fx", n = "IntroShot", d = 4.6 },
+				{ t = 0.1, k = "Fx", n = "Mood", m = "Observe", d = 2 },
+				{ t = 1.75, k = "Fx", n = "BladeOut" },
+				{ t = 2.9, k = "Trail", on = true, slot = "W" },
+				{ t = 3.15, k = "Trail", on = false, slot = "W" },
+				{ t = 3.45, k = "Fx", n = "BladeIn" },
+				{ t = 3.8, k = "Fx", n = "Mood", m = "Smile", d = 0.8 },
+			},
+		},
+		-- 2페이즈(2026-11-01): 의수 팔을 크게 휘두르면 주변이 우주로 바뀌며 빠르게 돌다 느려지고, 의수가 부서져 우주를 담은 팔이 채운다.
+		-- 동시에 얼굴이 우주로(별무리·표정이 사라짐). 끝에 별빛이 터지며 북두칠성 망치가 손에
+		CallistoPhase2 = {
+			Duration = 4.4,
+			Keys = {
+				K(0, nil, OBS),
+				K(0.7, "sineIn", OBS, { Root = { 0, -0.2, 0, 0, 30, 0 }, Torso = { -6, 34, 0 }, Head = { 0, -26, 0 }, RArm = { 70, 0, -72 }, LArm = { 24, 0, -20 }, RLeg = { 12, 0, 8 }, LLeg = { -10, 0, -8 } }),
+				K(1.0, "expoOut", OBS, { Root = { 0, -0.3, 0, 0, -26, 0 }, Torso = { -10, -38, 0 }, Head = { 6, 18, 0 }, RArm = { 92, 0, 96 }, LArm = { 30, 0, -40 }, RLeg = { 22, 0, 8 }, LLeg = { -18, 0, -8 } }),
+				K(1.8, nil, OBS, { Root = { 0, -0.25, 0, 0, -22, 0 }, Torso = { -8, -32, 0 }, Head = { 10, 14, 0 }, RArm = { 90, 0, 92 }, LArm = { 30, 0, -38 } }),
+				K(2.8, "sineInOut", OBS, { Root = { 0, 0.15, 0, 0, 0, 0 }, Torso = { 10, 0, 0 }, Head = { 24, 0, 0 }, RArm = { 50, 0, 44 }, LArm = { 50, 0, -44 } }),
+				K(3.7, "sineInOut", OBS, { Torso = { 6, 0, 0 }, Head = { 12, 0, 0 }, RArm = { 120, 0, 30 }, LArm = { 40, 0, -30 } }),
+				K(4.4, "sineInOut", HOBS),
+			},
+			Events = {
+				{ t = 0, k = "Fx", n = "PhaseShot", d = 4.4, p = 2 },
+				{ t = 1.0, k = "Fx", n = "PhaseTwo" },
+				{ t = 1.0, k = "Shake", a = 0.5, d = 0.6 },
+				{ t = 4.25, k = "Fx", n = "PageBurst" },
+			},
+		},
+		-- 3페이즈(2026-11-01): 옷이 모두 사라지며 우주 몸만 남고, 우주를 보여 주다 회전이 점점 빨라지며, 우리은하가 전투 필드 아래에 생겨난다
+		CallistoPhase3 = {
+			Duration = 4.8,
+			Keys = {
+				K(0, nil, HOBS),
+				K(0.8, "sineOut", HOBS, { Root = { 0, 0.3, 0, 0, 0, 0 }, Torso = { 12, 0, 0 }, Head = { 22, 0, 0 }, RArm = { 120, 0, 60 }, LArm = { 120, 0, -60 } }),
+				K(2.2, nil, HOBS, { Root = { 0, 0.4, 0, 0, 0, 0 }, Torso = { 14, 0, 0 }, Head = { 26, 0, 0 }, RArm = { 126, 0, 64 }, LArm = { 126, 0, -64 } }),
+				K(3.6, "sineInOut", HOBS, { Root = { 0, 0.3, 0, 0, 0, 0 }, Torso = { 4, 0, 0 }, Head = { -10, 0, 0 }, RArm = { 60, 0, 40 }, LArm = { 60, 0, -40 } }),
+				K(4.8, "sineInOut", HOBS),
+			},
+			Events = {
+				{ t = 0, k = "Fx", n = "PhaseShot", d = 4.8, p = 3 },
+				{ t = 0.8, k = "Fx", n = "PhaseThree" },
+				{ t = 2.0, k = "Fx", n = "SpinUp" },
+				{ t = 2.4, k = "Fx", n = "GalaxyRise" },
 			},
 		},
 		-- 페이즈 전환: 무릎을 꿇었다가 별을 올려다보고(눈물·결의), 두 팔을 펴며 일어서 별빛이 터진다
