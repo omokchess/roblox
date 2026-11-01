@@ -332,14 +332,14 @@ function Fx.PhaseShot(ctx: any, ev: any)
 	end)
 end
 
--- 2페이즈 전환 순간: 의수가 부서지고(놋쇠·쇠 파편) 우주 팔 · 우주 머리, 배경이 우주로 — 빠르게 돌다 느려진다
+-- 2페이즈 전환 순간: 팔 검과 오른 소매가 부서지고(강철·금·트위드 파편) 가면이 사라져 우주 팔 · 우주 머리, 배경이 우주로 — 빠르게 돌다 느려진다
 function Fx.PhaseTwo(ctx: any)
 	local model = ctx.Actor and ctx.Actor.Model
 	local arm = model and model:FindFirstChild("Right Arm") :: BasePart?
 	local Vfx = ctx.Vfx
 	if arm then
 		local at = arm.CFrame * Vector3.new(0, -0.6, 0)
-		Vfx.Burst(at, { Count = 22, Colors = { c(184, 145, 63), c(58, 60, 66), c(176, 106, 63) }, Size = 0.3, Speed = 22, Life = 1.0, Gravity = 30, Material = Enum.Material.Metal })
+		Vfx.Burst(at, { Count = 22, Colors = { c(208, 213, 222), c(228, 186, 100), c(110, 74, 48) }, Size = 0.3, Speed = 22, Life = 1.0, Gravity = 30, Material = Enum.Material.Metal })
 		Vfx.Burst(at, { Count = 16, Colors = { STAR, STAR_CORE }, Size = 0.25, Speed = 14, Life = 0.9, Gravity = -4, Material = Enum.Material.Neon })
 		Vfx.Flash(at, { Color = STAR_CORE, Size = 6, Life = 0.35, Brightness = 7 })
 	end

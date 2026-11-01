@@ -46,6 +46,8 @@ export type Piece = {
 	Sockets: { [string]: { number } },
 	-- 궤적 색(없으면 궤적 없음)
 	Trail: { number }?,
+	-- 팔에 붙은 채 모션의 W·O 값을 받지 않는다(팔 축 그대로 — 칼리스토 팔 검)
+	Fixed: boolean?,
 }
 export type Weapon = {
 	Id: string,
@@ -512,23 +514,31 @@ local weapons: { [string]: Weapon } = {
 	]]
 	CallistoArms = {
 		Id = "CallistoArms",
-		Name = "칼리스토 의체",
+		Name = "칼리스토 팔 검",
 		Type = "Prosthesis",
+		--[[
+			2026-11-01 4판(사용자: "의수를 놓지 말고 그냥 팔을 검으로"): 소맷부리에서 날이 곧장 나온다. 모터 C0(팔 끝 · X -90°)에서 무기 -Z 가
+			팔 축 아래로 이어지므로 Fixed(모션 W 값 무시)면 날이 늘 팔의 연장선. 블렌더 메시 = models/CallistoBlade.glb(build_callisto_outfit.py)
+			→ WeaponMeshes.CallistoArms.Main(Blade 강철 · Fuller 푸른 혈조 · Collar 금 고리 · Edge 혈조의 별빛 일곱). 아래 Parts 는 메시가 없을 때.
+			날이 들고 나는 것(등장 컷신 시험 · 기술 동안만 나옴)은 Combat/Callisto.Blade.
+		]]
 		Main = {
 			Hand = "Right",
+			Fixed = true,
 			Parts = {
-				P("Guard", "Block", { 0.92, 0.16, 0.18 }, { 0, 0, -0.46, 0, 0, 0 }, { 184, 145, 63 }, "Metal"),
-				P("GuardTipL", "Block", { 0.14, 0.24, 0.2 }, { -0.48, 0.02, -0.46, 0, 0, 0 }, { 184, 145, 63 }, "Metal"),
-				P("GuardTipR", "Block", { 0.14, 0.24, 0.2 }, { 0.48, 0.02, -0.46, 0, 0, 0 }, { 184, 145, 63 }, "Metal"),
-				P("GuardRing", "Cylinder", { 0.12, 0.42, 0.42 }, { 0, 0, -0.46, 0, 90, 0 }, { 58, 60, 66 }, "Metal"),
-				P("GuardGem", "Block", { 0.12, 0.12, 0.06 }, { 0, -0.14, -0.46, 0, 0, 45 }, { 156, 200, 255 }, "Neon"),
-				P("Ricasso", "Block", { 0.1, 0.3, 0.42 }, { 0, 0, -0.76, 0, 0, 0 }, { 176, 182, 192 }, "Metal"),
-				P("Blade", "Block", { 0.06, 0.27, 2.7 }, { 0, 0, -2.3, 0, 0, 0 }, { 214, 222, 236 }, "Metal"),
-				P("Fuller", "Block", { 0.068, 0.07, 2.2 }, { 0, 0.02, -2.1, 0, 0, 0 }, { 96, 104, 120 }, "Metal"),
-				P("Edge", "Block", { 0.065, 0.035, 2.6 }, { 0, -0.14, -2.3, 0, 0, 0 }, { 160, 205, 255 }, "Neon"),
-				P("Point", "Block", { 0.05, 0.16, 0.32 }, { 0, -0.04, -3.78, 0, 0, 0 }, { 214, 222, 236 }, "Metal"),
+				P("Collar", "Cylinder", { 0.12, 0.4, 0.4 }, { 0, 0, -0.1, 0, 90, 0 }, { 228, 186, 100 }, "Metal"),
+				P("Blade", "Block", { 0.07, 0.28, 3.0 }, { 0, 0, -1.6, 0, 0, 0 }, { 208, 213, 222 }, "Metal"),
+				P("Fuller", "Block", { 0.076, 0.06, 2.3 }, { 0, 0, -1.35, 0, 0, 0 }, { 42, 56, 96 }, "Metal"),
+				P("Edge", "Block", { 0.08, 0.018, 1.8 }, { 0, 0, -1.25, 0, 0, 0 }, { 156, 200, 255 }, "Neon"),
+				P("Point", "Block", { 0.05, 0.16, 0.3 }, { 0, 0, -3.22, 0, 0, 0 }, { 208, 213, 222 }, "Metal"),
 			},
-			Sockets = { Base = { 0, 0, -0.55 }, Tip = { 0, 0, -3.9 } },
+			Skins = {
+				Blade = S({ 208, 213, 222 }, "Metal"),
+				Fuller = S({ 42, 56, 96 }, "Metal"),
+				Collar = S({ 228, 186, 100 }, "Metal"),
+				Edge = S({ 156, 200, 255 }, "Neon"),
+			},
+			Sockets = { Base = { 0, 0, -0.3 }, Tip = { 0, 0, -3.3 } },
 			Trail = { 150, 200, 255 },
 		},
 		Off = {

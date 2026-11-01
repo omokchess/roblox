@@ -297,7 +297,10 @@ function CombatWeapons.Attach(character: Model, rig: any, weaponId: string?, cla
 		model.Parent = folder
 		self.Pieces[slot] = model
 		self.Motors[slot] = motor
-		rig:SetWeaponMotor(slot, motor)
+		-- Fixed(칼리스토 팔 검)는 모션 W·O 값을 받지 않아 팔 축 그대로 남는다
+		if not piece.Fixed then
+			rig:SetWeaponMotor(slot, motor)
+		end
 	end
 	return self
 end

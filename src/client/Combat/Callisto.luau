@@ -5,28 +5,32 @@
 	  "전체적으로 갈색 톤에 재킷을 걸치고(단추를 잠그지 않은 채 열림), 안에는 와이셔츠, 바지는 검은 바지 — 의수를 끼고, 의수 팔은 검을 끼고 있어야"
 	  "머리카락은 카탈로그 Carmen" · "1페이즈 눈은 별무리로 가려 안 보이게, 눈·입·코 자리를 조정해 데포르메"
 	  "2페이즈는 얼굴이 사라지고 우주 느낌으로 머리를 대체" · "3페이즈는 옷이 다 사라지고 우주가 사람 꼴로 빚어진 모습"
+	2026-11-01 4판(사용자): "의수를 놓지 말고 그냥 팔을 검으로 · 얼굴엔 블렌더 가면 · 로블록스 느낌 없이 최대한 퀄리티 높게,
+	  체형은 로블록스에 맞춰 · 재질도 진짜 옷 재질처럼" — 옷·가면은 GLB(SurfaceAppearance PBR), 옷을 입으면 관절 몸은 감춘다.
 
 	사람 모양이라 R6 관절을 그대로 쓴다(CombatRig·전투 모션·무기가 붙는다). 정면 = 모델 -Z(전투에서는 아군 쪽).
 	  옷  ReplicatedStorage.CallistoAssets.Outfit — 블렌더(models/build_callisto_outfit.py, 들여오기 tools/Callisto_Outfit.luau). 부품마다 속성
-	      Host(관절 부품) · Offset(그 부품에서 본 CFrame) 대로 붙인다. 오른팔 = 스팀펑크 의수(관절 팔은 투명) — 검은 무기 CallistoArms(Main)
+	      Host(관절 부품 — 머리 = 가면) · Offset(그 부품에서 본 CFrame) 대로 붙인다. 오른팔 = 검(소맷부리에서 날이 나옴 — 무기 CallistoArms Main, 팔 축 고정)
 	  머리 ReplicatedStorage.CallistoAssets.Hair(카탈로그 70421887676551 "Carmen") — 손잡이를 머리 HairAttachment(0, 0.6, 0)에 맞춰 용접
 	  들여온 것이 없으면(시험 환경) 맨몸 관절만.
-	얼굴(1페이즈) — 고전 머리 앞 투명 판(FacePlate)의 SurfaceGui: 눈 자리를 덮는 별무리 띠(반짝이는 별, 표정마다 밝기), 둥근 눈썹,
-	  작은 코, 아래로 내린 작은 입, 크고 둥근 볼터치(데포르메), 띠 밑으로 흐르는 눈물.
+	얼굴(1페이즈) — 가면(CalH_*)을 쓰면 그린 얼굴은 끈다. 가면이 없을 때(시험 환경)만 FacePlate 의 SurfaceGui: 별무리 띠, 둥근 눈썹,
+	  작은 코, 작은 입, 볼터치.
 	  Callisto.FaceOf(model) → face:Set(mood, 초?) 잠깐 표정 · face:SetBase(mood) 기본 표정
 	  표정 이름(Observe · Resolve · Sorrow · Attack · …)은 받지만 얼굴은 늘 같다 — 2026-11-01 사용자: "입은 무표정, 표정 변화 딱히 없게"
 	페이즈 — Callisto.SetPage(model, page, fade?)(한 번 넘어가면 되돌리지 않는다 — 컷신이 그 순간에 부른다)
 	  2  얼굴·머리·머리카락·별무리·표정이 사라지고 우주 머리(유리 껍질 속 깊은 밤 + 성운 빛 + 별 입자 · 은하 원반 · 도는 별 셋 · 뒤로 흐르는 별빛 머리칼),
-	     의수가 부서져 그 자리를 우주를 담은 팔이 채운다(2026-11-01 컷신 사양)
+	     가면이 사라지고 팔 검·오른 소매가 부서져 그 자리를 우주를 담은 팔이 채운다(2026-11-01 컷신 사양)
 	  3  옷이 모두 사라지고(fade 초에 걸쳐) 몸 관절이 밤하늘 유리(별 입자)로 — 몸통 앞엔 큰곰자리, 팔다리엔 별 셋과 빛줄(별자리)
-	의수 칼날 — Callisto.Blade(model, out, 초?) 의수 손이 쥔 검(무기 CallistoArms Main)의 날이 손 속에서 미끄러져 나오고 들어간다
-	  (Weld C0 를 날 축(+Z)으로 밀고, 들어가면 감춘다). 시작 컷신이 시험하고, 전투 중엔 기술을 쓸 때만 나온다(CombatDirector).
+	팔 검 — Callisto.Blade(model, out, 초?) 날(무기 CallistoArms Main)이 소매 속에서 미끄러져 나오고 들어간다
+	  (Weld C0 를 날 축(+Z)으로 밀며 투명도도 함께). 시작 컷신이 시험하고, 전투 중엔 기술을 쓸 때만 나온다(CombatDirector).
 	등 뒤 혼천의(고리 셋 + 별 핵 + 행성)와 둘레의 별가루는 그대로(천문학자).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+
+local SpaceLayer = require(script.Parent.SpaceLayer)
 
 local Callisto = {}
 
@@ -339,7 +343,7 @@ end
 
 local faces: { [Model]: any } = setmetatable({}, { __mode = "k" }) :: any
 -- 페이즈 모습에 쓰는 것: 입은 것(옷·머리카락) · 지금 페이즈 · 우주 머리의 도는 관절
-type Look = { Dressed: { BasePart }, Page: number, Disc: Motor6D?, Orbits: { Motor6D } }
+type Look = { Dressed: { BasePart }, Page: number, Orbits: { Motor6D } }
 local looks: { [Model]: Look } = setmetatable({}, { __mode = "k" }) :: any
 
 -- 몸에 붙은 얼굴 조종기(없으면 nil)
@@ -347,10 +351,10 @@ function Callisto.FaceOf(model: Model): Face?
 	return faces[model]
 end
 
---=== 의수 칼날 ===--
+--=== 팔 검(날) ===--
 
-local BLADE_PARTS = { Blade = true, Fuller = true, Edge = true, Point = true }
-local BLADE_SLIDE = 3.6 -- 들어가면 날 축(+Z — 팔 쪽)으로 이만큼 밀려 손·팔 속에 숨는다
+local BLADE_PARTS = { Blade = true, Fuller = true, Edge = true, Point = true, Collar = true }
+local BLADE_SLIDE = 2.0 -- 들어가면 날 축(+Z — 팔 쪽)으로 팔 길이만큼 밀려 소매 속에 숨는다(사라지며)
 
 function Callisto.Blade(model: Model, out: boolean, time: number?)
 	local folder = model:FindFirstChild("CombatWeapon")
@@ -376,17 +380,10 @@ function Callisto.Blade(model: Model, out: boolean, time: number?)
 			p.Transparency = if out then 0 else 1
 			continue
 		end
-		if out then
-			p.Transparency = 0
-		end
-		TweenService:Create(joint, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { C0 = goal }):Play()
-		if not out then
-			task.delay(t, function()
-				if p.Parent and model:GetAttribute("BladeOut") == false then
-					p.Transparency = 1
-				end
-			end)
-		end
+		-- 소매 속으로 들고 나는 동안 투명도도 함께(어깨 위로 날이 비치지 않게)
+		local info = TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		TweenService:Create(joint, info, { C0 = goal }):Play()
+		TweenService:Create(p, info, { Transparency = if out then 0 else 1 }):Play()
 	end
 end
 
@@ -404,9 +401,9 @@ local function cosmicHead(model: Model, look: Look, head: BasePart)
 	if hair and hair:IsA("BasePart") then
 		hair.Transparency = 1
 	end
-	-- 의수가 부서지고(쇠·놋쇠·구리·별빛 조각을 감춘다 — 부서지는 파편은 컷신 이펙트) 그 자리를 우주를 담은 팔이 채운다
+	-- 가면이 깨져 사라지고, 팔 검과 오른 소매가 부서져(파편은 컷신 이펙트) 그 자리를 우주를 담은 팔이 채운다
 	for _, p in look.Dressed do
-		if p.Name:match("^CalRA_(%a+)$") and ({ Iron = true, Brass = true, Copper = true, StarGlow = true })[p.Name:match("^CalRA_(%a+)$")] then
+		if p.Name:match("^CalH_") or p.Name:match("^CalRA_") then
 			p.Transparency = 1
 		end
 	end
@@ -415,36 +412,24 @@ local function cosmicHead(model: Model, look: Look, head: BasePart)
 		p.Parent = model
 		return p, motor(name .. "Joint", head, p, c0, CFrame.new())
 	end
-	local core = attach("CosmicCore", Vector3.new(1.45, 1.45, 1.45), C(8, 6, 24), Enum.Material.SmoothPlastic, "Ball", CFrame.new(0, 0.1, 0))
-	local nebula = attach("CosmicNebula", Vector3.new(1.62, 1.62, 1.62), C(96, 64, 190), Enum.Material.Neon, "Ball", CFrame.new(0, 0.1, 0))
-	nebula.Transparency = 0.86
-	local shell = attach("CosmicShell", Vector3.new(1.78, 1.78, 1.78), C(28, 22, 70), Enum.Material.Glass, "Ball", CFrame.new(0, 0.1, 0))
-	shell.Transparency = 0.25
-	shell.Reflectance = 0.12
-	stars(core, 18, 0.12, Enum.ParticleEmitterShape.Sphere)
-	local light = Instance.new("PointLight")
-	light.Color = C(150, 120, 255)
-	light.Range, light.Brightness = 9, 1.6
-	light.Parent = core
-	local disc, discJoint = attach("CosmicDisc", Vector3.new(0.04, 2.7, 2.7), C(176, 150, 255), Enum.Material.Glass, "Cylinder", CFrame.new(0, 0.1, 0))
-	disc.Transparency = 0.62
-	look.Disc = discJoint
+	-- 우주 머리(2026-11-01 사용자: 모델링보다 레이어 — 샘플): 머리 자리에 화면에 박힌 우주 그림을 둥글게 오려 낸 창(Combat/SpaceLayer)
+	-- + 그 둘레를 도는 작은 별 셋
+	SpaceLayer.Add(head, "Disc", 1.4)
 	for i, color in { STAR, GLOW, C(255, 214, 150) } do
 		local _, joint = attach("CosmicOrbit" .. i, Vector3.new(0.16, 0.16, 0.16), color, Enum.Material.Neon, "Ball", CFrame.new())
 		table.insert(look.Orbits, joint)
 	end
-	-- 뒤로 흐르는 별빛 머리칼
-	local tail = Instance.new("Attachment")
-	tail.Position = Vector3.new(0, 0.3, 0.7)
-	tail.Parent = core
-	local stream = stars(core, 26, 0.16, nil)
-	stream.Parent = tail
-	stream.EmissionDirection = Enum.NormalId.Back
-	stream.Speed = NumberRange.new(1.4, 2.8)
-	stream.SpreadAngle = Vector2.new(18, 12)
-	stream.LockedToPart = false
-	stream.Lifetime = NumberRange.new(1, 1.8)
-	stream.Color = ColorSequence.new(C(230, 236, 255), C(150, 110, 255))
+end
+
+-- 우주를 담은 팔(레이어 샘플): 관절 팔은 감추고 그 자리를 우주 그림 창으로. Cosmic 표지 — 3페이즈 유리 몸이 다시 덮지 않게
+local function spaceLimb(model: Model, name: string)
+	local body = model:FindFirstChild(name)
+	if not body or not body:IsA("BasePart") or body:GetAttribute("Cosmic") then
+		return
+	end
+	body:SetAttribute("Cosmic", true)
+	body.Transparency = 1
+	SpaceLayer.Add(body, "Limb", 0.9)
 end
 
 -- 3페이즈: 옷·머리카락을 모두 감추고 몸 관절이 밤하늘 유리로(별 입자 + 별자리)
@@ -512,7 +497,7 @@ function Callisto.SetPage(model: Model, page: number, fadeTime: number?)
 	end
 	if look.Page < 2 and page >= 2 then
 		cosmicHead(model, look, head)
-		cosmicLimb(model, "Right Arm")   -- 의수 자리를 채우는 우주 팔
+		spaceLimb(model, "Right Arm")    -- 팔 검 자리를 채우는 우주 팔(레이어)
 	end
 	if look.Page < 3 and page >= 3 then
 		cosmicBody(model, look, fadeTime)
@@ -562,7 +547,7 @@ function Callisto.Build(name: string): Model
 	local root = part("HumanoidRootPart", Vector3.new(2, 2, 1), JACKET)
 	root.Transparency = 1
 	root.Anchored = true
-	-- 관절 몸은 옷 밑 색(옷 틈으로 보여도 어울리게). 오른팔은 의수가 보이게 투명
+	-- 관절 몸은 옷 밑 색(옷이 없을 때). 옷을 입으면 감춘다 — 4판 옷이 몸 모양을 다 만든다
 	local torso = part("Torso", Vector3.new(2, 2, 1), JACKET)
 	local head = part("Head", Vector3.new(2, 1, 1), SKIN)
 	local rightArm = part("Right Arm", Vector3.new(1, 2, 1), JACKET)
@@ -593,8 +578,17 @@ function Callisto.Build(name: string): Model
 
 	--- 옷·머리카락(들여온 것) ---
 	local dressed = dress(model, head)
-	if #dressed > 0 then
-		rightArm.Transparency = 1
+	local masked = false
+	for _, p in dressed do
+		masked = masked or p:GetAttribute("Host") == "Head"
+	end
+	if masked then
+		-- 4판(가면이 있는 옷): 옷이 몸 모양을 다 만든다
+		for _, p in { torso, rightArm, leftArm, rightLeg, leftLeg } do
+			p.Transparency = 1
+		end
+	elseif #dressed > 0 then
+		rightArm.Transparency = 1 -- 3판: 의수가 보이게
 	end
 	-- 얼굴 판(투명) — SurfaceGui 로 그린다
 	local plate = deco(model, head, "FacePlate", Vector3.new(1.0, 0.9, 0.04), { 0, 0.02, -0.63 }, SKIN)
@@ -639,7 +633,11 @@ function Callisto.Build(name: string): Model
 	--- 얼굴 + 매 프레임(혼천의·별가루·우주 머리·표정) ---
 	local face: any = buildFace(plate)
 	faces[model] = face
-	local look: Look = { Dressed = dressed, Page = 1, Disc = nil, Orbits = {} }
+	-- 블렌더 가면을 쓰면 그린 얼굴은 끈다(조종기는 그대로 — 표정 배선이 남아 있어도 보이지 않는다)
+	if masked then
+		face.Gui.Enabled = false
+	end
+	local look: Look = { Dressed = dressed, Page = 1, Orbits = {} }
 	looks[model] = look
 	local t0 = math.random() * 10
 	-- 한 번 자리에 놓인 뒤 부모가 사라지면(치워짐) 스스로 끊는다
@@ -666,9 +664,6 @@ function Callisto.Build(name: string): Model
 				local a = t * 0.8 + i * 2.1
 				joint.C0 = CFrame.new(math.cos(a) * 1.7, 0.6 + math.sin(t * 1.3 + i) * 0.5, math.sin(a) * 1.2)
 			end
-		end
-		if look.Disc and look.Disc.Parent then
-			look.Disc.C0 = CFrame.new(0, 0.1, 0) * CFrame.Angles(0.35, t * 0.6, 1.2)
 		end
 		for i, joint in look.Orbits do
 			if joint.Parent then

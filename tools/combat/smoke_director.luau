@@ -297,6 +297,12 @@ end
 
 --=== 실행 ===--
 local client = game:GetService("StarterPlayer").StarterPlayerScripts.Client
+-- 우주 레이어(Combat/SpaceLayer)는 카메라 화면 투영(ViewportSize · WorldToViewportPoint)이 필요해 Lune 에선 빈 것으로 대신한다
+cache[client.Combat.SpaceLayer] = {
+	Add = function()
+		return function() end
+	end,
+}
 local CombatDirector = fakeRequire(client.Combat.CombatDirector)
 local BattleSkills = fakeRequire(game:GetService("ReplicatedStorage").Shared.BattleSkills)
 local WeaponDefinitions = fakeRequire(game:GetService("ReplicatedStorage").Shared.Combat.WeaponDefinitions)
