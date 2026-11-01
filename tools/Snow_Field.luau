@@ -36,6 +36,9 @@ local SKIN = {
 	DeadWood = { RGB(196, 198, 200), M.Wood },
 	DeadWood2 = { RGB(150, 146, 142), M.Wood },
 	Burnt = { RGB(40, 34, 30), M.Wood }, -- 폐허 둘레 그을린 마른 나무
+	Coal = { RGB(30, 26, 24), M.Basalt }, -- 화덕 숯 바닥
+	Coal2 = { RGB(48, 32, 26), M.Basalt },
+	Leather = { RGB(78, 50, 34), M.Leather }, -- 풀무
 	-- (옛 보스룸 2판 묶음 — 지금 자료엔 없음)
 	ArenaStone2 = { RGB(104, 110, 118), M.Slate },
 	ArenaIron = { RGB(60, 62, 68), M.DiamondPlate },
@@ -263,21 +266,38 @@ local ok, err = pcall(function()
 			l.Shadows = true
 			l.Parent = p
 		elseif name == "Ember" then
-			-- 불탄 공방 화덕에 아직 남은 불씨: 작은 불 · 옅은 연기 · 낮은 주황 빛
+			-- 불탄 공방 화덕에 아직 남은 불씨: 숯 위에 낮게 깔린 넓은 불 · 튀는 불티 · 낮은 주황 빛(연기는 굴뚝 끝 ChimneySmoke)
 			p.Transparency = 1
-			p.CanQuery = false
+			p.CanQuery, p.CanTouch = false, false
+			p.Size = Vector3.new(4.5, 0.4, 4)
 			local f = Instance.new("Fire")
-			f.Size, f.Heat = 2, 3
-			f.Color, f.SecondaryColor = RGB(255, 120, 40), RGB(160, 40, 20)
+			f.Size, f.Heat = 3, 1.5
+			f.Color, f.SecondaryColor = RGB(255, 130, 45), RGB(170, 40, 18)
 			f.Parent = p
-			local sm = Instance.new("Smoke")
-			sm.Color = RGB(70, 66, 64)
-			sm.Opacity, sm.RiseVelocity, sm.Size = 0.12, 3, 2
-			sm.Parent = p
+			local sp = Instance.new("ParticleEmitter")
+			sp.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			sp.Color = ColorSequence.new(RGB(255, 170, 70), RGB(255, 80, 30))
+			sp.LightEmission = 1
+			sp.Size = NumberSequence.new(0.18, 0.05)
+			sp.Lifetime = NumberRange.new(0.6, 1.4)
+			sp.Rate = 6
+			sp.Speed = NumberRange.new(2, 4)
+			sp.SpreadAngle = Vector2.new(25, 25)
+			sp.Acceleration = Vector3.new(0, 1.5, 0)
+			sp.EmissionDirection = Enum.NormalId.Top
+			sp.Parent = p
 			local l = Instance.new("PointLight")
 			l.Color = RGB(255, 110, 50)
-			l.Range, l.Brightness = 14, 0.9
+			l.Range, l.Brightness = 18, 1.3
+			l.Shadows = true
 			l.Parent = p
+		elseif name == "ChimneySmoke" then
+			p.Transparency = 1
+			p.CanQuery, p.CanTouch = false, false
+			local sm = Instance.new("Smoke")
+			sm.Color = RGB(80, 76, 74)
+			sm.Opacity, sm.RiseVelocity, sm.Size = 0.08, 5, 3
+			sm.Parent = p
 		elseif name == "Sign" then
 			p.Transparency = 1
 			p.CanQuery = false
