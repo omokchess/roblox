@@ -11,6 +11,7 @@
 ]]
 
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local CombatVfx = {}
@@ -634,6 +635,71 @@ function CombatVfx.MyTurn()
 	for _, fn in list do
 		fn()
 	end
+end
+
+--[[
+	마켓 VFX 팩(2026-11-01 사용자: "자체 제작 이펙트만으론 한계가 있으니 마켓플레이스 것도"): ReplicatedStorage.VfxLibrary
+	(tools/Vfx_Import.luau 가 스크립트를 걷어 내고 옮겨 둔다) 아래 이펙트 하나(파티클·빔·트레일을 품은 Attachment / Part / Model)를
+	cf 에 복제해 터뜨리고 치운다. 파티클 속성 EmitCount(한 번에 낼 수)·EmitDelay(늦춤 초)를 따르고(팩들의 흔한 관례), 없으면 Rate 의 1/4.
+	  Vfx.Pack("팩/이펙트", cf, { Size = 크기 배율, Color = 다시 칠할 색?, Count = 입자 수 배율 })
+	없는 이름이면 false — 부르는 쪽이 블록 이펙트로 대신한다(블록은 형태, 팩은 질감: 겹쳐 쓰는 것이 기본).
+]]
+function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boolean
+	local source: Instance? = ReplicatedStorage:FindFirstChild("VfxLibrary")
+	for piece in string.gmatch(name, "[^/]+") do
+		source = source and source:FindFirstChild(piece)
+	end
+	if not source then
+		return false
+	end
+	local o = opts or {}
+	local k = o.Size or 1
+	local holder = part(Vector3.new(0.2, 0.2, 0.2), cf, Color3.new(1, 1, 1))
+	holder.Transparency = 1
+	local copy = source:Clone()
+	if copy:IsA("Attachment") then
+		copy.CFrame = CFrame.identity
+	elseif copy:IsA("BasePart") then
+		copy.Anchored, copy.CanCollide, copy.CanQuery, copy.CanTouch = true, false, false, false
+		copy.Transparency = 1
+		copy.CFrame = cf
+	elseif copy:IsA("Model") then
+		copy:PivotTo(cf)
+	end
+	copy.Parent = holder
+	local life = 0.5
+	for _, d in copy:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored, d.CanCollide, d.CanQuery, d.CanTouch = true, false, false, false
+		elseif d:IsA("ParticleEmitter") then
+			if k ~= 1 then
+				local keys = {}
+				for _, key in d.Size.Keypoints do
+					table.insert(keys, NumberSequenceKeypoint.new(key.Time, key.Value * k, key.Envelope * k))
+				end
+				d.Size = NumberSequence.new(keys)
+				d.Speed = NumberRange.new(d.Speed.Min * k, d.Speed.Max * k)
+			end
+			if o.Color then
+				d.Color = ColorSequence.new(o.Color)
+			end
+			local count = d:GetAttribute("EmitCount")
+			count = math.max(1, math.floor((if type(count) == "number" then count else d.Rate / 4) * (o.Count or 1)))
+			local delay = d:GetAttribute("EmitDelay")
+			delay = if type(delay) == "number" then delay else 0
+			d.Enabled = false
+			life = math.max(life, delay + d.Lifetime.Max)
+			task.delay(delay, function()
+				if d.Parent then
+					d:Emit(count)
+				end
+			end)
+		elseif (d:IsA("Beam") or d:IsA("Trail")) and o.Color then
+			d.Color = ColorSequence.new(o.Color)
+		end
+	end
+	Debris:AddItem(holder, life + 0.3)
+	return true
 end
 
 -- 이 모듈 밖에서 부품이 필요할 때(무기 복제 날리기 등)
