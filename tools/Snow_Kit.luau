@@ -53,6 +53,8 @@ local PREFIX = {
 	Press = "Steam_Press", VBoil = "Vertical_Boiler", Proto = "Emotion_Proto", Forge = "Forge", Anvil = "Anvil",
 	Rifle = "Steam_Rifle", Pistol = "Steam_Pistol", Proj = "Film_Projector",
 	ChP = "Chess_Pawn", ChR = "Chess_Rook", ChN = "Chess_Knight", ChB = "Chess_Bishop", ChQ = "Chess_Queen", ChK = "Chess_King",
+	-- (구)설공방 폐허 화덕(models/build_snow_forge.py → models/forge_only/SnowKit.fbx — 이 모델 하나만 든 SnowKit 으로 가져와 가른다)
+	SelForge = "Sel_Forge_Ruin",
 }
 -- 피벗을 원점(바닥 가운데)이 아닌 곳에 두는 틀. 톱니는 굴대 가운데를 축으로 돌고,
 -- 꺾인 관은 꺾인 자리를 관 끝에 맞춘다(build_steam.py pipe_bend90 의 P)
