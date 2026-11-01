@@ -42,3 +42,10 @@ if game:GetService("RunService"):IsStudio() and workspace:GetAttribute("CombatSh
 		require(script.Combat.CombatShowcase).Start()
 	end)
 end
+
+-- 스튜디오 전용 칼리스토 페이즈 미리보기: 얼어붙은 호수 workspace.CallistoPreview 자리표마다 1·2·3페이즈 모습(Combat/CallistoPreview.luau)
+if game:GetService("RunService"):IsStudio() and workspace:FindFirstChild("CallistoPreview") then
+	task.spawn(function()
+		require(script.Combat.CallistoPreview).Start()
+	end)
+end

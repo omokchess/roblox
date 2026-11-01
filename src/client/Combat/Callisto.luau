@@ -18,9 +18,9 @@
 	  Callisto.FaceOf(model) → face:Set(mood, 초?) 잠깐 표정 · face:SetBase(mood) 기본 표정
 	  표정 이름(Observe · Resolve · Sorrow · Attack · …)은 받지만 얼굴은 늘 같다 — 2026-11-01 사용자: "입은 무표정, 표정 변화 딱히 없게"
 	페이즈 — Callisto.SetPage(model, page, fade?)(한 번 넘어가면 되돌리지 않는다 — 컷신이 그 순간에 부른다)
-	  2  얼굴·머리·머리카락·별무리·표정이 사라지고 우주 머리(유리 껍질 속 깊은 밤 + 성운 빛 + 별 입자 · 은하 원반 · 도는 별 셋 · 뒤로 흐르는 별빛 머리칼),
+	  2  얼굴·머리·머리카락·가면이 사라지고 우주 머리(고전 머리 윤곽 + 빛나는 하얀 테두리로 오려 낸 우주 그림 창 — Combat/SpaceLayer · 도는 별 셋),
 	     가면이 사라지고 팔 검·오른 소매가 부서져 그 자리를 우주를 담은 팔이 채운다(2026-11-01 컷신 사양)
-	  3  옷이 모두 사라지고(fade 초에 걸쳐) 몸 관절이 밤하늘 유리(별 입자)로 — 몸통 앞엔 큰곰자리, 팔다리엔 별 셋과 빛줄(별자리)
+	  3  옷이 모두 사라지고(fade 초에 걸쳐) 그동안 몸 전체(몸통·팔다리 상자 윤곽)가 우주 그림 창으로 나타난다(Combat/SpaceLayer)
 	팔 검 — Callisto.Blade(model, out, 초?) 날(무기 CallistoArms Main)이 소매 속에서 미끄러져 나오고 들어간다
 	  (Weld C0 를 날 축(+Z)으로 밀며 투명도도 함께). 시작 컷신이 시험하고, 전투 중엔 기술을 쓸 때만 나온다(CombatDirector).
 	등 뒤 혼천의(고리 셋 + 별 핵 + 행성)와 둘레의 별가루는 그대로(천문학자).
@@ -41,8 +41,6 @@ local GOLD = C(222, 186, 104)
 local SKIN = C(246, 228, 218)
 local GLOW = C(150, 200, 255)
 local STAR = C(214, 232, 255)
-local NIGHT = C(18, 14, 46)
-local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
 
 local RAD = math.pi / 180
 
@@ -85,23 +83,6 @@ local function deco(model: Model, host: BasePart, name: string, size: Vector3, a
 	weld(host, p)
 	p.Parent = model
 	return p
-end
-
-local function stars(parent: Instance, rate: number, size: number, shape: Enum.ParticleEmitterShape?): ParticleEmitter
-	local e = Instance.new("ParticleEmitter")
-	e.Texture = SPARK
-	e.Color = ColorSequence.new(C(255, 255, 255), C(170, 200, 255))
-	e.LightEmission = 1
-	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size), NumberSequenceKeypoint.new(0.5, size * 1.4), NumberSequenceKeypoint.new(1, 0) })
-	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.1), NumberSequenceKeypoint.new(1, 1) })
-	e.Lifetime = NumberRange.new(1.4, 3)
-	e.Rate = rate
-	e.Speed = NumberRange.new(0, 0.2)
-	e.LockedToPart = true
-	e.Shape = shape or Enum.ParticleEmitterShape.Box
-	e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
-	e.Parent = parent
-	return e
 end
 
 --=== 얼굴(1페이즈 — SurfaceGui) ===--
@@ -412,67 +393,27 @@ local function cosmicHead(model: Model, look: Look, head: BasePart)
 		p.Parent = model
 		return p, motor(name .. "Joint", head, p, c0, CFrame.new())
 	end
-	-- 우주 머리(2026-11-01 사용자: 모델링보다 레이어 — 샘플): 머리 자리에 화면에 박힌 우주 그림을 둥글게 오려 낸 창(Combat/SpaceLayer)
-	-- + 그 둘레를 도는 작은 별 셋
-	SpaceLayer.Add(head, "Disc", 1.4)
+	-- 우주 머리(2026-11-01 사용자: 모델링보다 레이어, 동그라미 말고 아바타 머리에 빛나는 하얀 윤곽): 고전 머리 윤곽으로 오려 낸
+	-- 화면에 박힌 우주 그림 창(Combat/SpaceLayer) + 그 둘레를 도는 작은 별 셋
+	SpaceLayer.Add(head, "Head", 0.25)
 	for i, color in { STAR, GLOW, C(255, 214, 150) } do
 		local _, joint = attach("CosmicOrbit" .. i, Vector3.new(0.16, 0.16, 0.16), color, Enum.Material.Neon, "Ball", CFrame.new())
 		table.insert(look.Orbits, joint)
 	end
 end
 
--- 우주를 담은 팔(레이어 샘플): 관절 팔은 감추고 그 자리를 우주 그림 창으로. Cosmic 표지 — 3페이즈 유리 몸이 다시 덮지 않게
-local function spaceLimb(model: Model, name: string)
+-- 우주를 담은 몸 한 부품: 관절 부품은 감추고 그 상자 윤곽대로 우주 그림 창(Combat/SpaceLayer). Cosmic 표지 — 두 번 씌우지 않게
+local function spaceLimb(model: Model, name: string, fade: number?)
 	local body = model:FindFirstChild(name)
 	if not body or not body:IsA("BasePart") or body:GetAttribute("Cosmic") then
 		return
 	end
 	body:SetAttribute("Cosmic", true)
 	body.Transparency = 1
-	SpaceLayer.Add(body, "Limb", 0.9)
+	SpaceLayer.Add(body, "Box", fade)
 end
 
--- 3페이즈: 옷·머리카락을 모두 감추고 몸 관절이 밤하늘 유리로(별 입자 + 별자리)
-local CONSTELLATIONS: { [string]: { { number } } } = {
-	-- 몸통 앞: 큰곰자리(국자 넷 + 손잡이 셋)
-	Torso = { { -0.62, 0.45 }, { -0.18, 0.52 }, { -0.12, 0.1 }, { -0.6, 0.02 }, { 0.22, -0.05 }, { 0.5, -0.3 }, { 0.78, -0.6 } },
-	["Right Arm"] = { { 0.1, 0.6 }, { -0.15, 0.0 }, { 0.12, -0.55 } },
-	["Left Arm"] = { { -0.1, 0.55 }, { 0.15, -0.05 }, { -0.1, -0.6 } },
-	["Right Leg"] = { { 0.12, 0.6 }, { -0.1, -0.1 }, { 0.15, -0.7 } },
-	["Left Leg"] = { { -0.12, 0.55 }, { 0.1, -0.15 }, { -0.14, -0.65 } },
-}
-
-local function cosmicLimb(model: Model, name: string)
-	local dots = CONSTELLATIONS[name]
-	local body = model:FindFirstChild(name)
-	if not dots or not body or not body:IsA("BasePart") or body:GetAttribute("Cosmic") then
-		return
-	end
-	body:SetAttribute("Cosmic", true)
-	do
-		body.Transparency = 0.12
-		body.Material = Enum.Material.Glass
-		body.Color = NIGHT
-		body.Reflectance = 0.1
-		stars(body, 8, 0.1, nil)
-		local front = -body.Size.Z / 2 - 0.02
-		local points: { Vector3 } = {}
-		for i, d in dots do
-			local at = Vector3.new(d[1], d[2], front)
-			table.insert(points, at)
-			deco(model, body, "Constellation" .. i, Vector3.new(0.12, 0.12, 0.05), { at.X, at.Y, at.Z, 0, 0, 45 }, STAR, Enum.Material.Neon)
-		end
-		for i = 2, #points do
-			local a, b = points[i - 1], points[i]
-			local line = part("ConstellationLine", Vector3.new(0.03, 0.03, (b - a).Magnitude), GLOW, Enum.Material.Neon)
-			line.Transparency = 0.35
-			line.CFrame = body.CFrame * CFrame.lookAt((a + b) / 2, b)
-			weld(body, line)
-			line.Parent = model
-		end
-	end
-end
-
+-- 3페이즈: 옷이 (fade 초에 걸쳐) 사라지는 동안 몸 전체가 우주 그림 창으로 나타난다
 local function cosmicBody(model: Model, look: Look, fadeTime: number?)
 	for _, p in look.Dressed do
 		if (fadeTime or 0) > 0 and p.Transparency < 1 then
@@ -481,8 +422,8 @@ local function cosmicBody(model: Model, look: Look, fadeTime: number?)
 			p.Transparency = 1
 		end
 	end
-	for name in CONSTELLATIONS do
-		cosmicLimb(model, name)
+	for _, name in { "Torso", "Right Arm", "Left Arm", "Right Leg", "Left Leg" } do
+		spaceLimb(model, name, fadeTime)
 	end
 end
 
@@ -497,7 +438,7 @@ function Callisto.SetPage(model: Model, page: number, fadeTime: number?)
 	end
 	if look.Page < 2 and page >= 2 then
 		cosmicHead(model, look, head)
-		spaceLimb(model, "Right Arm")    -- 팔 검 자리를 채우는 우주 팔(레이어)
+		spaceLimb(model, "Right Arm", 0.25) -- 팔 검 자리를 채우는 우주 팔(레이어)
 	end
 	if look.Page < 3 and page >= 3 then
 		cosmicBody(model, look, fadeTime)
