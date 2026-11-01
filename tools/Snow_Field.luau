@@ -35,6 +35,7 @@ local SKIN = {
 	CliffRock = { RGB(92, 98, 104), M.Slate },
 	DeadWood = { RGB(196, 198, 200), M.Wood },
 	DeadWood2 = { RGB(150, 146, 142), M.Wood },
+	Burnt = { RGB(40, 34, 30), M.Wood }, -- 폐허 둘레 그을린 마른 나무
 	-- (옛 보스룸 2판 묶음 — 지금 자료엔 없음)
 	ArenaStone2 = { RGB(104, 110, 118), M.Slate },
 	ArenaIron = { RGB(60, 62, 68), M.DiamondPlate },
