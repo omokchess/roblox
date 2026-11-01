@@ -24,7 +24,14 @@ local ok, err = pcall(function()
 		end
 	end
 	assert(marker, "표지(WeaponsOrigin_Marker)가 없다 — Weapons.fbx 를 먼저 가져올 것")
-	local imported = marker:FindFirstAncestorWhichIsA("Model") or marker.Parent
+	-- 가져온 묶음 = workspace 바로 아래 조상(GLB 는 조각마다 "_Node" 모델로 한 번 더 감싸므로 가장 가까운 Model 이 아니다)
+	local imported = marker
+	while imported.Parent and imported.Parent ~= workspace do
+		imported = imported.Parent
+	end
+	if imported == marker then
+		imported = workspace
+	end
 	local k = 1 / marker.Size.X
 	say("표지 크기 %.4f → 배율 %.4f", marker.Size.X, k)
 	local root = RS:FindFirstChild("WeaponMeshes")
