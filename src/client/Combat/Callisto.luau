@@ -14,7 +14,7 @@
 	얼굴(1페이즈) — 고전 머리 앞 투명 판(FacePlate)의 SurfaceGui: 눈 자리를 덮는 별무리 띠(반짝이는 별, 표정마다 밝기), 둥근 눈썹,
 	  작은 코, 아래로 내린 작은 입, 크고 둥근 볼터치(데포르메), 띠 밑으로 흐르는 눈물.
 	  Callisto.FaceOf(model) → face:Set(mood, 초?) 잠깐 표정 · face:SetBase(mood) 기본 표정
-	  표정: Observe(1) · Resolve(2) · Sorrow(3, 눈물) · Attack · Aim · Cast · Hit · Guard · Dodge · Death · Smile
+	  표정 이름(Observe · Resolve · Sorrow · Attack · …)은 받지만 얼굴은 늘 같다 — 2026-11-01 사용자: "입은 무표정, 표정 변화 딱히 없게"
 	페이즈 — Callisto.SetPage(model, page, fade?)(한 번 넘어가면 되돌리지 않는다 — 컷신이 그 순간에 부른다)
 	  2  얼굴·머리·머리카락·별무리·표정이 사라지고 우주 머리(유리 껍질 속 깊은 밤 + 성운 빛 + 별 입자 · 은하 원반 · 도는 별 셋 · 뒤로 흐르는 별빛 머리칼),
 	     의수가 부서져 그 자리를 우주를 담은 팔이 채운다(2026-11-01 컷신 사양)
@@ -146,21 +146,14 @@ type Face = {
 	Step: (self: Face, now: number, dt: number) -> (),
 }
 
--- 표정 값: Brow = {안쪽 끝이 오르는 각(+ 슬픔 / − 노여움), 위아래(+ 위)} · Mouth = smile/line/open/frown/o · Blush = 볼터치 투명도 ·
--- Band = 별무리 띠의 밝기(0 꺼짐 ~ 1 번쩍) · Tear = 눈물(띠 밑에서 흐른다)
-local MOODS: { [string]: { Brow: { number }, Mouth: string, Blush: number, Band: number, Tear: boolean } } = {
-	Observe = { Brow = { 3, 0 }, Mouth = "smile", Blush = 0.55, Band = 0.4, Tear = false },
-	Resolve = { Brow = { -9, 1 }, Mouth = "line", Blush = 0.68, Band = 0.55, Tear = false },
-	Sorrow = { Brow = { 15, 2 }, Mouth = "frown", Blush = 0.45, Band = 0.25, Tear = true },
-	Attack = { Brow = { -17, -2 }, Mouth = "open", Blush = 0.72, Band = 1, Tear = false },
-	Aim = { Brow = { -5, 1 }, Mouth = "smile", Blush = 0.58, Band = 0.85, Tear = false },
-	Cast = { Brow = { 7, 4 }, Mouth = "o", Blush = 0.55, Band = 0.95, Tear = false },
-	Hit = { Brow = { 13, -1 }, Mouth = "open", Blush = 0.4, Band = 0.1, Tear = false },
-	Guard = { Brow = { -13, 0 }, Mouth = "line", Blush = 0.68, Band = 0.65, Tear = false },
-	Dodge = { Brow = { 2, 2 }, Mouth = "smile", Blush = 0.58, Band = 0.5, Tear = false },
-	Death = { Brow = { 11, 0 }, Mouth = "smile", Blush = 0.45, Band = 0, Tear = true },
-	Smile = { Brow = { 5, 1 }, Mouth = "smile", Blush = 0.35, Band = 0.5, Tear = false },
-}
+-- 표정 값: Brow = {안쪽 끝이 오르는 각, 위아래} · Mouth = smile/line/open/frown/o · Blush = 볼터치 투명도 · Band = 별무리 띠 밝기 · Tear = 눈물.
+-- 2026-11-01 사용자: "입은 무표정, 표정 변화 딱히 없게" — 어떤 표정 이름이든 같은 얼굴(일자 입 · 곧은 눈썹 · 띠 밝기 일정 · 눈물 없음)
+local NEUTRAL = { Brow = { 0, 0 }, Mouth = "line", Blush = 0.6, Band = 0.5, Tear = false }
+local MOODS: { [string]: typeof(NEUTRAL) } = setmetatable({}, {
+	__index = function()
+		return NEUTRAL
+	end,
+}) :: any
 Callisto.MOODS = MOODS
 
 -- 별무리 띠(176 × 44, 눈 자리 y 98 을 덮는다)의 별 { 띠 안 x, y, 크기, 글자, 색 } — 눈 자리(50·126)엔 큰 별 둘
