@@ -37,7 +37,7 @@ CombatMotions.Sets = {
 }
 -- 무기 종류별 묶음(직업과 다른 종류의 무기를 들었을 때)
 CombatMotions.ByType = {
-	-- 칼리스토 2·3페이지 북두칠성 망치(대기·맞음·막음·피함·쓰러짐·버릇)
+	-- 칼리스토 2·3페이즈 북두칠성 망치(대기·맞음·막음·피함·쓰러짐·버릇)
 	StarHammer = CombatMotions.Sets.Callisto.Hammer,
 }
 

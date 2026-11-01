@@ -661,13 +661,13 @@ local PHASE_FLASH = {
 	[4] = { "4페이즈", "FATAL — 커널 모드 · 가하는 피해 +30%" },
 }
 --[[
-	칼리스토 알림(2026-10-31): 처음 · 페이지가 바뀔 때 · [작은 곰 자리]를 얻을 때 · 장판을 깔 때 한 번씩 화면 가운데 글.
+	칼리스토 알림(2026-10-31): 처음 · 페이즈가 바뀔 때 · [작은 곰 자리]를 얻을 때 · 장판을 깔 때 한 번씩 화면 가운데 글.
 ]]
 local CALLISTO_FLASH = Color3.fromRGB(150, 190, 255)
--- 페이지마다 기본 표정(그린 얼굴 — Combat/Callisto): 1 관찰자 · 2 결의 · 3 슬픔(눈물)
+-- 페이즈마다 기본 표정(그린 얼굴 — Combat/Callisto): 1 관찰자 · 2 결의 · 3 슬픔(눈물)
 local CALLISTO_PAGE_MOOD = { [1] = "Observe", [2] = "Resolve", [3] = "Sorrow" }
 
--- 미뤄 둔 컷신: 처음 나타날 때 등장(비숍의 인사), 페이지가 바뀌면 페이지 전환 — 연출이 한가해지면 튼다
+-- 미뤄 둔 컷신: 처음 나타날 때 등장(비숍의 인사), 페이즈가 바뀌면 페이즈 전환 — 연출이 한가해지면 튼다
 function BattleClient:_callistoCutscene()
 	local want = self.callistoCutscene
 	local director = self.director
@@ -703,7 +703,7 @@ function BattleClient:_callistoAlerts(snapshot: any)
 	if view.Page ~= seen.Page then
 		seen.Page = view.Page
 		self.callistoCutscene = { Id = view.UnitId, Skill = "CallistoPageShift" }
-		self.hud:Flash(string.format("%d페이지 — %s", view.Page, view.PageName), if view.Page >= 3 then "10턴 동안 장판을 버텨라 · 체력 1% 이하면 시험 종료" else nil, CALLISTO_FLASH)
+		self.hud:Flash(string.format("%d페이즈 — %s", view.Page, view.PageName), if view.Page >= 3 then "10턴 동안 장판을 버텨라 · 체력 1% 이하면 시험 종료" else nil, CALLISTO_FLASH)
 	end
 	if view.UrsaMinor and not seen.Ursa then
 		self.hud:Flash("작은 곰 자리", "아들을 위한 자리 — 아스트로 세시가 열렸다", Color3.fromRGB(236, 186, 78))
@@ -713,7 +713,7 @@ function BattleClient:_callistoAlerts(snapshot: any)
 		self.hud:Flash("뭇별 아래에 잠기리", string.format("장판 %d턴 — 매 턴 최대 체력 5%%", view.Field + 1), CALLISTO_FLASH)
 	end
 	seen.Field = view.Field
-	-- 2페이지
+	-- 2페이즈
 	if view.Chilseong and not seen.Chilseong then
 		self.hud:Flash("칠성군", "칼리스토 체력 65% 미만 — 일곱 별이 [성위 - 칠성]을 모은다", Color3.fromRGB(255, 224, 138))
 	end
@@ -734,7 +734,7 @@ end
 function BattleClient:_callistoField(snapshot: any)
 	local view = snapshot.Callisto
 	self:_callistoSheet("callistoField", view ~= nil and (view.Field or 0) > 0, { "Ally", "Enemy" }, Color3.fromRGB(40, 54, 140), true)
-	-- 알리오스 장판(2페이지): 아군 칸만, 금빛
+	-- 알리오스 장판(2페이즈): 아군 칸만, 금빛
 	self:_callistoSheet("aliothField", view ~= nil and (view.Aliot or 0) > 0, { "Ally" }, Color3.fromRGB(255, 200, 110), false)
 end
 
@@ -1187,13 +1187,13 @@ function BattleClient:_renderUnits()
 		end
 		local home = if unit.Cells
 			then BattleStage.BlockHome(self.layout, unit.Cells, GRID_WIDTH, GRID_HEIGHT, self.rayParams)
-			else self:_home("Enemy", unit.X, unit.Y)
+			else self:_home(unit.GridSide or "Enemy", unit.X, unit.Y)   -- 알코르 쌍둥이 = 적 편, 아군 진형(GridSide)
 		-- 사람 모양 적(칼리스토)은 아군처럼 칸 위 FLOAT_HEIGHT(_home 이 이미 0.4 올렸다)
 		if unit.DefId and EnemyDefinitions.IsValid(unit.DefId) and EnemyDefinitions.Get(unit.DefId).Humanoid then
 			home += Vector3.new(0, FLOAT_HEIGHT - 0.4, 0)
 		end
 		self:_ensureEnemyModel(id, unit.Name, home, unit.Part, unit.DefId)
-		-- 칼리스토 2·3페이지 무기: 북두칠성 망치(1페이지는 의체 칼날)
+		-- 칼리스토 2·3페이즈 무기: 북두칠성 망치(1페이즈는 의체 칼날)
 		if unit.DefId == "Callisto" and snapshot.Callisto and snapshot.Callisto.Page >= 2 then
 			director:SwapWeapon(id, "CallistoHammer")
 		end
@@ -1463,13 +1463,25 @@ function BattleClient:_paintTiles()
 			local planSkill = BattleSkills.ById(plan.SkillId)
 			local damaging = planSkill ~= nil and ((planSkill.Damage or 0) > 0 or planSkill.HpRatio ~= nil or planSkill.Inflicts == true) and not plan.Canceled
 			local callisto = unit.DefId == "Callisto"
+			-- 칼리스토 행·열 공격(페크다·메라크)은 지금 내가 선 행·열을 칠한다 — 옮길 때마다 다시 그려 실시간으로 따라온다(2026-11-01 질문 4)
+			local planCells = plan.Cells
+			if callisto and plan.Track and me and me.X and me.Y then
+				planCells = {}
+				for x = 1, GRID_WIDTH do
+					for y = 1, GRID_HEIGHT do
+						if (plan.Track == "Row" and y == me.Y) or (plan.Track == "Column" and x == me.X) then
+							table.insert(planCells, { x, y })
+						end
+					end
+				end
+			end
 			if damaging and (unit.Part or callisto) then
 				-- 칼리스토 연타는 묶음 하나("×N") · 추적(어디로 옮겨도 따라옴)·행열은 꼬리표로
 				local group = if callisto then enemyId .. ":" .. plan.SkillId else unit.Part .. ":" .. planSeen[enemyId]
 				local strikes = if callisto and unit.Plans and #unit.Plans > 1 then string.format(" ×%d", #unit.Plans) else ""
-				local track = if plan.Track == "Row" then " · 서 있는 행을 노림" elseif plan.Track == "Column" then " · 서 있는 열을 노림" elseif plan.Seek then " · 옮겨도 따라옴" else ""
+				local track = if plan.Track == "Row" then " · 내 행을 따라옴" elseif plan.Track == "Column" then " · 내 열을 따라옴" elseif plan.Seek then " · 옮겨도 따라옴" else ""
 				local label = (planSkill :: any).Name .. strikes .. track .. (if planSkill and planSkill.Unavoidable then " · 회피 불가" elseif planSkill and planSkill.GuardOnly then " · 막기만" elseif planSkill and planSkill.DodgeOnly then " · 회피만" else "")
-				for _, c in plan.Cells do
+				for _, c in planCells do
 					local key = c[1] .. "," .. c[2]
 					partRanges[key] = partRanges[key] or {}
 					local dup = false
@@ -1488,7 +1500,7 @@ function BattleClient:_paintTiles()
 					})
 				end
 			end
-			for _, c in plan.Cells do
+			for _, c in planCells do
 				if plan.SkillId == "DeleteCells" then
 					deleting[c[1] .. "," .. c[2]] = true
 				elseif not damaging then
@@ -1598,8 +1610,8 @@ function BattleClient:_paintTiles()
 				local cs = snapshot.Callisto
 				local gift = if cs.Party then "공격이 비껴감"
 					elseif cs.StarUsed and isMe then "회복함 · 가호"
-					else string.format("회복 %d%% · 피해 −%d%%", math.floor(cs.StarHeal * 100 + 0.5), math.floor(cs.StarGuard * 100 + 0.5))
-				callistoTag = string.format("★ %s\n+성위 %d", gift, cs.LureSeongwi or 2)
+					else string.format("회복 %d%% · 피해 −%d%% 2턴", math.floor(cs.StarHeal * 100 + 0.5), math.floor(cs.StarGuard * 100 + 0.5))
+				callistoTag = if cs.Party then "★ " .. gift else string.format("★ %s\n+성위 %d", gift, cs.LureSeongwi or 2)
 			end
 			BattleStage.Tag(
 				ally,
@@ -1840,7 +1852,7 @@ function BattleClient:_bindInput()
 			self.hud:SetBoss(self:_hpView(self.snapshot))
 			self.hud:SetCallisto(self:_hpView(self.snapshot))
 		end
-		-- 칼리스토 등장·페이지 전환 컷신(연출이 한가할 때 — 공격 연출과 겹치지 않게)
+		-- 칼리스토 등장·페이즈 전환 컷신(연출이 한가할 때 — 공격 연출과 겹치지 않게)
 		self:_callistoCutscene()
 		-- 내 차례(연출이 끝났고 막을 공격 · 기다리는 위협이 없음)면 "내 차례까지" 남겨 둔 화면 효과를 거둔다(조율자 셉텐트리오네스 화면 색)
 		if

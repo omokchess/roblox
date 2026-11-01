@@ -418,7 +418,7 @@ local bossSkills: { Skill } = {
 		callistoCells 가 예고 때 정한다(Shape 는 설명용). 피해 = 이 Damage 그대로(칼리스토 Power 0 — 디버그 적 공격력 배율만 곱한다).
 		괄호 안 연출 메모(블레이드 댄서 칼춤 등)는 사용자가 아케인 리니지에서 따온 레퍼런스.
 	]]
-	-- 1페이지 관찰자 칼리스토
+	-- 1페이즈 관찰자 칼리스토
 	{
 		Id = "CallistoSlash",
 		Name = "세시 파라티리시",
@@ -491,7 +491,7 @@ local bossSkills: { Skill } = {
 		Unavoidable = true,
 		BossKind = "Ultimate",
 	},
-	-- 3페이지 뭇별의 어머니 칼리스토
+	-- 3페이즈 뭇별의 어머니 칼리스토
 	{
 		Id = "CallistoResonance",
 		Name = "공명적 성위",
@@ -525,7 +525,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoSubmerge",
 		Name = "뭇별 아래에 잠기리",
-		Description = "- 3페이지 첫 턴에 바로 한 번만 씀.\n- 아군·적 가리지 않는 장판(10턴) — 회피 불가.\n- 장판 위 모두가 매 턴 최대 체력 5% 고정 피해.\n- 칼리스토는 매 턴 최대 체력 10%를 고정으로 잃음([잊혀져가는 성위]).",
+		Description = "- 3페이즈 첫 턴에 바로 한 번만 씀.\n- 아군·적 가리지 않는 장판(10턴) — 회피 불가.\n- 장판 위 모두가 매 턴 최대 체력 5% 고정 피해.\n- 칼리스토는 매 턴 최대 체력 10%를 고정으로 잃음([잊혀져가는 성위]).",
 		Damage = 0,
 		Range = "Ranged",
 		Shape = { Kind = "All" },
@@ -533,7 +533,7 @@ local bossSkills: { Skill } = {
 		Inflicts = true,
 		BossKind = "Gimmick",
 	},
-	-- 2페이지 성위 품은 자 칼리스토(무기: 북두칠성 모양 망치). 사양의 "알리오트"는 조율자와 같이 `알리오스`로, "듀베"는 [두베]로 적는다
+	-- 2페이즈 성위 품은 자 칼리스토(무기: 북두칠성 모양 망치). 사양의 "알리오트"는 조율자와 같이 `알리오스`로, "듀베"는 [두베]로 적는다
 	{
 		Id = "CallistoBuried",
 		Name = "수많은 성위 아래 파묻혀",

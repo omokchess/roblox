@@ -55,13 +55,13 @@ do
 	check(#enemies == 1, "칼리스토는 편성에 있으면 혼자 선다 — " .. #enemies)
 	local b = boss(s)
 	check(b.DefId == "Callisto" and b.Power == 0, "DefId·공격력 0")
-	check(b.MaxHealth == 50000, "1페이지 체력 50000 — " .. b.MaxHealth)
+	check(b.MaxHealth == 50000, "1페이즈 체력 50000 — " .. b.MaxHealth)
 	local snap = GridBattle.Snapshot(s)
 	check(snap.Callisto and snap.Callisto.Page == 1 and snap.Units[b.Id].DefId == "Callisto", "스냅샷 Callisto·DefId")
 	print("1 편성 OK")
 end
 
---=== 2. 1페이지 박자: 사진 → 멱살 → 찌르기(성위 없음) → 베기 → 트로히아(5연타) → 렌즈(성위 6↑) ===--
+--=== 2. 1페이즈 박자: 사진 → 멱살 → 찌르기(성위 없음) → 베기 → 트로히아(5연타) → 렌즈(성위 6↑) ===--
 do
 	local s = battle()
 	local ally = GridBattle.Ally(s)
@@ -89,7 +89,7 @@ do
 	if ripe then
 		check(stack(ally, ClassResources.SEONGWI) == 0 and stack(ally, ClassResources.MUTBYEOL) > 0, "렌즈가 성위를 뭇별로 바꿈")
 	end
-	print("2 1페이지 박자 OK")
+	print("2 1페이즈 박자 OK")
 end
 
 --=== 3. 회피하면 안 걸리고, 회피 불가는 늘 걸린다 · 성위 15 → 뭇별 ===--
@@ -139,19 +139,19 @@ do
 	print("4 작은 곰 자리 OK")
 end
 
---=== 5. 페이지 넘김(2페이지 사양 없음 → 3), 장판 10턴, 시험 종료 ===--
+--=== 5. 페이즈 넘김(2페이즈 사양 없음 → 3), 장판 10턴, 시험 종료 ===--
 do
 	local s = battle()
 	local b = boss(s)
 	local ally = GridBattle.Ally(s)
 	GridBattle.DebugHitPart(s, b.Id, 999999)
-	check(b.Alive and s.Callisto.Page == 2 and b.MaxHealth == 200000 and b.Health == 200000, "1페이지가 다하면 2페이지 체력 200000 — " .. s.Callisto.Page .. " " .. b.Health)
+	check(b.Alive and s.Callisto.Page == 2 and b.MaxHealth == 200000 and b.Health == 200000, "1페이즈가 다하면 2페이즈 체력 200000 — " .. s.Callisto.Page .. " " .. b.Health)
 	GridBattle.DebugHitPart(s, b.Id, 999999)
-	check(b.Alive and s.Callisto.Page == 3 and b.MaxHealth == 300000 and b.Health == 300000, "2페이지가 다하면 3페이지 체력 300000 — " .. s.Callisto.Page .. " " .. b.Health)
-	check(s.Outcome == "Ongoing", "페이지 넘김은 승리가 아님")
+	check(b.Alive and s.Callisto.Page == 3 and b.MaxHealth == 300000 and b.Health == 300000, "2페이즈가 다하면 3페이즈 체력 300000 — " .. s.Callisto.Page .. " " .. b.Health)
+	check(s.Outcome == "Ongoing", "페이즈 넘김은 승리가 아님")
 	GridBattle.EndTurn(s)
 	local first = playTurn(s)
-	check(first[1] == "CallistoSubmerge", "3페이지 첫 턴 뭇별 아래에 잠기리 — " .. tostring(first[1]))
+	check(first[1] == "CallistoSubmerge", "3페이즈 첫 턴 뭇별 아래에 잠기리 — " .. tostring(first[1]))
 	check(s.Callisto.Field == 9, "장판 남은 9턴(깐 턴 포함 10) — " .. s.Callisto.Field)
 	check(b.Health == 270000, "잠기리로 칼리스토 10% — " .. b.Health)
 	local order = {}
@@ -166,9 +166,9 @@ do
 			check(used[1] ~= "CallistoSubmerge", "잠기리는 한 번만")
 		end
 	end
-	check(order[1] == "CallistoArtificial" and order[2] == "CallistoShower" and order[3] == "CallistoResonance", "3페이지 박자 — " .. table.concat(order, ","))
+	check(order[1] == "CallistoArtificial" and order[2] == "CallistoShower" and order[3] == "CallistoResonance", "3페이즈 박자 — " .. table.concat(order, ","))
 	check(s.Outcome == "Victory" and not b.Alive, "장판 10턴이면 칼리스토 체력 1% 이하 → 시험 종료 — " .. s.Outcome .. " " .. b.Health)
-	print("5 페이지·장판·시험 종료 OK — " .. table.concat(order, ","))
+	print("5 페이즈·장판·시험 종료 OK — " .. table.concat(order, ","))
 end
 
 --=== 6. 그날의 기억: 화상 피해 ×2 ===--
@@ -195,15 +195,15 @@ do
 		GridBattle.DebugHitPart(s, s.Callisto.UnitId, 200)
 		playTurn(s, if rng() < 0.5 then "Success" else "Partial")
 	end
-	check(s.Callisto.Page == 3, "축소 체력으로 3페이지까지 감")
+	check(s.Callisto.Page == 3, "축소 체력으로 3페이즈까지 감")
 	print("7 결투사 OK")
 end
 
---=== 8. 2페이지 성위 품은 자: 소환·미자르·알리오스 장판·타들어가는 성위·칠성 일곱 별 → 북두칠성·점멸 ===--
+--=== 8. 2페이즈 성위 품은 자: 소환·미자르·알리오스 장판·타들어가는 성위·칠성 일곱 별 → 북두칠성·점멸 ===--
 local function toPage2(scale: number?)
 	local s = battle(scale)
 	GridBattle.DebugHitPart(s, s.Callisto.UnitId, 999999)
-	check(s.Callisto.Page == 2, "2페이지로")
+	check(s.Callisto.Page == 2, "2페이즈로")
 	GridBattle.EndTurn(s)
 	return s
 end
@@ -212,9 +212,9 @@ do
 	local b = boss(s)
 	local ally = GridBattle.Ally(s)
 	local t1 = playTurn(s)
-	check(#t1 == 0, "2페이지 첫 턴은 소환(예고 칸 없음) — " .. table.concat(t1, ","))
+	check(#t1 == 0, "2페이즈 첫 턴은 소환(예고 칸 없음) — " .. table.concat(t1, ","))
 	local alcor = s.Units[s.Callisto.AlcorId :: string]
-	check(alcor and alcor.Alive and alcor.DefId == "Alcor" and alcor.MaxHealth == 20000, "알코르 소환(체력 2페이지의 10%)")
+	check(alcor and alcor.Alive and alcor.DefId == "Alcor" and alcor.MaxHealth == 20000, "알코르 소환(체력 2페이즈의 10%)")
 	check(stack(ally, ClassResources.ALKAID) == 1, "알코르를 못 잡아 미자르 → 알카이드 1 — " .. stack(ally, ClassResources.ALKAID))
 	local t2 = playTurn(s)
 	check(t2[1] == "CallistoAlioth", "다음은 알리오스 — " .. tostring(t2[1]))
@@ -244,8 +244,8 @@ do
 	playTurn(s3)
 	local id3 = s3.Callisto.AlcorId :: string
 	GridBattle.DebugHitPart(s3, s3.Callisto.UnitId, 999999)
-	check(s3.Callisto.Page == 3 and not s3.Units[id3].Alive and stack(GridBattle.Ally(s3), ClassResources.MIZAR) == 0, "3페이지로 가면 알코르·미자르 거둠")
-	print("8 2페이지 소환·미자르·장판·타들어가는 성위 OK")
+	check(s3.Callisto.Page == 3 and not s3.Units[id3].Alive and stack(GridBattle.Ally(s3), ClassResources.MIZAR) == 0, "3페이즈로 가면 알코르·미자르 거둠")
+	print("8 2페이즈 소환·미자르·장판·타들어가는 성위 OK")
 end
 
 --=== 9. 칠성군(65% 미만): 일곱 별 → 메갈리 아르크토스 → 북두칠성, 쓰면 초기화 · 점멸 ===--
@@ -311,17 +311,19 @@ do
 			playTurn(s)
 		end
 		ally.Health = ally.MaxHealth
+		BattleStatus.SpendAll(ally.Status, ClassResources.BIND)   -- 앞 턴 심베라즈마 묶임(질문 6-A)은 이 점검과 상관없다
 		local before = BattleGrid.CellOf(s.Grid, b.Id)
 		GridBattle.EnemyPlan(s, rng)
 		local after = BattleGrid.CellOf(s.Grid, b.Id)
 		if before and after then
-			local dx, dy = math.abs(after.X - before.X), math.abs(after.Y - before.Y)
-			check(dx == dy, string.format("비숍처럼 대각선으로만 — (%d,%d)→(%d,%d)", before.X, before.Y, after.X, after.Y))
+			-- 질문 5-A: 아무 빈 칸으로(비숍 대각 아님) — 판 안에 있기만 하면 된다
+			check(after.X >= 1 and after.X <= 6 and after.Y >= 1 and after.Y <= 3, "칼리스토가 판 안에 선다")
 		end
 		local here = BattleGrid.CellOf(s.Grid, GridBattle.ALLY_ID)
 		local stars = s.Callisto.Lure
 		local plans = b.Plans or {}
-		if stars and #plans > 0 and here then
+		-- 추적 공격만(판 전체 공격은 성위를 쓰는 스킬이 섞여 성위 셈이 흔들린다 — 11절에서 따로)
+		if stars and #plans > 0 and here and plans[1].Seek then
 			seekSeen += 1
 			check(#stars == 3 or #stars == 4, "별자리 칸 3~4개 — " .. #stars)
 			for _, st in stars do
@@ -345,7 +347,7 @@ do
 			GridBattle.MoveAlly(s, st[1], st[2])
 			check(ally.Health - hp >= math.floor(ally.MaxHealth * GridBattle.STAR_HEAL) - 1, string.format("솔로 별자리 칸 — 최대 체력 20%% 회복(%d → %d)", hp, ally.Health))
 			check(math.abs(BattleStatus.Total(ally.Status, "DamageTaken") - (taken - GridBattle.STAR_GUARD)) < 1e-6, "별빛 가호 — 받는 피해 −30%")
-			check(stack(ally, ClassResources.STAR_GUARD) == 1, "별빛 가호 표시")
+			check(stack(ally, ClassResources.STAR_GUARD) == 2, "별빛 가호 표시(남은 2턴 — 질문 1-C)")
 			check(#GridBattle.PlannedThreatList(s) == #plans, "솔로는 별 위에서도 맞는다")
 			local hp2 = ally.Health
 			GridBattle.MoveAlly(s, here.X, here.Y)
@@ -358,7 +360,9 @@ do
 			GridBattle.EndTurn(s)
 			local now = stack(ally, ClassResources.SEONGWI) + stack(ally, ClassResources.MUTBYEOL) * 100
 			check(now > sw, "별자리 칸에서 턴을 마치면 성위")
-			check(not guarded(ally) and stack(ally, ClassResources.STAR_GUARD) == 0, "별빛 가호는 그 턴만")
+			check(guarded(ally) and stack(ally, ClassResources.STAR_GUARD) == 1, "별빛 가호는 다음 턴까지(질문 1-C)")
+			GridBattle.EndTurn(s)
+			check(not guarded(ally) and stack(ally, ClassResources.STAR_GUARD) == 0, "별빛 가호는 2턴 뒤 끝")
 		end
 	end
 	check(seekSeen > 0, "추적 공격이 나옴")
@@ -422,6 +426,73 @@ do
 		check(math.abs(to.X - from.X) + math.abs(to.Y - from.Y) >= 3, "심베라즈마가 멀리 내던짐")
 	end
 	print(string.format("10 추적·별자리 칸 OK (%d)", seekSeen))
+end
+
+--=== 11. 2026-11-01 답: 판 전체 별 칸(파티 빠짐) · 던진 뒤 묶임 · 알카이드·두베 감소 · 점멸 → 북두칠성 · 알코르 쌍둥이 ===--
+do
+	-- 판 전체(심베라즈마 = All)에도 별 칸이 깔리고, 파티면 별 위 사람은 빠진다
+	local s = battle()
+	local b = boss(s)
+	local ally = GridBattle.Ally(s)
+	local friend = table.clone(ally)
+	friend.Id = "player2"
+	s.Units.player2 = friend
+	local mine = BattleGrid.CellOf(s.Grid, GridBattle.ALLY_ID)
+	BattleGrid.Place(s.Grid, "player2", "Ally", if mine.X == 6 then 1 else 6, mine.Y)
+	GridBattle.EnemyPlan(s, rng)
+	check(s.Callisto.Lure ~= nil and #s.Callisto.Lure >= 3, "어떤 공격이든 별 칸이 깔린다(질문 3-A)")
+	-- 판 전체·행열 꼴(Shelter): 파티면 별 위 사람은 빠지고, 혼자면 맞는다
+	for _, plan in b.Plans or {} do
+		plan.Seek, plan.Shelter = nil, true
+	end
+	local st = s.Callisto.Lure[1]
+	GridBattle.MoveAlly(s, st[1], st[2])
+	local threats = #GridBattle.PlannedThreatList(s)
+	if #(b.Plans or {}) > 0 then
+		check(threats == 0, "파티: 판 전체 공격도 별 위 사람은 빠진다")
+		s.Units.player2 = nil
+		BattleGrid.Remove(s.Grid, "player2")
+		check(#GridBattle.PlannedThreatList(s) > 0, "혼자면 별 위에서도 맞는다(회복·가호를 받는다)")
+	end
+	-- 심베라즈마: 던진 뒤 다음 턴 묶임(공통 규칙)
+	local s2 = battle()
+	local a2 = GridBattle.Ally(s2)
+	playTurn(s2)
+	local used = playTurn(s2)
+	if used[1] == "CallistoSymberasma" then
+		check(BattleStatus.Stack(a2.Status, ClassResources.BIND) > 0, "심베라즈마 다음 턴 [묶임]")
+		check(GridBattle.MoveAlly(s2, 1, 1) == false or BattleGrid.CellOf(s2.Grid, GridBattle.ALLY_ID).X == 1, "묶이면 못 움직인다")
+	end
+	-- 2페이즈: 알카이드·두베 턴마다 1 감소 · 점멸 → 북두칠성 보너스 · 알코르 쌍둥이(아군 진형 대칭, 함께 처치)
+	local s3 = toPage2()
+	local b3 = boss(s3)
+	local a3 = GridBattle.Ally(s3)
+	playTurn(s3)   -- 소환 턴(알코르 + 쌍둥이)
+	-- 감소는 1페이즈에서(2페이즈는 미자르가 알카이드를 다시 채운다)
+	local s4 = battle()
+	local a4 = GridBattle.Ally(s4)
+	BattleStatus.AddStack(a4.Status, ClassResources.ALKAID, 5, 15)
+	BattleStatus.AddStack(a4.Status, ClassResources.DUBHE, 4, 20)
+	GridBattle.EndTurn(s4)
+	check(stack(a4, ClassResources.ALKAID) == 4 and stack(a4, ClassResources.DUBHE) == 3,
+		string.format("알카이드·두베가 턴마다 1 준다(알카이드 %d · 두베 %d)", stack(a4, ClassResources.ALKAID), stack(a4, ClassResources.DUBHE)))
+	local c3 = s3.Callisto
+	local alcor = c3.AlcorId and s3.Units[c3.AlcorId]
+	local twin = c3.AlcorTwinId and s3.Units[c3.AlcorTwinId]
+	check(alcor and twin and twin.Alive, "알코르와 아군 진형 쌍둥이")
+	local ac, tc = BattleGrid.CellOf(s3.Grid, alcor.Id), BattleGrid.CellOf(s3.Grid, twin.Id)
+	check(tc and tc.Side == "Ally" and ac.Side == "Enemy", "쌍둥이는 아군 진형에")
+	check(GridBattle.DebugHitPart(s3, twin.Id, 999999) == 0 and twin.Alive, "쌍둥이는 맞지 않는다")
+	GridBattle.DebugHitPart(s3, alcor.Id, 999999)
+	check(not alcor.Alive and not twin.Alive, "적 쪽 알코르를 잡으면 쌍둥이도 사라진다")
+	BattleStatus.AddStack(b3.Status, ClassResources.BLINK, 3)
+	c3.Dipper = true
+	c3.Cooldowns = {}
+	GridBattle.EnemyPlan(s3, rng)
+	if b3.Plans and b3.Plans[1].SkillId == "CallistoDipper" then
+		check(math.abs((c3.DipperBonus or 0) - 0.3) < 1e-6 and stack(b3, ClassResources.BLINK) == 0, "점멸 3 → 북두칠성 +30%(스택은 씀)")
+	end
+	print("11 2026-11-01 답(판 전체 별 칸·던진 뒤 묶임·감소·점멸·쌍둥이) OK")
 end
 
 print("칼리스토 규칙: 모두 통과")

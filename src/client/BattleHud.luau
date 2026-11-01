@@ -2098,7 +2098,7 @@ end
 local STARLIGHT = Color3.fromRGB(150, 190, 255)
 
 --[[
-	위 가운데 체력바: 이름 · 페이지 · 체력, 큰 체력바, 꼬리표(작은 곰 자리 · 장판 남은 턴 · 이번 턴 예고).
+	위 가운데 체력바: 이름 · 페이즈 · 체력, 큰 체력바, 꼬리표(작은 곰 자리 · 장판 남은 턴 · 이번 턴 예고).
 	snapshot.Callisto 가 없으면 숨긴다. 체력은 맞는 순간마다 줄어드는 보이는 값(BattleClient._hpView).
 ]]
 function BattleHud:SetCallisto(snapshot: any?)
@@ -2138,7 +2138,7 @@ function BattleHud:SetCallisto(snapshot: any?)
 	make("TextLabel", {
 		Size = UDim2.new(0, 420, 1, 0),
 		BackgroundTransparency = 1,
-		Text = string.format('<b>%s</b>   <font color="%s">%d페이지 · %s</font>', def.Name, hex(STARLIGHT), view.Page, view.PageName),
+		Text = string.format('<b>%s</b>   <font color="%s">%d페이즈 · %s</font>', def.Name, hex(STARLIGHT), view.Page, view.PageName),
 		RichText = true,
 		TextColor3 = BONE,
 		Font = Enum.Font.GothamBold,
@@ -2212,8 +2212,8 @@ function BattleHud:SetCallisto(snapshot: any?)
 end
 
 --[[
-	정보 창(보스 정보 창 틀을 같이 쓴다): 위 줄 = 페이지 탭(사양이 있는 페이지만), 아래 줄 = 액티브 · 패시브 · 기믹 · 이야기.
-	focus = "Callisto:<페이지>"(없으면 지금 페이지).
+	정보 창(보스 정보 창 틀을 같이 쓴다): 위 줄 = 페이즈 탭(사양이 있는 페이즈만), 아래 줄 = 액티브 · 패시브 · 기믹 · 이야기.
+	focus = "Callisto:<페이즈>"(없으면 지금 페이즈).
 ]]
 function BattleHud:ShowCallistoInfo(snapshot: any, focus: string?)
 	local view = snapshot and snapshot.Callisto
@@ -2241,7 +2241,7 @@ function BattleHud:ShowCallistoInfo(snapshot: any, focus: string?)
 	local sep = string.format('<font color="%s">   |   </font>', hex(Color3.fromRGB(80, 74, 66)))
 	self.bossStats.Text = table.concat({
 		statPart("체력", if unit then string.format("%s / %s", comma(math.max(0, unit.Health or 0)), comma(unit.MaxHealth or 0)) else "-"),
-		statPart("", string.format("%d턴 · 지금 %d페이지", snapshot.Turn or 1, view.Page)),
+		statPart("", string.format("%d턴 · 지금 %d페이즈", snapshot.Turn or 1, view.Page)),
 		statPart("무기", pageDef.Weapon),
 	}, sep)
 
@@ -2259,7 +2259,7 @@ function BattleHud:ShowCallistoInfo(snapshot: any, focus: string?)
 	table.sort(numbers)
 	for i, n in numbers do
 		local key = "Callisto:" .. n
-		local label = string.format("%d페이지 %s%s", n, pages[n].Name, if n == view.Page then string.format(' <font color="%s">●</font>', hex(RED)) else "")
+		local label = string.format("%d페이즈 %s%s", n, pages[n].Name, if n == view.Page then string.format(' <font color="%s">●</font>', hex(RED)) else "")
 		tabButton(self.bossPartRow, label, key == focus, STARLIGHT, i, n < view.Page, true).Activated:Connect(function()
 			if self.bossFocus ~= key and self.bossSnapshot then
 				self:ShowCallistoInfo(self.bossSnapshot, key)
@@ -2272,7 +2272,7 @@ function BattleHud:ShowCallistoInfo(snapshot: any, focus: string?)
 	end
 	local gimmicks = table.clone(def.Gimmicks or {})
 	if pageDef.Gimmick then
-		table.insert(gimmicks, 1, { Name = "페이지 기믹", Description = pageDef.Gimmick })
+		table.insert(gimmicks, 1, { Name = "페이즈 기믹", Description = pageDef.Gimmick })
 	end
 	local TABS = {
 		{ "Active", "액티브", CRIMSON, #pageDef.Moves },

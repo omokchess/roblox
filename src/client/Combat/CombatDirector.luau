@@ -349,7 +349,7 @@ function CombatDirector:AddCallisto(id: string, parent: Instance, home: CFrame)
 	return actor
 end
 
--- 칼리스토 2페이지 소환체 알코르: 떠 있는 작은 별(Combat/Alcor). 슬라임과 같은 틀(고정 부품 · Pivot), 모션 Motions/Callisto.Alcor
+-- 칼리스토 2페이즈 소환체 알코르: 떠 있는 작은 별(Combat/Alcor). 슬라임과 같은 틀(고정 부품 · Pivot), 모션 Motions/Callisto.Alcor
 function CombatDirector:AddAlcor(id: string, parent: Instance, home: CFrame)
 	self:Remove(id)
 	local model = Alcor.Build("Alcor_" .. id)
@@ -385,7 +385,7 @@ function CombatDirector:AddAlcor(id: string, parent: Instance, home: CFrame)
 end
 
 --[[
-	사람 배우의 무기를 바꿔 든다(칼리스토 2페이지: 의체 칼날 → 북두칠성 망치). 대기 자세도 새 무기 종류(CombatMotions.ByType)로.
+	사람 배우의 무기를 바꿔 든다(칼리스토 2페이즈: 의체 칼날 → 북두칠성 망치). 대기 자세도 새 무기 종류(CombatMotions.ByType)로.
 ]]
 function CombatDirector:SwapWeapon(id: string, weaponId: string)
 	local a = self.Actors[id]
@@ -905,7 +905,7 @@ function CombatDirector:_moodFor(a: Actor, skillId: string, onDone: (() -> ())?)
 	end
 end
 
--- 기본 표정(페이지마다 — 칼리스토 1 Observe · 2 Resolve · 3 Sorrow)
+-- 기본 표정(페이즈마다 — 칼리스토 1 Observe · 2 Resolve · 3 Sorrow)
 function CombatDirector:SetMood(id: string, mood: string)
 	local a = self.Actors[id]
 	if a and a.Face then
@@ -913,7 +913,7 @@ function CombatDirector:SetMood(id: string, mood: string)
 	end
 end
 
--- 칼리스토 페이지 모습(2 = 우주 머리, 3 = 우주 몸 — Combat/Callisto.SetPage). 칼리스토가 아니면 아무 일도 없다
+-- 칼리스토 페이즈 모습(2 = 우주 머리, 3 = 우주 몸 — Combat/Callisto.SetPage). 칼리스토가 아니면 아무 일도 없다
 function CombatDirector:SetCallistoPage(id: string, page: number)
 	local a = self.Actors[id]
 	if a and a.Model then

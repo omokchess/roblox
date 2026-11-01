@@ -476,7 +476,7 @@ local function spectatePacket(player: Player, session: Session, snapshot: any): 
 	local units = {}
 	for id, u in snapshot.Units do
 		units[id] = {
-			Name = u.Name, Side = u.Side, X = u.X, Y = u.Y, Alive = u.Alive,
+			Name = u.Name, Side = u.Side, X = u.X, Y = u.Y, GridSide = u.GridSide, Alive = u.Alive,
 			Health = u.Health, MaxHealth = u.MaxHealth, Stunned = u.Stunned,
 			-- 보스 부위(디버그): 관전하는 쪽도 같은 몸을 그린다
 			Part = u.Part, Cells = u.Cells,

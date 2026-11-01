@@ -71,7 +71,7 @@ ClassResources.RAGE = "Rage"
 ClassResources.STAR = "Star" -- 칠성(최대 7, 턴이 지나도 남음)
 ClassResources.MELT = "Melt" -- 융해(적에게, 특수 화상 — 턴 끝에 터진다)
 ClassResources.FUSION = "Fusion" -- 핵융합 반응(최대 1, 남은 세기는 보정값 "핵융합 반응"이 든다)
-ClassResources.BIND = "Bind" -- 묶임(미자르 — 그 턴 움직이지 못한다)
+ClassResources.BIND = "Bind" -- 묶임(공통 상태이상 — 그 턴 움직이지 못한다. 미자르·심베라즈마가 건다, 턴 끝에 풀림)
 
 -- 청의 검사(조건부 획득)
 ClassResources.CONCENTRATION = "Concentration" -- 집중력(도발로 얻고, 2턴 뒤 사라진다)
@@ -83,7 +83,7 @@ ClassResources.GOCHAL = "Gochal" -- 고찰(특수 도발)
 ClassResources.SYMBERASMA = "Symberasma" -- 심베라즈마(방어력 −20%, 남은 턴)
 ClassResources.BLADE_SCAR = "BladeScar" -- 칼춤 상처(아스트로 세시 — 방어력 −15%, 남은 턴)
 ClassResources.URSA_MINOR = "UrsaMinor" -- 작은 곰 자리(칼리스토 자신)
--- 칼리스토 2페이지(성위 품은 자) — 아군에게: 두베·알카이드·미자르 / 칼리스토 자신: 성위 - 칠성 · 성위 - 점멸
+-- 칼리스토 2페이즈(성위 품은 자) — 아군에게: 두베·알카이드·미자르 / 칼리스토 자신: 성위 - 칠성 · 성위 - 점멸
 ClassResources.DUBHE = "StarDubhe" -- 두베(1스택당 방어력 −2%, 최대 20)
 ClassResources.ALKAID = "StarAlkaid" -- 알카이드(특수 화상, 턴 끝 스택 × 3 피해, 최대 15)
 ClassResources.MIZAR = "StarMizar" -- 미자르(특수 도발 — 알코르를 그 턴에 못 잡으면 다음 턴 알카이드 1)
@@ -238,7 +238,7 @@ local BY_CLASS: { [string]: { string } } = {
 		ClassResources.OVERHEAL,
 	},
 	Berserker = { ClassResources.RAGE },
-	Attuner = { ClassResources.STAR, ClassResources.FUSION, ClassResources.BIND },
+	Attuner = { ClassResources.STAR, ClassResources.FUSION },
 	AzureBlade = { ClassResources.CONCENTRATION },
 }
 

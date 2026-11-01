@@ -115,7 +115,7 @@ M.Attuner_Kit = {
 	},
 	TurnEnd = function(c: Card)
 		local ally = H.Ally(c)
-		BattleStatus.SpendAll(ally.Status, R.BIND)
+		-- [묶임]은 공통 상태이상 — 턴 끝 풀기는 GridBattle.EndTurn 이 누구에게나(2026-11-01)
 		if H.Stack(c, R.FUSION) > 0 then
 			ally.FusionAge = (ally.FusionAge or 0) + 1
 			BattleSkillEffects.ApplyFusion(ally.Status, ally.FusionAge, Q(c.Rt, "FusionTakenDrop", 0.5))
@@ -165,8 +165,9 @@ M.Attuner_Mizar = {
 		end
 		c.Mem.skipped = if pick == me then 0 else (c.Mem.skipped or 0) + 1
 		if not mode(c, "MizarBurn") then
-			-- 묶임은 디버그 검수와 같은 규칙: 묶이면 그 뒤 두 턴 면역(BattleSkillEffects.TryBind)
-			if Q(c.Rt, "MizarNoBind", 0) < 1 then
+			-- 묶임은 디버그 검수와 같은 규칙: 묶이면 그 뒤 두 턴 면역(BattleSkillEffects.TryBind).
+			-- 혼자일 때는 묶지 않는다(2026-11-01 질문 16-B — 보호막·피해 버프만)
+			if Q(c.Rt, "MizarNoBind", 0) < 1 and #allies > 1 then
 				BattleSkillEffects.TryBind(pick.Status)
 			end
 			local shield = math.floor(Q(c.Rt, "MizarShield", 49) * shieldScale(c))

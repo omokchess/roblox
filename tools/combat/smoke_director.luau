@@ -722,7 +722,7 @@ do
 	print(string.format("%-12s %s", "보스 통합", if #failures == before then "통과" else "오류 " .. (#failures - before)))
 end
 
--- 칼리스토 통합(2026-10-31): 사람 모양 적 몸(R6 + 의체)·칸 옮김·연타 예고(계획마다 한 번씩)·페이지 넘김·장판이 연출과 맞물리는지
+-- 칼리스토 통합(2026-10-31): 사람 모양 적 몸(R6 + 의체)·칸 옮김·연타 예고(계획마다 한 번씩)·페이즈 넘김·장판이 연출과 맞물리는지
 do
 	local before = #failures
 	try("칼리스토 통합", function()
@@ -792,7 +792,7 @@ do
 			end
 			if state.Callisto then
 				pages[state.Callisto.Page] = true
-				-- 페이지 모습(우주 머리·몸)도 돌려 본다
+				-- 페이즈 모습(우주 머리·몸)도 돌려 본다
 				director:SetCallistoPage(state.Callisto.UnitId, state.Callisto.Page)
 			end
 			GridBattle.EndTurn(state)
@@ -806,7 +806,7 @@ do
 			table.insert(failures, "칼리스토 통합: 살아 있는 칼리스토의 몸이 없음")
 		end
 		if not pages[2] or not pages[3] then
-			table.insert(failures, "칼리스토 통합: 2·3페이지까지 가지 못함")
+			table.insert(failures, "칼리스토 통합: 2·3페이즈까지 가지 못함")
 		end
 		local names = {}
 		for id in seenSkills do

@@ -42,7 +42,7 @@ export type EnemyDefinition = {
 	]]
 	Humanoid: boolean?,
 	Solo: boolean?,
-	-- 전투 페이지(칼리스토). 페이지마다 이름·체력·무기·행동·패시브. 번호가 빠진 페이지는 건너뛴다(GridBattle callistoNextPage)
+	-- 전투 페이즈(칼리스토). 페이즈마다 이름·체력·무기·행동·패시브. 번호가 빠진 페이즈는 건너뛴다(GridBattle callistoNextPage)
 	Pages: { [number]: { Name: string, Health: number, Weapon: string, Moves: { BossMove }, Passives: { { Name: string, Description: string } }, Gimmick: string? } }?,
 	-- 정보 창 [이야기] 칸
 	Lore: { { Name: string, Description: string } }?,
@@ -189,7 +189,7 @@ local definitions: { [string]: EnemyDefinition } = {
 		히든 보스 칼리스토(2026-10-31 사용자 사양 — 밸런스는 사용자도 모른다고 해 사양 숫자 그대로).
 		큰곰자리 · 천문학자 · 시인. 사람 모양이라 칸을 옮겨 다니고 적 칸이 보인다.
 		규칙은 GridBattle "보스: 칼리스토" 절, 스킬은 BattleSkills 의 Callisto* 스킬.
-		페이지 2(성위 품은 자)는 같은 날 사양을 받아 넣었다 — 1 → 2 → 3.
+		페이즈 2(성위 품은 자)는 같은 날 사양을 받아 넣었다 — 1 → 2 → 3.
 		공격력 0: 스킬 피해 = 사양 숫자(디버그 패널 적 공격력 배율만 곱한다).
 	]]
 	Callisto = {
@@ -208,13 +208,13 @@ local definitions: { [string]: EnemyDefinition } = {
 			{ Name = "조우", Description = "- 성위 3개를 얻으면 천문대 입구가 열림.\n- 천문대 안에서 칼리스토와 대화한 뒤 선택지로 전투.\n- 성위를 조사하러 천문대에 들어간 길이다." },
 		},
 		Passives = {
-			{ Name = "그날의 기억", Description = "- 모든 페이지 공통.\n- 칼리스토는 [화상] 피해를 두 배로 받음." },
+			{ Name = "그날의 기억", Description = "- 모든 페이즈 공통.\n- 칼리스토는 [화상] 피해를 두 배로 받음." },
 		},
 		Gimmicks = {
 			{ Name = "성위 → 뭇별", Description = "- [성위]가 15스택이 되면 [성위]가 사라지고 [뭇별]을 얻음(5턴).\n- [뭇별]: 방어력 −20% · 공격력 −10%." },
 			{ Name = "칸 이동", Description = "- 사람 모양이라 매 턴 적 칸을 옮겨 다님.\n- 줄 공격을 할 땐 아군이 선 줄로 옮겨 섬." },
-			{ Name = "페이지", Description = "- 1·2페이지 체력이 다하면 다음 페이지로(쓰러지지 않음).\n- 1페이지 관찰자 → 2페이지 성위 품은 자 → 3페이지 뭇별의 어머니." },
-			{ Name = "알코르", Description = "- 2페이지 소환체. 공격하지 않음.\n- 살아 있는 동안 대상의 [미자르]가 남아 턴마다 [알카이드] 1.\n- 칼리스토가 다음 페이지로 넘어가면 사라짐." },
+			{ Name = "페이즈", Description = "- 1·2페이즈 체력이 다하면 다음 페이즈로(쓰러지지 않음).\n- 1페이즈 관찰자 → 2페이즈 성위 품은 자 → 3페이즈 뭇별의 어머니." },
+			{ Name = "알코르", Description = "- 2페이즈 소환체. 공격하지 않음.\n- 살아 있는 동안 대상의 [미자르]가 남아 턴마다 [알카이드] 1.\n- 칼리스토가 다음 페이즈로 넘어가면 사라짐." },
 		},
 		Pages = {
 			[1] = {
@@ -260,14 +260,14 @@ local definitions: { [string]: EnemyDefinition } = {
 			[3] = {
 				Name = "뭇별의 어머니 칼리스토",
 				Health = 300000,
-				Weapon = "북두칠성 모양 망치(2페이지와 같음)",
+				Weapon = "북두칠성 모양 망치(2페이즈와 같음)",
 				Gimmick = "10턴 동안 광역 장판 피해 버티기",
 				Passives = {
 					{ Name = "잊혀져가는 성위", Description = "- `뭇별 아래에 잠기리`로 받는 피해를 자기 최대 체력의 10%씩 고정으로 받음." },
 					{ Name = "시험 종료", Description = "- 칼리스토 체력이 1% 이하가 되면 전투 종료(승리)." },
 				},
 				Moves = {
-					{ Id = "CallistoSubmerge", When = "3페이지 첫 턴 바로 · 한 번만" },
+					{ Id = "CallistoSubmerge", When = "3페이즈 첫 턴 바로 · 한 번만" },
 					{ Id = "CallistoArtificial", When = "재사용 대기가 끝나면 먼저(4턴)" },
 					{ Id = "CallistoShower", When = "그다음(2턴)" },
 					{ Id = "CallistoResonance", When = "평타 · 둘 다 대기 중이면" },

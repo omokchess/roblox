@@ -234,7 +234,7 @@ local function render(view: View)
 			continue
 		end
 		-- 보스 부위(디버그)는 차지한 칸들 가운데에 부위 몸으로
-		local h = if unit.Cells then BattleStage.BlockHome(view.Layout, unit.Cells, W, H, nil) else home(view, "Enemy", unit.X, unit.Y)
+		local h = if unit.Cells then BattleStage.BlockHome(view.Layout, unit.Cells, W, H, nil) else home(view, unit.GridSide or "Enemy", unit.X, unit.Y)
 		-- 사람 모양 적(칼리스토)은 아군처럼 칸 위 FLOAT_HEIGHT
 		if unit.DefId == "Callisto" then
 			h += Vector3.new(0, FLOAT_HEIGHT - 0.4, 0)

@@ -1,6 +1,6 @@
 --!strict
 --[[
-	Callisto — 히든 보스 칼리스토의 몸·옷·얼굴·페이지 모습.
+	Callisto — 히든 보스 칼리스토의 몸·옷·얼굴·페이즈 모습.
 	2026-10-31 1·2판(파트 드레스·그린 얼굴) → 2026-11-01 3판(사용자):
 	  "전체적으로 갈색 톤에 재킷을 걸치고(단추를 잠그지 않은 채 열림), 안에는 와이셔츠, 바지는 검은 바지 — 의수를 끼고, 의수 팔은 검을 끼고 있어야"
 	  "머리카락은 카탈로그 Carmen" · "1페이즈 눈은 별무리로 가려 안 보이게, 눈·입·코 자리를 조정해 데포르메"
@@ -11,11 +11,11 @@
 	      Host(관절 부품) · Offset(그 부품에서 본 CFrame) 대로 붙인다. 오른팔 = 스팀펑크 의수(관절 팔은 투명) — 검은 무기 CallistoArms(Main)
 	  머리 ReplicatedStorage.CallistoAssets.Hair(카탈로그 70421887676551 "Carmen") — 손잡이를 머리 HairAttachment(0, 0.6, 0)에 맞춰 용접
 	  들여온 것이 없으면(시험 환경) 맨몸 관절만.
-	얼굴(1페이지) — 고전 머리 앞 투명 판(FacePlate)의 SurfaceGui: 눈 자리를 덮는 별무리 띠(반짝이는 별, 표정마다 밝기), 둥근 눈썹,
+	얼굴(1페이즈) — 고전 머리 앞 투명 판(FacePlate)의 SurfaceGui: 눈 자리를 덮는 별무리 띠(반짝이는 별, 표정마다 밝기), 둥근 눈썹,
 	  작은 코, 아래로 내린 작은 입, 크고 둥근 볼터치(데포르메), 띠 밑으로 흐르는 눈물.
 	  Callisto.FaceOf(model) → face:Set(mood, 초?) 잠깐 표정 · face:SetBase(mood) 기본 표정
 	  표정: Observe(1) · Resolve(2) · Sorrow(3, 눈물) · Attack · Aim · Cast · Hit · Guard · Dodge · Death · Smile
-	페이지 — Callisto.SetPage(model, page)(한 번 넘어가면 되돌리지 않는다)
+	페이즈 — Callisto.SetPage(model, page)(한 번 넘어가면 되돌리지 않는다)
 	  2  얼굴·머리·머리카락을 감추고 우주 머리: 유리 껍질 속 깊은 밤 + 성운 빛 + 별 입자 · 비스듬한 은하 원반 · 도는 별 셋 · 뒤로 흐르는 별빛 머리칼
 	  3  옷·머리카락을 다 감추고 몸 관절이 밤하늘 유리(별 입자)로 — 몸통 앞엔 큰곰자리, 팔다리엔 별 셋과 빛줄(별자리)
 	등 뒤 혼천의(고리 셋 + 별 핵 + 행성)와 둘레의 별가루는 그대로(천문학자).
@@ -97,7 +97,7 @@ local function stars(parent: Instance, rate: number, size: number, shape: Enum.P
 	return e
 end
 
---=== 얼굴(1페이지 — SurfaceGui) ===--
+--=== 얼굴(1페이즈 — SurfaceGui) ===--
 
 local FACE_W, FACE_H = 200, 180
 local FACE_TWEEN = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -342,7 +342,7 @@ local function buildFace(plate: BasePart): Face
 end
 
 local faces: { [Model]: any } = setmetatable({}, { __mode = "k" }) :: any
--- 페이지 모습에 쓰는 것: 입은 것(옷·머리카락) · 지금 페이지 · 우주 머리의 도는 관절
+-- 페이즈 모습에 쓰는 것: 입은 것(옷·머리카락) · 지금 페이즈 · 우주 머리의 도는 관절
 type Look = { Dressed: { BasePart }, Page: number, Disc: Motor6D?, Orbits: { Motor6D } }
 local looks: { [Model]: Look } = setmetatable({}, { __mode = "k" }) :: any
 
@@ -351,9 +351,9 @@ function Callisto.FaceOf(model: Model): Face?
 	return faces[model]
 end
 
---=== 페이지 모습 ===--
+--=== 페이즈 모습 ===--
 
--- 2페이지: 얼굴·머리·머리카락을 감추고 우주 머리(머리 관절에 붙어 모션을 따라간다)
+-- 2페이즈: 얼굴·머리·머리카락을 감추고 우주 머리(머리 관절에 붙어 모션을 따라간다)
 local function cosmicHead(model: Model, look: Look, head: BasePart)
 	head.Transparency = 1
 	local plate = model:FindFirstChild("FacePlate")
@@ -402,7 +402,7 @@ local function cosmicHead(model: Model, look: Look, head: BasePart)
 	stream.Color = ColorSequence.new(C(230, 236, 255), C(150, 110, 255))
 end
 
--- 3페이지: 옷·머리카락을 모두 감추고 몸 관절이 밤하늘 유리로(별 입자 + 별자리)
+-- 3페이즈: 옷·머리카락을 모두 감추고 몸 관절이 밤하늘 유리로(별 입자 + 별자리)
 local CONSTELLATIONS: { [string]: { { number } } } = {
 	-- 몸통 앞: 큰곰자리(국자 넷 + 손잡이 셋)
 	Torso = { { -0.62, 0.45 }, { -0.18, 0.52 }, { -0.12, 0.1 }, { -0.6, 0.02 }, { 0.22, -0.05 }, { 0.5, -0.3 }, { 0.78, -0.6 } },
@@ -445,7 +445,7 @@ local function cosmicBody(model: Model, look: Look)
 end
 
 --[[
-	페이지 모습을 맞춘다(2 = 우주 머리, 3 = 우주 몸). 전투 화면이 스냅숏마다 부른다 — 이미 그 페이지면 아무 일도 없고, 되돌리지 않는다.
+	페이즈 모습을 맞춘다(2 = 우주 머리, 3 = 우주 몸). 전투 화면이 스냅숏마다 부른다 — 이미 그 페이즈면 아무 일도 없고, 되돌리지 않는다.
 ]]
 function Callisto.SetPage(model: Model, page: number)
 	local look = looks[model]

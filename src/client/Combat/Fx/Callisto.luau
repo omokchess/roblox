@@ -220,7 +220,7 @@ function Fx.Submerge(ctx: any)
 	end)
 end
 
---=== 표정 · 등장 · 페이지 전환 ===--
+--=== 표정 · 등장 · 페이즈 전환 ===--
 
 -- 모션 도중 표정 바꾸기(사건 { n = "Mood", m = 표정, d = 초 }) — 그린 얼굴(Combat/Callisto)이 있을 때만
 function Fx.Mood(ctx: any, ev: any)
@@ -269,7 +269,7 @@ function Fx.PageBurst(ctx: any)
 	Vfx.Burst(p + Vector3.new(0, 1.5, 0), { Count = 24, Colors = { STAR, STAR_CORE }, Size = 0.35, Speed = 20, Life = 0.9, Gravity = -6, Material = Enum.Material.Neon })
 end
 
---=== 2페이지 성위 품은 자 — 북두칠성 망치 ===--
+--=== 2페이즈 성위 품은 자 — 북두칠성 망치 ===--
 
 local GOLDEN = c(255, 214, 130)
 

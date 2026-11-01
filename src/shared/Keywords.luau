@@ -675,9 +675,9 @@ local LIST: { Keyword } = {
 		Id = "Bind",
 		Name = "묶임",
 		Kind = "Debuff",
-		Description = "- 그 턴 동안 칸을 옮길 수 없음.\n"
+		Description = "- 상태이상. 그 턴 동안 칸을 옮길 수 없고, 턴이 끝나면 풀림.\n"
 			.. "- 한 번 묶이면 그 뒤 2턴 동안은 다시 묶이지 않음.\n"
-			.. "  - 조율자 `미자르`와 디버그 검수 묶임이 같은 규칙·같은 면역을 씀.",
+			.. "  - 조율자 `미자르`(파티일 때)·칼리스토 `심베라즈마`·디버그 검수가 같은 규칙·같은 면역을 씀.",
 		Scalable = false,
 		Unit = "",
 		Color = "#b7a4d6",
@@ -756,14 +756,14 @@ local LIST: { Keyword } = {
 		Id = "UrsaMinor",
 		Name = "작은 곰 자리",
 		Kind = "Buff",
-		Description = "- 칼리스토 체력이 50% 미만이면 얻음(1페이지).\n"
+		Description = "- 칼리스토 체력이 50% 미만이면 얻음(1페이즈).\n"
 			.. "- `아스트로 세시`를 쓸 수 있음.\n"
 			.. "- `미크리 아르크토스 하라시`가 [화상] 5를 더 부여.",
 		Scalable = false,
 		Unit = "",
 		Color = "#7fe3d0",
 	},
-	-- 칼리스토 2페이지 성위 품은 자
+	-- 칼리스토 2페이즈 성위 품은 자
 	{
 		Id = "StarDubhe",
 		Name = "두베",
@@ -824,7 +824,7 @@ local LIST: { Keyword } = {
 		Name = "별빛 가호",
 		Kind = "Buff",
 		Description = "- 혼자 싸울 때 칼리스토의 별자리 칸에 올라서면 얻음(체력 20% 회복과 함께).\n"
-			.. "- 이번 턴 받는 피해 30% 감소.",
+			.. "- 2턴 동안 받는 피해 30% 감소.",
 		Scalable = false,
 		Unit = "",
 		Color = "#bfe3ff",
