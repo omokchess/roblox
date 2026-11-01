@@ -287,17 +287,73 @@ MARKS.append(("Spot", rx, ry_ + 1.4, rz - 22, {"SpotName": "휴식처 2/8", "Reg
 # (바람 맞는 곳은 드물고, 바위·벼랑 그늘 우묵한 곳에만 작은 무리).
 # 규칙: 대부분 트인 눈밭 · 무리는 3~7 그루를 바람 그늘(단 가장자리·바위 무리·바닷가 낮은 땅)에만 · 트인 곳엔 외딴 나무 하나 · 마른 흰 나무 흩음
 #       (폐허 둘레는 그을린 마른 나무) · 마을·호수·폐허·휴식처·굴 입구 앞은 비움. 예전 간격 숲(GROVES 553 그루)은 지웠다.
-# 무리 틀(손) { dx, dz 스터드, 틀, 배율 }
+# 무리 모양(2026-11-01 사용자: "배치는 마음에 드는데 3 개씩 뭉친 게 거슬린다" → 틀 반복 대신 포아송 디스크):
+# 무리마다 자리·크기·돌림은 손 표(CLUMPS), 안쪽 나무 자리만 그 무리 씨앗으로 포아송 디스크(다트 던지기 — 서로 최소 거리 이상).
+#   최소 거리 = 두 나무 몫의 평균, 한 그루 몫 = 3.5 + 2.6 × 배율(큰 나무일수록 자리를 넓게) × (1 + 0.7 (가운데에서 거리/반지름)²)(가장자리로 갈수록 성기게)
+#   크기 계층 = 가운데 큰 나무 → 가장자리 어린 나무(배율 big → small, ±0.1), 테두리 밖(1.1 ~ 1.5 반지름) 묘목 0 ~ 2 그루
+# { 테두리: 원 반지름 / 띠(길이, 폭), 그루 수(최소, 최대), 배율(가운데, 가장자리), 자작 비율, 묘목 수(최소, 최대) }
 CLUMP = {
-    "셋": [(0, 0, "Pine_A", 1.6), (9, 5, "Pine_B", 1.2), (-6, 8, "Pine_A", 0.9)],
-    "큰하나": [(0, 0, "Pine_B", 1.8), (7, -6, "Pine_A", 0.8), (-5, -8, "Pine_B", 0.7)],
-    "다섯": [(0, 0, "Pine_A", 1.7), (10, 3, "Pine_B", 1.4), (4, 12, "Pine_A", 1.1), (-9, 6, "Pine_B", 1.3), (-3, -10, "Pine_A", 0.9)],
-    "바람막이": [(0, 0, "Pine_B", 1.4), (11, 1, "Pine_A", 1.5), (22, -1, "Pine_B", 1.2), (33, 2, "Pine_A", 1.0)],
-    "자작": [(0, 0, "Birch_A", 1.3), (6, 4, "Pine_A", 1.2), (-4, 6, "Birch_A", 1.0)],
-    "일곱": [(0, 0, "Pine_A", 1.8), (11, 2, "Pine_B", 1.5), (20, -4, "Pine_A", 1.2), (5, 12, "Pine_B", 1.6), (-8, 9, "Pine_A", 1.1),
-             (-12, -3, "Pine_B", 1.3), (14, 13, "Pine_A", 0.9)],
-    "둘": [(0, 0, "Pine_A", 1.5), (7, 3, "Pine_B", 1.1)],
+    "둘": {"r": 13, "n": (2, 3), "sc": (1.55, 1.0), "birch": 0.0, "kid": (0, 1)},
+    "셋": {"r": 17, "n": (3, 4), "sc": (1.65, 0.95), "birch": 0.0, "kid": (0, 1)},
+    "큰하나": {"r": 15, "n": (2, 4), "sc": (1.85, 0.8), "birch": 0.0, "kid": (0, 1)},
+    "자작": {"r": 15, "n": (3, 5), "sc": (1.35, 0.95), "birch": 0.6, "kid": (0, 1)},
+    "다섯": {"r": 23, "n": (4, 6), "sc": (1.75, 0.9), "birch": 0.1, "kid": (0, 2)},
+    "일곱": {"r": 32, "n": (7, 10), "sc": (1.85, 0.9), "birch": 0.1, "kid": (1, 2)},
+    "바람막이": {"strip": (44, 9), "n": (4, 6), "sc": (1.5, 1.05), "birch": 0.0, "kid": (0, 1)},
 }
+
+
+def poisson_clump(name, X, Y, ry):
+    """무리 하나의 나무 [(그림 X, Y, 틀, 배율, 돌림)] — 씨앗 = 자리라서 다시 지어도 같다. 땅이 안 되는 자리는 던지기에서 뺀다."""
+    spec = CLUMP[name]
+    rng = random.Random(int(X * 7919 + Y * 104729 + ry))
+    strip = spec.get("strip")
+    R = spec.get("r") or strip[0] / 2
+    big, small = spec["sc"]
+    want = rng.randint(*spec["n"])
+    out = []
+
+    def room(sc, d):
+        return (3.5 + 2.6 * sc) * (1 + 0.7 * (d / R) ** 2)
+
+    def throw(lo, hi, count, scale_of, tries=400):
+        for _ in range(tries):
+            if count <= 0:
+                return
+            if strip:
+                lx, lz = (rng.random() - 0.5) * strip[0] * hi, (rng.random() - 0.5) * strip[1] * hi
+                if lo > 0 and abs(lx) < strip[0] * lo / 2 and abs(lz) < strip[1] * lo / 2:
+                    continue
+                d = abs(lx) / (strip[0] / 2) * R
+            else:
+                a = rng.random() * math.tau
+                d = R * math.sqrt(lo * lo + rng.random() * (hi * hi - lo * lo))   # 넓이 고르게
+                lx, lz = math.cos(a) * d, math.sin(a) * d
+            sc = round(max(0.55, scale_of(min(d, R) / R) + (rng.random() - 0.5) * 0.2), 2)
+            r = room(sc, min(d, R))
+            if any(math.hypot(lx - ox, lz - oz) < (r + orr) / 2 for ox, oz, _, orr in out):
+                continue
+            ox_, oz_ = rot(lx, lz, ry)
+            Xp, Yp = X + ox_ / SCALE, Y + oz_ / SCALE
+            if not tree_ground(Xp, Yp):
+                continue
+            out.append((lx, lz, sc, r))
+            count -= 1
+
+    # 가운데부터: 첫 그루는 안쪽 30% 에서 가장 크게, 나머지는 무리 안, 묘목은 테두리 밖
+    throw(0, 0.3, 1, lambda f: big)
+    throw(0, 1.0, want - len(out), lambda f: big + (small - big) * f)
+    throw(1.1, 1.5, rng.randint(*spec["kid"]), lambda f: 0.62)
+    trees = []
+    for k, (lx, lz, sc, _r) in enumerate(out):
+        ox_, oz_ = rot(lx, lz, ry)
+        kind = "Birch_A" if rng.random() < spec["birch"] else ("Pine_A" if rng.random() < 0.55 else "Pine_B")
+        trees.append((X + ox_ / SCALE, Y + oz_ / SCALE, kind, sc, rng.randrange(0, 360, 5)))
+    if len(out) < spec["n"][0]:
+        bad.append(f"무리 {name}@{X},{Y}: 자리가 좁아 {len(out)} 그루만")
+    return trees
+
+
 # 무리 놓기 { 틀, 그림 X, Y, 돌림 } — 구역별(단 사이 바위 무리·단 가장자리에 걸린 자리는 가장 가까운 빈 자리로 조금 옮김)
 CLUMPS = [
     # 북쪽 들(32): 마을 쪽 바람막이 두 줄(사이는 길), 북쪽 가장자리·모퉁이에만
@@ -338,6 +394,17 @@ def in_rocks(x, z, r):
     return False
 
 
+def tree_ground(X, Y):
+    """무리 안 다트용: 땅이 되면 True(가장자리·피할 곳·바위 무리·마을은 False — 문제로 적지 않는다)."""
+    t = top_at(X, Y)
+    if t is None or t >= 60 or any(a <= X <= b and c <= Y <= d for a, b, c, d in AVOID):
+        return False
+    if any(top_at(X + dx, Y + dy) != t for dx, dy in ((8, 0), (-8, 0), (0, 8), (0, -8))):
+        return False
+    x, z = world(X, Y)
+    return not in_rocks(x, z, 8)
+
+
 def ground_ok(X, Y, what):
     """나무 자리: 땅이 있고 가장자리(8 px 안이 다른 높이)·피할 곳·단 사이 바위가 아니어야. 아니면 문제로 적는다."""
     t = top_at(X, Y)
@@ -360,13 +427,9 @@ def ground_ok(X, Y, what):
 
 
 for name, X, Y, ry in CLUMPS:
-    for k, (dx, dz, kind, sc) in enumerate(CLUMP[name]):
-        ox, oz = rot(dx, dz, ry)
-        Xp, Yp = X + ox / SCALE, Y + oz / SCALE
-        t = ground_ok(Xp, Yp, f"무리 {name}@{X},{Y} #{k + 1}")
-        if t is not None:
-            x, z = world(Xp, Yp)
-            TREES.append((kind, x, t - 0.3, z, (ry + k * 67) % 360, sc))
+    for Xp, Yp, kind, sc, yaw in poisson_clump(name, X, Y, ry):
+        x, z = world(Xp, Yp)
+        TREES.append((kind, x, top_at(Xp, Yp) - 0.3, z, yaw, sc))
 for X, Y, kind, sc in LONE:
     t = ground_ok(X, Y, "외딴 나무")
     if t is not None:
