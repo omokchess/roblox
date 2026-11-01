@@ -34,6 +34,9 @@ local SpaceLayer = require(script.Parent.SpaceLayer)
 
 local Callisto = {}
 
+local ORBIT_STARS = 9 -- 2페이즈부터 우주 머리 둘레를 도는 별
+local MOTES = 9 -- 몸 둘레를 떠도는 별가루
+
 local C = Color3.fromRGB
 local JACKET = C(110, 74, 48)
 local TROUSER = C(28, 28, 32)
@@ -324,7 +327,8 @@ end
 
 local faces: { [Model]: any } = setmetatable({}, { __mode = "k" }) :: any
 -- 페이즈 모습에 쓰는 것: 입은 것(옷·머리카락) · 지금 페이즈 · 우주 머리의 도는 관절
-type Look = { Dressed: { BasePart }, Page: number, Orbits: { Motor6D } }
+type Arm = { Joint: Motor6D, Base: CFrame, Phase: number, Sway: number }
+type Look = { Dressed: { BasePart }, Page: number, Orbits: { Motor6D }, Halo: Motor6D?, HaloGlow: BasePart?, Arms: { Arm } }
 local looks: { [Model]: Look } = setmetatable({}, { __mode = "k" }) :: any
 
 -- 몸에 붙은 얼굴 조종기(없으면 nil)
@@ -394,10 +398,12 @@ local function cosmicHead(model: Model, look: Look, head: BasePart)
 		return p, motor(name .. "Joint", head, p, c0, CFrame.new())
 	end
 	-- 우주 머리(2026-11-01 사용자: 모델링보다 레이어, 동그라미 말고 아바타 머리에 빛나는 하얀 윤곽): 고전 머리 윤곽으로 오려 낸
-	-- 화면에 박힌 우주 그림 창(Combat/SpaceLayer) + 그 둘레를 도는 작은 별 셋
+	-- 화면에 박힌 우주 그림 창(Combat/SpaceLayer) + 그 둘레를 도는 작은 별 아홉(기운 고리 셋 × 셋 — 사용자: "3배 빽빽하게")
 	SpaceLayer.Add(head, "Head", 0.25)
-	for i, color in { STAR, GLOW, C(255, 214, 150) } do
-		local _, joint = attach("CosmicOrbit" .. i, Vector3.new(0.16, 0.16, 0.16), color, Enum.Material.Neon, "Ball", CFrame.new())
+	for i = 1, ORBIT_STARS do
+		local color = ({ STAR, GLOW, C(255, 214, 150) })[(i - 1) % 3 + 1]
+		local size = 0.12 + 0.05 * ((i * 7) % 3)
+		local _, joint = attach("CosmicOrbit" .. i, Vector3.new(size, size, size), color, Enum.Material.Neon, "Ball", CFrame.new())
 		table.insert(look.Orbits, joint)
 	end
 end
@@ -413,6 +419,129 @@ local function spaceLimb(model: Model, name: string, fade: number?)
 	SpaceLayer.Add(body, "Box", fade)
 end
 
+--=== 3페이즈 주변 장식(2026-11-01 동업자 레퍼런스 — 사용자: "나는 옷을 벗고 있는 게 더 좋아서, 이런 느낌은 주변 장식으로") ===--
+-- 레퍼런스: 검은 로브 + 머리 자리의 일식(검은 원 · 금빛 테 · 계단처럼 겹친 가시 · 긴 빛살) + 등 뒤로 뻗은 검은 띠 팔 여섯(금 줄무늬, 꺾인 마디).
+-- 로브는 빼고(우주 몸) 일식 후광은 머리 뒤에, 띠 팔은 등에 — 둘 다 천천히 움직인다(후광은 돌고, 팔은 흔들린다).
+local ECLIPSE_DARK = C(14, 12, 16)
+local ECLIPSE_GOLD = C(232, 196, 128)
+local ECLIPSE_CREAM = C(255, 240, 214)
+local RIBBON = C(24, 22, 28)
+local HALO_C0 = CFrame.new(0, 0.15, 0.8)
+
+-- 부품을 투명으로 붙였다가 fade 초에 걸쳐 나타나게
+local function appear(p: BasePart, alpha: number, fade: number?)
+	p.Transparency = 1
+	if (fade or 0) > 0 then
+		TweenService:Create(p, TweenInfo.new(fade :: number, Enum.EasingStyle.Sine), { Transparency = alpha }):Play()
+	else
+		p.Transparency = alpha
+	end
+end
+
+local function eclipse(model: Model, look: Look, head: BasePart, fade: number?)
+	local hub = part("HaloHub", Vector3.new(0.2, 0.2, 0.2), ECLIPSE_DARK)
+	hub.Transparency = 1
+	hub.CFrame = head.CFrame * HALO_C0
+	hub.Parent = model
+	look.Halo = motor("HaloJoint", head, hub, HALO_C0, CFrame.new())
+	local function piece(name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material, alpha: number, shape: string?): Part
+		local p = part(name, size, color, material, shape)
+		p.CFrame = hub.CFrame * cf
+		weld(hub, p)
+		p.Parent = model
+		appear(p, alpha, fade)
+		return p
+	end
+	local face = CFrame.Angles(0, math.pi / 2, 0) -- 원기둥 축(X)을 앞뒤(Z)로
+	piece("HaloDisc", Vector3.new(0.06, 1.95, 1.95), face, ECLIPSE_DARK, Enum.Material.SmoothPlastic, 0)
+	piece("HaloRim", Vector3.new(0.05, 2.2, 2.2), CFrame.new(0, 0, 0.03) * face, ECLIPSE_GOLD, Enum.Material.Neon, 0.05)
+	look.HaloGlow = piece("HaloGlow", Vector3.new(0.04, 3.1, 3.1), CFrame.new(0, 0, 0.06) * face, ECLIPSE_CREAM, Enum.Material.Neon, 0.78)
+	-- 계단처럼 겹친 가시 열여섯(블록을 바깥으로 갈수록 좁게) — 검정과 금을 번갈아, 넷마다 길게
+	for i = 0, 15 do
+		local a = i / 16 * math.pi * 2 + (if i % 2 == 0 then 0 else 0.06)
+		local blocks = if i % 4 == 0 then 6 elseif i % 2 == 0 then 4 else 3
+		for k = 0, blocks - 1 do
+			local w = math.max(0.08, 0.56 - 0.1 * k)
+			local cf = CFrame.Angles(0, 0, a) * CFrame.new(1.18 + 0.34 * k, 0, 0.04 + 0.01 * k)
+			local color = if (i + k) % 2 == 0 then ECLIPSE_GOLD else C(46, 42, 40)
+			piece("HaloSpike", Vector3.new(0.34, w, 0.05), cf, color, if color == ECLIPSE_GOLD then Enum.Material.Neon else Enum.Material.SmoothPlastic, if color == ECLIPSE_GOLD then 0.15 else 0)
+		end
+	end
+	-- 긴 빛살 여덟(카메라를 보는 띠 — 안쪽은 밝고 끝으로 사라진다)
+	local center = Instance.new("Attachment")
+	center.Position = Vector3.new(0, 0, 0.08)
+	center.Parent = hub
+	for i = 0, 7 do
+		local a = (i + 0.5) / 8 * math.pi * 2
+		local len = if i % 2 == 0 then 9 else 6
+		local tip = Instance.new("Attachment")
+		tip.Position = Vector3.new(math.cos(a) * len, math.sin(a) * len, 0.08)
+		tip.Parent = hub
+		local beam = Instance.new("Beam")
+		beam.Attachment0, beam.Attachment1 = center, tip
+		beam.Width0, beam.Width1 = 0.55, 0.04
+		beam.Color = ColorSequence.new(ECLIPSE_CREAM)
+		beam.LightEmission = 1
+		beam.FaceCamera = true
+		beam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.6, 0.65), NumberSequenceKeypoint.new(1, 1) })
+		beam.Enabled = false
+		beam.Parent = hub
+		task.delay(fade or 0, function()
+			beam.Enabled = true
+		end)
+	end
+end
+
+-- 등 뒤 검은 띠 팔 여섯: 양쪽 셋씩, 마디 셋(꺾임), 마디마다 금 줄무늬 둘. 첫 마디가 몸통에 모터로 붙어 흔들린다
+local function ribbonArms(model: Model, look: Look, torso: BasePart, fade: number?)
+	local index = 0
+	for _, side in { 1, -1 } do
+		for j = 1, 3 do
+			index += 1
+			-- 팔 방향: 옆으로(바깥) 조금 뒤로 — 위 팔은 위로, 아래 팔은 아래로 기울어 거미 다리처럼 퍼진다
+			local away = math.rad(56 + j * 9)
+			local d = Vector3.new(side * math.sin(away), 0, math.cos(away))
+			local pitch = math.rad(({ 32, 4, -26 })[j])
+			local base = CFrame.fromMatrix(Vector3.new(side * 0.55, 0.75 - j * 0.42, 0.55), d, Vector3.yAxis) * CFrame.Angles(0, 0, pitch)
+			local prev: BasePart = torso
+			local c0 = base
+			for k, seg in { { 1.7, 0.34 }, { 1.45, 0.26 }, { 1.25, 0.16 } } do
+				local len, w = seg[1], seg[2]
+				local p = part("RibbonArm", Vector3.new(len, w, 0.07), RIBBON, Enum.Material.SmoothPlastic)
+				p.Parent = model
+				appear(p, 0, fade)
+				local joint = motor("RibbonJoint", prev, p, c0, CFrame.new(-len / 2, 0, 0))
+				p.CFrame = prev.CFrame * c0 * CFrame.new(len / 2, 0, 0)
+				for _, y in { -w * 0.28, w * 0.28 } do
+					local stripe = part("RibbonStripe", Vector3.new(len * 0.86, 0.03, 0.09), ECLIPSE_GOLD, Enum.Material.Metal)
+					stripe.CFrame = p.CFrame * CFrame.new(0, y, 0)
+					weld(p, stripe)
+					stripe.Parent = model
+					appear(stripe, 0, fade)
+				end
+				table.insert(look.Arms, { Joint = joint, Base = c0, Phase = index * 1.3 + k * 0.7, Sway = 0.06 + 0.04 * k })
+				prev = p
+				-- 다음 마디: 이 마디 끝에서 꺾여(팔꿈치) 아래로
+				c0 = CFrame.new(len / 2, 0, 0) * CFrame.Angles(0, 0, math.rad(({ -38, -30, 0 })[k]))
+			end
+		end
+	end
+end
+
+-- 3페이즈 후광이 한 번 타오른다(큰 기술 — 뭇별 아래에 잠기리)
+function Callisto.Flare(model: Model)
+	local look = looks[model]
+	local glow = look and look.HaloGlow
+	if not glow then
+		return
+	end
+	local size = glow.Size
+	TweenService:Create(glow, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = size * Vector3.new(1, 1.8, 1.8), Transparency = 0.35 }):Play()
+	task.delay(0.25, function()
+		TweenService:Create(glow, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { Size = size, Transparency = 0.78 }):Play()
+	end)
+end
+
 -- 3페이즈: 옷이 (fade 초에 걸쳐) 사라지는 동안 몸 전체가 우주 그림 창으로 나타난다
 local function cosmicBody(model: Model, look: Look, fadeTime: number?)
 	for _, p in look.Dressed do
@@ -424,6 +553,13 @@ local function cosmicBody(model: Model, look: Look, fadeTime: number?)
 	end
 	for _, name in { "Torso", "Right Arm", "Left Arm", "Right Leg", "Left Leg" } do
 		spaceLimb(model, name, fadeTime)
+	end
+	-- 동업자 레퍼런스의 일식 후광 · 검은 띠 팔(주변 장식)
+	local head = model:FindFirstChild("Head")
+	local torso = model:FindFirstChild("Torso")
+	if head and head:IsA("BasePart") and torso and torso:IsA("BasePart") then
+		eclipse(model, look, head, fadeTime)
+		ribbonArms(model, look, torso, fadeTime)
 	end
 end
 
@@ -563,10 +699,11 @@ function Callisto.Build(name: string): Model
 			planet.Parent = model
 		end
 	end
-	-- 둘레를 떠도는 별가루 셋
+	-- 둘레를 떠도는 별가루 아홉(사용자: "3배 빽빽하게") — 반지름·높이·빠르기·방향을 저마다 달리
 	local motes: { Motor6D } = {}
-	for i = 1, 3 do
-		local mote = part("Mote" .. i, Vector3.new(0.16, 0.16, 0.16), STAR, Enum.Material.Neon, "Ball")
+	for i = 1, MOTES do
+		local size = 0.1 + 0.04 * ((i * 5) % 3)
+		local mote = part("Mote" .. i, Vector3.new(size, size, size), ({ STAR, GLOW, GOLD })[(i - 1) % 3 + 1], Enum.Material.Neon, "Ball")
 		mote.Parent = model
 		motes[i] = motor("MoteJoint" .. i, torso, mote, CFrame.new(), CFrame.new())
 	end
@@ -578,7 +715,7 @@ function Callisto.Build(name: string): Model
 	if masked then
 		face.Gui.Enabled = false
 	end
-	local look: Look = { Dressed = dressed, Page = 1, Orbits = {} }
+	local look: Look = { Dressed = dressed, Page = 1, Orbits = {}, Arms = {} }
 	looks[model] = look
 	local t0 = math.random() * 10
 	-- 한 번 자리에 놓인 뒤 부모가 사라지면(치워짐) 스스로 끊는다
@@ -602,15 +739,27 @@ function Callisto.Build(name: string): Model
 		end
 		for i, joint in motes do
 			if joint.Parent then
-				local a = t * 0.8 + i * 2.1
-				joint.C0 = CFrame.new(math.cos(a) * 1.7, 0.6 + math.sin(t * 1.3 + i) * 0.5, math.sin(a) * 1.2)
+				local speed = (0.5 + 0.6 * ((i * 3) % 5) / 4) * (if i % 2 == 0 then -1 else 1)
+				local a = t * speed + i * (math.pi * 2 / MOTES)
+				local r = 1.45 + 0.75 * ((i * 4) % 5) / 4
+				joint.C0 = CFrame.new(math.cos(a) * r, -0.5 + 1.9 * ((i * 2) % 9) / 8 + math.sin(t * 1.3 + i) * 0.35, math.sin(a) * r * 0.8)
+			end
+		end
+		if look.Halo and look.Halo.Parent then
+			look.Halo.C0 = HALO_C0 * CFrame.Angles(0, 0, t * 0.22)
+		end
+		for _, arm in look.Arms do
+			if arm.Joint.Parent then
+				arm.Joint.C0 = arm.Base * CFrame.Angles(math.sin(t * 0.7 + arm.Phase) * arm.Sway, math.sin(t * 0.55 + arm.Phase) * arm.Sway, math.sin(t * 0.9 + arm.Phase * 1.3) * arm.Sway * 1.4)
 			end
 		end
 		for i, joint in look.Orbits do
 			if joint.Parent then
-				local a = t * (1.1 + i * 0.35) + i * 2.1
-				local tilt = CFrame.Angles(0, 0, (i - 2) * 0.6)
-				joint.C0 = CFrame.new(0, 0.1, 0) * tilt * CFrame.new(math.cos(a) * 1.25, 0, math.sin(a) * 1.25)
+				local ring = (i - 1) // 3
+				local a = t * (1.1 + ring * 0.35) * (if ring == 1 then -1 else 1) + ((i - 1) % 3) * (math.pi * 2 / 3) + ring
+				local r = 1.15 + 0.16 * ring
+				local tilt = CFrame.Angles(0, ring * 1.05, (ring - 1) * 0.6)
+				joint.C0 = CFrame.new(0, 0.1, 0) * tilt * CFrame.new(math.cos(a) * r, 0, math.sin(a) * r)
 			end
 		end
 		face:Step(now, dt)

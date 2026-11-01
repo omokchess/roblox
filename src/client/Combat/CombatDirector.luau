@@ -891,18 +891,18 @@ function CombatDirector:PlaySkill(id: string, skillId: string, targetsByHit: { {
 	return self:_play(a, self:_skillMotion(a, skillId), targetsByHit, { OnDone = self:_moodFor(a, skillId, onDone), Stage = stage })
 end
 
--- 칼리스토 컷신(의수 칼날을 제 사건 BladeOut/BladeIn 으로 다룬다)
-local CALLISTO_CUTSCENE = { CallistoIntro = true, CallistoPageShift = true, CallistoPhase2 = true, CallistoPhase3 = true }
+-- 칼리스토 칼 팔 기술(날이 소매에서 나와 있는 동안 — 카메라 기술·컷신은 날을 넣은 채. 컷신은 제 사건 BladeOut/BladeIn 으로 다룬다)
+local CALLISTO_BLADE = { CallistoSlash = true, CallistoTrohia = true, CallistoSynthesis = true, CallistoAstro = true }
 
 -- 그린 얼굴이 있으면 스킬 표정을 짓고, 모션이 끝나면 기본 표정으로(끝 콜백을 감싸 돌려준다).
--- 칼리스토 1페이즈(의수 칼날)면 기술 동안만 날이 나왔다가 끝나면 들어간다
+-- 칼리스토 1페이즈 칼 팔 기술이면 기술 동안만 날이 나왔다가 끝나면 들어간다(날이 팔 축이라 팔을 늘어뜨린 카메라 기술에선 땅에 박히므로)
 function CombatDirector:_moodFor(a: Actor, skillId: string, onDone: (() -> ())?): (() -> ())?
 	local face = a.Face
 	if not face then
 		return onDone
 	end
 	face:Set(SKILL_MOOD[skillId] or "Attack")
-	local bladed = a.Weapons ~= nil and a.Weapons.Def.Id == "CallistoArms" and not CALLISTO_CUTSCENE[skillId]
+	local bladed = a.Weapons ~= nil and a.Weapons.Def.Id == "CallistoArms" and CALLISTO_BLADE[skillId] == true
 	if bladed then
 		Callisto.Blade(a.Model, true, 0.12)
 	end

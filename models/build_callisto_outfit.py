@@ -1129,4 +1129,5 @@ def main():
     export_glb(blade + [marker("WeaponsOrigin_Marker")], os.path.join(HERE, "CallistoBlade.glb"))
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -1,21 +1,35 @@
 --!strict
 --[[
 	칼리스토 — 히든 보스(2026-10-31). 큰곰자리 · 천문학자 · 시인, 기물군의 비숍.
+	2026-11-01 전면 손질(사용자: "칼리스토 1·2·3페이즈 모션이랑 이펙트, 할 수 있는 최대한의 노력과 품질로 레퍼런스 찾아서").
+	레퍼런스·기술별 연출 표: 저장소 `보스 칼리스토.md` 「모션·이펙트 3판」.
 
-	성격: 관찰자. 서두르지 않고 꼿꼿이 서서 고개를 기울여 상대를 "찍는다". 칼날은 팔의 연장(의체),
-	      카메라는 왼손목 — 찍을 때는 왼팔을 쭉 뻗어 렌즈로 겨눈다.
-	무기 종류: Prosthesis (WeaponDefinitions.CallistoArms — 오른팔 칼날은 팔 선을 따라 손끝 너머로, 왼손목 카메라 렌즈도 팔 선 방향)
-	박자(feedback-motion-rhythm): 느린 준비(sineOut) → 번개 같은 한 방(expoOut) → 여운을 두고 천천히 돌아옴(sineInOut).
+	성격: 관찰자. 서두르지 않고 꼿꼿이 서서 고개를 기울여 상대를 "찍는다".
+	1페이즈 — 오른팔이 곧 검(무기 CallistoArms Main, 팔 축에 고정 · 날은 기술 동안만 소매에서 나온다 — CombatDirector).
+	  날이 팔의 연장(2.5)이라 날이 나와 있는 동안 팔은 늘 수직에서 45° 넘게 든다(칼끝이 땅에 박히지 않게 — 자세마다 칼끝 높이 확인).
+	  레퍼런스: 엘든 링 말레니아(의수 + 칼 — "칼 팔을 뒤로 감아 든 준비 동작이 화려한 기술의 신호", 물새 춤 = 도약 · 잠깐 떠 있다가 연타 묶음 셋),
+	            사이버펑크 2077 맨티스 블레이드(팔에서 나온 날 — 도약 베기), 아케인 리니지 블레이드 댄서(아스트로 세시 칼춤 — 사용자 사양),
+	            영 시리즈(Fatal Frame) 카메라 옵스큐라(포착 원이 대상에게 좁혀지고, 공격 순간 셔터 = 페이탈 프레임) — 왼손목 카메라 기술.
+	2·3페이즈 — 북두칠성 망치(WeaponDefinitions.CallistoHammer, 무기 종류 StarHammer → 이 표의 Hammer 묶음). 대기는 오른 어깨에 메고,
+	  공격은 두 손(오른손 y 0 · 왼손 y -0.85). 자세 = tools/combat/design/callisto_hammer_gen.py(손이 자루에 붙는지 · 머리가 땅에 박히지 않는지 계산).
+	  레퍼런스: 두 손 거대 망치(어깨 메기 → 머리 위로 → 내려찍기), 슬레지해머 스윙(뒷손은 고정, 칠 때 두 손 단단히 — US7694392),
+	            엘든 링 아스텔·라다곤/엘든 짐승(우주 별 공격 — 별 비 · 레이저), 할로우 나이트 라디언스(빛살 · 일식 후광 연출).
+	박자(feedback-motion-rhythm): 느린 준비(sineOut) → 짧은 멈춤(긴장) → 번개 같은 한 방(expoOut · quadIn) → 짧게 넘침 → 여운을 두고 천천히(sineInOut).
 	사건(k): Hit(i) · Dash(to = Target/Home, gap) · Fx(n = Fx/Callisto 의 이름) · Trail(on, slot) · Shake(a, d) · Stop(d)
-	연타 스킬(트로히아 5 · 신데시 톤 아스트론 3 · 쏟아지는 뭇별 3)은 서버가 예고를 따로 줄 세워 한 번씩 회피하므로
-	모션은 **한 번 치는 것**이다(회피 QTE 사이마다 하나씩 다시 튼다).
-	괄호 속 레퍼런스(사용자 사양): 아스트로 세시 = 아케인 리니지 블레이드 댄서 칼춤(고속 회전하며 사방을 벤다).
+	연타 스킬(트로히아 5 · 신데시 톤 아스트론 3 · 쏟아지는 뭇별 3)은 서버가 예고를 따로 줄 세워 한 번씩 회피하므로 모션은 **한 번 치는 것**이다.
+	망치 모션은 Kit.Chain 으로 키마다 무기 각 표기를 앞 키에 맞춘다(자세 계산기 값은 표기가 제멋대로라 그대로 두면 한 바퀴 돈다).
 ]]
 local Kit = require(script.Parent.Parent.MotionKit)
 local K = Kit.K
+local With = Kit.With
 
--- 관찰자의 대기: 오른 어깨를 조금 앞으로(몸 20°), 상체는 살짝 젖혀 턱을 든 채 고개를 갸웃.
--- 칼날 팔은 앞아래로 늘어뜨려 칼끝이 땅 위에서 멈추고(팔 40° — 칼날이 팔 선을 따라 2.2 뻗는다), 카메라 왼팔은 가슴 앞으로 반쯤 든다.
+local function M(motion: { [string]: any }): { [string]: any }
+	return Kit.Chain(motion)
+end
+
+--=== 1페이즈 자세(칼 팔 · 손목 카메라) ===--
+
+-- 관찰자의 대기: 오른 어깨를 조금 앞으로(몸 20°), 상체는 살짝 젖혀 턱을 든 채 고개를 갸웃. 칼날은 소매 속, 카메라 왼팔은 가슴 앞으로 반쯤
 local OBS = {
 	Root = { 0, 0, 0, 0, 20, 0 },
 	Torso = { 4, -6, 0 },
@@ -25,88 +39,141 @@ local OBS = {
 	RLeg = { 8, 0, 4 },
 	LLeg = { -6, 0, -4 },
 }
-
--- 베기 준비 · 내려벤 끝
-local READY = { Root = { 0, -0.15, 0.2, 0, 38, 0 }, Torso = { -6, 22, 0 }, Head = { 4, -24, 0 }, RArm = { 152, 0, 40 }, LArm = { 34, 0, -24 }, RLeg = { -18, 0, 8 }, LLeg = { 24, 0, -8 } }
-local SLASHED = { Root = { 0, -0.35, -0.3, 0, -8, 0 }, Torso = { -20, -26, 0 }, Head = { 10, 10, 0 }, RArm = { 24, 0, -34 }, LArm = { 10, 0, -34 }, RLeg = { 36, 0, 8 }, LLeg = { -26, 0, -8 } }
--- 등손 가로베기(트로히아 한 번)
-local COIL = { Root = { 0, -0.2, 0, 0, 44, 0 }, Torso = { -8, 32, 0 }, Head = { 0, -30, 0 }, RArm = { 84, 0, -52 }, LArm = { 20, 0, -20 }, RLeg = { 14, 0, 8 }, LLeg = { -10, 0, -8 } }
-local SWEEP = { Root = { 0, -0.3, -0.2, 0, -12, 0 }, Torso = { -12, -32, 0 }, Head = { 4, 14, 0 }, RArm = { 84, 0, 74 }, LArm = { 30, 0, -40 }, RLeg = { 24, 0, 8 }, LLeg = { -18, 0, -8 } }
--- 찌르기(신데시 톤 아스트론 한 번): 당기고 → 팔·칼날 한 줄로 쭉
-local DRAW = { Root = { 0, -0.25, 0.45, 0, 34, 0 }, Torso = { 6, 26, 0 }, Head = { 0, -30, 0 }, RArm = { 58, 28, 22 }, LArm = { 40, 0, -30 }, RLeg = { -12, 0, 8 }, LLeg = { 20, 0, -8 } }
-local THRUST = { Root = { 0, -0.45, -0.65, 0, 12, 0 }, Torso = { -16, -6, 0 }, Head = { 12, -10, 0 }, RArm = { 96, 0, 0 }, LArm = { -20, 0, -16 }, RLeg = { 46, 0, 6 }, LLeg = { -36, 0, -6 } }
--- 카메라 겨눔: 몸을 틀어 왼 어깨를 앞으로, 왼팔을 쭉 뻗어 렌즈로 겨눈다
+-- 베기 준비(말레니아의 칼 팔 뒤로 감아 듦): 칼 팔을 오른 어깨 위 뒤로, 몸을 오른쪽으로 비틀고 왼손은 앞으로 균형
+local READY_HI = { Root = { 0, -0.2, 0.25, 0, -20, 0 }, Torso = { 10, -24, 0 }, Head = { 0, 20, 0 }, RArm = { 165, 0, 35 }, LArm = { 60, 0, -20 }, RLeg = { -14, 0, 8 }, LLeg = { 22, 0, -8 } }
+-- 비스듬히 내려벤 끝: 몸이 왼쪽으로 풀리고 칼 팔은 몸 앞을 가로질러 왼쪽 아래(칼끝은 땅 위 1.7)
+local SLASH_END = { Root = { 0, -0.4, -0.35, 0, 24, 0 }, Torso = { -22, 30, 0 }, Head = { 10, -14, 0 }, RArm = { 82, 0, -58 }, LArm = { 10, 0, -40 }, RLeg = { 40, 0, 8 }, LLeg = { -30, 0, -8 } }
+-- 트로히아(등손 가로베기): 칼 팔을 가슴 앞으로 접어 왼쪽으로 감았다가 → 오른쪽으로 펼쳐 벤다
+local TRO_COIL = { Root = { 0, -0.2, 0, 0, 40, 0 }, Torso = { -8, 36, 0 }, Head = { 0, -34, 0 }, RArm = { 88, 0, -86 }, LArm = { 20, 0, -20 }, RLeg = { 14, 0, 8 }, LLeg = { -10, 0, -8 } }
+local TRO_SWEEP = { Root = { 0, -0.3, -0.2, 0, -26, 0 }, Torso = { -10, -36, 0 }, Head = { 4, 18, 0 }, RArm = { 92, 0, 80 }, LArm = { 34, 0, -40 }, RLeg = { 24, 0, 8 }, LLeg = { -18, 0, -8 } }
+-- 찌르기(신데시 톤 아스트론): 몸째 뒤로 당겨(오른 어깨 뒤) 팔·칼을 한 줄로 겨눴다가 → 앞발을 내디디며 어깨째 꿰뚫는다
+local DRAW = { Root = { 0, -0.25, 0.5, 0, -30, 0 }, Torso = { 6, -26, 0 }, Head = { 0, 30, 0 }, RArm = { 84, 0, 14 }, LArm = { 60, 0, -30 }, RLeg = { -12, 0, 8 }, LLeg = { 20, 0, -8 } }
+local THRUST = { Root = { 0, -0.45, -0.75, 0, 18, 0 }, Torso = { -14, 22, 0 }, Head = { 10, -20, 0 }, RArm = { 94, 0, -6 }, LArm = { -24, 0, -18 }, RLeg = { 50, 0, 6 }, LLeg = { -38, 0, -6 } }
+-- 칼춤(아스트로 세시): 웅크린 준비(칼 팔은 옆 뒤로) → 도약 → 두 팔을 수평으로 펴고 돈다
+local CROUCH = { Root = { 0, -0.75, 0.35, 0, -30, 0 }, Torso = { -26, -20, 0 }, Head = { 22, 20, 0 }, RArm = { 30, 0, 78 }, LArm = { 40, 0, -50 }, RLeg = { 60, 0, 10 }, LLeg = { -10, 0, -10 } }
+local LEAP = { Root = { 0, 1.8, -0.6, 0, -40, 0 }, Torso = { 8, -20, 0 }, Head = { -6, 20, 0 }, RArm = { 150, 0, 60 }, LArm = { 60, 0, -60 }, RLeg = { 50, 0, 8 }, LLeg = { -30, 0, -8 } }
+local SPIN = { Root = { 0, -0.3, 0, 0, 0, 0 }, Torso = { -6, 0, 0 }, Head = { 0, 0, 0 }, RArm = { 4, 0, 92 }, LArm = { 4, 0, -92 }, RLeg = { 4, 0, 10 }, LLeg = { -4, 0, -10 } }
+-- 카메라 겨눔: 몸을 틀어 왼 어깨를 앞으로, 왼팔을 쭉 뻗어 렌즈로 겨눈다(고개를 카메라 쪽으로 기울여 뷰파인더를 본다)
 local AIM = { Root = { 0, 0, 0, 0, -30, 0 }, Torso = { 2, -18, 0 }, Head = { -2, 30, 0 }, RArm = { 22, 0, 18 }, LArm = { 90, 0, 0 }, RLeg = { 6, 0, 4 }, LLeg = { -4, 0, -4 } }
+local AIM_EYE = With(AIM, { Head = { 4, 38, 12 }, Torso = { 4, -22, 0 } })
+-- 심베라즈마: 멱살 잡기 → 들어 올림 → 던질 준비 → 내던짐
+local GRAB = With(AIM, { LArm = { 96, 0, 4 }, Torso = { -10, -14, 0 }, Root = { 0, -0.1, 0, 0, -20, 0 }, Head = { 0, 20, 0 } })
+local LIFT = With(AIM, { LArm = { 126, 0, 4 }, Torso = { 10, -10, 0 }, Head = { 8, 24, 0 }, Root = { 0, 0.05, 0.1, 0, -20, 0 }, RLeg = { -6, 0, 4 }, LLeg = { 14, 0, -4 } })
+local WIND = With(AIM, { LArm = { 120, 30, 40 }, Torso = { 6, 32, 0 }, Head = { 0, -10, 0 }, Root = { 0, -0.1, 0.25, 0, 14, 0 } })
+local THROW = With(AIM, { LArm = { 40, -30, -70 }, Torso = { -16, -38, 0 }, Head = { 6, 30, 0 }, Root = { 0, -0.25, -0.25, 0, -44, 0 }, RLeg = { 30, 0, 8 }, LLeg = { -26, 0, -8 } })
 
---[[
-	2·3페이즈 북두칠성 망치(무기 종류 StarHammer — CombatMotions.ByType 가 이 묶음의 Hammer 를 쓴다).
-	옆에서 본 무기 각 = 팔X + 90 + 숙임(90 = 앞 수평, 180 = 위): 대기 14 + 90 − 40 = 64 → 머리가 앞아래 땅 가까이.
-	내려찍기는 등 뒤(168 + 90 + 20)에서 앞 땅으로(64 + 90 − 114), 가로치기는 망치를 팔 선과 한 줄(숙임 −90)로 두고 팔을 휘두른다.
-	키 사이 숙임 변화는 180° 아래(쿼터니언 최단 호가 엉뚱하게 돌지 않게).
-]]
-local HOBS = Kit.With(OBS, { RArm = { 14, 0, 14 }, W = { 0, 0, 0, -40, 0, 0 } })
-local HRAISE = { Root = { 0, -0.1, 0.25, 0, 10, 0 }, Torso = { 10, 8, 0 }, Head = { 0, -10, 0 }, RArm = { 168, 0, 8 }, LArm = { 160, 0, -8 }, RLeg = { -10, 0, 6 }, LLeg = { 16, 0, -6 }, W = { 0, 0, 0, 20, 0, 0 } }
-local HSMASH = { Root = { 0, -0.7, -0.5, 0, 6, 0 }, Torso = { -26, 0, 0 }, Head = { 14, 0, 0 }, RArm = { 64, 0, 4 }, LArm = { 60, 0, -4 }, RLeg = { 50, 0, 8 }, LLeg = { -36, 0, -8 }, W = { 0, 0, 0, -114, 0, 0 } }
-local HCOIL = { Root = { 0, -0.25, 0, 0, 46, 0 }, Torso = { -8, 34, 0 }, Head = { 0, -30, 0 }, RArm = { 90, 0, -50 }, LArm = { 40, 0, -30 }, RLeg = { 14, 0, 8 }, LLeg = { -10, 0, -8 }, W = { 0, 0, 0, -90, 0, 0 } }
-local HSWEEP = { Root = { 0, -0.35, -0.25, 0, -14, 0 }, Torso = { -12, -34, 0 }, Head = { 4, 14, 0 }, RArm = { 90, 0, 76 }, LArm = { 30, 0, -44 }, RLeg = { 26, 0, 8 }, LLeg = { -18, 0, -8 }, W = { 0, 0, 0, -90, 0, 0 } }
-local HSKY = { Root = { 0, 0.2, 0, 0, 0, 0 }, Torso = { 14, 0, 0 }, Head = { 30, 0, 0 }, RArm = { 170, 0, 6 }, LArm = { 150, 0, -20 }, RLeg = { 0, 0, 4 }, LLeg = { 0, 0, -4 }, W = { 0, 0, 0, -80, 0, 0 } }
+--=== 2·3페이즈 자세(북두칠성 망치 — callisto_hammer_gen.py 로 구함) ===--
+-- 대기: 오른 어깨에 메고(오른손 하나, 자루가 어깨를 넘어 머리는 어깨 뒤 위). 왼팔은 1페이즈 그대로(카메라를 반쯤)
+local HOBS = { Root = { 0, 0, 0, 0, 20, 0 }, Torso = { 4, -6, 0 }, Head = { -6, -16, 6 }, RArm = { 53.2, 27.7, 1.5 }, LArm = { 52, 10, -4 }, RLeg = { 8, 0, 4 }, LLeg = { -6, 0, -4 }, W = { 0, 0, 0, 50.9, -113.5, -24.7 } }
+-- 두 손 낮은 겨눔(머리는 앞 오른쪽 무릎 높이)
+local HREADY = { Root = { 0, -0.35, 0.1, 0, 30, 0 }, Torso = { -10, 14, 0 }, Head = { 8, -18, 0 }, RArm = { 64.2, 29.8, -2.2 }, LArm = { 77.4, -57.7, 25.8 }, RLeg = { 22, 0, 8 }, LLeg = { -14, 0, -8 }, W = { 0, -0.01, -0.01, -78.1, -164.3, 49.3 } }
+-- 머리 위로 치켜듦(망치 머리는 등 뒤 위 — 내려찍기 준비)
+local HRAISE = { Root = { 0, -0.1, 0.25, 0, 10, 0 }, Torso = { 12, 6, 0 }, Head = { -2, -6, 0 }, RArm = { 159.6, 25.9, -51.5 }, LArm = { 126.5, -34.4, 31.7 }, RLeg = { -10, 0, 6 }, LLeg = { 16, 0, -6 }, W = { 0.01, 0, -0.01, -0.6, -241.2, -23.6 } }
+-- 내려찍은 끝(무릎을 굽혀 앞 땅에)
+local HSMASH = { Root = { 0, -0.65, -0.45, 0, 6, 0 }, Torso = { -26, 0, 0 }, Head = { 16, 0, 0 }, RArm = { 76.2, 27.6, -11.6 }, LArm = { 79.7, -48.6, 37.5 }, RLeg = { 48, 0, 8 }, LLeg = { -36, 0, -8 }, W = { 0, -0.02, 0, -81.8, -358.4, -38.9 } }
+-- 가로치기 준비(몸을 오른쪽으로 감고 망치는 오른쪽 뒤 허리 높이) · 끝(왼쪽으로 풀려 망치는 왼쪽 뒤까지 감긴다)
+local HCOIL = { Root = { 0, -0.3, 0, 0, -40, 0 }, Torso = { -8, -30, 0 }, Head = { 0, 30, 0 }, RArm = { 52.6, 65.1, -3.9 }, LArm = { 54, -13.5, 20.9 }, RLeg = { 14, 0, 8 }, LLeg = { -10, 0, -8 }, W = { -0.02, 0.06, -0.02, -58.3, -181.2, 191.4 } }
+local HSWEEP = { Root = { 0, -0.35, -0.25, 0, 30, 0 }, Torso = { -12, 32, 0 }, Head = { 4, -24, 0 }, RArm = { 82.5, 32.6, -45.4 }, LArm = { 80.5, -63.1, 24 }, RLeg = { 26, 0, 8 }, LLeg = { -18, 0, -8 }, W = { 0.02, -0.01, -0.01, -79.2, -185.5, 361.3 } }
+-- 하늘로 곧추세움(머리가 하늘을 본다 — 별을 부를 때)
+local HSKY = { Root = { 0, 0.2, 0, 0, 0, 0 }, Torso = { 12, 0, 0 }, Head = { 28, 0, 0 }, RArm = { 158.7, 21.9, -32.9 }, LArm = { 114.1, -44.9, 42.8 }, RLeg = { 0, 0, 4 }, LLeg = { 0, 0, -4 }, W = { 0.01, -0.02, -0.01, -78.1, -213.7, 33.3 } }
+-- 한 손 올려치기 끝(머리가 앞 위 — 별을 쏘아 올린다)
+local HUPPER = { Root = { 0, 0.05, -0.2, 0, 10, 0 }, Torso = { 8, -10, 0 }, Head = { -10, 4, 0 }, RArm = { 123.1, 26.4, -12.9 }, LArm = { 40, 0, -40 }, RLeg = { -6, 0, 4 }, LLeg = { 24, 0, -4 }, W = { 0, 0, 0, -20.6, -130.1, 54.9 } }
+-- 막기(자루를 가로로 얼굴 앞에)
+local HGUARD = { Root = { 0, -0.3, 0.2, 0, 10, 0 }, Torso = { -8, 6, 0 }, Head = { 12, -6, 0 }, RArm = { 114.1, 39, -5.2 }, LArm = { 112.1, -37.1, 4.5 }, RLeg = { 20, 0, 8 }, LLeg = { -14, 0, -8 }, W = { 0, 0, -0.01, -26, -226.6, 89.5 } }
 
--- 맞음·막음·피함·쓰러짐·버릇(대기 자세 base 위에 — 칼날 OBS / 망치 HOBS). guard = 막을 때 덮을 관절
-local function reactions(base: { [string]: any }, guard: { [string]: any }): { [string]: any }
+-- 맞음·막음·피함·쓰러짐·버릇(대기 자세 base 위에). guard = 막을 때 자세(무기 포함)
+local function reactions(base: { [string]: any }, guard: { [string]: any }, fidgets: { any }): { [string]: any }
 	return {
-		Hit = {
-			Duration = 0.55,
+		-- 맞음: 머리가 먼저 젖혀지고(0.05) 몸통이 뒤따르며 반 걸음 밀린다 → 버티고 → 고개를 털며 돌아옴
+		Hit = M({
+			Duration = 0.62,
 			Keys = {
 				K(0, nil, base),
-				K(0.06, "expoOut", base, { Torso = { 16, 10, 0 }, Head = { 22, -6, 0 }, Root = { 0, 0, 0.7, 0, 26, 0 }, LArm = { 20, 0, -20 } }),
-				K(0.55, "sineInOut", base),
+				K(0.05, "expoOut", base, { Head = { 26, -8, 0 }, Torso = { 10, 8, 0 } }),
+				K(0.12, "quadOut", base, { Torso = { 18, 12, 0 }, Head = { 20, -6, 0 }, Root = { 0, -0.05, 0.7, 0, 28, 0 }, LArm = { 20, 0, -24 } }),
+				K(0.3, "sineOut", base, { Torso = { 8, 6, 0 }, Head = { 6, 10, 0 }, Root = { 0, -0.1, 0.5, 0, 24, 0 } }),
+				K(0.62, "sineInOut", base),
 			},
-		},
-		Guard = {
-			Duration = 0.55,
+		}),
+		Guard = M({
+			Duration = 0.6,
 			Keys = {
 				K(0, nil, base),
-				K(0.08, "expoOut", base, guard),
-				K(0.55, "sineInOut", base),
+				K(0.08, "expoOut", guard),
+				K(0.16, "quadOut", guard, { Root = { (guard.Root or base.Root)[1], (guard.Root or base.Root)[2] - 0.08, ((guard.Root or base.Root)[3]) + 0.25, 0, (guard.Root or base.Root)[5], 0 } }),
+				K(0.6, "sineInOut", base),
 			},
-		},
-		Dodge = {
-			Duration = 0.55,
+		}),
+		-- 피함: 무게를 오른발에 싣고 옆으로 미끄러지듯 반 바퀴 비켜섰다가 돌아온다
+		Dodge = M({
+			Duration = 0.6,
 			Keys = {
 				K(0, nil, base),
-				K(0.12, "expoOut", base, { Root = { -1.4, 0, 0.5, 0, 34, 12 }, Torso = { -8, 10, 0 } }),
-				K(0.55, "sineInOut", base),
+				K(0.05, "quadIn", base, { Root = { -0.2, -0.15, 0, 0, 24, 0 }, Torso = { -4, 6, 0 } }),
+				K(0.16, "expoOut", base, { Root = { -1.5, -0.05, 0.5, 0, 40, 12 }, Torso = { -8, 12, 0 }, Head = { 0, -10, 0 }, RLeg = { -10, 0, 18 }, LLeg = { 10, 0, -6 } }),
+				K(0.6, "sineInOut", base),
 			},
-		},
-		Death = {
-			Duration = 1.6,
+		}),
+		-- 쓰러짐: 휘청 → 한 무릎을 꿇고 하늘(아들의 별)을 올려다본 뒤 → 천천히 고개를 떨군다
+		Death = M({
+			Duration = 2.0,
 			Keys = {
 				K(0, nil, base),
 				K(0.15, "expoOut", base, { Torso = { 18, 0, 0 }, Head = { 24, 0, 0 }, Root = { 0, 0, 0.5, 0, 20, 0 } }),
-				-- 한 무릎을 꿇고 하늘(아들의 별)을 올려다본 뒤 고개를 떨군다
-				K(0.7, "sineOut", base, { Root = { 0, -1.3, 0.2, 0, 20, 0 }, Torso = { 8, 0, 0 }, Head = { 34, 0, 0 }, RLeg = { 88, 0, 6 }, LLeg = { -8, 0, -6 }, RArm = { 12, 0, 16 }, LArm = { 120, 0, -10 } }),
-				K(1.6, "sineInOut", base, { Root = { 0, -1.5, 0.2, 0, 20, 0 }, Torso = { -34, 0, 0 }, Head = { -30, 0, 0 }, RLeg = { 88, 0, 6 }, LLeg = { -8, 0, -6 }, RArm = { 6, 0, 10 }, LArm = { 10, 0, -10 } }),
+				K(0.42, "quadIn", base, { Torso = { -10, 0, 0 }, Head = { -6, 0, 0 }, Root = { 0, -0.6, 0.4, 0, 20, 0 }, RLeg = { 40, 0, 6 } }),
+				K(0.8, "sineOut", base, { Root = { 0, -1.3, 0.2, 0, 20, 0 }, Torso = { 8, 0, 0 }, Head = { 34, 0, 0 }, RLeg = { 88, 0, 6 }, LLeg = { -8, 0, -6 }, LArm = { 120, 0, -10 } }),
+				K(1.25, nil, base, { Root = { 0, -1.3, 0.2, 0, 20, 0 }, Torso = { 10, 0, 0 }, Head = { 38, 0, 0 }, RLeg = { 88, 0, 6 }, LLeg = { -8, 0, -6 }, LArm = { 126, 0, -10 } }),
+				K(2.0, "sineInOut", base, { Root = { 0, -1.5, 0.2, 0, 20, 0 }, Torso = { -34, 0, 0 }, Head = { -30, 0, 0 }, RLeg = { 88, 0, 6 }, LLeg = { -8, 0, -6 }, LArm = { 10, 0, -10 } }),
 			},
-		},
-		-- 가끔 카메라를 들어 찰칵(버릇)
-		Fidgets = {
-			{
-				Duration = 1.4,
-				Keys = {
-					K(0, nil, base),
-					K(0.35, "sineOut", base, { LArm = { 86, 14, 0 }, Head = { -2, 6, 0 } }),
-					K(0.9, nil, base, { LArm = { 88, 14, 0 }, Head = { -2, 8, 0 } }),
-					K(1.4, "sineInOut", base),
-				},
-			},
-		},
+		}),
+		Fidgets = fidgets,
 	}
 end
 
--- 칼날 팔을 몸 앞으로 가로질러 막는다 / 망치 자루를 가로로 들어 막는다
-local BLADE = reactions(OBS, { RArm = { 84, 0, -62 }, LArm = { 60, 0, -10 }, Torso = { -6, 10, 0 }, Root = { 0, -0.15, 0.25, 0, 26, 0 } })
-local HAMMER = reactions(HOBS, { RArm = { 84, 0, -40 }, LArm = { 84, 0, 30 }, Torso = { -6, 10, 0 }, Root = { 0, -0.15, 0.25, 0, 26, 0 }, W = { 0, 0, 0, -90, 90, 0 } })
-HAMMER.Idle = Kit.Breath(HOBS, { Duration = 3.8, Chest = 2.2, Rise = 0.04, Head = -1.2 })
+-- 1페이즈 버릇: 카메라를 들어 찰칵 · 고개를 반대로 갸웃하며 상대를 훑어봄
+local BLADE = reactions(OBS, { RArm = { 84, 0, -62 }, LArm = { 60, 0, -10 }, Torso = { -6, 10, 0 }, Root = { 0, -0.15, 0.25, 0, 26, 0 } }, {
+	M({
+		Duration = 1.5,
+		Keys = {
+			K(0, nil, OBS),
+			K(0.35, "sineOut", OBS, { LArm = { 86, 14, 0 }, Head = { -2, 8, 4 } }),
+			K(0.85, nil, OBS, { LArm = { 88, 14, 0 }, Head = { -2, 10, 6 } }),
+			K(0.9, "expoOut", OBS, { LArm = { 92, 14, 0 }, Head = { -4, 10, 6 } }),
+			K(1.5, "sineInOut", OBS),
+		},
+	}),
+	M({
+		Duration = 1.8,
+		Keys = {
+			K(0, nil, OBS),
+			K(0.6, "sineInOut", OBS, { Head = { -4, 14, -10 }, Torso = { 4, 4, 0 } }),
+			K(1.2, nil, OBS, { Head = { -2, 18, -12 }, Torso = { 4, 6, 0 } }),
+			K(1.8, "sineInOut", OBS),
+		},
+	}),
+})
+-- 망치 버릇: 어깨 위 망치를 툭 추켜 다시 메기 · 별을 올려다봄
+local HAMMER = reactions(HOBS, HGUARD, {
+	M({
+		Duration = 1.3,
+		Keys = {
+			K(0, nil, HOBS),
+			K(0.18, "quadIn", HOBS, { RArm = { 48, 27.7, 1.5 }, Root = { 0, -0.06, 0, 0, 20, 0 } }),
+			K(0.32, "backOut", HOBS, { RArm = { 60, 27.7, 1.5 }, Root = { 0, 0.04, 0, 0, 20, 0 }, Torso = { 6, -6, 0 } }),
+			K(1.3, "sineInOut", HOBS),
+		},
+	}),
+	M({
+		Duration = 2.2,
+		Keys = {
+			K(0, nil, HOBS),
+			K(0.8, "sineInOut", HOBS, { Head = { 30, -6, 0 }, Torso = { 10, -6, 0 } }),
+			K(1.5, nil, HOBS, { Head = { 32, -10, 0 }, Torso = { 10, -6, 0 } }),
+			K(2.2, "sineInOut", HOBS),
+		},
+	}),
+})
+HAMMER.Idle = Kit.Breath(HOBS, { Duration = 4.2, Chest = 2.4, Rise = 0.05, Head = -1.2 })
 
 -- 알코르(2페이즈 소환체 — 떠 있는 작은 별, 클라이언트 Combat/Alcor). 채널은 Root 하나: 위아래로 흔들리며 돈다
 local ALCOR_IDLE = {
@@ -151,139 +218,183 @@ return {
 	Hammer = HAMMER,
 	Alcor = ALCOR,
 	Skills = {
-		-- 1-1 세시 파라티리시: 다가가 높이 들었다가 비스듬히 내려벤다
+		--=== 1페이즈 성위 보는 자(칼 팔 · 손목 카메라) ===--
+		-- 1-1 세시 파라티리시: 다가가며 칼 팔을 어깨 위 뒤로 감아 들고(칼날이 번뜩 — 말레니아의 신호) → 짧은 멈춤 → 비스듬히 내려벤다.
+		-- 베인 자리는 [화상]이라 날을 따라 불꽃이 남는다
 		CallistoSlash = {
-			Duration = 1.25,
+			Duration = 1.4,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.3, "sineOut", READY),
-				K(0.4, "expoOut", SLASHED),
-				K(0.85, "sineInOut", SLASHED, { Torso = { -14, -22, 0 } }),
-				K(1.25, "sineInOut", OBS),
+				K(0.2, "sineOut", With(READY_HI, { RArm = { 120, 0, 28 }, Root = { 0, -0.1, 0.1, 0, -6, 0 } })),
+				K(0.34, "quadOut", READY_HI),
+				K(0.42, nil, READY_HI, { RArm = { 172, 0, 38 }, Torso = { 12, -28, 0 } }),
+				K(0.48, "expoOut", SLASH_END),
+				K(0.6, "backOut", SLASH_END, { Torso = { -24, 36, 0 }, RArm = { 80, 0, -64 } }),
+				K(0.95, "sineInOut", SLASH_END, { Torso = { -14, 24, 0 }, RArm = { 76, 0, -50 } }),
+				K(1.4, "sineInOut", OBS),
 			},
 			Events = {
-				{ t = 0.04, k = "Dash", to = "Target", gap = 3.2, d = 0.24 },
-				{ t = 0.3, k = "Trail", on = true, slot = "W" },
-				{ t = 0.36, k = "Fx", n = "BladeArc" },
-				{ t = 0.39, k = "Hit", i = 1 },
-				{ t = 0.39, k = "Shake", a = 0.25, d = 0.12 },
-				{ t = 0.39, k = "Stop", d = 0.05 },
-				{ t = 0.56, k = "Trail", on = false, slot = "W" },
-				{ t = 0.9, k = "Dash", to = "Home", d = 0.3 },
+				{ t = 0.06, k = "Dash", to = "Target", gap = 3.4, d = 0.26 },
+				{ t = 0.3, k = "Fx", n = "SlashGlint" },
+				{ t = 0.4, k = "Trail", on = true, slot = "W" },
+				{ t = 0.45, k = "Fx", n = "BladeArc" },
+				{ t = 0.47, k = "Hit", i = 1 },
+				{ t = 0.47, k = "Fx", n = "BurnSlash" },
+				{ t = 0.47, k = "Shake", a = 0.3, d = 0.14 },
+				{ t = 0.47, k = "Stop", d = 0.06 },
+				{ t = 0.66, k = "Trail", on = false, slot = "W" },
+				{ t = 1.0, k = "Dash", to = "Home", d = 0.32 },
 			},
 		},
-		-- 1-2 파라티리시: 왼손목 카메라로 찰칵(회피 불가)
+		-- 1-2 파라티리시: 몸을 틀어 손목 카메라를 들고 → 뷰파인더에 고개를 붙인 채 포착 원이 대상에게 좁혀지는 동안 멈춤(셔터 찬스)
+		-- → 찰칵(페이탈 프레임 — 흰 섬광, 대상 둘레 사진 틀) → 반동 → 찍은 것을 보듯 고개를 갸웃(회피 불가)
 		CallistoPhoto = {
-			Duration = 1.1,
+			Duration = 1.3,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.32, "sineOut", AIM),
-				K(0.46, nil, AIM),
-				K(0.54, "expoOut", AIM, { LArm = { 102, 0, 0 }, Torso = { 6, -18, 0 } }),
-				K(1.1, "sineInOut", OBS),
+				K(0.26, "sineOut", With(AIM, { LArm = { 70, 0, -4 } })),
+				K(0.42, "quadOut", AIM_EYE),
+				K(0.62, nil, AIM_EYE, { Head = { 4, 40, 14 } }),
+				K(0.67, "expoOut", AIM_EYE, { LArm = { 104, 0, 0 }, Torso = { 8, -20, 0 }, Root = { 0, 0, 0.12, 0, -30, 0 } }),
+				K(0.9, "sineOut", AIM, { LArm = { 70, 10, -6 }, Head = { -8, 14, -16 } }),
+				K(1.3, "sineInOut", OBS),
 			},
 			Events = {
-				{ t = 0.4, k = "Fx", n = "Flash" },
-				{ t = 0.44, k = "Hit", i = 1 },
+				{ t = 0.4, k = "Fx", n = "Focus" },
+				{ t = 0.63, k = "Fx", n = "Flash" },
+				{ t = 0.65, k = "Hit", i = 1 },
+				{ t = 0.65, k = "Shake", a = 0.12, d = 0.08 },
 			},
 		},
-		-- 2-1 트로히아(5번 중 한 번): 팔등 칼날로 등손 가로베기
+		-- 2-1 트로히아(5번 중 한 번): 칼 팔을 가슴 앞으로 접어 감고(짧은 멈춤) → 팔등 칼날로 등손 가로베기, 몸째 반 바퀴
 		CallistoTrohia = {
-			Duration = 0.72,
+			Duration = 0.8,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.13, "quadOut", COIL),
-				K(0.22, "expoOut", SWEEP),
-				K(0.48, "sineInOut", SWEEP, { Torso = { -8, -26, 0 } }),
-				K(0.72, "sineInOut", OBS),
+				K(0.12, "quadOut", TRO_COIL),
+				K(0.16, nil, TRO_COIL, { RArm = { 88, 0, -92 } }),
+				K(0.23, "expoOut", TRO_SWEEP),
+				K(0.4, "sineOut", TRO_SWEEP, { Torso = { -8, -42, 0 }, Root = { 0, -0.3, -0.2, 0, -34, 0 } }),
+				K(0.8, "sineInOut", OBS),
 			},
 			Events = {
-				{ t = 0, k = "Dash", to = "Target", gap = 3, d = 0.14 },
+				{ t = 0, k = "Dash", to = "Target", gap = 3.2, d = 0.14 },
 				{ t = 0.13, k = "Trail", on = true, slot = "W" },
-				{ t = 0.18, k = "Fx", n = "BladeArc" },
-				{ t = 0.2, k = "Hit", i = 1 },
-				{ t = 0.2, k = "Shake", a = 0.15, d = 0.08 },
-				{ t = 0.32, k = "Trail", on = false, slot = "W" },
-				{ t = 0.46, k = "Dash", to = "Home", d = 0.22 },
+				{ t = 0.19, k = "Fx", n = "BladeArc", style = "Back" },
+				{ t = 0.21, k = "Hit", i = 1 },
+				{ t = 0.21, k = "Shake", a = 0.16, d = 0.08 },
+				{ t = 0.21, k = "Stop", d = 0.03 },
+				{ t = 0.34, k = "Trail", on = false, slot = "W" },
+				{ t = 0.48, k = "Dash", to = "Home", d = 0.24 },
 			},
 		},
-		-- 2-2 심베라즈마: 멱살을 잡고 → 얼굴 앞에서 찰칵 → 내던진다(회피 불가)
+		-- 2-2 심베라즈마: 멱살을 잡아(왼손) 들어 올리고 → 손목 카메라가 얼굴 바로 앞 — 찰칵 → 몸을 감았다가 내던진다(회피 불가)
 		CallistoSymberasma = {
-			Duration = 1.7,
+			Duration = 1.95,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.25, "expoOut", AIM, { LArm = { 96, 0, 4 }, Torso = { -10, -14, 0 }, Root = { 0, -0.1, 0, 0, -20, 0 } }),
-				K(0.6, "sineOut", AIM, { LArm = { 124, 0, 4 }, Torso = { 8, -10, 0 }, Head = { 6, 24, 0 } }),
-				K(0.95, "sineOut", AIM, { LArm = { 120, 30, 40 }, Torso = { 6, 30, 0 }, Root = { 0, 0, 0.2, 0, 10, 0 } }),
-				K(1.1, "expoOut", AIM, { LArm = { 40, -30, -70 }, Torso = { -14, -36, 0 }, Root = { 0, -0.2, -0.2, 0, -40, 0 } }),
-				K(1.7, "sineInOut", OBS),
+				K(0.22, "expoOut", GRAB),
+				K(0.5, "sineOut", LIFT),
+				K(0.72, nil, LIFT, { Head = { 10, 28, 8 } }),
+				K(0.76, "expoOut", LIFT, { LArm = { 130, 0, 4 }, Torso = { 12, -12, 0 } }),
+				K(1.0, "sineIn", WIND),
+				K(1.14, "expoOut", THROW),
+				K(1.4, "sineOut", THROW, { Torso = { -12, -44, 0 } }),
+				K(1.95, "sineInOut", OBS),
 			},
 			Events = {
 				{ t = 0.04, k = "Dash", to = "Target", gap = 1.4, d = 0.2 },
-				{ t = 0.74, k = "Fx", n = "Flash" },
-				{ t = 1.1, k = "Hit", i = 1 },
-				{ t = 1.1, k = "Shake", a = 0.35, d = 0.18 },
-				{ t = 1.3, k = "Dash", to = "Home", d = 0.32 },
+				{ t = 0.22, k = "Fx", n = "Grab" },
+				{ t = 0.6, k = "Fx", n = "Focus" },
+				{ t = 0.75, k = "Fx", n = "Flash" },
+				{ t = 1.14, k = "Hit", i = 1 },
+				{ t = 1.14, k = "Fx", n = "Throw" },
+				{ t = 1.14, k = "Shake", a = 0.38, d = 0.2 },
+				{ t = 1.42, k = "Dash", to = "Home", d = 0.34 },
 			},
 		},
-		-- 3-1 신데시 톤 아스트론(3번 중 한 번): 손을 칼날로 — 당겼다가 한 줄로 찌른다
+		-- 3-1 신데시 톤 아스트론(3번 중 한 번): 손이 칼날 — 몸째 뒤로 당겨 겨누고(칼끝 번뜩) → 앞발을 내디디며 어깨째 찌른다
 		CallistoSynthesis = {
-			Duration = 0.95,
+			Duration = 1.0,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.26, "sineOut", DRAW),
-				K(0.35, "expoOut", THRUST),
-				K(0.62, "sineInOut", THRUST, { Torso = { -12, -6, 0 } }),
-				K(0.95, "sineInOut", OBS),
+				K(0.22, "sineOut", DRAW),
+				K(0.3, nil, DRAW, { Root = { 0, -0.28, 0.6, 0, -34, 0 } }),
+				K(0.36, "expoOut", THRUST),
+				K(0.46, "backOut", THRUST, { Root = { 0, -0.48, -0.85, 0, 20, 0 } }),
+				K(0.66, "sineInOut", THRUST, { Torso = { -10, 16, 0 }, Root = { 0, -0.4, -0.6, 0, 14, 0 } }),
+				K(1.0, "sineInOut", OBS),
 			},
 			Events = {
-				{ t = 0.04, k = "Dash", to = "Target", gap = 3.8, d = 0.2 },
-				{ t = 0.33, k = "Fx", n = "Stab" },
-				{ t = 0.35, k = "Hit", i = 1 },
-				{ t = 0.35, k = "Shake", a = 0.2, d = 0.1 },
-				{ t = 0.35, k = "Stop", d = 0.04 },
-				{ t = 0.62, k = "Dash", to = "Home", d = 0.26 },
+				{ t = 0.04, k = "Dash", to = "Target", gap = 4.0, d = 0.2 },
+				{ t = 0.24, k = "Fx", n = "SlashGlint" },
+				{ t = 0.34, k = "Fx", n = "Stab" },
+				{ t = 0.36, k = "Hit", i = 1 },
+				{ t = 0.36, k = "Shake", a = 0.22, d = 0.1 },
+				{ t = 0.36, k = "Stop", d = 0.05 },
+				{ t = 0.64, k = "Dash", to = "Home", d = 0.28 },
 			},
 		},
-		-- 3-2 미크리 아르크토스 하라시: 물러서며 렌즈를 겨눠 모았다가 아군 칸 전부를 태운다(막기만)
+		-- 3-2 미크리 아르크토스 하라시: 뒤로 물러서 손목 카메라를 겨누고 → 렌즈에 별빛이 빨려 들며 팔이 떨리는 동안 버팀
+		-- → 쏘는 순간 반동으로 미끄러진다(아군 칸 전부를 태움 — 막기만)
 		CallistoArktos = {
-			Duration = 2.1,
+			Duration = 2.3,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.4, "sineOut", AIM, { Root = { 0, -0.1, 0.6, 0, -30, 0 } }),
-				K(0.98, nil, AIM, { Root = { 0, -0.15, 0.65, 0, -30, 0 }, LArm = { 92, 0, 0 } }),
-				K(1.06, "expoOut", AIM, { Root = { 0, -0.1, 1.0, 0, -30, 0 }, LArm = { 100, 0, 0 }, Torso = { 12, -18, 0 } }),
-				K(2.1, "sineInOut", OBS),
+				K(0.32, "sineOut", AIM_EYE, { Root = { 0, -0.12, 0.8, 0, -30, 0 }, RArm = { 30, 0, 40 }, RLeg = { 14, 0, 8 }, LLeg = { -14, 0, -8 } }),
+				K(0.6, nil, AIM_EYE, { Root = { 0, -0.18, 0.82, 0, -30, 0 }, RArm = { 34, 0, 44 }, LArm = { 90, 1, 0 }, RLeg = { 14, 0, 8 }, LLeg = { -14, 0, -8 } }),
+				K(0.75, "sineInOut", AIM_EYE, { Root = { 0, -0.2, 0.82, 0, -30, 0 }, RArm = { 34, 0, 44 }, LArm = { 91, -1, 0 }, RLeg = { 14, 0, 8 }, LLeg = { -14, 0, -8 } }),
+				K(0.9, "sineInOut", AIM_EYE, { Root = { 0, -0.22, 0.82, 0, -30, 0 }, RArm = { 34, 0, 44 }, LArm = { 90, 1.5, 0 }, RLeg = { 16, 0, 8 }, LLeg = { -16, 0, -8 } }),
+				K(1.04, "sineInOut", AIM_EYE, { Root = { 0, -0.24, 0.82, 0, -30, 0 }, RArm = { 34, 0, 44 }, LArm = { 90.5, -1.5, 0 }, RLeg = { 16, 0, 8 }, LLeg = { -16, 0, -8 } }),
+				K(1.12, "expoOut", AIM_EYE, { Root = { 0, -0.15, 1.35, 0, -30, 0 }, LArm = { 102, 0, 0 }, Torso = { 14, -22, 0 }, RArm = { 40, 0, 50 } }),
+				K(1.6, "sineOut", AIM, { Root = { 0, -0.1, 1.2, 0, -30, 0 }, LArm = { 86, 0, -4 } }),
+				K(2.3, "sineInOut", OBS),
 			},
 			Events = {
-				{ t = 0.4, k = "Fx", n = "LensCharge" },
-				{ t = 1.0, k = "Fx", n = "LensBurn" },
-				{ t = 1.06, k = "Hit", i = 1 },
-				{ t = 1.06, k = "Shake", a = 0.5, d = 0.35 },
+				{ t = 0.34, k = "Fx", n = "LensCharge" },
+				{ t = 1.1, k = "Fx", n = "LensBurn" },
+				{ t = 1.13, k = "Hit", i = 1 },
+				{ t = 1.12, k = "Shake", a = 0.6, d = 0.4 },
+				{ t = 1.12, k = "Stop", d = 0.05 },
 			},
 		},
-		-- 강화 아스트로 세시: 뛰어들어 두 팔(칼날·카메라 팔)을 펴고 고속으로 네 바퀴 — 사방을 벤다(회피 불가)
+		-- 강화 아스트로 세시(아케인 리니지 블레이드 댄서 칼춤 + 말레니아 물새 춤): 칼 팔을 옆 뒤로 감고 웅크림(신호) → 도약해 잠깐 떠 있다가
+		-- → 두 팔을 수평으로 펴고 회전 묶음 셋(묶음 사이 짧은 틈 — 한 묶음 두 바퀴, 내려오며) → 착지와 함께 칼바람 고리(회피 불가)
 		CallistoAstro = {
-			Duration = 1.9,
+			Duration = 2.35,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.3, "sineOut", OBS, { Root = { 0, -0.6, 0, 0, 0, 0 }, Torso = { -16, 0, 0 }, RArm = { 40, 0, 80 }, LArm = { 40, 0, -80 }, RLeg = { 30, 0, 10 }, LLeg = { -20, 0, -10 } }),
-				K(0.36, "quadIn", OBS, { Root = { 0, -0.3, 0, 0, 0, 0 }, Torso = { -6, 0, 0 }, RArm = { 4, 0, 90 }, LArm = { 4, 0, -90 }, RLeg = { 4, 0, 10 }, LLeg = { -4, 0, -10 } }),
-				K(1.16, nil, OBS, { Root = { 0, -0.3, 0, 0, 1440, 0 }, Torso = { -6, 0, 0 }, RArm = { 4, 0, 90 }, LArm = { 4, 0, -90 }, RLeg = { 4, 0, 10 }, LLeg = { -4, 0, -10 } }),
-				K(1.34, "expoOut", OBS, { Root = { 0, -0.5, 0, 0, 1460, 0 }, Torso = { -14, 0, 0 }, RArm = { 30, 0, 60 }, LArm = { 30, 0, -60 } }),
-				K(1.9, "sineInOut", OBS, { Root = { 0, 0, 0, 0, 1460, 0 } }),
+				K(0.26, "sineOut", CROUCH),
+				K(0.4, nil, CROUCH, { Root = { 0, -0.85, 0.4, 0, -34, 0 } }),
+				K(0.52, "expoOut", LEAP),
+				K(0.62, nil, LEAP, { Root = { 0, 2.0, -0.6, 0, -40, 0 } }),
+				K(0.68, "quadIn", SPIN, { Root = { 0, 1.7, -0.4, 0, -40, 0 } }),
+				K(0.92, nil, SPIN, { Root = { 0, 1.3, -0.3, 0, 680, 0 } }),
+				K(1.0, "sineOut", SPIN, { Root = { 0, 1.2, -0.3, 0, 700, 0 }, Torso = { -10, 0, 0 } }),
+				K(1.04, "quadIn", SPIN, { Root = { 0, 1.1, -0.2, 0, 720, 0 } }),
+				K(1.26, nil, SPIN, { Root = { 0, 0.6, -0.1, 0, 1400, 0 } }),
+				K(1.32, "sineOut", SPIN, { Root = { 0, 0.5, -0.1, 0, 1420, 0 }, Torso = { -12, 0, 0 } }),
+				K(1.36, "quadIn", SPIN, { Root = { 0, 0.4, 0, 0, 1440, 0 } }),
+				K(1.62, nil, SPIN, { Root = { 0, -0.3, 0, 0, 2140, 0 } }),
+				K(1.74, "expoOut", CROUCH, { Root = { 0, -0.7, 0, 0, 2160, 0 }, RArm = { 30, 0, 86 }, LArm = { 30, 0, -86 } }),
+				K(2.35, "sineInOut", OBS, { Root = { 0, 0, 0, 0, 2180, 0 } }),
 			},
 			Events = {
-				{ t = 0.04, k = "Dash", to = "Target", gap = 2, d = 0.22 },
-				{ t = 0.36, k = "Trail", on = true, slot = "W" },
-				{ t = 0.36, k = "Fx", n = "BladeStorm" },
-				{ t = 0.76, k = "Hit", i = 1 },
-				{ t = 0.76, k = "Shake", a = 0.45, d = 0.4 },
-				{ t = 1.16, k = "Trail", on = false, slot = "W" },
-				{ t = 1.4, k = "Dash", to = "Home", d = 0.34 },
+				{ t = 0.04, k = "Dash", to = "Target", gap = 2.2, d = 0.3 },
+				{ t = 0.3, k = "Fx", n = "SlashGlint" },
+				{ t = 0.52, k = "Fx", n = "LeapDust" },
+				{ t = 0.68, k = "Trail", on = true, slot = "W" },
+				{ t = 0.68, k = "Fx", n = "BladeStorm" },
+				{ t = 1.1, k = "Hit", i = 1 },
+				{ t = 1.1, k = "Shake", a = 0.5, d = 0.5 },
+				{ t = 1.62, k = "Trail", on = false, slot = "W" },
+				{ t = 1.66, k = "Fx", n = "StormEnd" },
+				{ t = 1.66, k = "Shake", a = 0.35, d = 0.2 },
+				{ t = 1.85, k = "Dash", to = "Home", d = 0.36 },
 			},
 		},
-		--=== 등장 · 페이즈 전환(전투 화면이 튼다 — 얼굴 클로즈업 컷신) ===--
+
+		--=== 등장 · 페이즈 전환(전투 화면이 튼다) ===--
 		-- 등장(2026-11-01 사용자 사양): 마주 본 채 왼발 클로즈업 → 카메라가 왼쪽 위로 올라가며, 의수 칼날이 잘 나오는지 시험하는 모습
 		-- (팔을 들어 보고 → 날이 미끄러져 나옴 → 손목을 비틀어 날을 봄 → 허공을 한 번 그음) → 날을 다시 넣고 전투 시작
 		CallistoIntro = {
@@ -291,53 +402,53 @@ return {
 			Keys = {
 				K(0, nil, OBS),
 				K(1.2, nil, OBS),
-				K(1.6, "sineOut", OBS, { Torso = { 0, 12, 0 }, Head = { -14, 26, 0 }, RArm = { 82, 0, -34 }, W = { 0, 0, 0, 0, 0, 0 } }),
+				K(1.6, "sineOut", OBS, { Torso = { 0, 12, 0 }, Head = { -14, 26, 0 }, RArm = { 82, 0, -34 } }),
 				K(2.1, nil, OBS, { Torso = { 0, 12, 0 }, Head = { -16, 28, 0 }, RArm = { 84, 0, -32 } }),
-				K(2.45, "sineInOut", OBS, { Torso = { 0, 14, 0 }, Head = { -12, 30, 4 }, RArm = { 90, 0, -26 }, W = { 0, 0, 0, 0, 80, 0 } }),
-				K(2.75, "sineInOut", OBS, { Torso = { 0, 10, 0 }, Head = { -12, 26, 0 }, RArm = { 84, 0, -36 }, W = { 0, 0, 0, 0, 0, 0 } }),
+				K(2.45, "sineInOut", OBS, { Torso = { 0, 14, 0 }, Head = { -12, 30, 4 }, RArm = { 90, 0, -26 } }),
+				K(2.75, "sineInOut", OBS, { Torso = { 0, 10, 0 }, Head = { -12, 26, 0 }, RArm = { 84, 0, -36 } }),
 				K(3.0, "expoOut", OBS, { Root = { 0, -0.1, 0, 0, -10, 0 }, Torso = { -4, -16, 0 }, Head = { -6, 10, 0 }, RArm = { 96, 0, 46 } }),
 				K(3.25, "sineOut", OBS, { Torso = { 0, 6, 0 }, Head = { -10, 18, 0 }, RArm = { 80, 0, -10 } }),
-				K(3.75, "sineInOut", OBS, { Head = { -4, 6, 0 }, RArm = { 40, 0, 6 } }),
+				K(3.75, "sineInOut", OBS, { Head = { -4, 6, 0 }, RArm = { 50, 0, 6 } }),
 				K(4.6, "sineInOut", OBS),
 			},
 			Events = {
 				{ t = 0, k = "Fx", n = "IntroShot", d = 4.6 },
-				{ t = 0.1, k = "Fx", n = "Mood", m = "Observe", d = 2 },
 				{ t = 1.75, k = "Fx", n = "BladeOut" },
 				{ t = 2.9, k = "Trail", on = true, slot = "W" },
 				{ t = 3.15, k = "Trail", on = false, slot = "W" },
 				{ t = 3.45, k = "Fx", n = "BladeIn" },
-				{ t = 3.8, k = "Fx", n = "Mood", m = "Smile", d = 0.8 },
 			},
 		},
-		-- 2페이즈(2026-11-01): 의수 팔을 크게 휘두르면 주변이 우주로 바뀌며 빠르게 돌다 느려지고, 의수가 부서져 우주를 담은 팔이 채운다.
-		-- 동시에 얼굴이 우주로(별무리·표정이 사라짐). 끝에 별빛이 터지며 북두칠성 망치가 손에
-		CallistoPhase2 = {
-			Duration = 4.4,
+		-- 2페이즈(2026-11-01): 의수 팔을 크게 휘두르면 주변이 우주로 바뀌며 빠르게 돌다 느려지고, 팔 검이 부서져 우주를 담은 팔이 채운다.
+		-- 얼굴도 우주로. 하늘에서 별빛이 모여 북두칠성 망치가 손에 맺히고 어깨에 멘다
+		CallistoPhase2 = M({
+			Duration = 4.6,
 			Keys = {
 				K(0, nil, OBS),
 				K(0.7, "sineIn", OBS, { Root = { 0, -0.2, 0, 0, 30, 0 }, Torso = { -6, 34, 0 }, Head = { 0, -26, 0 }, RArm = { 70, 0, -72 }, LArm = { 24, 0, -20 }, RLeg = { 12, 0, 8 }, LLeg = { -10, 0, -8 } }),
 				K(1.0, "expoOut", OBS, { Root = { 0, -0.3, 0, 0, -26, 0 }, Torso = { -10, -38, 0 }, Head = { 6, 18, 0 }, RArm = { 92, 0, 96 }, LArm = { 30, 0, -40 }, RLeg = { 22, 0, 8 }, LLeg = { -18, 0, -8 } }),
 				K(1.8, nil, OBS, { Root = { 0, -0.25, 0, 0, -22, 0 }, Torso = { -8, -32, 0 }, Head = { 10, 14, 0 }, RArm = { 90, 0, 92 }, LArm = { 30, 0, -38 } }),
 				K(2.8, "sineInOut", OBS, { Root = { 0, 0.15, 0, 0, 0, 0 }, Torso = { 10, 0, 0 }, Head = { 24, 0, 0 }, RArm = { 50, 0, 44 }, LArm = { 50, 0, -44 } }),
-				K(3.7, "sineInOut", OBS, { Torso = { 6, 0, 0 }, Head = { 12, 0, 0 }, RArm = { 120, 0, 30 }, LArm = { 40, 0, -30 } }),
-				K(4.4, "sineInOut", HOBS),
+				K(3.6, "sineInOut", HSKY),
+				K(3.95, nil, HSKY, { Head = { 32, 0, 0 } }),
+				K(4.6, "sineInOut", HOBS),
 			},
 			Events = {
-				{ t = 0, k = "Fx", n = "PhaseShot", d = 4.4, p = 2 },
+				{ t = 0, k = "Fx", n = "PhaseShot", d = 4.6, p = 2 },
 				{ t = 1.0, k = "Fx", n = "PhaseTwo" },
 				{ t = 1.0, k = "Shake", a = 0.5, d = 0.6 },
-				{ t = 4.25, k = "Fx", n = "PageBurst" },
+				{ t = 3.6, k = "Fx", n = "PageBurst" },
 			},
-		},
-		-- 3페이즈(2026-11-01): 옷이 모두 사라지며 우주 몸만 남고, 우주를 보여 주다 회전이 점점 빨라지며, 우리은하가 전투 필드 아래에 생겨난다
-		CallistoPhase3 = {
+		}),
+		-- 3페이즈(2026-11-01): 망치를 하늘로 곧추세우자 옷이 모두 사라지며 우주 몸만 남고(등 뒤 일식 후광 · 검은 띠 팔이 펼쳐짐),
+		-- 우주의 회전이 점점 빨라지고, 우리은하가 전투 필드 아래에 생겨난다
+		CallistoPhase3 = M({
 			Duration = 4.8,
 			Keys = {
 				K(0, nil, HOBS),
-				K(0.8, "sineOut", HOBS, { Root = { 0, 0.3, 0, 0, 0, 0 }, Torso = { 12, 0, 0 }, Head = { 22, 0, 0 }, RArm = { 120, 0, 60 }, LArm = { 120, 0, -60 } }),
-				K(2.2, nil, HOBS, { Root = { 0, 0.4, 0, 0, 0, 0 }, Torso = { 14, 0, 0 }, Head = { 26, 0, 0 }, RArm = { 126, 0, 64 }, LArm = { 126, 0, -64 } }),
-				K(3.6, "sineInOut", HOBS, { Root = { 0, 0.3, 0, 0, 0, 0 }, Torso = { 4, 0, 0 }, Head = { -10, 0, 0 }, RArm = { 60, 0, 40 }, LArm = { 60, 0, -40 } }),
+				K(0.8, "sineOut", HSKY, { Root = { 0, 0.4, 0, 0, 0, 0 } }),
+				K(2.2, nil, HSKY, { Root = { 0, 0.55, 0, 0, 0, 0 }, Head = { 34, 0, 0 } }),
+				K(3.6, "sineInOut", HREADY, { Root = { 0, 0.1, 0.1, 0, 30, 0 } }),
 				K(4.8, "sineInOut", HOBS),
 			},
 			Events = {
@@ -346,8 +457,8 @@ return {
 				{ t = 2.0, k = "Fx", n = "SpinUp" },
 				{ t = 2.4, k = "Fx", n = "GalaxyRise" },
 			},
-		},
-		-- 페이즈 전환: 무릎을 꿇었다가 별을 올려다보고(눈물·결의), 두 팔을 펴며 일어서 별빛이 터진다
+		}),
+		-- 페이즈 전환(옛 컷신 — 시험용으로 남김): 무릎을 꿇었다가 별을 올려다보고, 두 팔을 펴며 일어서 별빛이 터진다
 		CallistoPageShift = {
 			Duration = 2.7,
 			Keys = {
@@ -359,205 +470,242 @@ return {
 			},
 			Events = {
 				{ t = 0, k = "Fx", n = "PageShot", d = 2.7 },
-				{ t = 0.4, k = "Fx", n = "Mood", m = "Sorrow", d = 1.4 },
 				{ t = 1.9, k = "Fx", n = "PageBurst" },
 				{ t = 1.9, k = "Shake", a = 0.4, d = 0.4 },
 			},
 		},
 
 		--=== 2페이즈 성위 품은 자(북두칠성 망치) ===--
-		-- 평타 수많은 성위 아래 파묻혀: 다가가 머리 위에서 내려찍는다
-		CallistoBuried = {
-			Duration = 1.2,
+		-- 평타 수많은 성위 아래 파묻혀: 다가가며 어깨의 망치를 두 손으로 머리 위로(국자 별이 밝아짐) → 꼭대기에서 짧게 멈춤
+		-- → 가속하며 내려찍는다(땅이 갈라지고 금빛 고리) → 망치를 뽑아 다시 어깨에
+		CallistoBuried = M({
+			Duration = 1.4,
 			Keys = {
 				K(0, nil, HOBS),
-				K(0.32, "sineOut", HRAISE),
-				K(0.42, "expoOut", HSMASH),
-				K(0.8, "sineInOut", HSMASH, { Torso = { -18, 0, 0 } }),
-				K(1.2, "sineInOut", HOBS),
+				K(0.3, "sineOut", HRAISE),
+				K(0.38, nil, HRAISE, { Torso = { 16, 6, 0 }, Root = { 0, -0.05, 0.3, 0, 10, 0 } }),
+				K(0.46, "quadIn", HSMASH),
+				K(0.6, "sineOut", HSMASH, { Root = { 0, -0.7, -0.45, 0, 6, 0 }, Torso = { -28, 0, 0 } }),
+				K(0.92, "sineInOut", HREADY),
+				K(1.4, "sineInOut", HOBS),
 			},
 			Events = {
-				{ t = 0.04, k = "Dash", to = "Target", gap = 3.6, d = 0.24 },
+				{ t = 0.04, k = "Dash", to = "Target", gap = 3.8, d = 0.26 },
+				{ t = 0.22, k = "Fx", n = "HammerGlow" },
+				{ t = 0.34, k = "Trail", on = true, slot = "W" },
+				{ t = 0.45, k = "Fx", n = "HammerSmash" },
+				{ t = 0.46, k = "Hit", i = 1 },
+				{ t = 0.46, k = "Shake", a = 0.36, d = 0.16 },
+				{ t = 0.46, k = "Stop", d = 0.06 },
+				{ t = 0.56, k = "Trail", on = false, slot = "W" },
+				{ t = 0.95, k = "Dash", to = "Home", d = 0.32 },
+			},
+		}),
+		-- 알리오스: 제자리에서 살짝 뛰어 망치를 머리 위로 → 온몸으로 땅을 내려찍어 아군 필드로 금빛 장판이 물결처럼 번진다 → 누른 채 버팀
+		CallistoAlioth = M({
+			Duration = 1.9,
+			Keys = {
+				K(0, nil, HOBS),
+				K(0.4, "sineOut", HRAISE, { Root = { 0, 0.55, 0.2, 0, 10, 0 } }),
+				K(0.54, nil, HRAISE, { Root = { 0, 0.65, 0.2, 0, 10, 0 }, Torso = { 16, 6, 0 } }),
+				K(0.66, "quadIn", HSMASH, { Root = { 0, -0.75, -0.45, 0, 6, 0 } }),
+				K(1.25, nil, HSMASH, { Root = { 0, -0.72, -0.45, 0, 6, 0 }, Torso = { -28, 0, 0 } }),
+				K(1.9, "sineInOut", HOBS),
+			},
+			Events = {
+				{ t = 0.25, k = "Fx", n = "HammerGlow" },
+				{ t = 0.4, k = "Trail", on = true, slot = "W" },
+				{ t = 0.66, k = "Fx", n = "AliothField" },
+				{ t = 0.68, k = "Hit", i = 1 },
+				{ t = 0.66, k = "Shake", a = 0.5, d = 0.3 },
+				{ t = 0.66, k = "Stop", d = 0.06 },
+				{ t = 0.76, k = "Trail", on = false, slot = "W" },
+			},
+		}),
+		-- 메그레즈: 다가가며 망치를 어깨에서 내려 몸을 오른쪽으로 감고(짧은 멈춤) → 몸을 풀며 가로로 후려친다 → 망치에 끌려 반 바퀴 더
+		CallistoMegrez = M({
+			Duration = 1.35,
+			Keys = {
+				K(0, nil, HOBS),
+				K(0.28, "sineOut", HCOIL),
+				K(0.34, nil, HCOIL, { Root = { 0, -0.32, 0, 0, -46, 0 } }),
+				K(0.42, "expoOut", HSWEEP),
+				K(0.62, "sineOut", HSWEEP, { Root = { 0, -0.35, -0.25, 0, 44, 0 }, Torso = { -12, 38, 0 } }),
+				K(0.9, "sineInOut", HREADY),
+				K(1.35, "sineInOut", HOBS),
+			},
+			Events = {
+				{ t = 0.04, k = "Dash", to = "Target", gap = 3.6, d = 0.22 },
 				{ t = 0.3, k = "Trail", on = true, slot = "W" },
-				{ t = 0.41, k = "Fx", n = "HammerSmash" },
-				{ t = 0.42, k = "Hit", i = 1 },
-				{ t = 0.42, k = "Shake", a = 0.3, d = 0.14 },
-				{ t = 0.42, k = "Stop", d = 0.05 },
+				{ t = 0.37, k = "Fx", n = "MegrezSwing" },
+				{ t = 0.39, k = "Hit", i = 1 },
+				{ t = 0.39, k = "Shake", a = 0.32, d = 0.14 },
+				{ t = 0.39, k = "Stop", d = 0.04 },
 				{ t = 0.55, k = "Trail", on = false, slot = "W" },
-				{ t = 0.85, k = "Dash", to = "Home", d = 0.3 },
+				{ t = 0.86, k = "Dash", to = "Home", d = 0.3 },
 			},
-		},
-		-- 알리오스: 제자리에서 땅을 내려찍어 아군 필드에 장판을 번지게 한다
-		CallistoAlioth = {
-			Duration = 1.6,
+		}),
+		-- 성위는 떠돌이, 갈 곳 잃은 아이를 바로잡아(소환): 망치를 하늘로 곧추세우면 국자 별이 밝아지고 미자르 곁의 작은 별(알코르)이
+		-- 망치에서 떨어져 나와 적 진영으로 날아가 내려앉는다(공격 아님 — 타격 없음)
+		CallistoAlcor = M({
+			Duration = 2.0,
 			Keys = {
 				K(0, nil, HOBS),
-				K(0.45, "sineOut", HRAISE),
-				K(0.58, "expoOut", HSMASH),
-				K(1.1, "sineInOut", HSMASH, { Torso = { -18, 0, 0 } }),
-				K(1.6, "sineInOut", HOBS),
+				K(0.55, "sineOut", HSKY),
+				K(0.95, nil, HSKY, { Head = { 34, -8, 0 } }),
+				K(1.0, "expoOut", HSKY, { Root = { 0, 0.3, 0, 0, 0, 0 }, Torso = { 14, 0, 0 } }),
+				K(2.0, "sineInOut", HOBS),
 			},
 			Events = {
-				{ t = 0.58, k = "Fx", n = "AliothField" },
-				{ t = 0.62, k = "Hit", i = 1 },
-				{ t = 0.58, k = "Shake", a = 0.4, d = 0.25 },
+				{ t = 0.6, k = "Fx", n = "HammerGlow" },
+				{ t = 0.98, k = "Fx", n = "SummonStar" },
 			},
-		},
-		-- 메그레즈: 다가가 망치를 팔 선과 한 줄로 들고 가로로 후려친다
-		CallistoMegrez = {
-			Duration = 1.15,
-			Keys = {
-				K(0, nil, HOBS),
-				K(0.26, "quadOut", HCOIL),
-				K(0.37, "expoOut", HSWEEP),
-				K(0.7, "sineInOut", HSWEEP, { Torso = { -8, -28, 0 } }),
-				K(1.15, "sineInOut", HOBS),
-			},
-			Events = {
-				{ t = 0.04, k = "Dash", to = "Target", gap = 3.4, d = 0.22 },
-				{ t = 0.26, k = "Trail", on = true, slot = "W" },
-				{ t = 0.33, k = "Fx", n = "MegrezSwing" },
-				{ t = 0.36, k = "Hit", i = 1 },
-				{ t = 0.36, k = "Shake", a = 0.3, d = 0.14 },
-				{ t = 0.5, k = "Trail", on = false, slot = "W" },
-				{ t = 0.78, k = "Dash", to = "Home", d = 0.3 },
-			},
-		},
-		-- 성위는 떠돌이, 갈 곳 잃은 아이를 바로잡아(소환): 망치를 하늘로 들어 별 하나를 적 진영에 내린다(공격 아님 — 타격 없음)
-		CallistoAlcor = {
+		}),
+		-- 페크다: 다가가 높이 뛰어올라 망치를 머리 위로(꼭대기에서 멈춤) → 떨어지며 대상이 선 열을 내리찍고 그 열로 별빛 기둥이 차례로 꽂힌다
+		CallistoPhecda = M({
 			Duration = 1.8,
 			Keys = {
 				K(0, nil, HOBS),
-				K(0.6, "sineOut", HSKY),
-				K(1.1, nil, HSKY, { Head = { 24, -10, 0 } }),
+				K(0.36, "sineOut", HRAISE, { Root = { 0, 2.6, 0.2, 0, 10, 0 } }),
+				K(0.5, nil, HRAISE, { Root = { 0, 2.9, 0.2, 0, 10, 0 }, Torso = { 16, 6, 0 } }),
+				K(0.64, "expoIn", HSMASH),
+				K(1.0, "sineOut", HSMASH, { Torso = { -30, 0, 0 }, Root = { 0, -0.72, -0.45, 0, 6, 0 } }),
+				K(1.3, "sineInOut", HREADY),
 				K(1.8, "sineInOut", HOBS),
 			},
 			Events = {
-				{ t = 0.62, k = "Fx", n = "SummonStar" },
+				{ t = 0.04, k = "Dash", to = "Target", gap = 4.4, d = 0.32 },
+				{ t = 0.3, k = "Fx", n = "HammerGlow" },
+				{ t = 0.36, k = "Trail", on = true, slot = "W" },
+				{ t = 0.63, k = "Fx", n = "PhecdaColumn" },
+				{ t = 0.65, k = "Hit", i = 1 },
+				{ t = 0.64, k = "Shake", a = 0.55, d = 0.3 },
+				{ t = 0.65, k = "Stop", d = 0.07 },
+				{ t = 0.78, k = "Trail", on = false, slot = "W" },
+				{ t = 1.25, k = "Dash", to = "Home", d = 0.36 },
 			},
-		},
-		-- 페크다: 뛰어올라 대상이 선 열을 위에서 내려찍는다
-		CallistoPhecda = {
-			Duration = 1.6,
-			Keys = {
-				K(0, nil, HOBS),
-				K(0.34, "sineOut", HRAISE, { Root = { 0, 2.4, 0.2, 0, 10, 0 } }),
-				K(0.6, "expoIn", HSMASH),
-				K(1.1, "sineInOut", HSMASH, { Torso = { -18, 0, 0 } }),
-				K(1.6, "sineInOut", HOBS),
-			},
-			Events = {
-				{ t = 0.04, k = "Dash", to = "Target", gap = 4.2, d = 0.3 },
-				{ t = 0.3, k = "Trail", on = true, slot = "W" },
-				{ t = 0.59, k = "Fx", n = "PhecdaColumn" },
-				{ t = 0.62, k = "Hit", i = 1 },
-				{ t = 0.6, k = "Shake", a = 0.5, d = 0.3 },
-				{ t = 0.62, k = "Stop", d = 0.06 },
-				{ t = 0.75, k = "Trail", on = false, slot = "W" },
-				{ t = 1.12, k = "Dash", to = "Home", d = 0.34 },
-			},
-		},
-		-- 메라크: 제자리에서 크게 가로로 휘둘러 대상이 선 행을 충격파로 쓸어 낸다(회피 불가)
-		CallistoMerak = {
-			Duration = 1.45,
-			Keys = {
-				K(0, nil, HOBS),
-				K(0.42, "sineOut", HCOIL, { Root = { 0, -0.35, 0.2, 0, 56, 0 } }),
-				K(0.54, "expoOut", HSWEEP),
-				K(1.0, "sineInOut", HSWEEP, { Torso = { -8, -28, 0 } }),
-				K(1.45, "sineInOut", HOBS),
-			},
-			Events = {
-				{ t = 0.42, k = "Trail", on = true, slot = "W" },
-				{ t = 0.5, k = "Fx", n = "MerakRow" },
-				{ t = 0.56, k = "Hit", i = 1 },
-				{ t = 0.54, k = "Shake", a = 0.45, d = 0.25 },
-				{ t = 0.7, k = "Trail", on = false, slot = "W" },
-			},
-		},
-		-- 강화 북두칠성: 하늘에 일곱 별이 북두칠성으로 늘어서고, 높이 뛰어 망치를 내리치면 별이 아군 칸 전부에 쏟아진다
-		CallistoDipper = {
-			Duration = 2.7,
-			Keys = {
-				K(0, nil, HOBS),
-				K(0.6, "sineOut", HSKY),
-				K(1.05, "sineOut", HRAISE, { Root = { 0, 3.2, 0.3, 0, 10, 0 } }),
-				K(1.3, nil, HRAISE, { Root = { 0, 3.4, 0.3, 0, 10, 0 } }),
-				K(1.5, "expoIn", HSMASH, { Root = { 0, -0.8, -0.5, 0, 6, 0 } }),
-				K(2.1, "sineInOut", HSMASH, { Torso = { -18, 0, 0 } }),
-				K(2.7, "sineInOut", HOBS),
-			},
-			Events = {
-				{ t = 0.25, k = "Fx", n = "Dipper" },
-				{ t = 1.05, k = "Trail", on = true, slot = "W" },
-				{ t = 1.5, k = "Fx", n = "DipperCrash" },
-				{ t = 1.54, k = "Hit", i = 1 },
-				{ t = 1.5, k = "Shake", a = 0.8, d = 0.6 },
-				{ t = 1.5, k = "Stop", d = 0.08 },
-				{ t = 1.7, k = "Trail", on = false, slot = "W" },
-			},
-		},
-
-		--=== 3페이즈 뭇별의 어머니(무기는 2페이즈와 같은 북두칠성 망치) ===--
-		-- 공명적 성위(평타): 망치를 팔 선과 한 줄로 겨눠 머리 끝에서 별빛을 쏜다
-		CallistoResonance = {
-			Duration = 1.0,
-			Keys = {
-				K(0, nil, HOBS),
-				K(0.3, "sineOut", HOBS, { RArm = { 96, 0, 6 }, Torso = { 0, 14, 0 }, Head = { 0, -20, 0 }, W = { 0, 0, 0, -90, 0, 0 } }),
-				K(0.42, "expoOut", HOBS, { RArm = { 100, 0, 4 }, Torso = { 6, 14, 0 }, Root = { 0, 0, 0.3, 0, 20, 0 }, W = { 0, 0, 0, -90, 0, 0 } }),
-				K(1.0, "sineInOut", HOBS),
-			},
-			Events = {
-				{ t = 0.36, k = "Fx", n = "StarBolt" },
-				{ t = 0.5, k = "Hit", i = 1 },
-			},
-		},
-		-- 인위적 별자리: 왼손(카메라 팔)으로 허공에 별자리를 긋고 그 별들이 대상 둘레에 내리꽂힌다
-		CallistoArtificial = {
+		}),
+		-- 메라크: 제자리에서 깊게 몸을 감고(가장 긴 준비) → 온몸을 풀어 가로로 휘두르면 금빛 초승달 충격파가 대상의 행을 쓸고 지나간다(회피 불가)
+		CallistoMerak = M({
 			Duration = 1.7,
 			Keys = {
 				K(0, nil, HOBS),
-				K(0.35, "sineOut", HOBS, { Root = AIM.Root, Torso = AIM.Torso, LArm = { 130, -30, -20 }, Head = { 10, 20, 0 } }),
-				K(0.75, "sineInOut", HOBS, { Root = AIM.Root, Torso = AIM.Torso, LArm = { 110, 30, 10 }, Head = { 6, 30, 0 } }),
-				K(1.0, "expoOut", HOBS, { Root = AIM.Root, LArm = { 70, 0, -10 }, Torso = { -8, -18, 0 } }),
+				K(0.46, "sineOut", HCOIL, { Root = { 0, -0.45, 0.15, 0, -60, 0 }, Torso = { -10, -36, 0 } }),
+				K(0.54, nil, HCOIL, { Root = { 0, -0.48, 0.18, 0, -64, 0 }, Torso = { -10, -38, 0 } }),
+				K(0.62, "expoOut", HSWEEP),
+				K(0.92, "sineOut", HSWEEP, { Root = { 0, -0.35, -0.25, 0, 58, 0 }, Torso = { -12, 40, 0 } }),
+				K(1.25, "sineInOut", HREADY),
 				K(1.7, "sineInOut", HOBS),
 			},
 			Events = {
-				{ t = 0.3, k = "Fx", n = "Constellation" },
-				{ t = 1.0, k = "Hit", i = 1 },
-				{ t = 1.0, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 0.2, k = "Fx", n = "HammerGlow" },
+				{ t = 0.5, k = "Trail", on = true, slot = "W" },
+				{ t = 0.58, k = "Fx", n = "MerakRow" },
+				{ t = 0.62, k = "Hit", i = 1 },
+				{ t = 0.6, k = "Shake", a = 0.45, d = 0.25 },
+				{ t = 0.75, k = "Trail", on = false, slot = "W" },
 			},
-		},
-		-- 쏟아지는 뭇별(3번 중 한 번): 망치를 하늘로 들었다가 앞으로 내려 별을 떨군다
-		CallistoShower = {
-			Duration = 1.0,
+		}),
+		-- 강화 북두칠성: 망치를 하늘로 곧추세우면 아군 진영 하늘에 일곱 별이 차례로 켜져 북두칠성으로 이어지고 → 높이 뛰어(꼭대기에서 멈춤)
+		-- → 떨어지며 내리치는 순간 일곱 별이 아군 칸 전부에 쏟아진다
+		CallistoDipper = M({
+			Duration = 3.0,
+			Keys = {
+				K(0, nil, HOBS),
+				K(0.6, "sineOut", HSKY),
+				K(1.05, nil, HSKY, { Head = { 36, 0, 0 } }),
+				K(1.25, "sineOut", HRAISE, { Root = { 0, 3.2, 0.3, 0, 10, 0 } }),
+				K(1.45, nil, HRAISE, { Root = { 0, 3.45, 0.3, 0, 10, 0 }, Torso = { 18, 6, 0 } }),
+				K(1.62, "expoIn", HSMASH, { Root = { 0, -0.8, -0.5, 0, 6, 0 } }),
+				K(2.3, nil, HSMASH, { Root = { 0, -0.76, -0.5, 0, 6, 0 }, Torso = { -30, 0, 0 } }),
+				K(3.0, "sineInOut", HOBS),
+			},
+			Events = {
+				{ t = 0.25, k = "Fx", n = "Dipper" },
+				{ t = 0.62, k = "Fx", n = "HammerGlow" },
+				{ t = 1.2, k = "Trail", on = true, slot = "W" },
+				{ t = 1.6, k = "Fx", n = "DipperCrash" },
+				{ t = 1.64, k = "Hit", i = 1 },
+				{ t = 1.62, k = "Shake", a = 0.85, d = 0.6 },
+				{ t = 1.62, k = "Stop", d = 0.09 },
+				{ t = 1.8, k = "Trail", on = false, slot = "W" },
+			},
+		}),
+
+		--=== 3페이즈 뭇별의 어머니(우주 몸 · 등 뒤 일식 후광 · 같은 북두칠성 망치) ===--
+		-- 공명적 성위(평타): 망치를 어깨에서 내려 낮게 → 한 손으로 앞 위로 올려치면 망치 머리에서 별이 튕겨 나가 대상에게 꽂힌다
+		CallistoResonance = M({
+			Duration = 1.15,
+			Keys = {
+				K(0, nil, HOBS),
+				K(0.26, "sineOut", HREADY),
+				K(0.32, nil, HREADY, { Root = { 0, -0.4, 0.12, 0, 34, 0 } }),
+				K(0.42, "expoOut", HUPPER),
+				K(0.7, "sineOut", HUPPER, { Torso = { 12, -12, 0 }, Root = { 0, 0.1, -0.25, 0, 6, 0 } }),
+				K(1.15, "sineInOut", HOBS),
+			},
+			Events = {
+				{ t = 0.34, k = "Trail", on = true, slot = "W" },
+				{ t = 0.4, k = "Fx", n = "StarBolt" },
+				{ t = 0.55, k = "Hit", i = 1 },
+				{ t = 0.55, k = "Trail", on = false, slot = "W" },
+			},
+		}),
+		-- 인위적 별자리: 망치는 어깨에 둔 채 왼손으로 허공에 큰곰자리를 한 별씩 찍어 긋고(별마다 손이 잠깐 멈춤) → 주먹을 쥐어 내리꽂으면
+		-- 별들이 대상 둘레로 떨어진다
+		CallistoArtificial = M({
+			Duration = 1.95,
+			Keys = {
+				K(0, nil, HOBS),
+				K(0.25, "sineOut", HOBS, { LArm = { 140, -30, -20 }, Torso = { 4, -14, 0 }, Head = { 14, 10, 0 } }),
+				K(0.36, "quadInOut", HOBS, { LArm = { 132, -14, -18 }, Torso = { 4, -14, 0 }, Head = { 14, 12, 0 } }),
+				K(0.47, "quadInOut", HOBS, { LArm = { 120, -16, -26 }, Torso = { 4, -12, 0 }, Head = { 12, 14, 0 } }),
+				K(0.58, "quadInOut", HOBS, { LArm = { 124, -32, -30 }, Torso = { 4, -12, 0 }, Head = { 12, 12, 0 } }),
+				K(0.69, "quadInOut", HOBS, { LArm = { 134, -40, -24 }, Torso = { 4, -14, 0 }, Head = { 14, 10, 0 } }),
+				K(0.8, "quadInOut", HOBS, { LArm = { 118, -50, -14 }, Torso = { 4, -16, 0 }, Head = { 12, 8, 0 } }),
+				K(0.91, "quadInOut", HOBS, { LArm = { 104, -58, -6 }, Torso = { 4, -18, 0 }, Head = { 10, 6, 0 } }),
+				K(1.02, "sineOut", HOBS, { LArm = { 150, -40, -10 }, Torso = { 10, -16, 0 }, Head = { 18, 10, 0 } }),
+				K(1.1, "expoOut", HOBS, { LArm = { 62, 0, -10 }, Torso = { -10, -16, 0 }, Head = { 2, 12, 0 }, Root = { 0, -0.1, -0.1, 0, 20, 0 } }),
+				K(1.95, "sineInOut", HOBS),
+			},
+			Events = {
+				{ t = 0.25, k = "Fx", n = "Constellation" },
+				{ t = 1.12, k = "Hit", i = 1 },
+				{ t = 1.12, k = "Shake", a = 0.32, d = 0.2 },
+			},
+		}),
+		-- 쏟아지는 뭇별(3번 중 한 번): 망치를 하늘로 치켜들면 별이 모이고 → 한 손으로 대상에게 내리그으면 별이 쏟아진다
+		CallistoShower = M({
+			Duration = 1.1,
 			Keys = {
 				K(0, nil, HOBS),
 				K(0.3, "sineOut", HSKY),
-				K(0.42, "expoOut", HSKY, { RArm = { 110, 0, 20 }, LArm = { 110, 0, -20 }, Torso = { -4, 0, 0 }, Head = { 0, 0, 0 }, W = { 0, 0, 0, -60, 0, 0 } }),
-				K(1.0, "sineInOut", HOBS),
+				K(0.36, nil, HSKY, { Head = { 30, 0, 0 } }),
+				K(0.46, "expoOut", HUPPER),
+				K(1.1, "sineInOut", HOBS),
 			},
 			Events = {
-				{ t = 0.34, k = "Fx", n = "StarShower" },
-				{ t = 0.56, k = "Hit", i = 1 },
+				{ t = 0.32, k = "Fx", n = "StarShower" },
+				{ t = 0.6, k = "Hit", i = 1 },
 			},
-		},
-		-- 뭇별 아래에 잠기리: 떠올라 두 팔을 펴고 하늘을 내린다(장판 10턴, 회피 불가)
-		CallistoSubmerge = {
-			Duration = 2.6,
+		}),
+		-- 뭇별 아래에 잠기리: 떠올라 망치를 하늘로 곧추세우고(일식 후광이 타오름) → 허공을 내리쳐 하늘을 끌어내린다(장판 10턴, 회피 불가)
+		CallistoSubmerge = M({
+			Duration = 2.9,
 			Keys = {
 				K(0, nil, HOBS),
-				K(0.8, "sineOut", HSKY, { Root = { 0, 1.2, 0, 0, 0, 0 } }),
-				K(1.5, nil, HSKY, { Root = { 0, 1.4, 0, 0, 0, 0 }, RArm = { 120, 0, 60 }, LArm = { 120, 0, -60 } }),
-				K(1.62, "expoOut", HSKY, { Root = { 0, 1.0, 0, 0, 0, 0 }, RArm = { 90, 0, 80 }, LArm = { 90, 0, -80 }, Head = { 0, 0, 0 } }),
-				K(2.6, "sineInOut", HOBS),
+				K(0.9, "sineOut", HSKY, { Root = { 0, 1.3, 0, 0, 0, 0 } }),
+				K(1.55, nil, HSKY, { Root = { 0, 1.55, 0, 0, 0, 0 }, Head = { 36, 0, 0 } }),
+				K(1.72, "expoIn", HSMASH, { Root = { 0, 0.6, -0.3, 0, 6, 0 } }),
+				K(2.2, nil, HSMASH, { Root = { 0, 0.5, -0.3, 0, 6, 0 }, Torso = { -30, 0, 0 } }),
+				K(2.9, "sineInOut", HOBS),
 			},
 			Events = {
 				{ t = 0.2, k = "Fx", n = "Submerge" },
-				{ t = 1.62, k = "Hit", i = 1 },
-				{ t = 1.62, k = "Shake", a = 0.6, d = 0.6 },
+				{ t = 1.72, k = "Hit", i = 1 },
+				{ t = 1.72, k = "Shake", a = 0.7, d = 0.6 },
+				{ t = 1.72, k = "Stop", d = 0.08 },
 			},
-		},
+		}),
 	},
 }

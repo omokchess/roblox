@@ -45,6 +45,49 @@ function MotionKit.K(t: number, e: string?, pose: { [string]: any }, over: { [st
 end
 
 --[[
+	무기(W·O) 오일러를 앞 키에 가장 가까운 '같은 회전'의 표기로 바꾼다(2026-11-01 — 자세 계산기로 구한 값은 키마다 표기가 제멋대로라
+	한 값이 180° 넘게 바뀌면 MotionMath 가 일부러 돌리는 것으로 보고 오일러로 한 바퀴 돈다). CFrame.Angles(x, y, z) 는
+	(x + 180, 180 - y, z + 180) 와 같은 회전이고, 각 값은 360 씩 바꿔 써도 같다.
+]]
+local function wrap(a: number, ref: number): number
+	return a + 360 * math.round((ref - a) / 360)
+end
+
+function MotionKit.NearWeapon(w: { number }, ref: { number }, sameBranch: boolean?): { number }
+	local best, bestD = w, math.huge
+	local branches = { { w[4], w[5], w[6] }, { w[4] + 180, 180 - w[5], w[6] + 180 } }
+	if sameBranch then
+		branches[2] = nil
+	end
+	for _, c in branches do
+		local x, y, z = wrap(c[1], ref[4]), wrap(c[2], ref[5]), wrap(c[3], ref[6])
+		local d = math.abs(x - ref[4]) + math.abs(y - ref[5]) + math.abs(z - ref[6])
+		if d < bestD then
+			best, bestD = { w[1], w[2], w[3], x, y, z }, d
+		end
+	end
+	return best
+end
+
+-- 모션 하나의 키들을 앞에서부터 이어 붙여 W·O 표기를 맞춘다(제자리에서 바꿔 돌려준다). 마지막 키는 처음 적은 갈래 그대로
+-- (360 씩만 감는다) — 모션 사이 섞기는 값마다 가까운 쪽으로 선형으로 섞으므로 갈래가 다르면 대기로 돌아갈 때 비틀린다
+function MotionKit.Chain(motion: { [string]: any }): { [string]: any }
+	local keys = motion.Keys
+	for _, slot in { "W", "O" } do
+		local prev = nil
+		for i, key in keys do
+			if key[slot] then
+				if prev then
+					key[slot] = MotionKit.NearWeapon(key[slot], prev, i == #keys)
+				end
+				prev = key[slot]
+			end
+		end
+	end
+	return motion
+end
+
+--[[
 	숨 쉬는 대기(2026-10-02 사용자: "끊기는 느낌이 아니라 부드럽게 숨을 쉬고 있는 느낌" — 모든 직업).
 	자세 하나로 되풀이 모션을 만든다: 내쉰 끝(0초) → 들이쉰 끝(Inhale 초) → 내쉬는 중(반쯤 돌아옴) → 다시 처음.
 	Smooth 라 키에서 멈추지 않고 이어진다(MotionMath.smoothSample).
