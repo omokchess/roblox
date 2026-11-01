@@ -1357,34 +1357,9 @@ def svc_bank(g):
         g["Iron"].cyl(hx, hy, zz - 0.8, 0.32, 0.32, 1.6, seg=12)
         g["Brass"].cyl(hx, hy, zz - 0.85, 0.36, 0.36, 0.1, seg=12)
 
-    def vault_door(g):
-        g["Iron"].hcyl(0, iy1 - 0.5, vz, 4.4, 0.7, axis="y", seg=28)
-        g["Brass"].hcyl(0, iy1 - 0.9, vz, 4.5, 0.12, axis="y", seg=28)
-        g["Iron"].hcyl(0, iy1 - 0.97, vz, 4.1, 0.08, axis="y", seg=28)
-        g["Brass"].hcyl(0, iy1 - 1.1, vz, 0.5, 0.3, axis="y", seg=12)
-        for k in range(6):
-            a = k * math.pi / 3
-            g["Brass"].obox(0.9 * math.cos(a), iy1 - 1.2, vz + 0.9 * math.sin(a), 1.8, 0.12, 0.14, ry=-a)
-        for k in range(8):
-            a = k * math.pi / 4
-            g["Steel"].hcyl(3.6 * math.cos(a), iy1 - 1.0, vz + 3.6 * math.sin(a), 0.22, 0.2, axis="y", seg=8)
-        for k in range(6):                                                     # 바퀴 살 끝 손잡이
-            a = k * math.pi / 3
-            sphere(g, "Brass", (1.8 * math.cos(a), iy1 - 1.25, vz + 1.8 * math.sin(a)), 0.16, sub=1)
-        for zz in (vz - 1.2, vz, vz + 1.2):                                     # 빗장 막대(가운데 → 테)
-            g["Steel"].box(2.6, iy1 - 1.02, zz, 2.8, 0.1, 0.16)
-        g["Paint"].hcyl(2.3, iy1 - 1.05, vz + 2.3, 0.45, 0.06, axis="y", seg=20)   # 번호 다이얼
-        g["Brass"].hcyl(2.3, iy1 - 1.03, vz + 2.3, 0.52, 0.04, axis="y", seg=20)
-        for k in range(12):
-            a = k * math.pi / 6
-            g["Char"].box(2.3 + 0.38 * math.cos(a), iy1 - 1.1, vz + 2.3 + 0.38 * math.sin(a), 0.04, 0.02, 0.04)
-        g["Brass"].hcyl(2.3, iy1 - 1.16, vz + 2.3, 0.14, 0.12, axis="y", seg=10)
-        g["Brass"].box(-2.4, iy1 - 1.04, vz - 3.0, 1.4, 0.04, 0.4)              # 이름판
-        g["Steel"].box(4.35, iy1 - 0.5, vz, 0.5, 0.5, 2.6)                     # 문 가장자리 빗장 끝(열린 문에서 보인다)
-    ang = math.radians(62.0)
-    L_.transformed(g, Matrix.Translation((hx, hy, 0)) @ Matrix.Rotation(-ang, 4, "Z") @ Matrix.Translation((-hx, -hy, 0)), vault_door)
-    dx_, dy_ = 4.75 * math.cos(-ang) - 0.25 * math.sin(-ang), 4.75 * math.sin(-ang) + 0.25 * math.cos(-ang)
-    C(hx + dx_, hy + dy_, vz, 8.8, 0.9, 8.8, rz=-ang)
+    # 2026-11-01 사용자: "은행 금고 문·양옆 입구 게이트가 열려 있다 — 나중에 퀘스트로 열 거니까 닫아 줘" → 문짝은 메시에서 뺐다.
+    # 닫힌 금고 문·옆문 쇠살문은 Studio 부품(tools/Snow_BankDoors.luau, 속성 QuestLocked · 태그 QuestDoor) — 퀘스트가 돌려 열 수 있게.
+    # 문 자리(블렌더): 금고 문 원판 가운데 (0, iy1 - 0.5, vz) 반지름 4.4 두께 0.7 · 경첩 (hx, hy) · 옆문 x = ±(W/2 - T/2), y sy0..sy1, 높이 sh
     for x0, x1 in ((-14.5, -5.8), (5.8, 14.5)):
         g["Wood"].box((x0 + x1) / 2, iy1 - 0.3, FZ + 4.6, x1 - x0, 0.6, 8.4)
         for i in range(int((x1 - x0) / 1.4)):

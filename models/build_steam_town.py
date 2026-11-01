@@ -114,6 +114,11 @@ JOBS = [
 
 if __name__ == "__main__":
     RENDER = "render" in (sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
+    # ONLY=Svc_Bank 처럼 주면 그 모델만 지어 SnowTownKit_<이름>.fbx 로(Studio 에서 그 모델 메시만 갈아 끼울 때 — Snow_BankDoors.luau).
+    # 이때 Snow_Inside_data.luau 는 쓰지 않는다(다른 건물 충돌 자료가 빠지니까 — 그건 ONLY 없이 돌려서)
+    ONLY = os.environ.get("ONLY")
+    if ONLY:
+        JOBS = [j for j in JOBS if j[0] in ONLY.split(",")]
     L.clear_scene()
     objs, pieces = [], []
     import zfight_scan as Z     # 2026-10-24 반짝임: 겹친 면 중 작은 쪽을 0.02 앞으로(뜰은 같은 자리 건물 면과도 잰다)
@@ -182,9 +187,10 @@ if __name__ == "__main__":
     for ob in objs + [marker]:
         ob.select_set(True)
     bpy.context.view_layer.objects.active = marker
-    fbx = os.path.join(HERE, "SnowTownKit.fbx")
+    fbx = os.path.join(HERE, "SnowTownKit.fbx" if not ONLY else "SnowTownKit_%s.fbx" % ONLY.replace(",", "_"))
     bpy.ops.export_scene.fbx(filepath=fbx, use_selection=True, global_scale=1.0, apply_unit_scale=True, apply_scale_options="FBX_SCALE_ALL",
                              axis_forward="-Z", axis_up="Y", object_types={"MESH"}, mesh_smooth_type="FACE", use_mesh_modifiers=True,
                              bake_space_transform=False)
     print("objects %d  FBX: %s" % (len(objs) + 1, fbx))
-    I.emit_luau(os.path.join(HERE, "..", "tools", "Snow_Inside_data.luau"))
+    if not ONLY:
+        I.emit_luau(os.path.join(HERE, "..", "tools", "Snow_Inside_data.luau"))
