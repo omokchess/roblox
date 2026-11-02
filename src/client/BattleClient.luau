@@ -1350,20 +1350,36 @@ function BattleClient:_scanOccluders()
 	end
 end
 
+--[[
+	칼리스토전 카메라(2026-11-01 사용자: "칼리스토 보스전 시야각은 이렇게 ㄱㄱ" + 스크린샷): 아군 칸 뒤 높은 곳에서 칸의 긴 방향으로
+	적 칸을 비스듬히 내려다본다. 칸 판 기준 로컬 스터드(X = 아군 -→ 적 +, Z = 줄, 높이 0 = 판) — 스크린샷의 칸 모서리 22곳에 맞춰 구했다(오차 0.7px, 세로 FOV 70 — 창 크기가 달라도 세로 구도는 그대로라 다시 맞출 일 없음).
+	  16:9 에서 가까운 아군 줄 아래 모서리 화면 높이 90% · 먼 적 줄 위 42% · 칸 가로 33~61% · 수평선 20%(위쪽 1/3 은 하늘/배경)
+	  Eye 카메라 자리 · Aim 화면 한가운데가 보는 바닥(카메라는 줄 가운데선 오른쪽에서 왼쪽으로 22° 돌아 있다 — 스크린샷대로)
+]]
+local CALLISTO_CAM = { Eye = Vector3.new(-61, 31, 19), Aim = Vector3.new(7, 0, -8) }
+local function callistoCamera(layout: BattleArena.Layout): CFrame
+	local plane = layout.Origin + Vector3.new(0, (layout.FlatY or layout.Origin.Y) - layout.Origin.Y, 0)
+	return plane * CFrame.lookAt(CALLISTO_CAM.Eye, CALLISTO_CAM.Aim)
+end
+
 function BattleClient:_lockCamera()
 	local camera = workspace.CurrentCamera
 	if not camera or not self.layout then
 		return
 	end
 	camera.CameraType = Enum.CameraType.Scriptable
-	camera.CFrame = BattleArena.FitCameraCFrame(
-		self.layout,
-		GRID_WIDTH,
-		GRID_HEIGHT,
-		camera.FieldOfView,
-		camera.ViewportSize.X / math.max(camera.ViewportSize.Y, 1),
-		CAMERA_PITCH
-	)
+	if self.snapshot and self.snapshot.Callisto then
+		camera.CFrame = callistoCamera(self.layout)
+	else
+		camera.CFrame = BattleArena.FitCameraCFrame(
+			self.layout,
+			GRID_WIDTH,
+			GRID_HEIGHT,
+			camera.FieldOfView,
+			camera.ViewportSize.X / math.max(camera.ViewportSize.Y, 1),
+			CAMERA_PITCH
+		)
+	end
 	-- 화면 흔들림은 연출이 이 자리를 기준으로 더한다
 	if self.director then
 		self.director:SetCamera(camera.CFrame)

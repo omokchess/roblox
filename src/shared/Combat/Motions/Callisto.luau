@@ -7,11 +7,16 @@
 	성격: 관찰자. 서두르지 않고 꼿꼿이 서서 고개를 기울여 상대를 "찍는다".
 	1페이즈 — 오른팔이 곧 검(무기 CallistoArms Main, 팔 축에 고정 · 날은 기술 동안만 소매에서 나온다 — CombatDirector).
 	  날이 팔의 연장(2.5)이라 날이 나와 있는 동안 팔은 늘 수직에서 45° 넘게 든다(칼끝이 땅에 박히지 않게 — 자세마다 칼끝 높이 확인).
+  날 방향(2026-11-01 사용자: "칼날이 아니라 칼 면으로 때리는 것 같은데"): 날 단면은 두께 0.07(팔 로컬 X) × 폭 0.28(팔 로컬 Z)이라 날은 팔 로컬 ±Z 쪽이다.
+  팔을 앞뒤 면으로 휘두르면 넓은 면이 앞장서므로, 휘두를 때 칼끝 속도(팔 축에 수직 성분)가 팔 로컬 Z 와 나란하도록 팔을 긴 축 둘레로 비튼다(R6 상자 팔이라 거의 안 보인다).
+  비틀기는 기술마다 키별로 구해 RArm 에 넣었고(callisto_edge_gen.py gen — 원본 키는 tools/combat/out/callisto_edge_base.json), 휘두르는 순간(칼끝 25 스터드/초 이상) |cos| ≥ 0.8 을 검사로 지킨다(check).
 	  레퍼런스: 엘든 링 말레니아(의수 + 칼 — "칼 팔을 뒤로 감아 든 준비 동작이 화려한 기술의 신호", 물새 춤 = 도약 · 잠깐 떠 있다가 연타 묶음 셋),
 	            사이버펑크 2077 맨티스 블레이드(팔에서 나온 날 — 도약 베기), 아케인 리니지 블레이드 댄서(아스트로 세시 칼춤 — 사용자 사양),
 	            영 시리즈(Fatal Frame) 카메라 옵스큐라(포착 원이 대상에게 좁혀지고, 공격 순간 셔터 = 페이탈 프레임) — 왼손목 카메라 기술.
 	2·3페이즈 — 북두칠성 망치(WeaponDefinitions.CallistoHammer, 무기 종류 StarHammer → 이 표의 Hammer 묶음). 대기는 오른 어깨에 메고,
 	  공격은 두 손(오른손 y 0 · 왼손 y -0.85). 자세 = tools/combat/design/callisto_hammer_gen.py(손이 자루에 붙는지 · 머리가 땅에 박히지 않는지 계산).
+	  대기(2026-11-01 사용자: "팔뚝을 팔이라 정의해서, 180도정도 뒤집은 다음 망치를 어깨에 걸치게"): R6 팔을 아래팔로 보고 세워 손이 귀 곁, 자루는 어깨 윗면 위, 머리는 등 뒤.
+	  대기 ↔ 두 손 자세는 망치만 손 둘레로 들썩(HPOP)여 어깨에서 떼었다가 얹는다(곧장 섞으면 머리가 몸통을 가로지른다).
 	  레퍼런스: 두 손 거대 망치(어깨 메기 → 머리 위로 → 내려찍기), 슬레지해머 스윙(뒷손은 고정, 칠 때 두 손 단단히 — US7694392),
 	            엘든 링 아스텔·라다곤/엘든 짐승(우주 별 공격 — 별 비 · 레이저), 할로우 나이트 라디언스(빛살 · 일식 후광 연출).
 	박자(feedback-motion-rhythm): 느린 준비(sineOut) → 짧은 멈춤(긴장) → 번개 같은 한 방(expoOut · quadIn) → 짧게 넘침 → 여운을 두고 천천히(sineInOut).
@@ -22,6 +27,9 @@
 local Kit = require(script.Parent.Parent.MotionKit)
 local K = Kit.K
 local With = Kit.With
+-- 날 비틀기 중간 키(tools/combat/design/callisto_edge_gen.py): 칼 기술은 휘두르는 동안 오른팔을 팔 자신의 긴 축 둘레로 비틀어 칼끝이 가는 쪽에 날(팔 로컬 ±Z)이 오게 한다.
+-- 비튼 팔은 오일러(YXZ)에서 값이 크게 휘어(팔이 수평 앞인 X≈90 근처는 짐벌) 키 둘만으론 칼끝이 엉뚱한 길로 가므로, 휘어지는 곳엔 원래 모션을 그 시각에 찍은 자세를 키로 끼운다.
+local Roll = K
 
 local function M(motion: { [string]: any }): { [string]: any }
 	return Kit.Chain(motion)
@@ -63,8 +71,12 @@ local WIND = With(AIM, { LArm = { 120, 30, 40 }, Torso = { 6, 32, 0 }, Head = { 
 local THROW = With(AIM, { LArm = { 40, -30, -70 }, Torso = { -16, -38, 0 }, Head = { 6, 30, 0 }, Root = { 0, -0.25, -0.25, 0, -44, 0 }, RLeg = { 30, 0, 8 }, LLeg = { -26, 0, -8 } })
 
 --=== 2·3페이즈 자세(북두칠성 망치 — callisto_hammer_gen.py 로 구함) ===--
--- 대기: 오른 어깨에 메고(오른손 하나, 자루가 어깨를 넘어 머리는 어깨 뒤 위). 왼팔은 1페이즈 그대로(카메라를 반쯤)
-local HOBS = { Root = { 0, 0, 0, 0, 20, 0 }, Torso = { 4, -6, 0 }, Head = { -6, -16, 6 }, RArm = { 53.2, 27.7, 1.5 }, LArm = { 52, 10, -4 }, RLeg = { 8, 0, 4 }, LLeg = { -6, 0, -4 }, W = { 0, 0, 0, 50.9, -113.5, -24.7 } }
+-- 대기(2026-11-01 사용자: "팔뚝을 팔이라 정의해서, 180도정도 뒤집은 다음 망치를 어깨에 걸치게"): R6 팔을 아래팔로 보고 위로 세운다(RArm X≈183 — 손이 오른쪽 귀 곁 머리 높이).
+-- 오른손 하나로 쥔 자루가 오른 어깨 윗면 뒤쪽 가장자리를 넘어(몸통과 틈 0.01) 머리는 등 뒤 아래에 걸린다(몸통·머리·왼팔과 안 겹침, 자루가 오른팔에 파고드는 건 쥐는 자리 0.42뿐).
+-- 몸은 1페이즈 관찰자 그대로. 왼팔은 허벅지 곁으로 늘어뜨려 손목 카메라가 앞을 본다. 계산: callisto_hammer_gen.py hobs
+local HOBS = { Root = { 0, 0, 0, 0, 20, 0 }, Torso = { 4, -6, 0 }, Head = { -6, -16, 6 }, RArm = { 183.2, 76.8, 4.6 }, LArm = { 14, 6, -6 }, RLeg = { 8, 0, 4 }, LLeg = { -6, 0, -4 }, W = { 0, 0, 0, -52, 26.1, 121.4 } }
+-- 들썩: 손·몸은 대기 그대로, 망치만 손 둘레로 돌려 머리가 어깨 위 하늘을 본다. 대기 ↔ 두 손 자세 사이에 거쳐 망치가 몸통·머리를 가로지르지 않게 한다(callisto_hammer_gen.py)
+local HPOP = With(HOBS, { W = { 0, 0, 0, -59, -40.6, 27.3 } })
 -- 두 손 낮은 겨눔(머리는 앞 오른쪽 무릎 높이)
 local HREADY = { Root = { 0, -0.35, 0.1, 0, 30, 0 }, Torso = { -10, 14, 0 }, Head = { 8, -18, 0 }, RArm = { 64.2, 29.8, -2.2 }, LArm = { 77.4, -57.7, 25.8 }, RLeg = { 22, 0, 8 }, LLeg = { -14, 0, -8 }, W = { 0, -0.01, -0.01, -78.1, -164.3, 49.3 } }
 -- 머리 위로 치켜듦(망치 머리는 등 뒤 위 — 내려찍기 준비)
@@ -152,14 +164,15 @@ local BLADE = reactions(OBS, { RArm = { 84, 0, -62 }, LArm = { 60, 0, -10 }, Tor
 		},
 	}),
 })
--- 망치 버릇: 어깨 위 망치를 툭 추켜 다시 메기 · 별을 올려다봄
+-- 망치 버릇: 어깨를 으쓱해 망치를 들썩이며 고쳐 메기(손이 올라 망치 머리가 등에서 살짝 뜨고 → 툭 내려앉음) · 별을 올려다봄
 local HAMMER = reactions(HOBS, HGUARD, {
 	M({
 		Duration = 1.3,
 		Keys = {
 			K(0, nil, HOBS),
-			K(0.18, "quadIn", HOBS, { RArm = { 48, 27.7, 1.5 }, Root = { 0, -0.06, 0, 0, 20, 0 } }),
-			K(0.32, "backOut", HOBS, { RArm = { 60, 27.7, 1.5 }, Root = { 0, 0.04, 0, 0, 20, 0 }, Torso = { 6, -6, 0 } }),
+			K(0.2, "quadOut", HOBS, { Root = { 0, 0.07, 0, 0, 20, 0 }, Torso = { 7, -6, 0 }, RArm = { 177, 76.8, 4.6 }, W = { 0, 0, 0, -43.9, 13.4, 102.3 } }),
+			K(0.36, "quadIn", HOBS, { Root = { 0, -0.05, 0, 0, 20, 0 }, Torso = { 3, -6, 0 }, RArm = { 186, 76.8, 4.6 } }),
+			K(0.5, "backOut", HOBS, { Root = { 0, 0.01, 0, 0, 20, 0 } }),
 			K(1.3, "sineInOut", HOBS),
 		},
 	}),
@@ -225,12 +238,20 @@ return {
 			Duration = 1.4,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.2, "sineOut", With(READY_HI, { RArm = { 120, 0, 28 }, Root = { 0, -0.1, 0.1, 0, -6, 0 } })),
-				K(0.34, "quadOut", READY_HI),
-				K(0.42, nil, READY_HI, { RArm = { 172, 0, 38 }, Torso = { 12, -28, 0 } }),
-				K(0.48, "expoOut", SLASH_END),
-				K(0.6, "backOut", SLASH_END, { Torso = { -24, 36, 0 }, RArm = { 80, 0, -64 } }),
-				K(0.95, "sineInOut", SLASH_END, { Torso = { -14, 24, 0 }, RArm = { 76, 0, -50 } }),
+				Roll(0.01, "linear", { Root = { 0, -0.01, 0.01, 0, 18, 0 }, Torso = { 4.5, -7.4, 0 }, Head = { -5.5, -13.2, 5.5 }, RArm = { 43.1, -49.8, -22.9 }, LArm = { 52.6, 9.2, -5.3 }, RLeg = { 6.3, 0, 4.3 }, LLeg = { -3.8, 0, -4.3 } }),
+				Roll(0.069, "linear", { Root = { 0, -0.05, 0.05, 0, 6.6, 0 }, Torso = { 7.1, -15.3, 0 }, Head = { -2.9, 2.6, 2.9 }, RArm = { 57.1, -97.6, -74.8 }, LArm = { 56.1, 4.8, -12.3 }, RLeg = { -3.3, 0, 6.1 }, LLeg = { 8.4, 0, -6.1 } }),
+				K(0.2, "quadOut", With(READY_HI, { RArm = { 35.1, -141.8, -122.6 }, Root = { 0, -0.1, 0.1, 0, -6, 0 } })),
+				K(0.34, "quadOut", READY_HI, { RArm = { 6.1, -167.7, -142.7 } }),
+				K(0.42, nil, READY_HI, { RArm = { -4.5, -164.3, -141.5 }, Torso = { 12, -28, 0 } }),
+				Roll(0.423, "linear", { Root = { 0, -0.26, 0.07, 0, -7.1, 0 }, Torso = { 2, -11, 0 }, Head = { 2.9, 10, 0 }, RArm = { 24.8, -147.4, -153.6 }, LArm = { 45.4, 0, -25.9 }, RLeg = { 1.8, 0, 8 }, LLeg = { 6.8, 0, -8 } }),
+				Roll(0.425, "linear", { Root = { 0, -0.29, -0.01, 0, -0.7, 0 }, Torso = { -2.9, -2.6, 0 }, Head = { 4.4, 5.1, 0 }, RArm = { 38.3, -130.5, -149.2 }, LArm = { 38.1, 0, -28.8 }, RLeg = { 9.7, 0, 8 }, LLeg = { -0.8, 0, -8 } }),
+				Roll(0.427, "linear", { Root = { 0, -0.31, -0.08, 0, 4.4, 0 }, Torso = { -6.9, 4.2, 0 }, Head = { 5.5, 1.1, 0 }, RArm = { 45.3, -109.3, -136.8 }, LArm = { 32.3, 0, -31.1 }, RLeg = { 15.9, 0, 8 }, LLeg = { -6.8, 0, -8 } }),
+				Roll(0.431, "linear", { Root = { 0, -0.34, -0.18, 0, 11.7, 0 }, Torso = { -12.5, 13.7, 0 }, Head = { 7.2, -4.5, 0 }, RArm = { 45.7, -73.4, -111.3 }, LArm = { 24, 0, -34.4 }, RLeg = { 24.8, 0, 8 }, LLeg = { -15.4, 0, -8 } }),
+				K(0.48, "expoOut", SLASH_END, { RArm = { 21.1, -30.1, -85.5 } }),
+				K(0.6, "backOut", SLASH_END, { Torso = { -24, 36, 0 }, RArm = { 11, -24.8, -85.6 } }),
+				Roll(0.775, "sineIn", { Root = { 0, -0.4, -0.35, 0, 24, 0 }, Torso = { -19, 30, 0 }, Head = { 10, -14, 0 }, RArm = { 44.5, -26, -80.9 }, LArm = { 10, 0, -40 }, RLeg = { 40, 0, 8 }, LLeg = { -30, 0, -8 } }),
+				Roll(0.838, "linear", { Root = { 0, -0.4, -0.35, 0, 24, 0 }, Torso = { -16.3, 26.8, 0 }, Head = { 10, -14, 0 }, RArm = { 62.1, -21.1, -73.2 }, LArm = { 10, 0, -40 }, RLeg = { 40, 0, 8 }, LLeg = { -30, 0, -8 } }),
+				K(0.95, "quadOut", SLASH_END, { Torso = { -14, 24, 0 }, RArm = { 76, 0, -50 } }),
 				K(1.4, "sineInOut", OBS),
 			},
 			Events = {
@@ -271,11 +292,20 @@ return {
 			Duration = 0.8,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.12, "quadOut", TRO_COIL),
-				K(0.16, nil, TRO_COIL, { RArm = { 88, 0, -92 } }),
-				K(0.23, "expoOut", TRO_SWEEP),
-				K(0.4, "sineOut", TRO_SWEEP, { Torso = { -8, -42, 0 }, Root = { 0, -0.3, -0.2, 0, -34, 0 } }),
-				K(0.8, "sineInOut", OBS),
+				Roll(0.01, "linear", { Root = { 0, -0.03, 0, 0, 23.2, 0 }, Torso = { 2.1, 0.7, 0 }, Head = { -5, -18.9, 5 }, RArm = { 17, 78.8, 45.3 }, LArm = { 46.9, 8.4, -6.6 }, RLeg = { 9, 0, 4.6 }, LLeg = { -6.6, 0, -4.6 } }),
+				Roll(0.05, "linear", { Root = { 0, -0.13, 0, 0, 33.2, 0 }, Torso = { -3.9, 21.7, 0 }, Head = { -2, -27.9, 2 }, RArm = { 25.3, 138.8, 77.8 }, LArm = { 30.9, 3.4, -14.6 }, RLeg = { 12, 0, 6.6 }, LLeg = { -8.6, 0, -6.6 } }),
+				K(0.12, "quadOut", TRO_COIL, { RArm = { 7, 176, 89.9 } }),
+				K(0.16, nil, TRO_COIL, { RArm = { 7, 182, 90.1 } }),
+				K(0.23, "expoOut", TRO_SWEEP, { RArm = { 7, 10, 90.3 } }),
+				K(0.4, "sineOut", TRO_SWEEP, { RArm = { 7, 10, 90.3 }, Torso = { -8, -42, 0 }, Root = { 0, -0.3, -0.2, 0, -34, 0 } }),
+				Roll(0.596, "sineIn", { Root = { 0, -0.15, -0.1, 0, -7.8, 0 }, Torso = { -2.2, -24.6, 0 }, Head = { -0.8, 1.5, 2.9 }, RArm = { -11.9, 43.9, 74.1 }, LArm = { 42.7, 4.8, -22.6 }, RLeg = { 16.3, 0, 6.1 }, LLeg = { -12.2, 0, -6.1 } }),
+				Roll(0.745, "linear", { Root = { 0, -0.01, -0.01, 0, 17.5, 0 }, Torso = { 3.4, -7.7, 0 }, Head = { -5.5, -14.4, 5.7 }, RArm = { -7.7, 76, 44 }, LArm = { 51.2, 9.5, -5.7 }, RLeg = { 8.7, 0, 4.2 }, LLeg = { -6.6, 0, -4.2 } }),
+				Roll(0.75, "linear", { Root = { 0, -0.01, -0.01, 0, 17.9, 0 }, Torso = { 3.5, -7.4, 0 }, Head = { -5.6, -14.7, 5.8 }, RArm = { 1.1, 67.6, 44 }, LArm = { 51.3, 9.6, -5.4 }, RLeg = { 8.6, 0, 4.2 }, LLeg = { -6.5, 0, -4.2 } }),
+				Roll(0.754, "linear", { Root = { 0, -0.01, -0.01, 0, 18.3, 0 }, Torso = { 3.6, -7.2, 0 }, Head = { -5.7, -14.9, 5.8 }, RArm = { 8.3, 60.4, 43 }, LArm = { 51.4, 9.7, -5.2 }, RLeg = { 8.5, 0, 4.1 }, LLeg = { -6.4, 0, -4.1 } }),
+				Roll(0.758, "linear", { Root = { 0, -0.01, -0.01, 0, 18.5, 0 }, Torso = { 3.7, -7, 0 }, Head = { -5.7, -15.1, 5.8 }, RArm = { 15.3, 52.6, 41 }, LArm = { 51.5, 9.7, -5 }, RLeg = { 8.4, 0, 4.1 }, LLeg = { -6.3, 0, -4.1 } }),
+				Roll(0.76, "linear", { Root = { 0, -0.01, -0, 0, 18.7, 0 }, Torso = { 3.7, -6.9, 0 }, Head = { -5.8, -15.2, 5.9 }, RArm = { 19, 48.2, 39.4 }, LArm = { 51.6, 9.8, -4.9 }, RLeg = { 8.4, 0, 4.1 }, LLeg = { -6.3, 0, -4.1 } }),
+				Roll(0.767, "linear", { Root = { 0, -0.01, -0, 0, 19.1, 0 }, Torso = { 3.8, -6.6, 0 }, Head = { -5.8, -15.4, 5.9 }, RArm = { 28.1, 34.9, 33.4 }, LArm = { 51.7, 9.8, -4.6 }, RLeg = { 8.3, 0, 4.1 }, LLeg = { -6.2, 0, -4.1 } }),
+				K(0.8, "quadOut", OBS),
 			},
 			Events = {
 				{ t = 0, k = "Dash", to = "Target", gap = 3.2, d = 0.14 },
@@ -318,12 +348,19 @@ return {
 			Duration = 1.0,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.22, "sineOut", DRAW),
-				K(0.3, nil, DRAW, { Root = { 0, -0.28, 0.6, 0, -34, 0 } }),
-				K(0.36, "expoOut", THRUST),
-				K(0.46, "backOut", THRUST, { Root = { 0, -0.48, -0.85, 0, 20, 0 } }),
-				K(0.66, "sineInOut", THRUST, { Torso = { -10, 16, 0 }, Root = { 0, -0.4, -0.6, 0, 14, 0 } }),
-				K(1.0, "sineInOut", OBS),
+				Roll(0.006, "linear", { Root = { 0, -0.01, 0.02, 0, 17.9, 0 }, Torso = { 4.1, -6.9, 0 }, Head = { -5.7, -14, 5.7 }, RArm = { 35.6, -58.3, -26.4 }, LArm = { 52.3, 9.6, -5.1 }, RLeg = { 7.1, 0, 4.2 }, LLeg = { -4.9, 0, -4.2 } }),
+				Roll(0.01, "linear", { Root = { 0, -0.02, 0.04, 0, 16.4, 0 }, Torso = { 4.1, -7.4, 0 }, Head = { -5.6, -12.7, 5.6 }, RArm = { 20.9, -84.6, -40.2 }, LArm = { 52.6, 9.3, -5.9 }, RLeg = { 6.6, 0, 4.3 }, LLeg = { -4.1, 0, -4.3 } }),
+				K(0.22, "sineOut", DRAW, { RArm = { 21.3, -101.8, -83.7 } }),
+				K(0.3, nil, DRAW, { RArm = { 16.4, -102.4, -83.9 }, Root = { 0, -0.28, 0.6, 0, -34, 0 } }),
+				K(0.36, "expoOut", THRUST, { RArm = { 3.4, -84.2, -94 } }),
+				K(0.46, "backOut", THRUST, { RArm = { 3.4, -84.2, -94 }, Root = { 0, -0.48, -0.85, 0, 20, 0 } }),
+				K(0.66, "sineInOut", THRUST, { RArm = { 3.4, -84.2, -94 }, Torso = { -10, 16, 0 }, Root = { 0, -0.4, -0.6, 0, 14, 0 } }),
+				Roll(0.767, "quadIn", { Root = { 0, -0.31, -0.46, 0, 15.4, 0 }, Torso = { -6.8, 11, 0 }, Head = { 6.4, -19.1, 1.4 }, RArm = { 22, -84.7, -81.2 }, LArm = { -6.9, 2.3, -14.8 }, RLeg = { 40.5, 0, 5.5 }, LLeg = { -30.8, 0, -5.5 } }),
+				Roll(0.829, "linear", { Root = { 0, -0.2, -0.3, 0, 17, 0 }, Torso = { -3.1, 5.1, 0 }, Head = { 2.1, -18, 3 }, RArm = { 42.8, -70.4, -58.3 }, LArm = { 13.6, 5, -11.1 }, RLeg = { 29.2, 0, 5 }, LLeg = { -22.1, 0, -5 } }),
+				Roll(0.833, "linear", { Root = { 0, -0.19, -0.29, 0, 17.1, 0 }, Torso = { -2.8, 4.7, 0 }, Head = { 1.8, -17.9, 3.1 }, RArm = { 43.9, -68.6, -56.1 }, LArm = { 15.1, 5.1, -10.8 }, RLeg = { 28.4, 0, 5 }, LLeg = { -21.6, 0, -5 } }),
+				Roll(0.835, "linear", { Root = { 0, -0.19, -0.29, 0, 17.1, 0 }, Torso = { -2.7, 4.5, 0 }, Head = { 1.6, -17.9, 3.1 }, RArm = { 44.5, -67.5, -54.9 }, LArm = { 15.8, 5.2, -10.7 }, RLeg = { 28, 0, 5 }, LLeg = { -21.3, 0, -5 } }),
+				Roll(0.898, "linear", { Root = { 0, -0.08, -0.12, 0, 18.8, 0 }, Torso = { 1.1, -1.5, 0 }, Head = { -2.7, -16.8, 4.8 }, RArm = { 50.2, -28.4, -13.9 }, LArm = { 36.3, 7.9, -6.9 }, RLeg = { 16.7, 0, 4.4 }, LLeg = { -12.6, 0, -4.4 } }),
+				K(1.0, "quadOut", OBS),
 			},
 			Events = {
 				{ t = 0.04, k = "Dash", to = "Target", gap = 4.0, d = 0.2 },
@@ -364,20 +401,28 @@ return {
 			Duration = 2.35,
 			Keys = {
 				K(0, nil, OBS),
-				K(0.26, "sineOut", CROUCH),
+				Roll(0.01, "linear", { Root = { 0, -0.05, 0.02, 0, 17, 0 }, Torso = { 2.2, -6.8, 0 }, Head = { -4.3, -13.8, 5.6 }, RArm = { 10.9, 53.3, 40.8 }, LArm = { 51.3, 9.4, -6.8 }, RLeg = { 11.1, 0, 4.4 }, LLeg = { -6.2, 0, -4.4 } }),
+				K(0.26, "sineOut", CROUCH, { RArm = { -14.2, 8.7, 79.3 } }),
 				K(0.4, nil, CROUCH, { Root = { 0, -0.85, 0.4, 0, -34, 0 } }),
+				Roll(0.402, "linear", { Root = { 0, -0.56, 0.29, 0, -34.7, 0 }, Torso = { -22.3, -20, 0 }, Head = { 18.9, 20, 0 }, RArm = { 43.1, 0, 76 }, LArm = { 42.2, 0, -51.1 }, RLeg = { 58.9, 0, 9.8 }, LLeg = { -12.2, 0, -9.8 } }),
 				K(0.52, "expoOut", LEAP),
 				K(0.62, nil, LEAP, { Root = { 0, 2.0, -0.6, 0, -40, 0 } }),
-				K(0.68, "quadIn", SPIN, { Root = { 0, 1.7, -0.4, 0, -40, 0 } }),
-				K(0.92, nil, SPIN, { Root = { 0, 1.3, -0.3, 0, 680, 0 } }),
+				Roll(0.656, "quadIn", { Root = { 0, 1.89, -0.53, 0, -40, 0 }, Torso = { 3, -12.8, 0 }, Head = { -3.8, 12.8, 0 }, RArm = { 109.8, 11.8, 83.1 }, LArm = { 39.8, 0, -71.5 }, RLeg = { 33.4, 0, 8.7 }, LLeg = { -20.6, 0, -8.7 } }),
+				Roll(0.669, "linear", { Root = { 0, 1.8, -0.47, 0, -40, 0 }, Torso = { -1.3, -6.7, 0 }, Head = { -2, 6.7, 0 }, RArm = { 75.1, -13.3, 69.2 }, LArm = { 22.7, 0, -81.3 }, RLeg = { 19.3, 0, 9.3 }, LLeg = { -12.7, 0, -9.3 } }),
+				K(0.68, "linear", SPIN, { RArm = { 39, 1.5, 92.6 }, Root = { 0, 1.7, -0.4, 0, -40, 0 } }),
+				Roll(0.683, "quadIn", { Root = { 0, 1.7, -0.4, 0, -39.7, 0 }, Torso = { -6, 0, 0 }, Head = { 0, 0, 0 }, RArm = { 4, 0, 92 }, LArm = { 4, 0, -92 }, RLeg = { 4, 0, 10 }, LLeg = { -4, 0, -10 } }),
+				K(0.92, "sineInOut", SPIN, { Root = { 0, 1.3, -0.3, 0, 680, 0 } }),
 				K(1.0, "sineOut", SPIN, { Root = { 0, 1.2, -0.3, 0, 700, 0 }, Torso = { -10, 0, 0 } }),
 				K(1.04, "quadIn", SPIN, { Root = { 0, 1.1, -0.2, 0, 720, 0 } }),
 				K(1.26, nil, SPIN, { Root = { 0, 0.6, -0.1, 0, 1400, 0 } }),
 				K(1.32, "sineOut", SPIN, { Root = { 0, 0.5, -0.1, 0, 1420, 0 }, Torso = { -12, 0, 0 } }),
 				K(1.36, "quadIn", SPIN, { Root = { 0, 0.4, 0, 0, 1440, 0 } }),
 				K(1.62, nil, SPIN, { Root = { 0, -0.3, 0, 0, 2140, 0 } }),
-				K(1.74, "expoOut", CROUCH, { Root = { 0, -0.7, 0, 0, 2160, 0 }, RArm = { 30, 0, 86 }, LArm = { 30, 0, -86 } }),
-				K(2.35, "sineInOut", OBS, { Root = { 0, 0, 0, 0, 2180, 0 } }),
+				K(1.74, "expoOut", CROUCH, { Root = { 0, -0.7, 0, 0, 2160, 0 }, RArm = { -34.9, 4.4, 85.8 }, LArm = { 30, 0, -86 } }),
+				Roll(2.075, "sineIn", { Root = { 0, -0.3, 0, 0, 2171.5, 0 }, Torso = { -8.7, -11.9, 0 }, Head = { 5.8, -0.8, 3.5 }, RArm = { -14.9, 43, 52.3 }, LArm = { 42.7, 5.8, -38.7 }, RLeg = { 30, 0, 6.5 }, LLeg = { -7.7, 0, -6.5 } }),
+				Roll(2.25, "linear", { Root = { 0, -0.05, 0, 0, 2178.7, 0 }, Torso = { 2.1, -6.9, 0 }, Head = { -4.2, -13.7, 5.6 }, RArm = { 3.8, 60.4, 42.1 }, LArm = { 50.6, 9.4, -9.3 }, RLeg = { 11.4, 0, 4.4 }, LLeg = { -6.3, 0, -4.4 } }),
+				Roll(2.285, "linear", { Root = { 0, -0.02, 0, 0, 2179.4, 0 }, Torso = { 3.2, -6.4, 0 }, Head = { -5.2, -15, 5.8 }, RArm = { 28.9, 30.3, 31.5 }, LArm = { 51.4, 9.7, -6.3 }, RLeg = { 9.4, 0, 4.2 }, LLeg = { -6.1, 0, -4.2 } }),
+				K(2.35, "quadOut", OBS, { Root = { 0, 0, 0, 0, 2180, 0 } }),
 			},
 			Events = {
 				{ t = 0.04, k = "Dash", to = "Target", gap = 2.2, d = 0.3 },
@@ -403,12 +448,16 @@ return {
 				K(0, nil, OBS),
 				K(1.2, nil, OBS),
 				K(1.6, "sineOut", OBS, { Torso = { 0, 12, 0 }, Head = { -14, 26, 0 }, RArm = { 82, 0, -34 } }),
-				K(2.1, nil, OBS, { Torso = { 0, 12, 0 }, Head = { -16, 28, 0 }, RArm = { 84, 0, -32 } }),
-				K(2.45, "sineInOut", OBS, { Torso = { 0, 14, 0 }, Head = { -12, 30, 4 }, RArm = { 90, 0, -26 } }),
-				K(2.75, "sineInOut", OBS, { Torso = { 0, 10, 0 }, Head = { -12, 26, 0 }, RArm = { 84, 0, -36 } }),
-				K(3.0, "expoOut", OBS, { Root = { 0, -0.1, 0, 0, -10, 0 }, Torso = { -4, -16, 0 }, Head = { -6, 10, 0 }, RArm = { 96, 0, 46 } }),
-				K(3.25, "sineOut", OBS, { Torso = { 0, 6, 0 }, Head = { -10, 18, 0 }, RArm = { 80, 0, -10 } }),
-				K(3.75, "sineInOut", OBS, { Head = { -4, 6, 0 }, RArm = { 50, 0, 6 } }),
+				Roll(1.858, "sineIn", { Root = { 0, 0, 0, 0, 20, 0 }, Torso = { 0, 12, 0 }, Head = { -15.1, 27.1, 0 }, RArm = { 69.6, -40.9, -73.1 }, LArm = { 52, 10, -4 }, RLeg = { 8, 0, 4 }, LLeg = { -6, 0, -4 } }),
+				K(2.1, "sineOut", OBS, { Torso = { 0, 12, 0 }, Head = { -16, 28, 0 }, RArm = { 56.5, -50.1, -80.8 } }),
+				K(2.45, "sineInOut", OBS, { Torso = { 0, 14, 0 }, Head = { -12, 30, 4 }, RArm = { 45, -64, -90 } }),
+				K(2.75, "sineInOut", OBS, { Torso = { 0, 10, 0 }, Head = { -12, 26, 0 }, RArm = { -0.5, -53.9, -85.1 } }),
+				K(3.0, "expoOut", OBS, { Root = { 0, -0.1, 0, 0, -10, 0 }, Torso = { -4, -16, 0 }, Head = { -6, 10, 0 }, RArm = { -1.3, -136.1, -94.2 } }),
+				K(3.25, "sineOut", OBS, { Torso = { 0, 6, 0 }, Head = { -10, 18, 0 }, RArm = { 1.2, -79.6, -80.2 } }),
+				Roll(3.379, "quadIn", { Root = { 0, 0, 0, 0, 20, 0 }, Torso = { 0.6, 4.1, 0 }, Head = { -9.1, 16.1, 0 }, RArm = { 14.1, -78.5, -75 }, LArm = { 52, 10, -4 }, RLeg = { 8, 0, 4 }, LLeg = { -6, 0, -4 } }),
+				Roll(3.421, "linear", { Root = { 0, 0, 0, 0, 20, 0 }, Torso = { 1, 2.9, 0 }, Head = { -8.4, 14.9, 0 }, RArm = { 26.2, -74.8, -70.1 }, LArm = { 52, 10, -4 }, RLeg = { 8, 0, 4 }, LLeg = { -6, 0, -4 } }),
+				Roll(3.442, "linear", { Root = { 0, 0, 0, 0, 20, 0 }, Torso = { 1.3, 2.1, 0 }, Head = { -8.1, 14.1, 0 }, RArm = { 31.5, -72.2, -66.8 }, LArm = { 52, 10, -4 }, RLeg = { 8, 0, 4 }, LLeg = { -6, 0, -4 } }),
+				K(3.75, "sineOut", OBS, { Head = { -4, 6, 0 }, RArm = { 50, 0, 6 } }),
 				K(4.6, "sineInOut", OBS),
 			},
 			Events = {
@@ -431,6 +480,7 @@ return {
 				K(2.8, "sineInOut", OBS, { Root = { 0, 0.15, 0, 0, 0, 0 }, Torso = { 10, 0, 0 }, Head = { 24, 0, 0 }, RArm = { 50, 0, 44 }, LArm = { 50, 0, -44 } }),
 				K(3.6, "sineInOut", HSKY),
 				K(3.95, nil, HSKY, { Head = { 32, 0, 0 } }),
+				K(4.25, "sineInOut", HPOP),
 				K(4.6, "sineInOut", HOBS),
 			},
 			Events = {
@@ -446,9 +496,11 @@ return {
 			Duration = 4.8,
 			Keys = {
 				K(0, nil, HOBS),
+				K(0.25, "quadOut", HPOP),
 				K(0.8, "sineOut", HSKY, { Root = { 0, 0.4, 0, 0, 0, 0 } }),
 				K(2.2, nil, HSKY, { Root = { 0, 0.55, 0, 0, 0, 0 }, Head = { 34, 0, 0 } }),
 				K(3.6, "sineInOut", HREADY, { Root = { 0, 0.1, 0.1, 0, 30, 0 } }),
+				K(4.3, "sineInOut", HPOP),
 				K(4.8, "sineInOut", HOBS),
 			},
 			Events = {
@@ -482,11 +534,13 @@ return {
 			Duration = 1.4,
 			Keys = {
 				K(0, nil, HOBS),
+				K(0.1, "quadOut", HPOP),
 				K(0.3, "sineOut", HRAISE),
 				K(0.38, nil, HRAISE, { Torso = { 16, 6, 0 }, Root = { 0, -0.05, 0.3, 0, 10, 0 } }),
 				K(0.46, "quadIn", HSMASH),
 				K(0.6, "sineOut", HSMASH, { Root = { 0, -0.7, -0.45, 0, 6, 0 }, Torso = { -28, 0, 0 } }),
 				K(0.92, "sineInOut", HREADY),
+				K(1.14, "sineInOut", HPOP),
 				K(1.4, "sineInOut", HOBS),
 			},
 			Events = {
@@ -506,10 +560,12 @@ return {
 			Duration = 1.9,
 			Keys = {
 				K(0, nil, HOBS),
+				K(0.14, "quadOut", HPOP),
 				K(0.4, "sineOut", HRAISE, { Root = { 0, 0.55, 0.2, 0, 10, 0 } }),
 				K(0.54, nil, HRAISE, { Root = { 0, 0.65, 0.2, 0, 10, 0 }, Torso = { 16, 6, 0 } }),
 				K(0.66, "quadIn", HSMASH, { Root = { 0, -0.75, -0.45, 0, 6, 0 } }),
 				K(1.25, nil, HSMASH, { Root = { 0, -0.72, -0.45, 0, 6, 0 }, Torso = { -28, 0, 0 } }),
+				K(1.58, "sineInOut", HPOP),
 				K(1.9, "sineInOut", HOBS),
 			},
 			Events = {
@@ -532,6 +588,7 @@ return {
 				K(0.42, "expoOut", HSWEEP),
 				K(0.62, "sineOut", HSWEEP, { Root = { 0, -0.35, -0.25, 0, 44, 0 }, Torso = { -12, 38, 0 } }),
 				K(0.9, "sineInOut", HREADY),
+				K(1.1, "sineInOut", HPOP),
 				K(1.35, "sineInOut", HOBS),
 			},
 			Events = {
@@ -551,9 +608,11 @@ return {
 			Duration = 2.0,
 			Keys = {
 				K(0, nil, HOBS),
+				K(0.16, "quadOut", HPOP),
 				K(0.55, "sineOut", HSKY),
 				K(0.95, nil, HSKY, { Head = { 34, -8, 0 } }),
 				K(1.0, "expoOut", HSKY, { Root = { 0, 0.3, 0, 0, 0, 0 }, Torso = { 14, 0, 0 } }),
+				K(1.55, "sineInOut", HPOP),
 				K(2.0, "sineInOut", HOBS),
 			},
 			Events = {
@@ -566,11 +625,13 @@ return {
 			Duration = 1.8,
 			Keys = {
 				K(0, nil, HOBS),
+				K(0.12, "quadOut", HPOP),
 				K(0.36, "sineOut", HRAISE, { Root = { 0, 2.6, 0.2, 0, 10, 0 } }),
 				K(0.5, nil, HRAISE, { Root = { 0, 2.9, 0.2, 0, 10, 0 }, Torso = { 16, 6, 0 } }),
 				K(0.64, "expoIn", HSMASH),
 				K(1.0, "sineOut", HSMASH, { Torso = { -30, 0, 0 }, Root = { 0, -0.72, -0.45, 0, 6, 0 } }),
 				K(1.3, "sineInOut", HREADY),
+				K(1.52, "sineInOut", HPOP),
 				K(1.8, "sineInOut", HOBS),
 			},
 			Events = {
@@ -595,6 +656,7 @@ return {
 				K(0.62, "expoOut", HSWEEP),
 				K(0.92, "sineOut", HSWEEP, { Root = { 0, -0.35, -0.25, 0, 58, 0 }, Torso = { -12, 40, 0 } }),
 				K(1.25, "sineInOut", HREADY),
+				K(1.47, "sineInOut", HPOP),
 				K(1.7, "sineInOut", HOBS),
 			},
 			Events = {
@@ -612,12 +674,14 @@ return {
 			Duration = 3.0,
 			Keys = {
 				K(0, nil, HOBS),
+				K(0.2, "quadOut", HPOP),
 				K(0.6, "sineOut", HSKY),
 				K(1.05, nil, HSKY, { Head = { 36, 0, 0 } }),
 				K(1.25, "sineOut", HRAISE, { Root = { 0, 3.2, 0.3, 0, 10, 0 } }),
 				K(1.45, nil, HRAISE, { Root = { 0, 3.45, 0.3, 0, 10, 0 }, Torso = { 18, 6, 0 } }),
 				K(1.62, "expoIn", HSMASH, { Root = { 0, -0.8, -0.5, 0, 6, 0 } }),
 				K(2.3, nil, HSMASH, { Root = { 0, -0.76, -0.5, 0, 6, 0 }, Torso = { -30, 0, 0 } }),
+				K(2.65, "sineInOut", HPOP),
 				K(3.0, "sineInOut", HOBS),
 			},
 			Events = {
@@ -638,10 +702,12 @@ return {
 			Duration = 1.15,
 			Keys = {
 				K(0, nil, HOBS),
+				K(0.09, "quadOut", HPOP),
 				K(0.26, "sineOut", HREADY),
 				K(0.32, nil, HREADY, { Root = { 0, -0.4, 0.12, 0, 34, 0 } }),
 				K(0.42, "expoOut", HUPPER),
 				K(0.7, "sineOut", HUPPER, { Torso = { 12, -12, 0 }, Root = { 0, 0.1, -0.25, 0, 6, 0 } }),
+				K(0.92, "sineInOut", HPOP),
 				K(1.15, "sineInOut", HOBS),
 			},
 			Events = {
@@ -679,9 +745,11 @@ return {
 			Duration = 1.1,
 			Keys = {
 				K(0, nil, HOBS),
+				K(0.1, "quadOut", HPOP),
 				K(0.3, "sineOut", HSKY),
 				K(0.36, nil, HSKY, { Head = { 30, 0, 0 } }),
 				K(0.46, "expoOut", HUPPER),
+				K(0.8, "sineInOut", HPOP),
 				K(1.1, "sineInOut", HOBS),
 			},
 			Events = {
@@ -694,10 +762,12 @@ return {
 			Duration = 2.9,
 			Keys = {
 				K(0, nil, HOBS),
+				K(0.3, "quadOut", HPOP),
 				K(0.9, "sineOut", HSKY, { Root = { 0, 1.3, 0, 0, 0, 0 } }),
 				K(1.55, nil, HSKY, { Root = { 0, 1.55, 0, 0, 0, 0 }, Head = { 36, 0, 0 } }),
 				K(1.72, "expoIn", HSMASH, { Root = { 0, 0.6, -0.3, 0, 6, 0 } }),
 				K(2.2, nil, HSMASH, { Root = { 0, 0.5, -0.3, 0, 6, 0 }, Torso = { -30, 0, 0 } }),
+				K(2.55, "sineInOut", HPOP),
 				K(2.9, "sineInOut", HOBS),
 			},
 			Events = {

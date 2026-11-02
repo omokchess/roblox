@@ -7,20 +7,23 @@
 	  "2페이즈는 얼굴이 사라지고 우주 느낌으로 머리를 대체" · "3페이즈는 옷이 다 사라지고 우주가 사람 꼴로 빚어진 모습"
 	2026-11-01 4판(사용자): "의수를 놓지 말고 그냥 팔을 검으로 · 얼굴엔 블렌더 가면 · 로블록스 느낌 없이 최대한 퀄리티 높게,
 	  체형은 로블록스에 맞춰 · 재질도 진짜 옷 재질처럼" — 옷·가면은 GLB(SurfaceAppearance PBR), 옷을 입으면 관절 몸은 감춘다.
+	2026-11-01 5판(사용자): "옷이랑 바지는 이거 입히자" — 블렌더 옷·가면(Outfit) 대신 카탈로그 고전 셔츠·바지. 몸 다섯 부위는 피부색으로 보이게 두고
+	  Humanoid(R6, 상태 기계 끔)를 넣어 Shirt·Pants 를 입힌다. 가면이 없으니 1페이즈 얼굴은 그린 얼굴.
 
 	사람 모양이라 R6 관절을 그대로 쓴다(CombatRig·전투 모션·무기가 붙는다). 정면 = 모델 -Z(전투에서는 아군 쪽).
-	  옷  ReplicatedStorage.CallistoAssets.Outfit — 블렌더(models/build_callisto_outfit.py, 들여오기 tools/Callisto_Outfit.luau). 부품마다 속성
-	      Host(관절 부품 — 머리 = 가면) · Offset(그 부품에서 본 CFrame) 대로 붙인다. 오른팔 = 검(소맷부리에서 날이 나옴 — 무기 CallistoArms Main, 팔 축 고정)
+	  옷  셔츠 카탈로그 11985252397 "Mad Scientist Dark Shirt" · 바지 카탈로그 11924564943 "Bondrewd Delver Scientist Black Pants"(아래 SHIRT_TEMPLATE · PANTS_TEMPLATE).
+	      오른팔 = 검(소맷부리에서 날이 나옴 — 무기 CallistoArms Main, 팔 축 고정)
+	      (ReplicatedStorage.CallistoAssets.Outfit — 블렌더 옷 4판은 스튜디오에 그대로 남아 있다. 지금은 붙이지 않는다 — 동업자가 옷을 전면 수정할 때 쓸 수 있다.
+	       부품마다 속성 Host(관절 부품) · Offset(그 부품에서 본 CFrame), 만든 곳 models/build_callisto_outfit.py · tools/Callisto_Outfit.luau)
 	  머리 ReplicatedStorage.CallistoAssets.Hair(카탈로그 70421887676551 "Carmen") — 손잡이를 머리 HairAttachment(0, 0.6, 0)에 맞춰 용접
-	  들여온 것이 없으면(시험 환경) 맨몸 관절만.
-	얼굴(1페이즈) — 가면(CalH_*)을 쓰면 그린 얼굴은 끈다. 가면이 없을 때(시험 환경)만 FacePlate 의 SurfaceGui: 별무리 띠, 둥근 눈썹,
-	  작은 코, 작은 입, 볼터치.
+	  머리카락이 없으면(시험 환경) 맨머리.
+	얼굴(1페이즈) — FacePlate 의 SurfaceGui: 별무리 띠, 둥근 눈썹, 작은 코, 작은 입, 볼터치.
 	  Callisto.FaceOf(model) → face:Set(mood, 초?) 잠깐 표정 · face:SetBase(mood) 기본 표정
 	  표정 이름(Observe · Resolve · Sorrow · Attack · …)은 받지만 얼굴은 늘 같다 — 2026-11-01 사용자: "입은 무표정, 표정 변화 딱히 없게"
 	페이즈 — Callisto.SetPage(model, page, fade?)(한 번 넘어가면 되돌리지 않는다 — 컷신이 그 순간에 부른다)
-	  2  얼굴·머리·머리카락·가면이 사라지고 우주 머리(고전 머리 윤곽 + 빛나는 하얀 테두리로 오려 낸 우주 그림 창 — Combat/SpaceLayer · 도는 별 셋),
-	     가면이 사라지고 팔 검·오른 소매가 부서져 그 자리를 우주를 담은 팔이 채운다(2026-11-01 컷신 사양)
-	  3  옷이 모두 사라지고(fade 초에 걸쳐) 그동안 몸 전체(몸통·팔다리 상자 윤곽)가 우주 그림 창으로 나타난다(Combat/SpaceLayer)
+	  2  얼굴·머리·머리카락이 사라지고 우주 머리(고전 머리 윤곽 + 빛나는 하얀 테두리로 오려 낸 우주 그림 창 — Combat/SpaceLayer · 도는 별 셋),
+	     팔 검·오른 소매(오른팔 부위 — 셔츠 소매도 부위 투명도와 함께 사라진다)가 부서져 그 자리를 우주를 담은 팔이 채운다(2026-11-01 컷신 사양)
+	  3  옷이 모두 사라지고(fade 초에 걸쳐 — 몸 부위가 투명해지고 끝나면 셔츠·바지를 지운다) 그동안 몸 전체(몸통·팔다리 상자 윤곽)가 우주 그림 창으로 나타난다(Combat/SpaceLayer)
 	팔 검 — Callisto.Blade(model, out, 초?) 날(무기 CallistoArms Main)이 소매 속에서 미끄러져 나오고 들어간다
 	  (Weld C0 를 날 축(+Z)으로 밀며 투명도도 함께). 시작 컷신이 시험하고, 전투 중엔 기술을 쓸 때만 나온다(CombatDirector).
 	등 뒤 혼천의(고리 셋 + 별 핵 + 행성)와 둘레의 별가루는 그대로(천문학자).
@@ -38,14 +41,16 @@ local ORBIT_STARS = 9 -- 2페이즈부터 우주 머리 둘레를 도는 별
 local MOTES = 9 -- 몸 둘레를 떠도는 별가루
 
 local C = Color3.fromRGB
-local JACKET = C(110, 74, 48)
-local TROUSER = C(28, 28, 32)
 local GOLD = C(222, 186, 104)
 local SKIN = C(246, 228, 218)
 local GLOW = C(150, 200, 255)
 local STAR = C(214, 232, 255)
 
 local RAD = math.pi / 180
+
+-- 카탈로그 id 와 옷 그림(템플릿) id 는 다르다 — 스튜디오 InsertService:LoadAsset 으로 읽은 템플릿 id(2026-11-01)
+local SHIRT_TEMPLATE = "rbxassetid://11985252365" -- 카탈로그 11985252397 Mad Scientist Dark Shirt
+local PANTS_TEMPLATE = "rbxassetid://11924564913" -- 카탈로그 11924564943 Bondrewd Delver Scientist Black Pants
 
 local function part(name: string, size: Vector3, color: Color3, material: Enum.Material?, shape: string?): Part
 	local p = Instance.new("Part")
@@ -326,7 +331,7 @@ local function buildFace(plate: BasePart): Face
 end
 
 local faces: { [Model]: any } = setmetatable({}, { __mode = "k" }) :: any
--- 페이즈 모습에 쓰는 것: 입은 것(옷·머리카락) · 지금 페이즈 · 우주 머리의 도는 관절
+-- 페이즈 모습에 쓰는 것: 붙인 것(머리카락 — 셔츠·바지는 부품이 아니라 몸 부위에 그려진다) · 지금 페이즈 · 우주 머리의 도는 관절
 type Arm = { Joint: Motor6D, Base: CFrame, Phase: number, Sway: number }
 type Look = { Dressed: { BasePart }, Page: number, Orbits: { Motor6D }, Halo: Motor6D?, HaloGlow: BasePart?, Arms: { Arm } }
 local looks: { [Model]: Look } = setmetatable({}, { __mode = "k" }) :: any
@@ -386,12 +391,7 @@ local function cosmicHead(model: Model, look: Look, head: BasePart)
 	if hair and hair:IsA("BasePart") then
 		hair.Transparency = 1
 	end
-	-- 가면이 깨져 사라지고, 팔 검과 오른 소매가 부서져(파편은 컷신 이펙트) 그 자리를 우주를 담은 팔이 채운다
-	for _, p in look.Dressed do
-		if p.Name:match("^CalH_") or p.Name:match("^CalRA_") then
-			p.Transparency = 1
-		end
-	end
+	-- 팔 검과 오른 소매가 부서져(파편은 컷신 이펙트) 그 자리를 우주를 담은 팔이 채운다 — SetPage 가 spaceLimb 로 오른팔을 감춘다
 	local function attach(name: string, size: Vector3, color: Color3, material: Enum.Material, shape: string?, c0: CFrame): (Part, Motor6D)
 		local p = part(name, size, color, material, shape)
 		p.Parent = model
@@ -408,14 +408,24 @@ local function cosmicHead(model: Model, look: Look, head: BasePart)
 	end
 end
 
--- 우주를 담은 몸 한 부품: 관절 부품은 감추고 그 상자 윤곽대로 우주 그림 창(Combat/SpaceLayer). Cosmic 표지 — 두 번 씌우지 않게
+-- 부품을 fade 초에 걸쳐 투명하게(없으면 바로)
+local function fadeOut(p: BasePart, fade: number?)
+	if (fade or 0) > 0 and p.Transparency < 1 then
+		TweenService:Create(p, TweenInfo.new(fade :: number, Enum.EasingStyle.Sine), { Transparency = 1 }):Play()
+	else
+		p.Transparency = 1
+	end
+end
+
+-- 우주를 담은 몸 한 부품: 관절 부품은 (fade 초에 걸쳐) 감추고 — 그 부위에 그려진 셔츠·바지도 함께 — 그 상자 윤곽대로 우주 그림 창(Combat/SpaceLayer).
+-- Cosmic 표지 — 두 번 씌우지 않게
 local function spaceLimb(model: Model, name: string, fade: number?)
 	local body = model:FindFirstChild(name)
 	if not body or not body:IsA("BasePart") or body:GetAttribute("Cosmic") then
 		return
 	end
 	body:SetAttribute("Cosmic", true)
-	body.Transparency = 1
+	fadeOut(body, fade)
 	SpaceLayer.Add(body, "Box", fade)
 end
 
@@ -545,15 +555,19 @@ end
 -- 3페이즈: 옷이 (fade 초에 걸쳐) 사라지는 동안 몸 전체가 우주 그림 창으로 나타난다
 local function cosmicBody(model: Model, look: Look, fadeTime: number?)
 	for _, p in look.Dressed do
-		if (fadeTime or 0) > 0 and p.Transparency < 1 then
-			TweenService:Create(p, TweenInfo.new(fadeTime :: number, Enum.EasingStyle.Sine), { Transparency = 1 }):Play()
-		else
-			p.Transparency = 1
-		end
+		fadeOut(p, fadeTime)
 	end
 	for _, name in { "Torso", "Right Arm", "Left Arm", "Right Leg", "Left Leg" } do
 		spaceLimb(model, name, fadeTime)
 	end
+	-- 고전 옷은 몸 부위 투명도를 따라 사라지지만, 확실히 하려고 페이드가 끝나면 셔츠·바지를 없앤다
+	task.delay(fadeTime or 0, function()
+		for _, c in model:GetChildren() do
+			if c:IsA("Shirt") or c:IsA("Pants") then
+				c:Destroy()
+			end
+		end
+	end)
 	-- 동업자 레퍼런스의 일식 후광 · 검은 띠 팔(주변 장식)
 	local head = model:FindFirstChild("Head")
 	local torso = model:FindFirstChild("Torso")
@@ -584,23 +598,10 @@ end
 
 --=== 몸 ===--
 
--- 들여온 옷(블렌더)과 머리카락(카탈로그)을 붙인다. 없으면(시험 환경) 맨몸
+-- 머리카락(카탈로그)을 붙인다. 없으면(시험 환경) 맨머리. 옷은 Build 가 셔츠·바지로 입힌다 — CallistoAssets.Outfit(블렌더 옷)은 더 붙이지 않는다
 local function dress(model: Model, head: BasePart): { BasePart }
 	local dressed: { BasePart } = {}
 	local kit = ReplicatedStorage:FindFirstChild("CallistoAssets")
-	local outfit = kit and kit:FindFirstChild("Outfit")
-	for _, src in (outfit and outfit:GetChildren()) or {} do
-		local hostName, offset = src:GetAttribute("Host"), src:GetAttribute("Offset")
-		local host = type(hostName) == "string" and model:FindFirstChild(hostName)
-		if src:IsA("BasePart") and host and host:IsA("BasePart") and typeof(offset) == "CFrame" then
-			local p = src:Clone()
-			p.Anchored = false
-			p.CFrame = host.CFrame * offset
-			weld(host, p)
-			p.Parent = model
-			table.insert(dressed, p)
-		end
-	end
 	local hair = kit and kit:FindFirstChild("Hair")
 	local handle = hair and hair:FindFirstChild("Handle")
 	if handle and handle:IsA("BasePart") then
@@ -621,16 +622,16 @@ end
 function Callisto.Build(name: string): Model
 	local model = Instance.new("Model")
 	model.Name = name
-	local root = part("HumanoidRootPart", Vector3.new(2, 2, 1), JACKET)
+	local root = part("HumanoidRootPart", Vector3.new(2, 2, 1), SKIN)
 	root.Transparency = 1
 	root.Anchored = true
-	-- 관절 몸은 옷 밑 색(옷이 없을 때). 옷을 입으면 감춘다 — 4판 옷이 몸 모양을 다 만든다
-	local torso = part("Torso", Vector3.new(2, 2, 1), JACKET)
+	-- 몸 다섯 부위는 피부색으로 보인다 — 셔츠·바지 그림의 투명한 곳에 피부가 비친다
+	local torso = part("Torso", Vector3.new(2, 2, 1), SKIN)
 	local head = part("Head", Vector3.new(2, 1, 1), SKIN)
-	local rightArm = part("Right Arm", Vector3.new(1, 2, 1), JACKET)
-	local leftArm = part("Left Arm", Vector3.new(1, 2, 1), JACKET)
-	local rightLeg = part("Right Leg", Vector3.new(1, 2, 1), TROUSER)
-	local leftLeg = part("Left Leg", Vector3.new(1, 2, 1), TROUSER)
+	local rightArm = part("Right Arm", Vector3.new(1, 2, 1), SKIN)
+	local leftArm = part("Left Arm", Vector3.new(1, 2, 1), SKIN)
+	local rightLeg = part("Right Leg", Vector3.new(1, 2, 1), SKIN)
+	local leftLeg = part("Left Leg", Vector3.new(1, 2, 1), SKIN)
 	for _, p in { root, torso, head, rightArm, leftArm, rightLeg, leftLeg } do
 		p.Parent = model
 	end
@@ -653,20 +654,27 @@ function Callisto.Build(name: string): Model
 	rightLeg.CFrame = torso.CFrame * CFrame.new(0.5, -2, 0)
 	leftLeg.CFrame = torso.CFrame * CFrame.new(-0.5, -2, 0)
 
-	--- 옷·머리카락(들여온 것) ---
+	--- 옷(고전 셔츠·바지) · 머리카락(들여온 것) ---
+	--[[
+		Shirt·Pants 는 Humanoid 가 있는 모델의 R6 몸 부위에만 그려진다. 관절은 Motor6D 모션(CombatRig)이 움직이고 뿌리는 고정이니
+		Humanoid 는 옷을 입히는 데만 쓴다 — 이름·체력 표시 · 죽음 · 상태 기계(물리·애니메이션 덮어쓰기)를 모두 끈다.
+	]]
+	local humanoid = Instance.new("Humanoid")
+	humanoid.RigType = Enum.HumanoidRigType.R6
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	humanoid.NameDisplayDistance, humanoid.HealthDisplayDistance = 0, 0
+	humanoid.BreakJointsOnDeath = false
+	humanoid.RequiresNeck = false
+	humanoid.EvaluateStateMachine = false
+	humanoid.Parent = model
+	local shirt = Instance.new("Shirt")
+	shirt.ShirtTemplate = SHIRT_TEMPLATE
+	shirt.Parent = model
+	local pants = Instance.new("Pants")
+	pants.PantsTemplate = PANTS_TEMPLATE
+	pants.Parent = model
 	local dressed = dress(model, head)
-	local masked = false
-	for _, p in dressed do
-		masked = masked or p:GetAttribute("Host") == "Head"
-	end
-	if masked then
-		-- 4판(가면이 있는 옷): 옷이 몸 모양을 다 만든다
-		for _, p in { torso, rightArm, leftArm, rightLeg, leftLeg } do
-			p.Transparency = 1
-		end
-	elseif #dressed > 0 then
-		rightArm.Transparency = 1 -- 3판: 의수가 보이게
-	end
 	-- 얼굴 판(투명) — SurfaceGui 로 그린다
 	local plate = deco(model, head, "FacePlate", Vector3.new(1.0, 0.9, 0.04), { 0, 0.02, -0.63 }, SKIN)
 	plate.Transparency = 1
@@ -711,10 +719,6 @@ function Callisto.Build(name: string): Model
 	--- 얼굴 + 매 프레임(혼천의·별가루·우주 머리·표정) ---
 	local face: any = buildFace(plate)
 	faces[model] = face
-	-- 블렌더 가면을 쓰면 그린 얼굴은 끈다(조종기는 그대로 — 표정 배선이 남아 있어도 보이지 않는다)
-	if masked then
-		face.Gui.Enabled = false
-	end
 	local look: Look = { Dressed = dressed, Page = 1, Orbits = {}, Arms = {} }
 	looks[model] = look
 	local t0 = math.random() * 10
