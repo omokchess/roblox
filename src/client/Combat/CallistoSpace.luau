@@ -16,7 +16,7 @@
 	  SetCenter(pos)          전투 필드 가운데(전투 화면이 스냅숏마다 알려 준다)
 	  Show(fade?)             우주를 띄운다(이미 떠 있으면 아무 일 없음). fade = 초(서서히)
 	  Spin(rate, ramp)        도는 빠르기(라디안/초)를 ramp 초에 걸쳐 그쪽으로
-	  Galaxy(on, rise?)       우리은하(필드 아래) — rise = 초(아래에서 떠오르며 밝아짐). 별가루·성운 파티클이 은하와 함께 돈다(_GalaxyParticles)
+	  Galaxy(on, rise?)       우리은하(필드 아래) — rise = 초(아래에서 떠오르며 밝아짐). 별·성운·먼지 파티클이 은하와 함께 돈다(GalaxyParticles)
 	  Hide()                  다 걷는다(전투가 끝나면)
 	들여온 것이 없으면(시험 환경) 아무 일도 하지 않는다.
 ]]
@@ -27,6 +27,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local RegionAtmosphere = require(script.Parent.Parent.RegionAtmosphere)
+local GalaxyParticles = require(script.Parent.GalaxyParticles)
 
 local CallistoSpace = {}
 
@@ -82,109 +83,14 @@ local function fade(model: Model, from: number, to: number, time: number)
 	end
 end
 
--- 우리은하 파티클(2026-11-06 사용자: "우리은하는 파티클도 추가해서 더 화려해보이게"): 은하 모형에 붙어 함께 돈다(LockedToPart).
--- 팔 따라 흐르는 별가루 8(팔 넷 × 안·바깥) · 팽대부 빛 알갱이 1 · 성운 안개 1 · 가끔 반짝이는 큰 별 1 = 이미터 11, 초당 약 66개(살아 있는 건 ~400). 처음엔 꺼 두고 Galaxy(on) 이 켠다.
--- 팔 식은 build_callisto_space.py 와 같다(r = 14·e^(0.21t), 팔 사이 90°). 블렌더 y → 로블록스 -z 로 가정.
-local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
-local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
-local GAL_GOLD = Color3.fromRGB(255, 207, 138)
-local GAL_BLUE = Color3.fromRGB(168, 200, 255)
-local GAL_HAZE = Color3.fromRGB(140, 108, 240)
-
-local function emitter(parent: Instance, props: { [string]: any }): ParticleEmitter
-	local e = Instance.new("ParticleEmitter")
-	e.Enabled = false
-	e.LockedToPart = true
-	e.LightInfluence = 0
-	e.LightEmission = 1
-	e.Texture = SPARKLE
-	e.Rate = 1
-	for k, v in props do
-		(e :: any)[k] = v
-	end
-	e.Parent = parent
-	return e
-end
+-- 우리은하 파티클(2026-11-06 사용자: "은하수 전체를 이루는 파티클이 여러개 필요해"): 배치·속성은 GalaxyParticles.luau.
+-- 은하 모형에 붙어 함께 돈다(LockedToPart). 모형 자체는 GALAXY_MODEL_ALPHA 만큼만 보이게 옅게 남겨 파티클의 뼈대로 쓴다. 처음엔 꺼 두고 Galaxy(on) 이 켠다.
+local GALAXY_MODEL_ALPHA = 0.5 -- 블렌더 은하 모형이 보이는 비율(1=그대로, 0=없앰)
 
 function CallistoSpace._GalaxyParticles(g: Model): { ParticleEmitter }
 	local cf, size = g:GetBoundingBox()
 	local radius = math.clamp(math.max(size.X, size.Z) / 2, 30, 140)
-	local function holder(name: string, dim: Vector3): Part
-		local p = Instance.new("Part")
-		p.Name = name
-		p.Transparency = 1
-		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
-		p.Size = dim
-		p.CFrame = cf
-		p.Parent = g
-		return p
-	end
-	local list: { ParticleEmitter } = {}
-	local anchor = holder("GalaxyFx", Vector3.one)
-	local fadeInOut = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 4), NumberSequenceKeypoint.new(0.8, 3), NumberSequenceKeypoint.new(1, 0) })
-	for arm = 0, 3 do
-		for i, t in { 5.5, 8.5 } do
-			local r = 14 * math.exp(0.21 * t)
-			local a = arm * math.pi / 2 + t
-			local at = Vector3.new(math.cos(a) * r, 0, -math.sin(a) * r)
-			local dir = Vector3.new(0.21 * math.cos(a) + math.sin(a) * -1, 0, -(0.21 * math.sin(a) + math.cos(a))).Unit
-			local att = Instance.new("Attachment")
-			att.CFrame = CFrame.lookAt(at, at + dir) * CFrame.Angles(-math.pi / 2, 0, 0)
-			att.Parent = anchor
-			table.insert(list, emitter(att, {
-				Color = ColorSequence.new(if i == 1 then GAL_GOLD else GAL_BLUE, if i == 1 then GAL_BLUE else Color3.new(1, 1, 1)),
-				Size = fadeInOut,
-				Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.1), NumberSequenceKeypoint.new(0.8, 0.3), NumberSequenceKeypoint.new(1, 1) }),
-				Lifetime = NumberRange.new(5, 7),
-				Speed = NumberRange.new(6, 12),
-				SpreadAngle = Vector2.new(10, 10),
-				RotSpeed = NumberRange.new(-40, 40),
-				Rate = 6,
-			}))
-		end
-	end
-	local bulge = holder("GalaxyBulge", Vector3.new(30, 14, 30))
-	table.insert(list, emitter(bulge, {
-		Shape = Enum.ParticleEmitterShape.Sphere,
-		ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
-		Color = ColorSequence.new(GAL_GOLD, Color3.fromRGB(255, 240, 205)),
-		Size = fadeInOut,
-		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.1), NumberSequenceKeypoint.new(1, 1) }),
-		Lifetime = NumberRange.new(3, 5),
-		Speed = NumberRange.new(0, 2),
-		SpreadAngle = Vector2.new(180, 180),
-		RotSpeed = NumberRange.new(-60, 60),
-		Rate = 14,
-	}))
-	local disc = Vector3.new(radius * 1.7, 4, radius * 1.7)
-	local haze = holder("GalaxyHaze", disc)
-	table.insert(list, emitter(haze, {
-		Shape = Enum.ParticleEmitterShape.Box,
-		ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
-		Texture = SMOKE,
-		LightEmission = 0.35,
-		Color = ColorSequence.new(GAL_HAZE, GAL_BLUE),
-		Size = NumberSequence.new(30, 50),
-		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.88), NumberSequenceKeypoint.new(0.7, 0.9), NumberSequenceKeypoint.new(1, 1) }),
-		Lifetime = NumberRange.new(9, 12),
-		Speed = NumberRange.new(0, 1),
-		SpreadAngle = Vector2.new(180, 180),
-		RotSpeed = NumberRange.new(-6, 6),
-		Rate = 3,
-	}))
-	local twinkle = holder("GalaxyTwinkle", disc)
-	table.insert(list, emitter(twinkle, {
-		Shape = Enum.ParticleEmitterShape.Box,
-		ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
-		Color = ColorSequence.new(Color3.new(1, 1, 1), GAL_GOLD),
-		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 12), NumberSequenceKeypoint.new(1, 0) }),
-		Transparency = NumberSequence.new(0),
-		Lifetime = NumberRange.new(1.6, 2.4),
-		Speed = NumberRange.new(0, 0),
-		RotSpeed = NumberRange.new(20, 60),
-		Rate = 1.2,
-	}))
-	return list
+	return GalaxyParticles.Build(g, cf, radius)
 end
 
 function CallistoSpace.Show(fadeTime: number?)
@@ -288,7 +194,7 @@ function CallistoSpace.Galaxy(on: boolean, rise: number?)
 	local time = rise or 0
 	local below = center - Vector3.new(0, GALAXY_DROP + (if on and time > 0 then 30 else 0), 0)
 	galaxy:PivotTo(CFrame.new(below))
-	fade(galaxy, if on then 0 else 1, if on then 1 else 0, time)
+	fade(galaxy, if on then 0 else GALAXY_MODEL_ALPHA, if on then GALAXY_MODEL_ALPHA else 0, time)
 	-- 파티클: 떠오르는 동안 서서히(켤 땐 조금 늦게, 끌 땐 바로)
 	task.delay(if on then time * 0.4 else 0, function()
 		if state == s and s.GalaxyOn == on then

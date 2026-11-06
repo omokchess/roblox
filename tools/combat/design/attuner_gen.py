@@ -238,19 +238,25 @@ skills.append(motion("Alioth", "알리오스: 알리오스를 꺼내 적 진영 
 # 셉텐트리오네스(컷신): 왼 허리로 손을 모았다 치켜들면 별 일곱이 하늘 높이(Orbs Sky) → 별이 하나씩 레이저(국자를 따라 알카이드부터) →
 # 북두칠성 꼴로 진형 전체를 강타. 카메라는 Fx 가 잡는다(SeptRise → SeptLaser ×7 → SeptSlam), 모션이 끝나면 감독이 놓는다.
 TRACE = [4, 5, 3, 1, 6, 2, 7]
-LASERS = [round(2.1 + 0.95 * k, 2) for k in range(7)]
-sept_events = ['{ t = 0.95, k = "Orbs", mode = "Sky", at = "Enemies" }', '{ t = 0.95, k = "Fx", n = "SeptRise", d = 1.1, total = 9.5 }']
+# 2026-11-06 사용자: "레이저 속도랑 카메라 속도를 올려서 전체적으로 속도감 있게" — 10.8초 → 6.3초. 발사 간격은 강중약(0.55 · 0.35 · 0.35 · 0.55 · 0.3 · 0.3 · 0.35),
+# 레이저는 AIM 0.12 + GROW 0.1 = 0.22초 만에 닿는다(옛 0.47초). 모으기 뒤 0.5초 멈췄다 강타(한 템포 쉼으로 대비)
+GAPS7 = [0.55, 0.35, 0.35, 0.55, 0.3, 0.3, 0.35]
+LASERS = [1.35]
+for g in GAPS7[:-1]:
+    LASERS.append(round(LASERS[-1] + g, 2))
+sept_events = ['{ t = 0.6, k = "Orbs", mode = "Sky", at = "Enemies" }', '{ t = 0.6, k = "Fx", n = "SeptRise", d = 0.65, total = 5.5 }']
 for k, t in enumerate(LASERS):
-    sept_events += ['{ t = %s, k = "Fx", n = "SeptLaser", star = %d, nth = %d }' % (t, TRACE[k], k + 1),
-                    '{ t = %s, k = "Hit", i = %d, fx = "SeptLaserHit" }' % (round(t + 0.47, 2), k + 1),
-                    '{ t = %s, k = "Shake", a = 0.8, d = 0.4 }' % round(t + 0.47, 2)]  # 2026-10-31 사용자: "레이저 떨굴 때마다 진동도 강하게"
-sept_events += ['{ t = 8.62, k = "Fx", n = "SeptGather" }', '{ t = 9.05, k = "Hit", i = 8, fx = "SeptSlam" }', '{ t = 9.06, k = "Stop", d = 0.12 }', '{ t = 9.07, k = "Shake", a = 3, d = 1.3 }',
-                '{ t = 9.9, k = "Orbs", mode = "Orbit" }']
+    sept_events += ['{ t = %s, k = "Fx", n = "SeptLaser", star = %d, nth = %d, gap = %s }' % (t, TRACE[k], k + 1, GAPS7[k]),
+                    '{ t = %s, k = "Shake", a = 0.3, d = 0.12 }' % round(t + 0.12, 2),  # 발사 순간 짧은 흔들림
+                    '{ t = %s, k = "Hit", i = %d, fx = "SeptLaserHit" }' % (round(t + 0.22, 2), k + 1),
+                    '{ t = %s, k = "Shake", a = 0.8, d = 0.25 }' % round(t + 0.22, 2)]  # 2026-10-31 사용자: "레이저 떨굴 때마다 진동도 강하게"
+sept_events += ['{ t = 4.1, k = "Fx", n = "SeptGather" }', '{ t = 4.6, k = "Hit", i = 8, fx = "SeptSlam" }', '{ t = 4.61, k = "Stop", d = 0.12 }', '{ t = 4.62, k = "Shake", a = 3, d = 1.3 }',
+                '{ t = 5.45, k = "Orbs", mode = "Orbit" }']
 skills.append(motion("Septentriones", "셉텐트리오네스(컷신): 오른손을 왼 허리로 모았다가[중] 하늘로 치켜들면[강] 별 일곱이 하늘 높이 오르고 → 별이 하나씩 적 진영으로 레이저"
-                     "(별 이름 · 화면 색 · 카메라가 별 → 레이저를 따라 아래로) → 팔을 내리치면[강] 북두칠성 꼴로 진형 전체를 강타하고 선 자국이 남는다", 10.8,
-                     [(0, None, "STANCE"), (0.3, "cubicOut", "SEPT_LOW"), (0.75, "sineInOut", "SEPT_LOW", {"Head": (-16, 16, 0)}), (0.95, "expoOut", "SEPT_UP"),
-                      (4.5, "sineInOut", "SEPT_UP", {"Root": (0, 0.16, 0, 0, -18, 0), "Head": (26, 6, 0)}), (8.6, "sineInOut", "SEPT_UP", {"Root": (0, 0.2, 0, 0, -20, 0)}),
-                      (8.95, "expoOut", "SEPT_DOWN"), (9.6, "sineOut", "SEPT_DOWN", {"Root": (0, -0.12, -0.12, 0, -24, 0)}), (10.6, "cubicInOut", "STANCE")],
+                     "(별 이름 · 화면 색 · 카메라가 별 → 레이저를 따라 아래로) → 팔을 내리치면[강] 북두칠성 꼴로 진형 전체를 강타하고 선 자국이 남는다", 6.3,
+                     [(0, None, "STANCE"), (0.2, "cubicOut", "SEPT_LOW"), (0.45, "sineInOut", "SEPT_LOW", {"Head": (-16, 16, 0)}), (0.6, "expoOut", "SEPT_UP"),
+                      (2.3, "sineInOut", "SEPT_UP", {"Root": (0, 0.16, 0, 0, -18, 0), "Head": (26, 6, 0)}), (4.1, "sineInOut", "SEPT_UP", {"Root": (0, 0.2, 0, 0, -20, 0)}),
+                      (4.5, "expoOut", "SEPT_DOWN"), (5.05, "sineOut", "SEPT_DOWN", {"Root": (0, -0.12, -0.12, 0, -24, 0)}), (6.1, "cubicInOut", "STANCE")],
                      sept_events))
 skills.append(motion("Guard", "가드(스킬): 별 방패를 오래 세운다", 1.1,
                      [(0, None, "STANCE"), (0.18, "backOut", "SHIELD"), (0.8, "sineInOut", "SHIELD", {"Root": (0, -0.08, 0.3, 0, -14, 0)}), (1.1, "sineInOut", "STANCE")],

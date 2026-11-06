@@ -17,6 +17,9 @@
 	                 밤하늘 화면 · 누운 성반, 진영보다 넓게 펼친 별에서 레이저가 진영 안으로 모여 떨어진다) → 별이 하나씩 적 진영으로 레이저(SeptLaser — 별 이름표, 매번 다른 화면 색, 카메라는 별을 보다 레이저 끝을 따라 아래로,
 	                 떨어진 자리에 룬 · 하늘과 바닥에 별자리 선이 한 줄씩) → 모으기(SeptGather) → 일곱 빛줄기가 한꺼번에 내리꽂혀 진형 전체를 강타
 	                 (SeptSlam — 화면 효과 · 제목 카드 "SEPTENTRIONES" · 별을 잇는 선 자국이 남는다)
+	  2026-11-06 속도감(사용자: "레이저 속도랑 카메라 속도를 올려서 전체적으로 속도감 있게") — 극장판 필살기의 빠른 컷 편집처럼: 레이저는 0.22초에 닿고
+	                 (옛 0.47) 꼬리는 0.18초에 끊기며, 카메라는 expoOut(급가속 뒤 급정지)·quadIn(레이저를 쫓아 가속)으로 짧게 꺾이고 발사 순간 앞으로 한 번 쿵 밀린다.
+	                 발사 간격은 강중약(0.55 · 0.35 · 0.35 · 0.55 · 0.3 · 0.3 · 0.35), 강타 앞은 오히려 0.5초 멈춰 대비를 준다. 전체 10.8 → 6.3초
 ]]
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -61,6 +64,16 @@ end
 
 local function sine(x: number): number
 	return -(math.cos(math.pi * math.clamp(x, 0, 1)) - 1) / 2
+end
+
+-- 급가속 뒤 급정지(카메라 꺾기) · 서서히 붙는 가속(레이저를 쫓는 카메라)
+local function expoOut(x: number): number
+	x = math.clamp(x, 0, 1)
+	return if x >= 1 then 1 else 1 - 2 ^ (-10 * x)
+end
+local function quadIn(x: number): number
+	x = math.clamp(x, 0, 1)
+	return x * x
 end
 
 -- 별자리 선(두 별 사이 빛줄)
@@ -286,11 +299,12 @@ local function titleCard(ctx: any, opts: { [string]: any })
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	fadeEnds.Parent = bar
+	local q = math.min(1, dur / 0.85) -- 짧은 카드(레이저 이름표)는 들고 나는 시간도 같은 비율로 줄인다
 	CombatVfx.Timed(dur, function(t)
 		local a = dur * t
-		local come = 1 - (1 - math.min(1, a / 0.22)) ^ 4
-		local leave = math.clamp((a - (dur - 0.25)) / 0.25, 0, 1)
-		local shown = math.min(1, a / 0.1) * (1 - leave)
+		local come = 1 - (1 - math.min(1, a / (0.22 * q))) ^ 4
+		local leave = math.clamp((a - (dur - 0.25 * q)) / (0.25 * q), 0, 1)
+		local shown = math.min(1, a / (0.1 * q)) * (1 - leave)
 		holder.Position = UDim2.fromScale(0.5 + 0.07 * (1 - come) - 0.04 * leave, y)
 		local split = 0.018 * (1 - come) + 0.003 * math.sin(a * 60) * (1 - 0.7 * come)
 		red.Position = UDim2.fromScale(0.5 - split, 0.18)
@@ -300,9 +314,9 @@ local function titleCard(ctx: any, opts: { [string]: any })
 		red.TextTransparency = 1 - 0.55 * shown
 		cyan.TextTransparency = 1 - 0.55 * shown
 		head.TextTransparency = 1 - 0.85 * shown
-		local sweep = math.min(1, a / 0.3)
+		local sweep = math.min(1, a / (0.3 * q))
 		bar.Size = UDim2.new(sweep, 0, 0, 2 + 4 * (1 - sweep))
-		bar.BackgroundTransparency = 0.1 + 0.9 * math.clamp((a - 0.3) / 0.35, 0, 1)
+		bar.BackgroundTransparency = 0.1 + 0.9 * math.clamp((a - 0.3 * q) / (0.35 * q), 0, 1)
 	end, function()
 		gui:Destroy()
 	end)
@@ -774,7 +788,7 @@ local function held(sept: any, parts: { BasePart }, update: (number, number, num
 	CombatVfx.Timed(12, function(_, dt)
 		t += dt
 		if sept.Gather then
-			gk = math.min(1, gk + dt / 0.3)
+			gk = math.min(1, gk + dt / 0.2)
 		end
 		if sept.Slammed and not slamAt then
 			slamAt = t
@@ -795,7 +809,7 @@ local function heldLine(sept: any, ends: () -> (Vector3, Vector3), width: number
 	core.Transparency, glow.Transparency = 1, 1
 	held(sept, { core, glow }, function(t, gk, gone)
 		local a, b = ends()
-		local head = a:Lerp(b, sine(t / 0.25))
+		local head = a:Lerp(b, expoOut(t / 0.12))
 		local len = math.max(0.05, (head - a).Magnitude)
 		local cf = CFrame.lookAt(a, if len > 0.06 then head else b) * CFrame.new(0, 0, -len / 2)
 		local w = width * (1 + 2 * gk) * (1 + 2 * gone)
@@ -822,7 +836,7 @@ local function groundRune(ctx: any, sept: any, g: Vector3)
 		end
 	end
 	held(sept, parts, function(t, gk, gone)
-		local open = 1 - (1 - math.min(1, t / 0.3)) ^ 3
+		local open = 1 - (1 - math.min(1, t / 0.15)) ^ 3
 		for ri, spec in RUNE do
 			local n = spec[1]
 			local R = spec[2] * open * (1 + 0.6 * gone)
@@ -875,7 +889,7 @@ local function astrolabe(ctx: any, sept: any)
 			seenPulse, pk = sept.Pulse, 1
 		end
 		pk *= math.exp(-dt * 5)
-		local appear = sine(t / 0.9)
+		local appear = sine(t / 0.5)
 		local R = cur * (0.35 + 0.65 * appear) * (1 - 0.45 * gk) * (1 + 1.4 * gone)
 		local seen = appear * (1 - gone)
 		local spin = 1 + 6 * gk
@@ -978,7 +992,7 @@ function Fx.SeptRise(ctx: any, ev: any)
 		local sky = dipperSky(ctx, sept.Points)
 		for i = 1, 7 do
 			local from, goal = ctx.Star(i), sky[i]
-			local t, after = -(i - 1) * 0.05, 0
+			local t, after = -(i - 1) * 0.03, 0
 			ctx.Weapons:Drive(i, function(dt: number): Vector3?
 				t += dt
 				if sept.Slammed then
@@ -987,7 +1001,7 @@ function Fx.SeptRise(ctx: any, ev: any)
 						return nil
 					end
 				end
-				return from:Lerp(goal, sine(t / d)) + Vector3.new(0, math.sin(t * 1.6 + i) * 0.12, 0)
+				return from:Lerp(goal, expoOut(t / d)) + Vector3.new(0, math.sin(t * 1.6 + i) * 0.12, 0)
 			end)
 		end
 	end
@@ -1008,9 +1022,9 @@ function Fx.SeptRise(ctx: any, ev: any)
 			sum += ctx.Star(i)
 		end
 		local mid = sum / 7
-		local k = sine(t / d)
+		local k = expoOut(t / d)
 		local pos = (home + r * 13 + Vector3.new(0, 2, 0)):Lerp(home:Lerp(mid, 0.35) + r * 18 + Vector3.new(0, 2, 0), k)
-		local cf = from:Lerp(CFrame.lookAt(pos, mid), sine(t / 0.4))
+		local cf = from:Lerp(CFrame.lookAt(pos, mid), expoOut(t / 0.2))
 		s.cam = cf
 		return cf
 	end)
@@ -1020,7 +1034,7 @@ end
 	레이저 한 줄기: 세 겹(넓은 푸른 겉 · 흰 청 · 흰 심)이 별 i 에서 바닥 g 로 grow 초에 뻗어 life 초 머물다 가늘어지고,
 	뻗는 동안 빛고리 셋이 줄기를 감아 내려간다. 닿으면 번쩍 · 충격파 · 파편. size = 굵기 배(강타 땐 크게)
 ]]
-local AIM, GROW = 0.25, 0.22
+local AIM, GROW = 0.12, 0.1 -- 2026-11-06 속도감: 0.25 + 0.22 → 0.12 + 0.1
 local LAYERS: { { any } } = { { STAR, 1.4, 0.55 }, { PALE, 0.7, 0.3 }, { WHITE, 0.26, 0 } } -- 빛 · 굵기 · 투명도
 local function laser(ctx: any, i: number, g: Vector3, size: number, grow: number, life: number)
 	local parts: { Part } = {}
@@ -1035,7 +1049,7 @@ local function laser(ctx: any, i: number, g: Vector3, size: number, grow: number
 		local len = math.max(0.05, (head - top).Magnitude)
 		local cf = CFrame.lookAt(top, if len > 0.06 then head else top - Vector3.new(0, 0.1, 0), ctx.Forward) * CFrame.new(0, 0, -len / 2)
 		local fade = math.clamp((a - grow) / life, 0, 1)
-		local w = size * (1 - fade) * (1 + 0.15 * math.sin(a * 50))
+		local w = size * (1 - fade) ^ 2 * (1 + 0.15 * math.sin(a * 50)) -- 꼬리는 제곱으로 날카롭게 끊긴다
 		for k, layer in LAYERS do
 			local d = 0.03 + layer[2] * w
 			parts[k].Size, parts[k].CFrame = Vector3.new(d, d, len), cf
@@ -1054,7 +1068,7 @@ local function laser(ctx: any, i: number, g: Vector3, size: number, grow: number
 				R0 = 0.4 * size,
 				R1 = 2.2 * size,
 				Color = PALE,
-				Life = 0.35,
+				Life = 0.2,
 				Width = 0.1 * size,
 				Facing = true,
 				Segments = 16,
@@ -1062,8 +1076,8 @@ local function laser(ctx: any, i: number, g: Vector3, size: number, grow: number
 		end)
 	end
 	task.delay(grow, function()
-		ctx.Vfx.Flash(g, { Color = WHITE, Size = 6 * size, Life = 0.3, Brightness = 6 })
-		ctx.Vfx.Shockwave(Vector3.new(g.X, ctx.Ground + 0.1, g.Z), { Color = STAR, Radius = 5 * size, Life = 0.45 })
+		ctx.Vfx.Flash(g, { Color = WHITE, Size = 6 * size, Life = 0.2, Brightness = 6 })
+		ctx.Vfx.Shockwave(Vector3.new(g.X, ctx.Ground + 0.1, g.Z), { Color = STAR, Radius = 5 * size, Life = 0.3 })
 		ctx.Vfx.Burst(g, { Count = 8, Colors = { STAR, WHITE }, Size = 0.2, Speed = 14, Gravity = 20, Life = 0.5 })
 	end)
 end
@@ -1077,11 +1091,12 @@ function Fx.SeptLaser(ctx: any, ev: any)
 	local s = st(ctx)
 	local sept = septOf(ctx)
 	local i, k = (ev and ev.star) or 1, (ev and ev.nth) or 1
+	local gap = math.max(0.3, (ev and ev.gap) or 0.4) -- 다음 발사까지(모션 이벤트) — 이름표 · 카메라가 이 안에 끝난다
 	local g = sept.Points[i]
 	titleCard(ctx, {
 		Top = (ROMAN[k] or "I") .. "  /  VII",
 		Big = spaced(NAMES[i][1]),
-		Dur = 0.85,
+		Dur = gap,
 	})
 	local star = ctx.Star(i)
 	local cam = workspace.CurrentCamera
@@ -1095,10 +1110,10 @@ function Fx.SeptLaser(ctx: any, ev: any)
 		Facing = true,
 	})
 	task.delay(AIM, function()
-		laser(ctx, i, g, 1, GROW, 0.35)
+		laser(ctx, i, g, 1, GROW, 0.18)
 		sept.Pulse += 1
-		grade(ctx, LASER_GRADE[k] or LASER_GRADE[1], 0, 0.6)
-		ctx.Vfx.Flash(ctx.Star(i), { Color = WHITE, Size = 2.4, Life = 0.25, Brightness = 6 })
+		grade(ctx, LASER_GRADE[k] or LASER_GRADE[1], 0, 0.3)
+		ctx.Vfx.Flash(ctx.Star(i), { Color = WHITE, Size = 2.4, Life = 0.15, Brightness = 6 })
 	end)
 	task.delay(AIM + GROW, function()
 		groundRune(ctx, sept, g)
@@ -1107,17 +1122,22 @@ function Fx.SeptLaser(ctx: any, ev: any)
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
 	local from = camNow(s)
-	ctx.Shot(0.95, function(_, t)
+	ctx.Shot(gap, function(_, t)
 		local top = ctx.Star(i)
 		local below = top + r * 10 - f * 4 + Vector3.new(0, -14, 0)
 		local desired
 		if t < AIM then
 			desired = CFrame.lookAt(below, top)
 		else
-			local a = sine((t - AIM) / 0.32)
+			-- 레이저가 뻗는 동안 quadIn 으로 쫓아 내려가 끝에 닿는 순간 딱 멈춘다
+			local a = quadIn((t - AIM) / GROW)
 			desired = CFrame.lookAt(below:Lerp(g + r * 11 - f * 3 + Vector3.new(0, 4, 0), a), top:Lerp(g, a))
 		end
-		local cf = from:Lerp(desired, sine(t / AIM))
+		local cf = from:Lerp(desired, expoOut(t / AIM))
+		-- 발사 순간 줌 펀치: 앞으로 1.8 쿵 밀렸다 0.12초 안에 돌아온다
+		if t >= AIM then
+			cf += cf.LookVector * (1.8 * math.exp(-(t - AIM) * 20))
+		end
 		s.cam = cf
 		return cf
 	end)
@@ -1145,7 +1165,7 @@ function Fx.SeptGather(ctx: any)
 	for i = 1, 7 do
 		local p = ctx.Star(i)
 		sum += p
-		ctx.Vfx.Implode(p, { Color = WHITE, Radius = 5, Count = 8, Life = 0.35 })
+		ctx.Vfx.Implode(p, { Color = WHITE, Radius = 5, Count = 8, Life = 0.3 })
 		ctx.Vfx.Flash(p, { Color = PALE, Size = 3, Life = 0.35, Brightness = 6 })
 	end
 	grade(ctx, { Saturation = -0.85, Contrast = 0.8, Brightness = -0.14 }, 0.7, 0.6)
@@ -1155,8 +1175,8 @@ function Fx.SeptGather(ctx: any)
 	local from = camNow(s)
 	local goal = CFrame.lookAt(mid + Vector3.new(0, 12, 0) - f * 20 + r * 6, ctx.EnemyCenter:Lerp(mid, 0.5))
 	s.slamLook = ctx.EnemyCenter:Lerp(mid, 0.5)
-	ctx.Shot(0.4, function(_, t)
-		local cf = from:Lerp(goal, sine(t / 0.4))
+	ctx.Shot(0.3, function(_, t)
+		local cf = from:Lerp(goal, expoOut(t / 0.3))
 		s.cam = cf
 		return cf
 	end)
@@ -1207,7 +1227,7 @@ function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 			grade(ctx, SLAM_GRADE, 0.8)
 		end)
 		for i = 1, 7 do
-			laser(ctx, i, P[i], 2.4, 0.08, 0.5)
+			laser(ctx, i, P[i], 2.4, 0.05, 0.4)
 			ctx.Vfx.Flash(ctx.Star(i), { Color = WHITE, Size = 4, Life = 0.3, Brightness = 8 })
 			ctx.Vfx.Pillar(P[i], { Height = 18, Width = 2.6, Color = STAR, Life = 0.6 })
 			ctx.Vfx.Shockwave(P[i] + Vector3.new(0, 0.05, 0), { Color = WHITE, Radius = 7, Life = 0.6 })
