@@ -140,6 +140,8 @@ export type Skill = {
 	Inflicts: boolean?,
 	-- 칼리스토: 한 번씩 따로 회피하는 연타 수("5번 회피 기믹"). 예고(Plans)를 이 수만큼 줄 세운다
 	Strikes: number?,
+	-- 연타 회피 QTE 를 하나로 합친다(칼리스토 신데시·쏟아지는 뭇별 — QteDefinitions CreateChain)
+	ChainQte: boolean?,
 }
 
 -- 적 전용. 적은 직업이 없으므로 이 중에서 무작위로 고른다. 지금은 슬라임 공격 둘뿐이다.
@@ -463,17 +465,18 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoSynthesis",
 		Name = "신데시 톤 아스트론",
-		Description = "- 손을 칼날로 바꿔 3번 찌름(12 × 3).\n- 한 번씩 따로 회피(3번 회피).\n- 대상에게 [성위]가 있으면 피해 +30% · 찌를 때마다 [화상] 5.",
+		Description = "- 손을 칼날로 바꿔 3번 찌름(12 × 3).\n- 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 대상에게 [성위]가 있으면 피해 +30% · 찌를 때마다 [화상] 5.",
 		Damage = 12,
 		Range = "Melee",
 		Shape = { Kind = "Row" },
 		Strikes = 3,
+		ChainQte = true, -- 2026-11-06 개선안 4절: 회피 QTE 3번 대신 QTE 1개 안의 3비트
 		BossKind = "Attack",
 	},
 	{
 		Id = "CallistoArktos",
 		Name = "미크리 아르크토스 하라시",
-		Description = "- 카메라 렌즈를 넓게 쏴 아군 칸 전부를 태움.\n- 회피 불가 · 막기 가능.\n- 맞으면 [성위]를 바로 [뭇별]로 바꿈.\n- 이미 [뭇별]이 있으면 대신 40 피해.\n- [작은 곰 자리]: [화상] 5 추가.",
+		Description = "- 카메라 렌즈를 넓게 쏴 노린 아군이 선 열과 양옆 열(3열 9칸)을 태움.\n- 회피 불가 · 막기 가능.\n- 맞으면 [성위]를 바로 [뭇별]로 바꿈.\n- 이미 [뭇별]이 있으면 대신 40 피해.\n- [작은 곰 자리]: [화상] 5 추가.",
 		Damage = 0,
 		Range = "Ranged",
 		Shape = { Kind = "All" },
@@ -484,7 +487,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoAstro",
 		Name = "아스트로 세시",
-		Description = "- 강화 스킬. [작은 곰 자리]일 때만 씀.\n- 고속으로 돌며 사방을 벰(아군 칸 전부).\n- 회피 불가.\n- 대상에게 [뭇별]이 있으면 피해 +40%.\n- [성위]를 지닌 채 맞으면 [칼춤 상처](방어력 −15%, 3턴).",
+		Description = "- 강화 스킬. [작은 곰 자리]일 때만 씀.\n- 고속으로 돌며 사방을 벰(노린 아군 칸 둘레 3×3, 가장자리는 잘림).\n- 회피 불가.\n- 대상에게 [뭇별]이 있으면 피해 +40%.\n- [성위]를 지닌 채 맞으면 [칼춤 상처](방어력 −15%, 3턴).",
 		Damage = 30,
 		Range = "Melee",
 		Shape = { Kind = "All" },
@@ -514,13 +517,25 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoShower",
 		Name = "쏟아지는 뭇별",
-		Description = "- 별을 쏟아 3번 때림(5 × 3). 한 번씩 따로 회피.\n- 맞을 때마다 [성위] 1.",
+		Description = "- 별을 쏟아 3번 때림(5 × 3). 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 맞을 때마다 [성위] 1.",
 		Damage = 5,
 		Range = "Ranged",
 		Shape = { Kind = "Column" },
 		Strikes = 3,
+		ChainQte = true,
 		BossKind = "Attack",
-		BossCooldown = 2,
+		BossCooldown = 3, -- 2026-11-06 R3: 2 → 3
+	},
+	{
+		Id = "CallistoKenos",
+		Name = "케노스 아스테리스모스",
+		Description = "- 빈 별자리. 3페이즈 위치 기믹 — 빛 칸 6칸이 켜지고 나머지 12칸이 갈라져 별똥별이 떨어짐.\n- 빛 칸 안에 서 있으면 맞지 않음. 회피·막기 QTE 없음.\n- 맞으면 [성위] 4.",
+		Damage = 40,
+		Range = "Ranged",
+		Shape = { Kind = "All" },
+		Unavoidable = true,
+		BossKind = "Attack",
+		BossCooldown = 5,
 	},
 	{
 		Id = "CallistoSubmerge",
@@ -546,12 +561,12 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoAlioth",
 		Name = "알리오스",
-		Description = "- 상대 필드 변화기.\n- 아군 필드에 5턴 동안 남는 장판을 깖.\n  - 턴이 지날 때마다 피해 5 · [두베] 1 · [성위] 2.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
+		Description = "- 상대 필드 변화기.\n- 아군이 선 열과 그 앞쪽 열(2열 6칸)에 5턴 동안 남는 장판을 깖. 장판 밖에 서 있으면 맞지 않음.\n  - 턴이 지날 때마다 피해 5 · [두베] 1 · [성위] 2.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
 		Damage = 5,
 		Range = "Ranged",
 		Shape = { Kind = "All" },
 		BossKind = "Attack",
-		BossCooldown = 4,
+		BossCooldown = 7, -- 2026-11-06 개선안 5절: 4 → 7
 	},
 	{
 		Id = "CallistoMegrez",
@@ -581,7 +596,7 @@ local bossSkills: { Skill } = {
 		Range = "Melee",
 		Shape = { Kind = "Column" },
 		BossKind = "Attack",
-		BossCooldown = 8,
+		BossCooldown = 11, -- 2026-11-06 개선안 5절: 8 → 11
 	},
 	{
 		Id = "CallistoMerak",
@@ -592,12 +607,12 @@ local bossSkills: { Skill } = {
 		Shape = { Kind = "Row" },
 		Unavoidable = true,
 		BossKind = "Attack",
-		BossCooldown = 3,
+		BossCooldown = 6, -- 2026-11-06 개선안 5절: 3 → 6
 	},
 	{
 		Id = "CallistoDipper",
 		Name = "북두칠성",
-		Description = "- 강화 스킬. [성위 - 칠성] 7스택이면 다음 턴 이 스킬로 고정([메갈리 아르크토스]).\n- 아군 칸 전부를 침. 재사용 대기 없음.\n- 대상의 [알카이드] 1스택당 피해 +5%(최대 20%).",
+		Description = "- 강화 스킬. [성위 - 칠성] 7스택이면 다음 턴 이 스킬로 고정([메갈리 아르크토스]).\n- 북두 국자 모양 7칸을 침. 재사용 대기 없음.\n- 대상의 [알카이드] 1스택당 피해 +5%(최대 20%).",
 		Damage = 50,
 		Range = "Melee",
 		Shape = { Kind = "All" },

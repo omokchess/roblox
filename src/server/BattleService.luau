@@ -797,6 +797,13 @@ function BattleService:_queueThreats(player: Player)
 	for _, t in GridBattle.PlannedThreatList(battle) do
 		local enemy = t.Unit
 		local foeSkill = GridBattle.EnemySkill(enemy, t.Index)
+		-- 2026-11-06 칼리스토 개선안 4절: 연타 QTE 를 하나로 합치는 기술(ChainQte)은 같은 적의 이어지는 예고를 맨 앞 줄 하나(Chain = 비트 수)로 묶는다
+		local head = threats[#threats]
+		if foeSkill.ChainQte and head and head.Id == enemy.Id and head.SkillId == foeSkill.Id and head.Chain then
+			head.Chain += 1
+			table.insert(threats, { Id = enemy.Id, PlanIndex = t.Index, Name = enemy.Name, SkillId = foeSkill.Id, SkillName = foeSkill.Name, Unavoidable = false, Tail = true })
+			continue
+		end
 		table.insert(threats, {
 			Id = enemy.Id,
 			PlanIndex = t.Index,
@@ -807,6 +814,7 @@ function BattleService:_queueThreats(player: Player)
 			DodgeOnly = foeSkill.DodgeOnly == true,
 			GuardOnly = foeSkill.GuardOnly == true,
 			Unavoidable = GridBattle.IsUnavoidable(battle, foeSkill),
+			Chain = if foeSkill.ChainQte and not GridBattle.IsUnavoidable(battle, foeSkill) then 1 else nil,
 		})
 	end
 	session.Threats = threats
@@ -886,7 +894,20 @@ function BattleService:HandleGridAction(player: Player, request: any)
 		end
 		-- 대상은 서버가 고른다(대기열 맨 앞). 클라이언트 Id 를 믿으면 어긋날 때 턴이 멈춘다.
 		local pending = table.remove(session.Threats, 1)
-		GridBattle.ResolveDodge(battle, pending.Id, grade :: any, pending.PlanIndex)
+		local function gradeOf(beat: number): string
+			local given = if type(request.Grades) == "table" then tostring(request.Grades[beat]) else nil
+			return if given and VALID_GRADES[given] then given else grade
+		end
+		GridBattle.ResolveDodge(battle, pending.Id, gradeOf(1) :: any, pending.PlanIndex)
+		-- 3연타 QTE: 이어지는 비트(Tail)를 비트별 등급(Grades)으로 마저 해소한다. Grades 가 모자라거나 틀리면 Grade 로 채운다
+		for beat = 2, pending.Chain or 1 do
+			local nextThreat = session.Threats[1]
+			if not nextThreat or not nextThreat.Tail then
+				break
+			end
+			table.remove(session.Threats, 1)
+			GridBattle.ResolveDodge(battle, nextThreat.Id, gradeOf(beat) :: any, nextThreat.PlanIndex)
+		end
 		if self:_settle(player) then
 			return
 		end

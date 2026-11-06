@@ -2549,7 +2549,8 @@ function BattleHud:_buildQte()
 		Padding = UDim.new(0, 9),
 	}, row)
 	self.dirCaps = {}
-	for i = 1, QteDefinitions.COMMAND_COUNT do
+	self.dirRowLayout = row:FindFirstChildOfClass("UIListLayout")
+	for i = 1, QteDefinitions.COMMAND_MAX do
 		-- 크고 굵게(2026-09-29 요청: 화살표가 잘 안 보인다). 글자에 검은 테를 둘러 어떤 칸 색에서도 읽히게
 		local cap = keycap(row, "", 68, 68, 40)
 		make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, cap)
@@ -2673,9 +2674,21 @@ function BattleHud:QteOpen(challenge: any, role: string, title: string, word: st
 			word
 		)
 		local directions = challenge.ExpectedDirections or {}
+		-- 3연타 QTE(화살표 15개)는 키캡을 줄여 한 줄에 담는다
+		local chain = challenge.BeatSize ~= nil
+		local size = if chain then 32 else 68
+		self.dirRowLayout.Padding = UDim.new(0, if chain then 3 else 9)
+		if chain then
+			self.qteHint.Text = string.format(
+				'<font color="%s"><b>방향키</b></font> 또는 <font color="%s"><b>WASD</b></font> — %d개씩 %d비트, 비트마다 한 번도 틀리면 안 됨',
+				hex(BONE), hex(BONE), challenge.BeatSize, challenge.BeatCount or 1
+			)
+		end
 		for i, cap in self.dirCaps do
 			cap.Cap.Visible = directions[i] ~= nil
 			cap.Cap.Text = DIRECTION_GLYPH[directions[i]] or ""
+			cap.Cap.Size = UDim2.fromOffset(size, size)
+			cap.Cap.TextSize = if chain then 20 else 40
 		end
 	end
 	self:_paintAttack()
@@ -2760,6 +2773,15 @@ function BattleHud:QteTick(challenge: any, visual: { [string]: any }, elapsed: n
 			end
 		end
 		local mistakes = tonumber(visual.mistakes) or 0
+		if visual.beatSize then
+			local beat = math.min(visual.beatCount or 1, math.ceil(current / visual.beatSize))
+			local mine = (visual.beatMistakes or {})[beat] or 0
+			self.dirNote.Text = string.format(
+				'비트 <b>%d / %d</b>   ·   이번 비트 틀림 <font color="%s"><b>%d</b></font>   ·   0번 %s, 1번 막기',
+				beat, visual.beatCount or 1, hex(if mine > QteDefinitions.CHAIN_DODGE_MISTAKES then RED else BONE), mine, self.qteRole.Text
+			)
+			return
+		end
 		self.dirNote.Text = string.format(
 			'틀림 <font color="%s"><b>%d</b></font>   ·   %d번까지 %s, %d번까지 막기',
 			hex(if mistakes > QteDefinitions.COMMAND_DODGE_MISTAKES then RED else BONE),

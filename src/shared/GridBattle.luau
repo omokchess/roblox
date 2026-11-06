@@ -138,6 +138,10 @@ export type CallistoState = {
 	Lure: { { number } }?,
 	-- 이번 턴 솔로 별자리 칸 보상을 받았나(한 턴 한 번)
 	StarUsed: boolean?,
+	-- 2026-11-06 개선안 3절 R2: 평타를 연달아 쓴 수(2 이면 다음 턴 재사용 1 이하 남은 기술을 바로 쓴다)
+	Basics: number?,
+	-- 2026-11-06 개선안 2절: 알리오스 장판 6칸(예고 때 정함 — 턴 끝 피해는 이 칸 안에 서 있을 때만)
+	AliothCells: { { number } }?,
 }
 
 --[[
@@ -2677,6 +2681,7 @@ local CALLISTO_FORM: { [string]: string } = {
 	CallistoPhecda = "TrackColumn",
 	CallistoMerak = "TrackRow",
 	CallistoDipper = "All",
+	CallistoKenos = "All",
 }
 GridBattle.CALLISTO_FORM = CALLISTO_FORM
 -- 별자리 칸에서 턴을 마치면 얻는 [성위]
@@ -2836,8 +2841,29 @@ local function summonAlcor(state: State, c: CallistoState, unit: Unit, ally: Uni
 	pushLog(state, string.format("%s — 알코르를 불러냈다 (체력 %d, 아군 진형에 쌍둥이) · %s에게 [미자르]", unit.Name, health, ally.Name))
 end
 
+--[[
+	2026-11-06 개선안 3절 R2: 평타 2연속이면 다음 턴은 재사용 대기가 1 이하 남은 기술을 대기 해제하고 쓴다.
+	평타(수많은 성위 아래 파묻혀·공명적 성위)가 아니면 연속 수를 0 으로.
+]]
+local function callistoBasics(c: CallistoState, id: string?)
+	if id == nil then
+		if (c.Basics or 0) >= 2 then
+			for key, left in c.Cooldowns do
+				if left <= 1 then
+					c.Cooldowns[key] = 0
+				end
+			end
+		end
+	else
+		c.Basics = if id == "CallistoBuried" or id == "CallistoResonance" then (c.Basics or 0) + 1 else 0
+	end
+end
+
 -- 이번 턴 쓸 스킬(행동 박자 — 위 설명). 고르면서 바퀴·자리·재사용 대기를 넘긴다
 local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Unit): string
+	if c.Page >= 2 then
+		callistoBasics(c, nil)
+	end
 	if c.Page == 2 then
 		local cd = c.Cooldowns
 		local id
@@ -2868,6 +2894,7 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 		if SEVEN_SKILLS[id] then
 			sevenStar(state, c, unit, id)
 		end
+		callistoBasics(c, id)
 		return id
 	end
 	if c.Page >= 3 then
@@ -2879,6 +2906,8 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 			id = "CallistoArtificial"
 		elseif (c.Cooldowns.CallistoShower or 0) <= 0 then
 			id = "CallistoShower"
+		elseif (c.Cooldowns.CallistoKenos or 0) <= 0 then
+			id = "CallistoKenos" -- 2026-11-06 개선안 1절: 회피 불가 위치 기믹
 		else
 			id = "CallistoResonance"
 		end
@@ -2886,6 +2915,7 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 		if skill and skill.BossCooldown then
 			c.Cooldowns[id] = skill.BossCooldown
 		end
+		callistoBasics(c, id)
 		return id
 	end
 	local id
@@ -2896,7 +2926,7 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 	elseif c.Slot == 2 then
 		id = if stackOf(ally, ClassResources.GOCHAL) > 0 then "CallistoSymberasma" else "CallistoTrohia"
 	else
-		local ripe = stackOf(ally, ClassResources.MUTBYEOL) > 0 or stackOf(ally, ClassResources.SEONGWI) >= 6
+		local ripe = stackOf(ally, ClassResources.MUTBYEOL) > 0 or stackOf(ally, ClassResources.SEONGWI) >= 3 -- 2026-11-06 R1: 6 → 3
 		id = if ripe then "CallistoArktos" else "CallistoSynthesis"
 	end
 	if c.Slot == 3 and stackOf(unit, ClassResources.URSA_MINOR) > 0 then
@@ -3040,6 +3070,55 @@ local function callistoMove(state: State, rng: () -> number, unit: Unit, wantRow
 end
 
 --[[
+	2026-11-06 개선안 1·2절: 추적을 끄고 예고 때 칸을 정하는 기술. (칸 목록, 빛 칸 목록?)을 돌려준다 — 없으면 판 전체 형태.
+	  렌즈 노린 아군 열과 양옆 열(9) · 아스트로 세시 둘레 3×3 · 알리오스 선 열과 앞쪽 열(6) · 북두칠성 국자 7칸 ·
+	  케노스 빛 칸 6칸(앞 열1~2 · 가운데 3~4 · 뒤 5~6 중 무작위)을 뺀 12칸이 위험 칸
+]]
+local DIPPER_CELLS = { { 6, 1 }, { 3, 2 }, { 4, 2 }, { 5, 2 }, { 1, 3 }, { 2, 3 }, { 3, 3 } }
+local function callistoZone(state: State, rng: () -> number, id: string, here: { X: number, Y: number }): ({ { number } }?, { { number } }?)
+	local width, height = state.Grid.Width, state.Grid.Height
+	local cells = {}
+	if id == "CallistoArktos" then
+		local x0 = math.clamp(here.X - 1, 1, math.max(1, width - 2))
+		for x = x0, math.min(width, x0 + 2) do
+			for y = 1, height do
+				table.insert(cells, { x, y })
+			end
+		end
+	elseif id == "CallistoAstro" then
+		for x = math.max(1, here.X - 1), math.min(width, here.X + 1) do
+			for y = math.max(1, here.Y - 1), math.min(height, here.Y + 1) do
+				table.insert(cells, { x, y })
+			end
+		end
+	elseif id == "CallistoAlioth" then
+		local front = if here.X > 1 then here.X - 1 else 2
+		for _, x in { math.min(front, here.X), math.max(front, here.X) } do
+			for y = 1, height do
+				table.insert(cells, { x, y })
+			end
+		end
+	elseif id == "CallistoDipper" then
+		for _, cell in DIPPER_CELLS do
+			table.insert(cells, { cell[1], cell[2] })
+		end
+	elseif id == "CallistoKenos" then
+		local band = math.max(1, width // 3)
+		local first = (math.floor(rng() * 3)) * band + 1
+		local safe = {}
+		for x = 1, width do
+			for y = 1, height do
+				table.insert(if x >= first and x < first + band then safe else cells, { x, y })
+			end
+		end
+		return cells, safe
+	else
+		return nil, nil
+	end
+	return cells, nil
+end
+
+--[[
 	칼리스토 예고: 칸을 옮기고(줄 공격이면 아군이 선 줄의 앞쪽 세 칸 가운데, 아니면 아무 빈 칸) 스킬을 고르고,
 	연타면 그 수만큼 예고를 줄 세운다.
 ]]
@@ -3061,11 +3140,13 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 		pushEvent(state, { Kind = "Cast", Actor = unit.Id, SkillId = id, Summon = c.AlcorId })
 		return
 	end
+	local zone, safe = callistoZone(state, rng, id, here)
 	if c.Page == 2 then
 		c.Swing = { Hit = false }
 		if id == "CallistoAlioth" then
 			c.Aliot = ALIOTH_TURNS
-			pushLog(state, string.format("알리오스 — 아군 필드에 장판 %d턴", ALIOTH_TURNS))
+			c.AliothCells = zone
+			pushLog(state, string.format("알리오스 — 선 열과 앞쪽 열 %d칸에 장판 %d턴", if zone then #zone else 0, ALIOTH_TURNS))
 		end
 	end
 	local form = CALLISTO_FORM[id] or "All"
@@ -3073,13 +3154,14 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 	local count = math.max(1, skill.Strikes or 1)
 	-- 추적이면 별자리 칸을 깐다. 칸은 늘 판 전체(추적·행열은 맞는 순간 정해진다 — EnemyThreatensAlly)
 	-- 별 칸은 모든 공격에(질문 3-A — 판 전체·행열도). 추적은 파티면 다른 아군을 찾아가고, 판 전체·행열은 파티면 별 위 사람이 빠진다
-	c.Lure = pickStars(state, rng)
+	-- 케노스는 빛 칸이 별 칸 구실을 한다(별 칸·솔로 회복·가호 없음)
+	c.Lure = if id == "CallistoKenos" then nil else pickStars(state, rng)
 	c.StarUsed = nil
-	local cells = allCells(state)
+	local cells = zone or allCells(state)
 	local track = if form == "TrackRow" then "Row" elseif form == "TrackColumn" then "Column" else nil
 	local plans = {}
 	for k = 1, count do
-		table.insert(plans, { SkillId = id, Cells = cells, Track = track, Strike = k, Seek = form == "Seek" or nil, Shelter = form ~= "Seek" or nil, Target = ALLY_ID })
+		table.insert(plans, { SkillId = id, Cells = cells, Track = track, Strike = k, Seek = form == "Seek" or nil, Shelter = (form ~= "Seek" and zone == nil) or nil, Safe = safe, Target = ALLY_ID })
 		table.insert(state.Planned, unit.Id)
 	end
 	unit.Plans = plans
@@ -3192,7 +3274,7 @@ local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: U
 		if seongwi > 0 then
 			timedDebuff(ally, ClassResources.BLADE_SCAR, "칼춤 상처", CALLISTO_DEBUFF_TURNS, { { "DamageTaken", 0.15 } })
 		end
-	elseif id == "CallistoArtificial" then
+	elseif id == "CallistoArtificial" or id == "CallistoKenos" then -- 케노스도 [성위] 4
 		addSeongwi(state, ally, 4)
 	elseif id == "CallistoShower" then
 		addSeongwi(state, ally, 1)
@@ -3296,10 +3378,19 @@ local function callistoEndTurn(state: State, c: CallistoState)
 	-- 알리오스 장판: 턴이 지날 때마다 피해 5 · 두베 1 · 성위 2
 	if c.Aliot > 0 and ally.Alive then
 		c.Aliot -= 1
-		local hurt = damageUnit(state, ally, 5 * c.PowerScale, "Physical", true)
-		addDubhe(state, c, unit, ally, 1)
-		addSeongwi(state, ally, 2)
-		pushLog(state, string.format("알리오스 장판 — %s %d · [두베] 1 · [성위] 2 (%d턴 남음)", ally.Name, hurt, c.Aliot))
+		-- 2026-11-06 개선안 2절: 장판 6칸 안에 서 있을 때만
+		local standing = BattleGrid.CellOf(state.Grid, ALLY_ID)
+		if not c.AliothCells or (standing and hasCell(c.AliothCells, standing.X, standing.Y)) then
+			local hurt = damageUnit(state, ally, 5 * c.PowerScale, "Physical", true)
+			addDubhe(state, c, unit, ally, 1)
+			addSeongwi(state, ally, 2)
+			pushLog(state, string.format("알리오스 장판 — %s %d · [두베] 1 · [성위] 2 (%d턴 남음)", ally.Name, hurt, c.Aliot))
+		else
+			pushLog(state, string.format("알리오스 장판 — %s 장판 밖에 서 있어 피함 (%d턴 남음)", ally.Name, c.Aliot))
+		end
+		if c.Aliot <= 0 then
+			c.AliothCells = nil
+		end
 	end
 	-- 미자르: 알코르를 그 턴에 잡지 못했으면 다음 턴 알카이드 1(알코르가 쓰러졌으면 사라진다)
 	if stackOf(ally, ClassResources.MIZAR) > 0 then
@@ -3807,7 +3898,8 @@ function GridBattle.EndTurn(state: State)
 				BattleStatus.SpendStack(unit.Status, ClassResources.TETANUS, 1)
 			end
 			local burnIgnore = unit.Status.BurnIgnore -- 다 타면 TickDots 가 지우므로 먼저 받아 둔다
-			local tick = BattleStatus.TickDots(unit.Status, unit.MaxHealth, unit.Health)
+			local callistoDef = if callistoOf(state, unit) then EnemyDefinitions.Get("Callisto") else nil
+			local tick = BattleStatus.TickDots(unit.Status, unit.MaxHealth, unit.Health, callistoDef and callistoDef.BleedRatio)
 			-- 보스 부위는 도트를 BOSS_DOT_CUT(99%) 덜 받는다
 			if unit.Part and BOSS_DOT_CUT > 0 then
 				local keep = 1 - BOSS_DOT_CUT
@@ -3816,8 +3908,17 @@ function GridBattle.EndTurn(state: State)
 				tick.True *= keep
 			end
 			-- 칼리스토 [그날의 기억]: 화상 피해를 두 배로 받는다
-			if callistoOf(state, unit) then
+			if callistoDef then
 				tick.Fire *= 2
+				-- 2026-11-06 개선안 6절 안 C: 턴당 도트 총합(출혈·화상·독, ×2 적용 뒤)은 최대 체력의 DotCap 까지
+				local cap = callistoDef.DotCap
+				local sum = tick.Physical + tick.Fire + tick.True
+				if cap and sum > unit.MaxHealth * cap then
+					local keep = unit.MaxHealth * cap / sum
+					tick.Physical *= keep
+					tick.Fire *= keep
+					tick.True *= keep
+				end
 			end
 			local total = 0
 			total += damageUnit(state, unit, tick.Physical, "Physical", false)
@@ -4063,6 +4164,7 @@ function GridBattle.Snapshot(state: State): any
 			Seven = if unit then stackOf(unit, ClassResources.SEVEN) else 0,
 			Blink = if unit then stackOf(unit, ClassResources.BLINK) else 0,
 			Aliot = callisto.Aliot,
+			AliothCells = if callisto.AliothCells then table.clone(callisto.AliothCells) else nil,
 			AlcorId = if alcorAlive(state, callisto) then callisto.AlcorId else nil,
 			Dipper = callisto.Dipper,
 			Chilseong = callisto.Page == 2 and unit ~= nil and unit.Health < unit.MaxHealth * CHILSEONG_RATIO,

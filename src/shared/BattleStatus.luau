@@ -248,11 +248,12 @@ end
 	감소는 여기서 함께 처리한다. 피해를 준 뒤 줄어드는 순서다.
 ]]
 -- health: 지금 체력(출혈은 2026-10-04 리워크로 지금 체력 비례). 없으면 최대 체력
-function BattleStatus.TickDots(state: State, maxHealth: number, health: number?): TickResult
+-- bleedRatio: 출혈 비율 바꿈(칼리스토 3% — 2026-11-06 개선안 6절). 없으면 BLEED_MAX_HEALTH_RATIO
+function BattleStatus.TickDots(state: State, maxHealth: number, health: number?, bleedRatio: number?): TickResult
 	local result: TickResult = { Physical = 0, Fire = 0, True = 0, Notes = {} }
 
 	if state.Bleed > 0 then
-		local damage = math.floor((health or maxHealth) * BattleStatus.BLEED_MAX_HEALTH_RATIO)
+		local damage = math.floor((health or maxHealth) * (bleedRatio or BattleStatus.BLEED_MAX_HEALTH_RATIO))
 		result.Physical += damage
 		table.insert(result.Notes, string.format("출혈 %d (%d 피해)", state.Bleed, damage))
 		state.Bleed = math.max(0, state.Bleed - BattleStatus.BLEED_DECAY)

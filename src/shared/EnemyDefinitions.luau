@@ -42,6 +42,9 @@ export type EnemyDefinition = {
 	]]
 	Humanoid: boolean?,
 	Solo: boolean?,
+	-- 2026-11-06 칼리스토 개선안 6절: 이 적에게만 [출혈] 비율(기본 BattleStatus 5%)·턴당 도트 총합 상한(최대 체력 비율, 출혈·화상·독 합산)
+	BleedRatio: number?,
+	DotCap: number?,
 	-- 전투 페이즈(칼리스토). 페이즈마다 이름·체력·무기·행동·패시브. 번호가 빠진 페이즈는 건너뛴다(GridBattle callistoNextPage)
 	Pages: { [number]: { Name: string, Health: number, Weapon: string, Moves: { BossMove }, Passives: { { Name: string, Description: string } }, Gimmick: string? } }?,
 	-- 정보 창 [이야기] 칸
@@ -202,6 +205,9 @@ local definitions: { [string]: EnemyDefinition } = {
 		Behavior = "Boss",
 		Humanoid = true,
 		Solo = true,
+		-- 월 필그림·조율자 단독 클리어 대책 안 C(2026-11-06): 출혈 5% → 3% · 도트 총합 턴당 최대 체력 3%
+		BleedRatio = 0.03,
+		DotCap = 0.03,
 		Lore = {
 			{ Name = "컨셉", Description = "큰곰자리 · 천문학자 · 시인." },
 			{ Name = "이야기", Description = "슈네라이히의 천문학자였고 기물군의 비숍이었다.\n아들 아르카스가 반란을 주동했다는 누명을 쓰고 화형당하는 것을 보았다.\n그 충격으로 기물군을 나와, 아들의 별자리를 만들어 주려고 천문대에 틀어박혔다." },
@@ -231,7 +237,7 @@ local definitions: { [string]: EnemyDefinition } = {
 					{ Id = "CallistoSlash", When = "1번 자리 · 짝수 바퀴" },
 					{ Id = "CallistoSymberasma", When = "2번 자리 · 대상에게 [고찰]이 있으면" },
 					{ Id = "CallistoTrohia", When = "2번 자리 · [고찰]이 없으면" },
-					{ Id = "CallistoArktos", When = "3번 자리 · [뭇별]이 있거나 [성위] 6 이상" },
+					{ Id = "CallistoArktos", When = "3번 자리 · [뭇별]이 있거나 [성위] 3 이상" },
 					{ Id = "CallistoSynthesis", When = "3번 자리 · 그 밖" },
 					{ Id = "CallistoAstro", When = "[작은 곰 자리] · 바퀴 끝(4번 자리)" },
 				},
@@ -246,13 +252,13 @@ local definitions: { [string]: EnemyDefinition } = {
 					{ Name = "칠성군", Description = "- 체력 65% 미만이면 켜짐.\n- `북두칠성`·`수많은 성위 아래 파묻혀`·`성위는 떠돌이, 갈 곳 잃은 아이를 바로잡아`를 뺀 스킬을 쓰면 자신에게 [성위 - 칠성] 1.\n  - 스킬마다 `북두칠성`을 쓰기 전까지 한 번만.\n- [두베]·[알카이드]·[미자르]를 처음 걸 때도 별마다 한 번씩 [성위 - 칠성] 1(북두칠성 일곱 별)." },
 					{ Name = "메갈리 아르크토스", Description = "- [성위 - 칠성]을 7스택 모으면 다음 턴 쓸 스킬을 `북두칠성`으로 고정." },
 				},
-				-- 행동 박자(사양에 쿨타임만 있어 차례를 정함): 북두칠성 고정 → 소환 → 장판 → 페크다 → 메라크 → 메그레즈 → 평타
+				-- 행동 박자(사양에 쿨타임만 있어 차례를 정함): 북두칠성 고정 → 소환 → 장판 → 페크다 → 메라크 → 메그레즈 → 평타 (평타 2연속이면 다음 턴은 재사용 1 이하 남은 기술을 바로 — R2)
 				Moves = {
 					{ Id = "CallistoDipper", When = "[성위 - 칠성] 7스택 다음 턴 · 고정" },
 					{ Id = "CallistoAlcor", When = "`알코르`가 없으면 먼저(재사용 6턴)" },
-					{ Id = "CallistoAlioth", When = "장판이 없으면(재사용 4턴)" },
-					{ Id = "CallistoPhecda", When = "대상에게 [성위] 4 이상이거나 [뭇별](재사용 8턴)" },
-					{ Id = "CallistoMerak", When = "재사용 3턴" },
+					{ Id = "CallistoAlioth", When = "장판이 없으면(재사용 7턴)" },
+					{ Id = "CallistoPhecda", When = "대상에게 [성위] 4 이상이거나 [뭇별](재사용 11턴)" },
+					{ Id = "CallistoMerak", When = "재사용 6턴" },
 					{ Id = "CallistoMegrez", When = "대상에게 [알카이드]가 있으면(재사용 3턴)" },
 					{ Id = "CallistoBuried", When = "평타 · 모두 대기 중이면" },
 				},
@@ -269,8 +275,9 @@ local definitions: { [string]: EnemyDefinition } = {
 				Moves = {
 					{ Id = "CallistoSubmerge", When = "3페이즈 첫 턴 바로 · 한 번만" },
 					{ Id = "CallistoArtificial", When = "재사용 대기가 끝나면 먼저(4턴)" },
-					{ Id = "CallistoShower", When = "그다음(2턴)" },
-					{ Id = "CallistoResonance", When = "평타 · 둘 다 대기 중이면" },
+					{ Id = "CallistoShower", When = "그다음(3턴)" },
+					{ Id = "CallistoKenos", When = "그다음(5턴) · 빛 칸 6칸 밖은 피해" },
+					{ Id = "CallistoResonance", When = "평타 · 모두 대기 중이면" },
 				},
 			},
 		},

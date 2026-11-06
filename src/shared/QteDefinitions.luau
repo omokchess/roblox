@@ -60,6 +60,10 @@ export type Challenge = {
 	CommandRevealMs: number?,
 	SequenceIndex: number?,
 	Mistakes: number?,
+	-- 3연타 QTE(2026-11-06 칼리스토 개선안 4절): 화살표 BeatSize 개씩 BeatCount 비트를 이어 입력. 비트별 실수는 BeatMistakes[비트]
+	BeatCount: number?,
+	BeatSize: number?,
+	BeatMistakes: { [number]: number }?,
 }
 
 --=== 상수 (원본 Qte.js와 동일) ===--
@@ -76,6 +80,11 @@ local COMMAND_COUNT = 6
 local COMMAND_REVEAL_MS = 900
 local COMMAND_GUARD_MISTAKES = 2
 local COMMAND_DODGE_MISTAKES = 1
+-- 3연타 QTE: 화살표 5개 × 비트, 제한 시간은 전체 6,000ms(3비트 기준 화살표당 400ms), 비트마다 실수 0 이면 회피 · 1 이면 막기 · 2 이상 실패
+local CHAIN_DURATION_MS = 6000
+local CHAIN_BEAT_SIZE = 5
+local CHAIN_DODGE_MISTAKES = 0
+local CHAIN_GUARD_MISTAKES = 1
 
 --[[
 	배율. 추가&수정.md `###### 전투` 기준.
@@ -111,6 +120,12 @@ QteDefinitions.SWEEP_ATTEMPTS = SWEEP_ATTEMPTS
 QteDefinitions.COMMAND_COUNT = COMMAND_COUNT
 QteDefinitions.COMMAND_GUARD_MISTAKES = COMMAND_GUARD_MISTAKES
 QteDefinitions.COMMAND_DODGE_MISTAKES = COMMAND_DODGE_MISTAKES
+QteDefinitions.CHAIN_DURATION_MS = CHAIN_DURATION_MS
+QteDefinitions.CHAIN_BEAT_SIZE = CHAIN_BEAT_SIZE
+QteDefinitions.CHAIN_DODGE_MISTAKES = CHAIN_DODGE_MISTAKES
+QteDefinitions.CHAIN_GUARD_MISTAKES = CHAIN_GUARD_MISTAKES
+-- 화면이 만들어 둘 화살표 칸 수(일반 6 · 3연타 5 × 3)
+QteDefinitions.COMMAND_MAX = CHAIN_BEAT_SIZE * 3
 QteDefinitions.PARRY_GROGGY_GAIN = PARRY_GROGGY_GAIN
 QteDefinitions.Multipliers = MULTIPLIERS
 
@@ -267,6 +282,9 @@ function QteDefinitions.VisualState(challenge: Challenge, elapsedMs: number): { 
 		sequenceIndex = sequenceIndex,
 		mistakes = math.max(challenge.Mistakes or 0, 0),
 		hiddenCommandIndexes = hidden,
+		beatCount = challenge.BeatCount,
+		beatSize = challenge.BeatSize,
+		beatMistakes = challenge.BeatMistakes,
 	}
 end
 
@@ -312,6 +330,16 @@ function QteDefinitions.Judge(challenge: Challenge, elapsedMs: number): Grade
 		return "Fail"
 	end
 
+	if challenge.Type == "Directional" and challenge.BeatSize then
+		local worst: Grade = "Success"
+		for _, grade in QteDefinitions.JudgeChain(challenge) do
+			if grade == "Fail" or (grade == "Partial" and worst == "Success") then
+				worst = grade
+			end
+		end
+		return worst
+	end
+
 	if challenge.Type == "Directional" then
 		local expected = state.expectedDirections
 		-- 끝까지 입력하지 못했으면 실패
@@ -328,6 +356,68 @@ function QteDefinitions.Judge(challenge: Challenge, elapsedMs: number): Grade
 	end
 
 	return "Fail"
+end
+
+--[[
+	3연타 QTE 만들기(2026-11-06 칼리스토 개선안 4절). 방향 입력 한 줄(5 × beats)에 제한 시간 6,000ms.
+	서버는 비트마다 ResolveDodge 를 따로 부르고, 등급은 JudgeChain 이 비트별로 낸다.
+]]
+function QteDefinitions.CreateChain(rng: () -> number, now: number, id: string, beats: number): Challenge
+	local expected: { Direction } = {}
+	for _ = 1, CHAIN_BEAT_SIZE * beats do
+		table.insert(expected, DIRECTIONS[math.clamp(math.floor(clamp01(rng()) * 4) + 1, 1, 4)])
+	end
+	return {
+		Id = id,
+		Role = "Dodge",
+		Type = "Directional",
+		Title = "연타 회피",
+		StartedAt = now,
+		DurationMs = CHAIN_DURATION_MS,
+		InputCount = 0,
+		DisruptionEnabled = false,
+		ExpectedDirections = expected,
+		CommandConcealOffset = 0,
+		CommandRevealMs = COMMAND_REVEAL_MS,
+		SequenceIndex = 0,
+		Mistakes = 0,
+		BeatCount = beats,
+		BeatSize = CHAIN_BEAT_SIZE,
+		BeatMistakes = {},
+	}
+end
+
+-- 방향 입력 하나를 먹인다(일반·3연타 공통). 맞았는지를 돌려준다
+function QteDefinitions.FeedDirection(challenge: Challenge, input: string): boolean
+	local expected = challenge.ExpectedDirections or {}
+	local index = (challenge.SequenceIndex or 0) + 1
+	local ok = expected[index] == input
+	if not ok then
+		challenge.Mistakes = (challenge.Mistakes or 0) + 1
+		if challenge.BeatSize then
+			local beat = math.ceil(index / challenge.BeatSize)
+			local mistakes = challenge.BeatMistakes or {}
+			challenge.BeatMistakes = mistakes
+			mistakes[beat] = (mistakes[beat] or 0) + 1
+		end
+	end
+	challenge.SequenceIndex = index
+	return ok
+end
+
+-- 3연타 QTE 의 비트별 등급. 비트를 다 못 채웠으면(시간 끝) 그 비트부터 실패
+function QteDefinitions.JudgeChain(challenge: Challenge): { Grade }
+	local size = challenge.BeatSize or CHAIN_BEAT_SIZE
+	local beats = challenge.BeatCount or 1
+	local done = challenge.SequenceIndex or 0
+	local grades: { Grade } = {}
+	for beat = 1, beats do
+		local mistakes = (challenge.BeatMistakes or {})[beat] or 0
+		grades[beat] = if done < beat * size or mistakes > CHAIN_GUARD_MISTAKES then "Fail"
+			elseif mistakes > CHAIN_DODGE_MISTAKES then "Partial"
+			else "Success"
+	end
+	return grades
 end
 
 -- 스윕은 3회 시도의 실수 횟수로 최종 등급을 낸다.

@@ -1003,8 +1003,22 @@ function BattleClient:_consumeEvents(snapshot: any)
 			self.pendingSkillPlay:SetResult(ev)
 			self.pendingSkillPlay = nil
 		elseif ev.Kind == "EnemyAttack" and self.pendingAttackPlay then
-			self.pendingAttackPlay:SetResult(ev)
-			self.pendingAttackPlay = nil
+			local merged = self.chainResult
+			if merged then
+				-- 3연타 QTE(2026-11-06): 비트마다 오는 결과를 모아 한 번에 붙인다(비트 하나가 Hit 묶음 하나)
+				table.insert(merged.Hits, ev.Hits[1])
+				merged.Reflect = (merged.Reflect or 0) + (ev.Reflect or 0)
+				merged.ReflectKilled = merged.ReflectKilled or ev.ReflectKilled
+				self.chainLeft -= 1
+				if self.chainLeft <= 0 then
+					self.chainResult = nil
+					self.pendingAttackPlay:SetResult(merged)
+					self.pendingAttackPlay = nil
+				end
+			else
+				self.pendingAttackPlay:SetResult(ev)
+				self.pendingAttackPlay = nil
+			end
 		elseif ev.Kind == "Cast" and self.director and self.director:Has(ev.Actor) then
 			-- 공격이 아닌 보스 행동(칼리스토 알코르 소환): 모션만
 			self.director:PlaySkill(ev.Actor, ev.SkillId, { {} })
@@ -1603,10 +1617,15 @@ function BattleClient:_paintTiles()
 	for _, c in (snapshot.Callisto and snapshot.Callisto.Lure) or {} do
 		lureAt[c[1] .. "," .. c[2]] = true
 	end
+	-- 케노스 아스테리스모스 빛 칸(안전)
+	local lightAt: { [string]: boolean } = {}
 	for _, enemyId in snapshot.Planned or {} do
 		local unit = snapshot.Units[enemyId]
 		planSeen[enemyId] = (planSeen[enemyId] or 0) + 1
 		local plan = unit and ((unit.Plans and unit.Plans[planSeen[enemyId]]) or (planSeen[enemyId] == 1 and unit.Plan))
+		for _, c in (plan and plan.Safe) or {} do
+			lightAt[c[1] .. "," .. c[2]] = true
+		end
 		if unit and unit.Alive and plan then
 			local planSkill = BattleSkills.ById(plan.SkillId)
 			local damaging = planSkill ~= nil and ((planSkill.Damage or 0) > 0 or planSkill.HpRatio ~= nil or planSkill.Inflicts == true) and not plan.Canceled
@@ -1755,7 +1774,9 @@ function BattleClient:_paintTiles()
 			-- 검수 칸(검수됨!·검수 준비중)은 칸 글자 대신 덩어리마다 글자 하나 + 칸 위 효과(아래 GroupMarks, 2026-10-02 요청)
 			-- 칼리스토 별자리 칸(★): 파티면 추적 공격이 비껴가고, 솔로면 올라설 때 회복+[별빛 가호] · 턴을 마치면 성위
 			local callistoTag = nil
-			if lureAt[cellKey] then
+			if lightAt[cellKey] then
+				callistoTag = "☆ 빛 칸\n안전"
+			elseif lureAt[cellKey] then
 				local cs = snapshot.Callisto
 				local gift = if cs.Party then "공격이 비껴감"
 					elseif cs.StarUsed and isMe then "회복함 · 가호"
@@ -1770,7 +1791,8 @@ function BattleClient:_paintTiles()
 					elseif mod == "Debuff" then "▼ 버그"
 					elseif mod == "Heal" then "✚ 회복"
 					else nil,
-				if lureAt[cellKey] then CALLISTO_LURE
+				if lightAt[cellKey] then Color3.fromRGB(235, 245, 255)
+					elseif lureAt[cellKey] then CALLISTO_LURE
 					elseif callistoTag then CALLISTO_RANGE
 					elseif gone[cellKey] then Color3.fromRGB(235, 235, 235)
 					elseif deleting[cellKey] then TILE_DELETE
@@ -1787,6 +1809,8 @@ function BattleClient:_paintTiles()
 				BattleStage.Paint(ally, TILE_ME, true)
 			elseif deleting[cellKey] and gimmick then
 				BattleStage.Paint(ally, TILE_DELETE, true)
+			elseif lightAt[cellKey] then
+				BattleStage.Paint(ally, Color3.fromRGB(235, 245, 255), true)
 			elseif lureAt[cellKey] then
 				BattleStage.Paint(ally, CALLISTO_LURE, true)
 			elseif mod and gimmick then
@@ -2148,9 +2172,17 @@ function BattleClient:_startQte(role: QteDefinitions.Role)
 		end
 	end
 	local rng = Random.new(os.clock() * 1000)
-	self.qte = QteDefinitions.Create(role, function()
-		return rng:NextNumber()
-	end, os.clock() * 1000, "tower", false)
+	local beats = if role == "Dodge" and self.pendingThreat then self.pendingThreat.Chain or 1 else 1
+	if beats > 1 then
+		-- 칼리스토 신데시·쏟아지는 뭇별: 연타 QTE 하나(화살표 5개 × 비트, 6,000ms)
+		self.qte = QteDefinitions.CreateChain(function()
+			return rng:NextNumber()
+		end, os.clock() * 1000, "tower", beats)
+	else
+		self.qte = QteDefinitions.Create(role, function()
+			return rng:NextNumber()
+		end, os.clock() * 1000, "tower", false)
+	end
 	-- 회피 시간(카드·집중·스탯): 방향 회피 입력 시간을 늘린다(최대 +100%)
 	local extra = if role == "Dodge" then math.clamp((self.snapshot and self.snapshot.AllyParryWindow) or 0, 0, 1) else 0
 	self.qte.DurationMs = math.floor(self.qte.DurationMs * (1 + extra))
@@ -2206,11 +2238,7 @@ function BattleClient:_qteInput(input: string)
 	if challenge.Type == "Directional" then
 		local expected = challenge.ExpectedDirections or {}
 		local nextIndex = (challenge.SequenceIndex or 0) + 1
-		if expected[nextIndex] ~= input then
-			challenge.Mistakes = (challenge.Mistakes or 0) + 1
-		end
-		self.hud:QteMark(nextIndex, expected[nextIndex] == input)
-		challenge.SequenceIndex = nextIndex
+		self.hud:QteMark(nextIndex, QteDefinitions.FeedDirection(challenge, input))
 		if nextIndex >= #expected then
 			self:_resolveQte()
 		end
@@ -2228,13 +2256,15 @@ function BattleClient:_resolveQte()
 	local elapsed = (os.clock() - self.qteStart) * 1000
 	local grade = QteDefinitions.Judge(challenge, elapsed)
 	local role = challenge.Role
+	local grades = if challenge.BeatSize then QteDefinitions.JudgeChain(challenge) else nil
 	self:_endQte()
 	self.hud:FlashGrade(role, grade, self.qteWord or "회피")
-	self:_submitGrade(role, grade)
+	self:_submitGrade(role, grade, grades)
 end
 
 -- 등급을 서버로 보내고 연출을 시작한다(QTE 를 거쳤든 자동이든)
-function BattleClient:_submitGrade(role: QteDefinitions.Role, grade: string)
+-- grades = 3연타 QTE 의 비트별 등급(없으면 자동 판정이라 같은 등급으로 채운다)
+function BattleClient:_submitGrade(role: QteDefinitions.Role, grade: string, grades: { string }?)
 	if role == "Skill" then
 		--[[
 			번호와 Id를 함께 보낸다. 강화 스킬이 열리고 닫히면 뒤쪽(가드·명상) 번호가
@@ -2271,8 +2301,34 @@ function BattleClient:_submitGrade(role: QteDefinitions.Role, grade: string)
 		]]
 		local threat = self.pendingThreat
 		self.pendingThreat = nil
-		self.Remotes.GridAction:FireServer({ Kind = "Dodge", Grade = grade })
+		local beats = if threat then threat.Chain or 1 else 1
+		if beats > 1 and not grades then
+			grades = table.create(beats, grade)
+		end
+		self.Remotes.GridAction:FireServer({ Kind = "Dodge", Grade = grade, Grades = grades })
+		self.chainResult, self.chainLeft = nil, beats
+		if beats > 1 then
+			self.chainResult = { Hits = {}, Reflect = 0 }
+		end
 		if self.director and threat then
+			-- 예고 칸(범위를 줄인 칼리스토 기술 Fx)·빛 칸(케노스 Fx)의 타일을 Fx ctx 로 넘긴다
+			local plan = self.snapshot and self.snapshot.Units[threat.Id] and self.snapshot.Units[threat.Id].Plans
+			plan = plan and plan[threat.PlanIndex or 1]
+			local function tilesOf(cells: { { number } }?): { BasePart }?
+				if not cells then
+					return nil
+				end
+				local list = {}
+				for _, c in cells do
+					local tile = self.tiles.Ally[c[2]] and self.tiles.Ally[c[2]][c[1]]
+					if tile then
+						table.insert(list, tile)
+					end
+				end
+				return list
+			end
+			self.director.ThreatTiles = tilesOf(plan and plan.Cells)
+			self.director.SafeTiles = tilesOf(plan and plan.Safe)
 			self.pendingAttackPlay =
 				self.director:PlayEnemyAttack(threat.Id, threat.SkillId or "SlimeTackle", "player", grade)
 		end

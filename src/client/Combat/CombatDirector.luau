@@ -130,6 +130,9 @@ function CombatDirector.new(opts: { Quiet: boolean? }?)
 	self.EnemyTiles = nil :: { BasePart }?
 	-- 아군 진영 칸 부품들(BattleClient). 칼리스토가 아군 칸 전부를 덮는 기술이 쓴다
 	self.AllyTiles = nil :: { BasePart }?
+	-- 2026-11-06 칼리스토 개선안: 지금 재생하는 적 공격의 예고 칸(plan.Cells)·케노스 빛 칸(plan.Safe)의 타일. BattleClient 가 공격 직전에 정한다
+	self.ThreatTiles = nil :: { BasePart }?
+	self.SafeTiles = nil :: { BasePart }?
 	-- 피해 숫자를 띄울 때마다 부른다(id, 피해). BattleClient 가 체력바를 그 순간 깎는다
 	self.OnDamage = nil :: ((string, number) -> ())?
 	-- 보스 위성 셋이 함께 도는 바퀴의 각(라디안, _bossHomes)
@@ -572,6 +575,8 @@ function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 	ctx.EnemyCenter = self:_enemyCenter(a)
 	ctx.EnemyTiles = self.EnemyTiles
 	ctx.AllyTiles = self.AllyTiles
+	ctx.ThreatTiles = self.ThreatTiles
+	ctx.SafeTiles = self.SafeTiles
 	-- 관전 화면(남의 전투) — 화면 색·소리·카메라 같은 내 화면 효과는 하지 않는다
 	ctx.Quiet = self.Quiet
 	-- 컷신 카메라: fn(진행도 0~1, 지난 초) → 카메라 CFrame. fn 없이 부르면 전투 카메라로 돌려준다(모션이 끝나도 돌려준다)

@@ -4,7 +4,9 @@
 	2026-11-01 3판: 블록 이펙트(모양·판정이 읽히는 것) 위에 마켓 VFX 팩 질감(ctx.Vfx.Pack — 빛번짐·불꽃·별가루·균열)을 겹치고,
 	신호(칼날 번뜩 = 말레니아의 큰 기술 신호 · 포착 원 = 영(Fatal Frame) 카메라 옵스큐라)를 더했다. 레퍼런스 표는 `보스 칼리스토.md`.
 	자리: ctx.Root = 칼리스토, ctx.Target = 맞는 아군, ctx.Tip("W") = 칼날 끝, ctx.Tip("O") = 카메라 렌즈.
-	아군 칸 전부를 덮는 기술(렌즈·칼춤·장판)은 ctx.AllyTiles(전투 화면이 넘겨준다 — 없으면 대상 둘레를 어림).
+	아군 칸 전부를 덮는 기술은 ctx.AllyTiles(전투 화면이 넘겨준다 — 없으면 대상 둘레를 어림).
+	2026-11-06: 범위가 줄어든 4종(렌즈 9 · 아스트로 세시 3×3 · 알리오스 2열 · 북두칠성 7칸)은 ctx.ThreatTiles(그 기술이 실제로 덮는 칸 BasePart 목록 — 프로그래밍이 예고 Cells 로 넘김)를 쓰고,
+	없으면 ctx.AllyTiles 의 순서(행 우선 · 6열 × 3행)와 ctx.Target 에서 설계서 모양대로 어림한다(reach). 케노스 아스테리스모스는 ctx.SafeTiles(빛 칸 6칸 BasePart 목록 — 없으면 앞 두 열).
 ]]
 local Common = require(script.Parent.Common)
 local CallistoBody = require(script.Parent.Parent.Callisto)
@@ -43,6 +45,72 @@ local function center(points: { Vector3 }): Vector3
 		sum += p
 	end
 	return sum / math.max(1, #points)
+end
+
+-- 아군 칸 배열은 행 우선(y 1..H, x 1..W — BattleClient)이라 순서에서 열·행을 읽는다(행 3 고정). 열 1 = 앞(중앙선 쪽)
+local GRID_ROWS = 3
+local function gridOf(ctx: any): number?
+	local tiles = ctx.AllyTiles
+	if not tiles or #tiles == 0 or #tiles % GRID_ROWS ~= 0 then
+		return nil
+	end
+	return #tiles // GRID_ROWS
+end
+
+local function targetIndex(ctx: any): number
+	local best, bestD = 1, math.huge
+	for i, tile in ctx.AllyTiles do
+		local d = tile.Position - ctx.Target
+		d = Vector3.new(d.X, 0, d.Z)
+		if d.Magnitude < bestD then
+			best, bestD = i, d.Magnitude
+		end
+	end
+	return best
+end
+
+-- 북두칠성 7칸(행 · 열): 설계서 2절 그림 — 위 행에서 뒤 한 칸, 가운데 행 열 3~5, 아래 행 열 1~3
+local DIPPER_CELLS = { { 1, 6 }, { 2, 3 }, { 2, 4 }, { 2, 5 }, { 3, 1 }, { 3, 2 }, { 3, 3 } }
+
+-- 줄어든 범위의 칸 가운데들. shape = "Lens"(대상 열 + 양옆 3열) · "Astro"(대상 둘레 3×3) · "Alioth"(대상 열 + 앞 열) · "Dipper"(국자 7칸)
+local function reach(ctx: any, shape: string): { Vector3 }
+	if ctx.ThreatTiles and #ctx.ThreatTiles > 0 then
+		local out = {}
+		for _, tile in ctx.ThreatTiles do
+			table.insert(out, tile.Position)
+		end
+		return out
+	end
+	local w = gridOf(ctx)
+	if not w or (shape == "Dipper" and w ~= 6) then
+		return allyCells(ctx)
+	end
+	local ti = targetIndex(ctx)
+	local tc, tr = (ti - 1) % w + 1, (ti - 1) // w + 1
+	local out = {}
+	for i, tile in ctx.AllyTiles do
+		local col, row = (i - 1) % w + 1, (i - 1) // w + 1
+		local ok = false
+		if shape == "Lens" then
+			local lo = math.clamp(tc - 1, 1, w - 2)
+			ok = col >= lo and col <= lo + 2
+		elseif shape == "Astro" then
+			ok = math.abs(col - tc) <= 1 and math.abs(row - tr) <= 1
+		elseif shape == "Alioth" then
+			local lo = math.max(1, math.min(tc - 1, w - 1))
+			ok = col == lo or col == lo + 1
+		else
+			for _, cell in DIPPER_CELLS do
+				if cell[1] == row and cell[2] == col then
+					ok = true
+				end
+			end
+		end
+		if ok then
+			table.insert(out, tile.Position)
+		end
+	end
+	return out
 end
 
 local function lens(ctx: any): Vector3
@@ -84,15 +152,17 @@ function Fx.BurnSlash(ctx: any)
 end
 
 -- 찌르기: 칼날 끝에서 대상까지 한 줄 + 꿰뚫고 나가는 별가루와 충격(팩)
-function Fx.Stab(ctx: any)
+function Fx.Stab(ctx: any, ev: any)
+	local beat = (ev and ev.s) or 3 -- 신데시 3비트(2026-11-06): 1 약 · 2 중 · 3 강 — 별빛 크기·가루 수가 단계로 커진다
+	local k = 0.6 + 0.2 * (beat - 1)
 	local from = ctx.Tip("W") or ctx.Hand("R")
 	local dir = ctx.Target - from
 	dir = if dir.Magnitude > 1e-3 then dir.Unit else ctx.Forward
-	ctx.Vfx.Thrust(ctx.Target - dir * 3, dir, { Length = 6, Color = STAR, Width = 0.26 })
-	ctx.Vfx.Flash(ctx.Target, { Color = STAR_CORE, Size = 4.5, Life = 0.16 })
-	ctx.Vfx.Sparks(ctx.Target + dir * 0.6, { Color = STAR, Count = 12, Speed = 26 })
-	ctx.Vfx.Pack("Anime/Slash-Impact-01", CFrame.new(ctx.Target), { Color = STAR, Size = 0.7 })
-	ctx.Vfx.Pack("Loose/Flash-3", CFrame.new(ctx.Target + dir * 0.8), { Color = STAR_CORE, Size = 0.6 })
+	ctx.Vfx.Thrust(ctx.Target - dir * 3, dir, { Length = 6 * k, Color = STAR, Width = 0.26 * k })
+	ctx.Vfx.Flash(ctx.Target, { Color = STAR_CORE, Size = 4.5 * k, Life = 0.16 })
+	ctx.Vfx.Sparks(ctx.Target + dir * 0.6, { Color = STAR, Count = math.floor(12 * k), Speed = 26 })
+	ctx.Vfx.Pack("Anime/Slash-Impact-01", CFrame.new(ctx.Target), { Color = STAR, Size = 0.7 * k })
+	ctx.Vfx.Pack("Loose/Flash-3", CFrame.new(ctx.Target + dir * 0.8), { Color = STAR_CORE, Size = 0.6 * k })
 end
 
 -- 카메라 찰칵(페이탈 프레임): 렌즈에서 흰 섬광, 대상 둘레에 사진 틀(네모 고리) + 반짝이는 빛살
@@ -154,10 +224,10 @@ function Fx.LensCharge(ctx: any)
 	end
 end
 
--- 렌즈 광선: 렌즈에서 아군 진영 가운데로 굵은 빛(번개 질감), 칸마다 차례로 타오른다(불꽃)
+-- 렌즈 광선: 렌즈에서 맞는 9칸 가운데로 굵은 빛(번개 질감), 칸마다 차례로 타오른다(불꽃)
 function Fx.LensBurn(ctx: any)
 	local Vfx = ctx.Vfx
-	local cells = allyCells(ctx)
+	local cells = reach(ctx, "Lens") -- 대상 열 + 양옆 열 9칸(2026-11-06)
 	local mid = center(cells) + Vector3.new(0, 0.5, 0)
 	local from = lens(ctx)
 	Vfx.Beam(from, mid, { Color = STAR, Width = 3.2, Life = 0.55 })
@@ -191,7 +261,8 @@ function Fx.BladeStorm(ctx: any)
 			Vfx.Pack("Big/Tornado-01", CFrame.new(a.Pos.Position - Vector3.new(0, 2, 0)), { Color = STAR, Size = 0.45, Count = 0.5 })
 		end)
 	end
-	local cells = allyCells(ctx)
+	-- 베기 자국은 맞는 칸(대상 둘레 3×3 — 2026-11-06)에만 남긴다
+	local cells = reach(ctx, "Astro")
 	task.delay(0.4, function()
 		for i, p in cells do
 			if i % 2 == 1 then
@@ -267,12 +338,14 @@ function Fx.Constellation(ctx: any)
 	end)
 end
 
--- 쏟아지는 뭇별(한 번): 망치가 하늘을 가리키면 별이 모이고, 내리그으면 대상 둘레로 다섯이 떨어진다
-function Fx.StarShower(ctx: any)
+-- 쏟아지는 뭇별(3비트 중 하나, ev.s = 1 약 · 2 중 · 3 강): 망치가 하늘을 가리키면 별이 모이고, 내리그으면 대상 둘레로 별이 떨어진다(3·4·7개 — 셋째가 가장 많고 충격 고리)
+function Fx.StarShower(ctx: any, ev: any)
 	local Vfx = ctx.Vfx
+	local beat = (ev and ev.s) or 3
+	local count = ({ 3, 4, 7 })[math.clamp(beat, 1, 3)]
 	local head = ctx.Tip("W") or ctx.Root.Position
 	Vfx.Pack("Loose/Sparkles_Beam", CFrame.new(head), { Color = STAR_CORE, Size = 0.6 })
-	for i = 1, 5 do
+	for i = 1, count do
 		task.delay(0.12 + 0.04 * i, function()
 			local land = ctx.Target + Vector3.new(math.random(-20, 20) / 10, -1.5, math.random(-20, 20) / 10)
 			local from = land + Vector3.new(math.random(-40, 40) / 10, 18, math.random(-40, 40) / 10)
@@ -281,6 +354,11 @@ function Fx.StarShower(ctx: any)
 				Vfx.Flash(land, { Color = STAR, Size = 3.5, Life = 0.22, Brightness = 4 })
 				Vfx.Pack("Anime/Stars-01", CFrame.new(land + Vector3.new(0, 0.8, 0)), { Color = STAR_CORE, Size = 0.45, Count = 0.5 })
 			end)
+		end)
+	end
+	if beat == 3 then
+		task.delay(0.12 + 0.04 * count + 0.16, function()
+			Vfx.Ring(CFrame.new(Vector3.new(ctx.Target.X, ctx.Ground + 0.15, ctx.Target.Z)), { R0 = 0.8, R1 = 6, Color = STAR, Life = 0.4, Width = 0.25, Height = 0.06 })
 		end)
 	end
 end
@@ -527,12 +605,12 @@ function Fx.HammerSmash(ctx: any)
 	smash(ctx, ctx.Tip("W") or ctx.Target, 1)
 end
 
--- 알리오스: 내려찍은 자리에서 아군 필드로 금빛 물결이 달려가 장판으로 번진다(남는 장판은 전투 화면이 snapshot.Callisto.Aliot 로 그린다)
+-- 알리오스: 내려찍은 자리에서 장판 칸(2열 6칸)으로 금빛 물결이 달려가 장판으로 번진다(남는 장판은 전투 화면이 snapshot.Callisto.Aliot 로 그린다)
 function Fx.AliothField(ctx: any)
 	local Vfx = ctx.Vfx
 	local hit = ctx.Tip("W") or (ctx.Root.Position + ctx.Forward * 3)
 	smash(ctx, hit, 1.2)
-	local cells = allyCells(ctx)
+	local cells = reach(ctx, "Alioth") -- 아군이 선 열 + 앞 열 6칸(2026-11-06)
 	local mid = center(cells)
 	local from = Vector3.new(hit.X, ctx.Ground + 0.2, hit.Z)
 	for k = 1, 6 do
@@ -542,9 +620,10 @@ function Fx.AliothField(ctx: any)
 		end)
 	end
 	task.delay(0.32, function()
-		Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = 20, Color = GOLDEN, Life = 0.8, Width = 0.35, Height = 0.06 })
+		-- 판 전체를 덮는 큰 고리 대신 칸마다 작은 고리(장판 범위가 칸 모양으로 읽히게)
 		for i, p in cells do
 			task.delay(0.03 * i, function()
+				Vfx.Ring(CFrame.new(p + Vector3.new(0, 0.2, 0)), { R0 = 1, R1 = 4.5, Color = GOLDEN, Life = 0.6, Width = 0.25, Height = 0.06 })
 				Vfx.Flash(p + Vector3.new(0, 0.4, 0), { Color = if i % 2 == 0 then GOLDEN else STAR, Size = 3, Life = 0.5, Brightness = 2 })
 				Vfx.Pack("Anime/Shiny-01", CFrame.new(p + Vector3.new(0, 0.6, 0)), { Color = GOLDEN, Size = 0.4, Count = 0.4 })
 			end)
@@ -649,8 +728,18 @@ function Fx.DipperCrash(ctx: any)
 	local Vfx = ctx.Vfx
 	local stars = dipperStars(ctx)
 	smash(ctx, ctx.Tip("W") or ctx.Target, 1.6)
-	for i, p in allyCells(ctx) do
-		local from = stars[(i - 1) % #stars + 1]
+	-- 별 일곱이 국자 7칸에 하나씩(앞쪽 별 ↔ 앞쪽 칸 순) 떨어진다(2026-11-06)
+	local cells = reach(ctx, "Dipper")
+	local f = ctx.Forward
+	table.sort(cells, function(a, b)
+		return a:Dot(f) < b:Dot(f)
+	end)
+	local order = table.clone(stars)
+	table.sort(order, function(a, b)
+		return a:Dot(f) < b:Dot(f)
+	end)
+	for i, p in cells do
+		local from = order[(i - 1) % #order + 1]
 		task.delay(0.02 * i, function()
 			Vfx.Projectile(from, p + Vector3.new(0, 0.4, 0), { Time = 0.14, Color = STAR_CORE, TrailColor = STAR })
 			task.delay(0.14, function()
@@ -659,10 +748,127 @@ function Fx.DipperCrash(ctx: any)
 			end)
 		end)
 	end
-	local mid = center(allyCells(ctx))
+	local mid = center(cells)
 	task.delay(0.3, function()
-		Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = 24, Color = STAR_CORE, Life = 0.7, Width = 0.5, Height = 0.08 })
+		Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = 12, Color = STAR_CORE, Life = 0.7, Width = 0.5, Height = 0.08 })
 		Vfx.Pack("Loose/Shockwave", CFrame.new(mid + Vector3.new(0, 0.6, 0)), { Color = STAR_CORE, Size = 0.9 })
+	end)
+end
+
+--=== 3페이즈 케노스 아스테리스모스(빈 별자리, 2026-11-06) ===--
+-- 빛 칸 6칸 밖은 전부 맞는 회피 불가 위치형. 칸 표시(빛/붉은 칸)는 전투 화면이 그리고, 이 이펙트는 시전·낙하 연출이다.
+-- 빛 칸 = ctx.SafeTiles(BasePart 목록 — 프로그래밍이 예고 안전 칸으로 넘김), 없으면 앞 두 열 6칸.
+
+local CRACK = c(176, 48, 64) -- 붉은 금 균열
+
+-- 빛 칸 · 붉은 칸 가운데들
+local function kenosSplit(ctx: any): ({ Vector3 }, { Vector3 })
+	local safe, dark = {}, {}
+	local w = gridOf(ctx)
+	for i, tile in ctx.AllyTiles or {} do
+		local isSafe
+		if ctx.SafeTiles and #ctx.SafeTiles > 0 then
+			isSafe = table.find(ctx.SafeTiles, tile) ~= nil
+		else
+			isSafe = w ~= nil and (i - 1) % w + 1 <= 2
+		end
+		table.insert(if isSafe then safe else dark, tile.Position)
+	end
+	return safe, dark
+end
+
+-- 시전 — 빛 칸에 가는 빛기둥이 서고(정적 동안 낮게 맥동) 붉은 칸엔 금 간 균열이 퍼진다
+function Fx.KenosCast(ctx: any)
+	local Vfx = ctx.Vfx
+	local safe, dark = kenosSplit(ctx)
+	for i, p in safe do
+		task.delay(0.05 * i, function()
+			Vfx.Pillar(p, { Color = STAR_CORE, Life = 1.3, Height = 14, Width = 0.5 })
+			Vfx.Flash(p + Vector3.new(0, 0.5, 0), { Color = STAR, Size = 3, Life = 1.0, Brightness = 2 })
+		end)
+		for k = 1, 2 do
+			task.delay(0.5 + 0.35 * k, function()
+				Vfx.Flash(p + Vector3.new(0, 0.5, 0), { Color = STAR_CORE, Size = 3.4, Life = 0.3, Brightness = 3 })
+			end)
+		end
+	end
+	for i, p in dark do
+		task.delay(0.04 * i, function()
+			local ground = Vector3.new(p.X, ctx.Ground + 0.12, p.Z)
+			Vfx.Pack("Anime/Crack-01", CFrame.new(ground), { Color = CRACK, Size = 1.5 })
+			Vfx.Ring(CFrame.new(ground), { R0 = 0.4, R1 = 3, Color = CRACK, Life = 0.6, Width = 0.15, Height = 0.05 })
+		end)
+	end
+end
+
+-- 하늘에 빈 별자리(작은곰자리 — 빛 칸 위 별 여섯 + 북극성)가 손이 긋는 대로 하나씩 켜지고 선으로 이어진다
+function Fx.KenosLine(ctx: any)
+	local Vfx = ctx.Vfx
+	local safe = kenosSplit(ctx)
+	if #safe == 0 then
+		return
+	end
+	local f = ctx.Forward
+	table.sort(safe, function(a, b)
+		return a:Dot(f) < b:Dot(f)
+	end)
+	local points = {}
+	for i, p in safe do
+		points[i] = p + Vector3.new(0, 11 + (i % 2) * 1.5, 0)
+	end
+	table.insert(points, center(safe) + Vector3.new(0, 16, 0)) -- 북극성
+	for i, p in points do
+		task.delay(0.06 * (i - 1), function()
+			star(ctx, p, 2.4, 1.1, STAR_CORE)
+			Vfx.Pack("Loose/Flare", CFrame.new(p), { Color = STAR_CORE, Size = 0.4 })
+			if i > 1 then
+				Vfx.Beam(points[i - 1], p, { Color = STAR, Width = 0.16, Life = 1.0 })
+			end
+		end)
+	end
+end
+
+-- 낙하 — 붉은 칸 열둘에 별똥별이 일제히 떨어지고 충격 고리가 번진다. 빛 칸엔 별이 비껴 떨어지고 기둥만 선다
+function Fx.KenosFall(ctx: any)
+	local Vfx = ctx.Vfx
+	local safe, dark = kenosSplit(ctx)
+	local all = {}
+	for _, p in safe do
+		table.insert(all, p)
+	end
+	for _, p in dark do
+		table.insert(all, p)
+	end
+	local mid = center(all)
+	for i, p in dark do
+		task.delay(0.015 * i, function()
+			local from = p + Vector3.new(math.random(-30, 30) / 10, 24, math.random(-30, 30) / 10)
+			Vfx.Projectile(from, p + Vector3.new(0, 0.4, 0), { Time = 0.12, Color = STAR_CORE, TrailColor = CRACK })
+			task.delay(0.12, function()
+				local ground = Vector3.new(p.X, ctx.Ground + 0.15, p.Z)
+				Vfx.Flash(p + Vector3.new(0, 0.5, 0), { Color = STAR_CORE, Size = 4.5, Life = 0.22, Brightness = 5 })
+				Vfx.Ring(CFrame.new(ground), { R0 = 0.6, R1 = 4.5, Color = CRACK, Life = 0.4, Width = 0.28, Height = 0.07 })
+				Vfx.Burst(ground + Vector3.new(0, 0.3, 0), { Count = 6, Colors = { CRACK, STAR_CORE, GOLDEN_STAR }, Size = 0.35, Speed = 16, Life = 0.5, Gravity = 36, Material = Enum.Material.Neon })
+				Vfx.Pack("vfx pack/Explosion", CFrame.new(p + Vector3.new(0, 0.6, 0)), { Color = CRACK, Size = 0.25, Count = 0.3 })
+			end)
+		end)
+	end
+	local away = if #dark > 0 then center(dark) else mid
+	for i, p in safe do
+		task.delay(0.02 * i + 0.03, function()
+			local side = Vector3.new(p.X - away.X, 0, p.Z - away.Z)
+			side = if side.Magnitude > 1e-3 then side.Unit else ctx.Forward
+			local land = p + side * 3.2
+			Vfx.Projectile(land + Vector3.new(0, 20, 0), land + Vector3.new(0, 0.3, 0), { Time = 0.12, Color = STAR_CORE, TrailColor = STAR })
+			Vfx.Pillar(p, { Color = STAR_CORE, Life = 0.45, Height = 14, Width = 0.8 })
+			task.delay(0.12, function()
+				Vfx.Sparks(land, { Color = STAR_CORE, Count = 5, Speed = 12 })
+			end)
+		end)
+	end
+	task.delay(0.1, function()
+		Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = 26, Color = CRACK, Life = 0.7, Width = 0.45, Height = 0.08 })
+		Vfx.Pack("Loose/Shockwave", CFrame.new(mid + Vector3.new(0, 0.6, 0)), { Color = CRACK, Size = 0.8 })
 	end)
 end
 
