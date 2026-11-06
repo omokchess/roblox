@@ -12,6 +12,7 @@ local ok, err = pcall(function()
 	local list = HS:JSONDecode(HS:GetAsync("http://127.0.0.1:35001/tools/sync.json", true))
 	local changed, created, same = 0, 0, 0
 	local failed = {}
+	local made = {} -- 새로 만든 것의 경로(2026-11-06 — 무엇이 사라졌다 다시 생기는지 보려고)
 	for _, it in ipairs(list) do
 		local src = HS:GetAsync("http://127.0.0.1:35001/" .. it.file, true)
 		-- 부모 사슬
@@ -28,6 +29,7 @@ local ok, err = pcall(function()
 				child.Name = name
 				child.Parent = node
 				created += 1
+				table.insert(made, child:GetFullName())
 			end
 			node = child
 		end
@@ -48,12 +50,14 @@ local ok, err = pcall(function()
 			fresh.Parent = node
 			target = fresh
 			created += 1
+			table.insert(made, fresh:GetFullName() .. "(종류 바뀜)")
 		end
 		if not target then
 			target = Instance.new(it.class)
 			target.Name = name
 			target.Parent = node
 			created += 1
+			table.insert(made, target:GetFullName())
 		end
 		if target.Source ~= src then
 			if #target.Source > 0 then
@@ -81,6 +85,9 @@ local ok, err = pcall(function()
 		end
 	end
 	report[#report + 1] = string.format("목록 %d: 바꿈 %d, 새로 %d, 같음 %d, 실패 %d", #list, changed, created, same, #failed)
+	for _, m in made do
+		report[#report + 1] = "  (새로) " .. m
+	end
 
 	--[[
 		지운 파일(tools/sync_remove.json)은 Studio 에서도 지운다. 지우기 전 Source 를 수신기로 보낸다.

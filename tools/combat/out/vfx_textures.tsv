@@ -1,0 +1,304 @@
+총 303
+P	Anime/Blood-01/Main/Blood1	rbxassetid://16664856199	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.75-0.75	rate=5.0	size=0.00:0.25 0.38:2.06 1.00:2.69	squash=0.00:0.00 1.00:0.00
+P	Anime/Blood-02/Main/Blood1	rbxassetid://16939835586	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=2.00-2.00	rate=50.0	size=0.00:0.03 0.52:0.39 1.00:0.00	squash=0.00:-0.50 1.00:-0.50
+P	Anime/Blood-Punch-01/Main/Blood1	rbxassetid://16668936898	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.50-0.50	rate=10.0	size=0.00:2.19 1.00:3.56	squash=0.00:0.00 1.00:0.00
+P	Anime/Blood-Punch-01/Main/Blood2	rbxassetid://16669046762	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.75-0.75	rate=5.0	size=0.00:3.25 1.00:4.31	squash=0.00:0.00 1.00:0.00
+P	Anime/Charge-01/Main/Core1	rbxassetid://1084982817	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.40-0.40	rate=150.0	size=0.00:0.50 1.00:0.50	squash=0.00:0.00 1.00:0.00
+P	Anime/Charge-01/Main/Energy1	rbxassetid://15041986621	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.30-0.30	rate=20.0	size=0.00:3.69 1.00:1.13	squash=0.00:0.00 1.00:0.00
+P	Anime/Charge-01/Main/Energy2	rbxassetid://15041986460	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.30-0.30	rate=20.0	size=0.00:3.69 1.00:1.13	squash=0.00:0.00 1.00:0.00
+P	Anime/Crack-01/Main/Floor1	rbxassetid://16937229477	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.40-0.40	rate=5.0	size=0.00:0.87 1.00:5.01	squash=0.00:0.00 1.00:0.00
+P	Anime/Crack-01/Main/Floor2	rbxassetid://16937144632	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=5.0	size=0.00:4.88 1.00:7.50	squash=0.00:0.00 1.00:0.00
+P	Anime/Fire-01/Main/Fire1	rbxassetid://13818306392	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.10	life=0.45-0.55	rate=125.0	size=0.00:0.00 0.14:0.82 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Fire-01/Main/FireSpecs1	rbxassetid://11187840108	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.75	rate=125.0	size=0.00:0.00 0.25:0.70 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Fire-02/Main/Fire1	rbxassetid://16676544947	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.70-0.70	rate=15.0	size=0.00:0.00 0.57:2.31 1.00:2.38	squash=0.00:0.00 1.00:0.00
+P	Anime/Fire-03/Main/Fire1	http://www.roblox.com/asset/?id=11395089850	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.50-0.50	rate=10.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:-0.12
+P	Anime/Fire-Slash-01/Main/SlashFire1	rbxassetid://16951304645	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.30-0.30	rate=50.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Fire-Slash-01/Main/SlashFireSpecs1	rbxassetid://16951289316	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-1.00	life=0.30-0.30	rate=50.0	size=0.00:6.30 1.00:6.30	squash=0.00:0.00 1.00:0.00
+P	Anime/Flamethrower-01/Main/ParticleEmitter	rbxassetid://12782553831	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.90	life=1.00-1.00	rate=50.0	size=0.00:0.00 1.00:2.52	squash=0.00:0.00 1.00:3.00
+P	Anime/Flamethrower-01/Main/ParticleEmitter	rbxassetid://17087884204	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.00-1.00	rate=50.0	size=0.00:1.41 1.00:2.09	squash=0.00:0.00 1.00:0.00
+P	Anime/ForceField-01/Main/ForceField1	rbxassetid://11973936966	flip=Enum.ParticleFlipbookLayout.None	light=0.50	life=1.00-1.00	rate=50.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Anime/ForceField-01/Main/ForceField3	rbxassetid://14005262616	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.50-1.50	rate=1.0	size=0.00:3.10 1.00:3.10	squash=0.00:0.00 1.00:0.00
+P	Anime/ForceField-Break-01/Main/Break1	rbxassetid://12239789629	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=0.50-0.50	rate=1.0	size=0.00:3.50 1.00:3.50	squash=0.00:0.00 1.00:0.00
+P	Anime/ForceField-Break-01/Main/Break2	rbxassetid://11973936966	flip=Enum.ParticleFlipbookLayout.None	light=0.50	life=0.50-0.50	rate=1.0	size=0.00:3.50 1.00:3.50	squash=0.00:0.00 1.00:0.00
+P	Anime/ForceField-Break-01/Main/Break3	rbxassetid://15514662196	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.50-0.50	rate=1.0	size=0.00:3.69 0.24:4.06 0.28:4.25 0.32:4.44 0.40:5.12 0.49:4.69 0.53:4.75 0.58:4.44 0.61:4.06 1.00:0.06	squash=0.00:0.00 1.00:0.00
+P	Anime/ForceField-Break-01/Main/Break4	rbxassetid://13634052022	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.50-0.50	rate=1.0	size=0.00:3.43 0.25:3.86 0.28:4.05 0.32:4.05 0.40:4.46 0.48:4.18 0.54:4.00 0.59:4.13 0.63:3.79 1.00:0.06	squash=0.00:0.00 1.00:0.00
+P	Anime/Lighting-01/Main/Lighting1	rbxassetid://16664675233	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.60-0.60	rate=8.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Lighting-02/Main/Lighting1	http://www.roblox.com/asset/?id=12390063093	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=1.00	life=0.80-0.80	rate=5.0	size=0.00:3.00 1.00:3.00	squash=0.00:-0.20 1.00:-0.20
+P	Anime/Lighting-03/Main/Lighting1	rbxassetid://16951505034	flip=Enum.ParticleFlipbookLayout.Grid2x2	light=1.00	life=0.20-0.20	rate=5.5	size=0.00:2.00 1.00:2.00	squash=0.00:-0.20 1.00:-0.20
+P	Anime/Lighting-03/Main/Lighting2	rbxassetid://16951501423	flip=Enum.ParticleFlipbookLayout.Grid2x2	light=1.00	life=0.20-0.20	rate=5.5	size=0.00:2.00 1.00:2.00	squash=0.00:-0.20 1.00:-0.20
+P	Anime/Lighting-03/Main/Lighting3	rbxassetid://16676262776	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.30-0.30	rate=5.3	size=0.00:2.00 1.00:2.00	squash=0.00:-0.20 1.00:-0.20
+P	Anime/Lighting-03/Main/Lighting4	rbxassetid://16676250078	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.30-0.30	rate=5.2	size=0.00:2.00 1.00:2.00	squash=0.00:-0.20 1.00:-0.20
+P	Anime/Portal-01/Main/Portal	rbxassetid://1084982817	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.00-1.00	rate=5.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Portal-01/Main/PortalOutline	rbxassetid://16951115765	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=10.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Portal-01/Main/PortalSuck	rbxassetid://16951208736	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=4.0	size=0.00:5.49 1.00:2.09	squash=0.00:0.00 1.00:0.00
+P	Anime/Portal-Enter-01/Main/Portal	rbxassetid://1084982817	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.00-1.00	rate=5.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Portal-Enter-01/Main/PortalLines	rbxassetid://16953209220	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.50	rate=50.0	size=0.00:2.33 1.00:0.00	squash=0.00:0.50 1.00:0.50
+P	Anime/Portal-Enter-01/Main/PortalOutline	rbxassetid://16951115765	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=10.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Portal-Enter-01/Main/PortalOutline	rbxassetid://16953324078	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=3.0	size=0.00:2.48 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Portal-Enter-01/Main/PortalSuck	rbxassetid://16951208736	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=4.0	size=0.00:5.49 1.00:2.09	squash=0.00:0.00 1.00:0.00
+P	Anime/Punch-01/Main/Hit1	rbxassetid://16937107174	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.50-0.50	rate=1.5	size=0.00:0.44 1.00:3.31	squash=0.00:0.00 1.00:0.00
+P	Anime/Punch-02/Main/Hit1	rbxassetid://16678929169	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.50-0.50	rate=1.5	size=0.00:2.19 1.00:4.81	squash=0.00:0.00 1.00:0.00
+P	Anime/Punch-03/Main/Hit1	rbxassetid://16937115673	flip=Enum.ParticleFlipbookLayout.Grid2x2	light=1.00	life=0.20-0.20	rate=1.5	size=0.00:1.62 1.00:3.37	squash=0.00:0.00 1.00:0.00
+P	Anime/Realistic-Explosion-01/Main/ParticleEmitter	rbxassetid://12782553831	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=1.00-1.00	rate=5.0	size=0.00:0.00 1.00:2.52	squash=0.00:0.00 1.00:0.00
+P	Anime/Realistic-Explosion-01/Main/ParticleEmitter	rbxassetid://17087884204	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.00-1.00	rate=20.0	size=0.00:0.00 1.00:3.64	squash=0.00:0.00 1.00:0.00
+P	Anime/Shield-01/Main/ParticleEmitter	rbxassetid://17086063752	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.5	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Shield-01/Main/ParticleEmitter	rbxassetid://17086075673	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.5	size=0.00:2.18 1.00:5.87	squash=0.00:0.00 1.00:0.00
+P	Anime/Shield-Break-01/Main/Shockwave	rbxassetid://17086390547	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.50-0.50	rate=3.0	size=0.00:0.00 0.37:1.21 1.00:5.44	squash=0.00:0.00 1.00:0.00
+P	Anime/Shield-Break-01/Main/Specs	rbxassetid://17086409913	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.25-0.50	rate=150.0	size=0.00:0.29 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Shield-Break-01/Main/Specs	rbxassetid://17088300017	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.20-0.40	rate=100.0	size=0.00:0.00 1.00:0.39	squash=0.00:0.00 1.00:0.00
+P	Anime/Shiny-01/Main/Core1	rbxassetid://1075864321	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=2.50-2.50	rate=1.5	size=0.00:1.50 1.00:1.50	squash=0.00:0.00 1.00:0.00
+P	Anime/Shiny-01/Main/Lines1	rbxassetid://1053548563	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=100.0	size=0.00:2.19 1.00:3.50	squash=0.00:0.00 1.00:0.00
+P	Anime/Shoot-01/Main/Shockwave1	rbxassetid://16477162837	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.50-0.50	rate=0.8	size=0.00:0.44 0.50:3.75 1.00:5.12	squash=0.00:0.00 1.00:0.00
+P	Anime/Slash-01/Main/Slash1	rbxassetid://16939611858	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.20-0.20	rate=50.0	size=0.00:6.00 1.00:6.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Slash-Impact-01/Main/SlashImpact1	rbxassetid://16923007448	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.40-0.40	rate=10.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Slash-Impact-01/Main/Specs1	rbxassetid://16923007448	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.40-0.40	rate=15.0	size=0.00:0.00 1.00:2.67	squash=0.00:0.00 1.00:0.00
+P	Anime/Slash-Impact-01/Main/Specs2	rbxassetid://16923007448	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.40-0.40	rate=15.0	size=0.00:0.00 1.00:2.67	squash=0.00:0.00 1.00:0.00
+P	Anime/Slashes-01/Bottom/Wind1	rbxassetid://7216847656	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.40-0.80	rate=20.0	size=0.00:0.00 0.09:2.44 0.19:4.31 0.29:5.62 0.39:6.81 0.50:7.75 0.59:8.44 0.70:9.00 0.79:9.50 0.90:9.75 1.00:10.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Slashes-01/Cracks/SlashesCrack	rbxassetid://11155927496	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.10-0.10	rate=75.0	size=0.00:2.00 1.00:2.00	squash=0.00:-1.00 1.00:-1.00
+P	Anime/Slashes-01/Main/Slashes1	rbxassetid://10927170198	flip=Enum.ParticleFlipbookLayout.None	light=-5.00	life=0.50-0.50	rate=50.0	size=0.00:4.50 1.00:4.50	squash=0.00:0.00 1.00:0.00
+P	Anime/Smoke-01/Main/Smoke1	rbxassetid://14006773822	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=0.80-0.80	rate=5.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Smoke-01/Main/Smoke1	rbxassetid://16669188960	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.10	life=0.80-0.80	rate=5.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Splash-01/Main/ParticleEmitter	rbxassetid://17063077953	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=1.00-1.00	rate=2.5	size=0.00:1.00 1.00:2.38	squash=0.00:0.00 1.00:0.00
+P	Anime/Splash-01/Main/ParticleEmitter	rbxassetid://17063077953	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=1.00-1.00	rate=5.0	size=0.00:1.00 1.00:2.96	squash=0.00:0.00 1.00:0.00
+P	Anime/Stars-01/Main/Light	rbxassetid://1075864321	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=2.0	size=0.00:4.50 1.00:4.50	squash=0.00:0.00 1.00:0.00
+P	Anime/Stars-01/Main/Stars	rbxassetid://1851669703	flip=Enum.ParticleFlipbookLayout.None	light=2.00	life=1.00-1.00	rate=4.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Water-01/Main/Water1	rbxassetid://16664715772	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.30	life=1.00-1.00	rate=20.0	size=0.00:0.10 0.10:0.29 0.20:0.46 0.30:0.62 0.40:0.78 0.50:0.94 0.60:1.10 0.70:1.28 0.80:1.48 0.90:1.71 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Water-02/Main/Water1	rbxassetid://16664772965	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=100.0	size=0.00:0.10 1.00:1.56	squash=0.00:0.00 1.00:0.00
+P	Anime/Water-02/Main/Water2	rbxassetid://16664715772	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.30	life=1.00-1.00	rate=20.0	size=0.00:0.10 0.10:0.29 0.20:0.46 0.30:0.62 0.40:0.78 0.50:0.94 0.60:1.10 0.70:1.28 0.80:1.48 0.90:1.71 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Wind-01/Main/Wind1	rbxassetid://16950679789	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.40-0.80	rate=20.0	size=0.00:0.00 0.10:2.29 0.20:3.94 0.30:5.23 0.40:6.25 0.50:7.08 0.60:7.74 0.70:8.26 0.80:8.65 0.90:8.90 1.00:9.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Wind-01/Main/Wind2	rbxassetid://10337713824	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=20.0	size=0.00:0.00 0.10:2.54 0.20:4.38 0.30:5.81 0.40:6.94 0.50:7.86 0.60:8.60 0.70:9.18 0.80:9.61 0.90:9.89 1.00:10.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Wind-02/Main/Smoke1	rbxassetid://14595543880	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.60-0.60	rate=5.0	size=0.00:7.00 1.00:7.00	squash=0.00:0.00 1.00:0.00
+P	Anime/Wind-02/Main/Smoke2	rbxassetid://12144047227	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.30-1.00	rate=10.0	size=0.00:4.06 1.00:4.06	squash=0.00:0.00 1.00:0.00
+P	Anime/Wind-02/Main/Wind1	http://www.roblox.com/asset/?id=12685367098	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-1.00	rate=10.0	size=0.00:0.00 0.44:7.15 1.00:7.46	squash=0.00:0.00 1.00:0.00
+P	Auras/Fire-Aura-01/Head/H	rbxassetid://16676455805	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Fire-Aura-01/Left Arm/LA	rbxassetid://16676455805	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Fire-Aura-01/Left Leg/LL	rbxassetid://16676455805	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Fire-Aura-01/Right Arm/RA	rbxassetid://16676455805	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Fire-Aura-01/Right Leg/RL	rbxassetid://16676455805	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Fire-Aura-01/Torso/T	rbxassetid://16676455805	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+B	Auras/RNG-Aura-01/HumanoidRootPart/BeamAttachment/Beam	rbxassetid://12781812529	light=1.00
+B	Auras/RNG-Aura-01/HumanoidRootPart/BeamAttachment/Beam	rbxassetid://12781812529	light=1.00
+B	Auras/RNG-Aura-01/HumanoidRootPart/BeamAttachment/Beam	rbxassetid://3029306948	light=1.00
+B	Auras/RNG-Aura-01/HumanoidRootPart/BeamAttachment/Beam	rbxassetid://3029306948	light=1.00
+B	Auras/RNG-Aura-01/HumanoidRootPart/BeamAttachment/Beam	rbxassetid://3029306948	light=1.00
+B	Auras/RNG-Aura-01/HumanoidRootPart/BeamAttachment/Beam	rbxassetid://3029306948	light=1.00
+P	Auras/RNG-Aura-01/HumanoidRootPart/Main/Floor1	rbxassetid://16956569427	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.5	size=0.00:0.00 1.00:3.16	squash=0.00:0.00 1.00:0.00
+P	Auras/RNG-Aura-01/HumanoidRootPart/Main/Floor2	rbxassetid://14591895021	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.5	size=0.00:4.20 1.00:4.20	squash=0.00:0.00 1.00:0.00
+P	Auras/RNG-Aura-01/HumanoidRootPart/Main/Floor3	rbxassetid://16956497860	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.5	size=0.00:3.50 1.00:3.50	squash=0.00:0.00 1.00:0.00
+B	Auras/RNG-Aura-02/HumanoidRootPart/Left/Beam	rbxassetid://12781800668	light=1.00
+B	Auras/RNG-Aura-02/HumanoidRootPart/Left/Beam	rbxassetid://17087331428	light=1.00
+P	Auras/RNG-Aura-02/HumanoidRootPart/Left/Circle	rbxassetid://17086075673	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.5	size=0.00:0.00 1.00:2.50	squash=0.00:0.00 1.00:0.00
+P	Auras/RNG-Aura-02/HumanoidRootPart/Left/Star	rbxassetid://14006783533	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.5	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+B	Auras/RNG-Aura-02/HumanoidRootPart/Right/Beam	rbxassetid://12781800668	light=1.00
+B	Auras/RNG-Aura-02/HumanoidRootPart/Right/Beam	rbxassetid://17087331428	light=1.00
+P	Auras/RNG-Aura-02/HumanoidRootPart/Right/Circle	rbxassetid://17086075673	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.5	size=0.00:0.00 1.00:2.50	squash=0.00:0.00 1.00:0.00
+P	Auras/RNG-Aura-02/HumanoidRootPart/Right/Star	rbxassetid://14006783533	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.5	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Auras/RNG-Aura-02/HumanoidRootPart/Top/Collide	rbxassetid://17086022111	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=5.0	size=0.00:3.00 0.01:0.00 1.00:3.98	squash=0.00:0.00 1.00:0.00
+P	Auras/RNG-Aura-02/HumanoidRootPart/Top/Stars	rbxassetid://17087151546	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=15.0	size=0.00:0.00 1.00:0.87	squash=0.00:0.00 1.00:0.00
+P	Auras/RNG-Aura-03/HumanoidRootPart/Bottom/idk	rbxassetid://17087448166	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=2.0	size=0.00:7.00 1.00:7.00	squash=0.00:0.00 1.00:0.00
+P	Auras/RNG-Aura-03/HumanoidRootPart/Bottom/idk	rbxassetid://17087712772	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.50	rate=25.0	size=0.00:1.00 1.00:3.98	squash=0.00:0.00 1.00:0.00
+B	Auras/RNG-Aura-03/HumanoidRootPart/Top/Beam	rbxassetid://17087518099	light=1.00
+B	Auras/RNG-Aura-03/HumanoidRootPart/Top/Beam	rbxassetid://1851669703	light=1.00
+P	Auras/RNG-Aura-03/HumanoidRootPart/Top/idk	rbxassetid://17087507236	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=5.0	size=0.00:7.00 1.00:7.00	squash=0.00:0.00 1.00:0.00
+P	Auras/RNG-Aura-03/HumanoidRootPart/Top/idk	rbxassetid://17087733793	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=5.0	size=0.00:6.00 1.00:6.00	squash=0.00:0.00 1.00:0.00
+P	Auras/Water-Aura-01/Head/H	rbxassetid://16664715772	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Water-Aura-01/Left Arm/LA	rbxassetid://16664715772	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Water-Aura-01/Left Leg/LL	rbxassetid://16664715772	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Water-Aura-01/Right Arm/RA	rbxassetid://16664715772	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Water-Aura-01/Right Leg/RL	rbxassetid://16664715772	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Auras/Water-Aura-01/Torso/T	rbxassetid://16664715772	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=1.00-1.00	rate=20.0	size=0.00:1.10 1.00:1.10	squash=0.00:0.00 1.00:0.00
+P	Beams/Lava-01/End/Fire1	rbxassetid://13818306392	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.10	life=0.45-0.55	rate=200.0	size=0.00:0.00 0.14:0.64 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Beams/Lava-01/End/FireSpecs1	rbxassetid://11187840108	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.75	rate=200.0	size=0.00:0.00 0.25:0.70 1.00:0.00	squash=0.00:0.00 1.00:0.00
+B	Beams/Lava-01/Main/Beam	rbxassetid://12781780964	light=0.00
+B	Beams/Lava-01/Main/Beam	rbxassetid://12781828706	light=0.00
+B	Beams/Lava-01/Main/Beam	rbxassetid://12781828706	light=0.10
+P	Beams/Lava-01/Main/Fire1	rbxassetid://13818306392	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.10	life=0.45-0.55	rate=200.0	size=0.00:0.00 0.14:0.64 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Beams/Lava-01/Main/FireSpecs1	rbxassetid://11187840108	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.75	rate=200.0	size=0.00:0.00 0.25:0.70 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Beams/Waterfall-01/End/Clouds	http://www.roblox.com/asset/?id=275871881	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.10-1.10	rate=10.0	size=0.00:1.00 1.00:1.00	squash=0.00:0.00 1.00:0.00
+P	Beams/Waterfall-01/End/Clouds	http://www.roblox.com/asset/?id=275871881	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.10-1.10	rate=10.0	size=0.00:1.00 1.00:1.00	squash=0.00:0.00 1.00:0.00
+B	Beams/Waterfall-01/Start/Beam	rbxassetid://10365550877	light=1.00
+B	Beams/Waterfall-01/Start/Beam	rbxassetid://12781828706	light=0.00
+B	Beams/Waterfall-01/Start/Beam	rbxassetid://12781828706	light=0.00
+B	Beams/Waterfall-01/Start/Beam	rbxassetid://9541055154	light=1.00
+P	Beams/Waterfall-01/Start/Clouds	http://www.roblox.com/asset/?id=275871881	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.10-1.10	rate=10.0	size=0.00:1.00 1.00:1.00	squash=0.00:0.00 1.00:0.00
+P	Beams/Waterfall-01/Start/Clouds	http://www.roblox.com/asset/?id=275871881	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.10-1.10	rate=10.0	size=0.00:1.00 1.00:1.00	squash=0.00:0.00 1.00:0.00
+P	Beams/Wind-01/End/Smoke1	rbxassetid://14595543880	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.60-0.60	rate=5.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Beams/Wind-01/End/Wind1	rbxassetid://10337713824	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=20.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+B	Beams/Wind-01/Start/Beam	rbxassetid://10365550877	light=1.00
+B	Beams/Wind-01/Start/Beam	rbxassetid://9541055154	light=1.00
+P	Beams/Wind-01/Start/Smoke1	rbxassetid://14595543880	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.60-0.60	rate=5.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Beams/Wind-01/Start/Wind1	rbxassetid://10337713824	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=20.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Big/Ball-01/FireSpecs1	rbxassetid://11187840108	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.75	rate=125.0	size=0.00:0.00 0.26:2.72 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Big/Ball-01/Main/Ash1	rbxassetid://16955854038	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.10	life=0.65-0.65	rate=150.0	size=0.00:1.84 0.28:3.40 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Big/Ball-01/Main/Circle	rbxassetid://17063107542	flip=Enum.ParticleFlipbookLayout.None	light=0.10	life=1.00-1.00	rate=2.0	size=0.00:0.00 1.00:10.00	squash=0.00:0.00 1.00:0.00
+P	Big/Ball-01/Main/Fire1	rbxassetid://13818306392	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.10	life=0.65-0.65	rate=150.0	size=0.00:1.84 0.28:3.40 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Big/Big-Crack-01/Main/Ash1	rbxassetid://16955854038	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.50-0.50	rate=250.0	size=0.00:0.00 0.25:0.00 0.46:3.45 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Big/Big-Crack-01/Main/Fire1	rbxassetid://13818306392	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.10	life=0.50-0.50	rate=250.0	size=0.00:0.00 0.25:0.00 0.46:3.45 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Big/Big-Crack-01/Main/Impact1	rbxassetid://17067057050	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=15.0	size=0.00:12.00 1.00:12.00	squash=0.00:0.00 1.00:0.00
+P	Big/Big-Crack-01/Main/Impact2	rbxassetid://17067103637	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.30-0.30	rate=15.0	size=0.00:20.00 1.00:20.00	squash=0.00:0.00 1.00:0.00
+P	Big/Explosion-01/Main/Fire1	http://www.roblox.com/asset/?id=11395089850	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.50-0.50	rate=10.0	size=0.00:10.70 1.00:12.67	squash=0.00:0.00 1.00:-0.12
+P	Big/Explosion-01/Main/Fire2	http://www.roblox.com/asset/?id=11395090403	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.50-0.50	rate=10.0	size=0.00:10.70 1.00:12.67	squash=0.00:0.00 1.00:-0.12
+P	Big/Explosion-01/Main/Fire3	http://www.roblox.com/asset/?id=11395118687	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.50-0.50	rate=10.0	size=0.00:10.70 1.00:12.67	squash=0.00:0.00 1.00:-0.12
+P	Big/Explosion-01/Main/SmokeDark1	rbxassetid://10180479311	flip=Enum.ParticleFlipbookLayout.None	light=0.50	life=2.00-4.00	rate=6.2	size=0.00:13.50 0.25:27.00 1.00:27.00	squash=0.00:0.00 1.00:0.00
+P	Big/Explosion-01/Main/Specks1	http://www.roblox.com/asset/?id=8068783649	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.80-2.50	rate=250.0	size=0.00:0.00 0.40:0.69 0.67:0.06 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Big/Lighting-01/Lighting/Lightning	rbxassetid://13771290435	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.50	life=0.50-0.50	rate=5.0	size=0.00:13.00 1.00:13.00	squash=0.00:0.00 1.00:0.00
+P	Big/Lighting-01/Main/Impact1	rbxassetid://16954586568	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=15.0	size=0.00:8.75 1.00:13.37	squash=0.00:0.00 1.00:0.00
+P	Big/Lighting-01/Main/Impact2	rbxassetid://16670162492	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=15.0	size=0.00:8.00 1.00:8.00	squash=0.00:0.00 1.00:0.00
+P	Big/Lighting-01/Main/Impact3	rbxassetid://16954602535	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=15.0	size=0.00:20.00 1.00:20.00	squash=0.00:0.00 1.00:0.00
+P	Big/Lighting-01/Main/Lighting1	rbxassetid://16664675233	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.80-0.80	rate=15.0	size=0.00:0.00 1.00:6.36	squash=0.00:0.00 1.00:0.00
+P	Big/Tornado-01/Main/Impact1	rbxassetid://16957275379	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=15.0	size=0.00:4.31 1.00:13.03	squash=0.00:0.00 1.00:0.00
+P	Big/Tornado-01/Main/Impact2	rbxassetid://16670162492	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.30	rate=15.0	size=0.00:2.00 1.00:10.00	squash=0.00:0.00 1.00:0.00
+P	Big/Tornado-01/Main/Windspin1	rbxassetid://16669803246	flip=Enum.ParticleFlipbookLayout.None	light=0.75	life=1.00-1.00	rate=100.0	size=0.00:0.00 1.00:14.00	squash=0.00:0.00 1.00:0.00
+P	Big/Tornado-01/Main/Windspin2	rbxassetid://16669505937	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.00-1.00	rate=40.0	size=0.00:0.00 1.00:14.97	squash=0.00:0.00 1.00:0.00
+P	Big/Tornado-01/Main/Windspin3	http://www.roblox.com/asset/?id=12685367098	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=10.0	size=0.00:0.00 0.49:12.23 1.00:19.58	squash=0.00:0.00 1.00:0.00
+P	Big/Tornado-01/Main/Windspin4	rbxassetid://16669782675	flip=Enum.ParticleFlipbookLayout.None	light=0.75	life=1.00-1.00	rate=100.0	size=0.00:0.00 1.00:9.15	squash=0.00:0.00 1.00:0.00
+P	Big/Tornado-01/Main/Windspin5	rbxassetid://16669903446	flip=Enum.ParticleFlipbookLayout.None	light=0.75	life=1.00-1.00	rate=100.0	size=0.00:0.00 1.00:14.00	squash=0.00:0.00 1.00:0.00
+P	Heads/Angry-01/Main/Angry	rbxassetid://16678293642	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.50	rate=6.0	size=0.00:0.70 1.00:0.70	squash=0.00:0.00 1.00:0.00
+P	Heads/Confused-01/Main/Confused	rbxassetid://16678362161	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.50	rate=6.0	size=0.00:0.70 1.00:0.70	squash=0.00:0.00 1.00:0.00
+P	Heads/Flamming-Eyes-01/EyeL/RedGlow1	rbxassetid://14163162698	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.10	life=1.00-1.00	rate=1.5	size=0.00:0.40 1.00:0.40	squash=0.00:0.00 1.00:0.00
+P	Heads/Flamming-Eyes-01/EyeR/RedGlow1	rbxassetid://14163162698	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.10	life=1.00-1.00	rate=1.5	size=0.00:0.40 1.00:0.40	squash=0.00:0.00 1.00:0.00
+P	Heads/Glowing-Eyes-01/EyeL/RedGlow1	rbxassetid://16956515291	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.50	rate=6.0	size=0.00:0.40 1.00:0.40	squash=0.00:0.00 1.00:0.00
+P	Heads/Glowing-Eyes-01/EyeR/RedGlow1	rbxassetid://16956515291	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.50	rate=6.0	size=0.00:0.40 1.00:0.40	squash=0.00:0.00 1.00:0.00
+P	Heads/Surprised-01/Main/Surprised	rbxassetid://16678333910	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.50	rate=6.0	size=0.00:0.70 1.00:0.70	squash=0.00:0.00 1.00:0.00
+P	Heads/Surprised-02/Main/Surprised	rbxassetid://16678313371	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.50	rate=6.0	size=0.00:0.70 1.00:0.70	squash=0.00:0.00 1.00:0.00
+P	Loose/Aura/Aura	rbxassetid://14447188478	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.60-1.00	rate=10.0	size=0.00:8.00 1.00:8.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Black/Black	rbxassetid://14457094589	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.10-1.00	rate=5.0	size=0.00:7.60 1.00:7.60	squash=0.00:0.00 1.00:0.00
+P	Loose/BlackSwirl/Black Swirl	rbxassetid://14477910720	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.10-1.00	rate=5.0	size=0.00:7.00 1.00:7.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Circle/Circle	rbxassetid://14425843511	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.10-1.00	rate=10.0	size=0.00:8.00 1.00:8.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Core/Core	http://www.roblox.com/asset/?id=243664672	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.50	rate=15.0	size=0.00:10.00 1.00:10.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Dots1/Dots 1	rbxassetid://14582794847	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.10-1.00	rate=20.0	size=0.00:0.10 1.00:0.63	squash=0.00:0.00 1.00:0.00
+P	Loose/Dots1/Dots 2	rbxassetid://14582794847	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.10-1.00	rate=40.0	size=0.00:0.10 1.00:0.40	squash=0.00:0.00 1.00:0.00
+P	Loose/Flare/Attachment/Flare	rbxassetid://867619398	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.50	rate=1.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Flare/Attachment/Sparkle	rbxassetid://1053546634	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.50	rate=1.0	size=0.00:4.00 0.50:0.00 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Flare/Attachment/Wave	rbxassetid://1084952073	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.40-0.40	rate=1.0	size=0.00:0.00 0.06:0.16 0.11:0.31 0.17:0.46 0.22:0.59 0.28:0.72 0.33:0.83 0.39:0.94 0.44:1.04 0.50:1.12 0.56:1.20 0.61:1.27 0.67:1.33 0.72:1.38 0.78:1.43 0.83:1.46 0.89:1.48 0.94:1.50 1.00:1.50 1.00:1.50	squash=0.00:0.00 1.00:0.00
+P	Loose/Flash-2/Flash	rbxassetid://11372606236	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.40-0.40	rate=2.0	size=0.00:3.99 0.50:13.61 0.99:15.00 1.00:15.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Flash-2/Flash	rbxassetid://11372606236	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.20-0.20	rate=10.0	size=0.00:10.44 0.50:16.19 1.00:20.67 1.00:21.31	squash=0.00:0.00 1.00:0.00
+P	Loose/Flash-3/Flash	rbxassetid://11372587580	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.30-0.60	rate=5.0	size=0.00:3.99 0.50:6.20 1.00:7.91 1.00:8.15	squash=0.00:0.00 1.00:0.00
+P	Loose/Flash/Flash	rbxassetid://11372772717	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=0.60-0.60	rate=2.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Loose/LastParticle/Last Particle	rbxassetid://14494884246	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.10-1.00	rate=3.0	size=0.00:7.00 1.00:7.00	squash=0.00:0.00 1.00:0.00
+P	Loose/LightningOne/Lightning One	rbxassetid://14582813693	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.10-1.00	rate=5.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Loose/MiniSparks/MiniSparks	http://www.roblox.com/asset/?id=7587238412	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.25-0.25	rate=1000.0	size=0.00:1.00 1.00:1.00	squash=0.00:0.00 1.00:0.00
+P	Loose/ParticleEmitter2/Attachment/Charged	http://www.roblox.com/asset/?id=249902641	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.50	rate=20.0	size=0.00:0.00 1.00:15.38	squash=0.00:0.00 1.00:0.00
+P	Loose/ParticleEmitter2/Attachment/ParticleEmitter1	rbxassetid://7216847765	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.60-0.60	rate=25.0	size=0.00:0.00 1.00:2.59	squash=0.00:0.00 1.00:0.00
+P	Loose/ParticleEmitter2/Attachment/ParticleEmitter2	rbxassetid://7216847765	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.20-0.40	rate=25.0	size=0.00:18.42 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Loose/ParticleEmitter2/Attachment/Spark	rbxassetid://7216979807	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.25-0.50	rate=20.0	size=0.00:2.00 0.44:1.83 1.00:0.00	squash=0.00:-1.00 1.00:-1.00
+P	Loose/PurpleExpanding/Purple Expanding	rbxassetid://14435065552	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.00-1.00	rate=2.0	size=0.00:4.59 1.00:8.50	squash=0.00:0.00 1.00:0.00
+P	Loose/Rays/Attachment/Circles	rbxassetid://1084982817	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.10-1.10	rate=8.0	size=0.00:0.30 1.00:0.30	squash=0.00:0.00 1.00:0.00
+P	Loose/Rays/Attachment/Flare	rbxassetid://867619398	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=1.0	size=0.00:7.00 1.00:7.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Rays/Attachment/Rays	rbxassetid://1053548563	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.00	rate=8.0	size=0.00:0.00 0.06:2.48 0.11:4.45 0.17:5.98 0.22:7.15 0.28:8.03 0.33:8.68 0.39:9.14 0.44:9.47 0.50:9.69 0.56:9.83 0.61:9.91 0.67:9.96 0.72:9.98 0.78:9.99 0.83:10.00 0.89:10.00 0.94:10.00 1.00:10.00 1.00:10.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Rays/Attachment/Rays	rbxassetid://1084975295	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.50-1.50	rate=1.0	size=0.00:0.00 0.10:9.00 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Shockwave/Shockwave	rbxassetid://14412529554	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.50	rate=2.0	size=0.00:17.00 0.22:15.02 0.41:12.52 0.67:8.22 0.84:4.42 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Sparkles/Sparkles	rbxassetid://1084970835	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=4.00-6.00	rate=10.0	size=0.00:0.40 0.50:0.40 0.51:0.20 1.00:0.20	squash=0.00:0.00 1.00:0.00
+P	Loose/Sparkles_Beam/Sparkles	rbxassetid://1084970835	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.40-0.60	rate=6.0	size=0.00:0.00 0.50:0.30 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Sparkles_Beam/Sparkles_Beam	rbxassetid://1084970835	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=4.00-4.50	rate=2.0	size=0.00:0.20 1.00:0.20	squash=0.00:0.00 1.00:0.00
+P	Loose/Swirling/Swirling	rbxassetid://14426307916	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.00-2.00	rate=1.0	size=0.00:12.00 0.22:11.48 0.56:9.60 0.82:7.00 1.00:4.08	squash=0.00:0.00 1.00:0.00
+P	Loose/Twirl/Twirl	rbxassetid://14426232568	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-2.00	rate=10.0	size=0.00:15.00 0.10:12.00 0.26:7.65 0.46:4.00 0.71:1.42 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Wave-2/Attachment/Flare	rbxassetid://867619398	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.50	rate=1.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Wave-2/Attachment/Sparkles	rbxassetid://1053546634	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.70	rate=6.0	size=0.00:0.30 1.00:0.30	squash=0.00:0.00 1.00:0.00
+P	Loose/Wave-2/Attachment/Wave	rbxassetid://1084952073	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.50	rate=1.0	size=0.00:1.00 0.06:1.35 0.11:1.69 0.17:2.03 0.22:2.37 0.28:2.69 0.33:3.00 0.39:3.29 0.44:3.57 0.50:3.83 0.56:4.06 0.61:4.27 0.67:4.46 0.72:4.62 0.78:4.76 0.83:4.86 0.89:4.94 0.94:4.98 1.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Wave/Attachment/Bits	rbxassetid://1084996976	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-1.00	rate=4.0	size=0.00:2.00 0.06:1.78 0.11:1.58 0.17:1.39 0.22:1.21 0.28:1.04 0.33:0.89 0.39:0.75 0.44:0.62 0.50:0.50 0.56:0.40 0.61:0.30 0.67:0.22 0.72:0.16 0.78:0.10 0.83:0.06 0.89:0.03 0.94:0.01 1.00:0.00 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Wave/Attachment/Bits_Small	rbxassetid://1084997326	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-1.00	rate=6.0	size=0.00:2.00 0.06:1.78 0.11:1.58 0.17:1.39 0.22:1.21 0.28:1.04 0.33:0.89 0.39:0.75 0.44:0.62 0.50:0.50 0.56:0.40 0.61:0.30 0.67:0.22 0.72:0.16 0.78:0.10 0.83:0.06 0.89:0.03 0.94:0.01 1.00:0.00 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Wave/Attachment/Wave	rbxassetid://1084965356	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-2.00	rate=1.0	size=0.00:2.00 1.00:1.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Wave/Attachment/Wave	rbxassetid://1084996536	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.50	rate=3.0	size=0.00:1.75 1.00:1.00	squash=0.00:0.00 1.00:0.00
+P	Loose/Yars/Yars	rbxassetid://14315288248	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.10-1.00	rate=3.0	size=0.00:11.00 1.00:11.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11389369395/Attachment/ParticleEmitter	rbxassetid://11389369395	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11447021694/Attachment/ParticleEmitter	rbxassetid://11447021694	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11515478646/Attachment/ParticleEmitter	rbxassetid://11515478646	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11517935503/Attachment/ParticleEmitter	rbxassetid://11517935503	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11749129449/Attachment/ParticleEmitter	rbxassetid://11749129449	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=1.00-1.00	rate=2.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11794599322/Attachment/ParticleEmitter	rbxassetid://11794599322	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=3.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11844017484/Attachment/ParticleEmitter	rbxassetid://11844017484	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-1.00	life=1.00-1.00	rate=3.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11846336638/Attachment/ParticleEmitter	rbxassetid://11846336638	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11861733639/Attachment/ParticleEmitter	rbxassetid://11861733639	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11862032588/Attachment/ParticleEmitter	rbxassetid://11862032588	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11895782540/Attachment/ParticleEmitter	rbxassetid://11895782540	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=1.00-1.00	rate=2.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11917388916/Attachment/ParticleEmitter	rbxassetid://11917388916	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/11941047152/Attachment/ParticleEmitter	rbxassetid://11941047152	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12123878312/Attachment/ParticleEmitter	rbxassetid://12123878312	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12169768457/Attachment/ParticleEmitter	rbxassetid://12169768457	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=30.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12602224662/Attachment/ParticleEmitter	rbxassetid://12602224662	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=0.00	life=1.00-1.00	rate=3.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12683695494/Attachment/ParticleEmitter	rbxassetid://12683695494	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12779603482/Attachment/ParticleEmitter	rbxassetid://12779603482	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12780365055/Attachment/ParticleEmitter	rbxassetid://12780365055	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12830011666/Attachment/ParticleEmitter	rbxassetid://12830011666	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12865656309/Attachment/ParticleEmitter	rbxassetid://12865656309	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12865691168/Attachment/ParticleEmitter	rbxassetid://12865691168	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12878027420/Attachment/ParticleEmitter	rbxassetid://12878027420	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=2.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12906276200/Attachment/ParticleEmitter	rbxassetid://12906276200	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/12930785601/Attachment/ParticleEmitter	rbxassetid://12930785601	flip=Enum.ParticleFlipbookLayout.Grid2x2	light=-10.00	life=1.00-1.00	rate=1.5	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/13233046382/Attachment/ParticleEmitter	rbxassetid://13233046382	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-1.00	life=1.00-1.00	rate=3.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/13336761812/Attachment/ParticleEmitter	rbxassetid://13336761812	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/13365068138/Attachment/ParticleEmitter	rbxassetid://13365068138	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=1.00-1.00	rate=3.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/13414392494/Attachment/ParticleEmitter	rbxassetid://13414392494	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/13455668887/Attachment/ParticleEmitter	rbxassetid://13455668887	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-2.00	life=2.00-2.00	rate=0.7	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/13669808632/Attachment/ParticleEmitter	rbxassetid://13669808632	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-10.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/13980004222/Attachment/ParticleEmitter	rbxassetid://13980004222	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=1.00-1.00	rate=3.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14066311352/Attachment/ParticleEmitter	rbxassetid://14066311352	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14200879082/Attachment/ParticleEmitter	rbxassetid://14200879082	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-2.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14354336687/Attachment/ParticleEmitter	rbxassetid://14354336687	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-2.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14393243408/Attachment/ParticleEmitter	rbxassetid://14393243408	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-3.00	life=1.00-1.00	rate=1.5	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14394427356/Attachment/ParticleEmitter	rbxassetid://14394427356	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-10.00	life=1.00-1.00	rate=2.0	size=0.00:2.00 1.00:2.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14431663347/Attachment/ParticleEmitter	rbxassetid://14431663347	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14442131728/Attachment/ParticleEmitter	rbxassetid://14442131728	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14471362207/Attachment/ParticleEmitter	rbxassetid://14471362207	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=1.00	life=1.00-1.00	rate=1.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14476165199/Attachment/ParticleEmitter	rbxassetid://14476165199	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14480839965/Attachment/ParticleEmitter	rbxassetid://14480839965	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=1.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14483718869/Attachment/ParticleEmitter	rbxassetid://14483718869	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=-2.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14496415643/Attachment/ParticleEmitter	rbxassetid://14496415643	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=3.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14550142746/Attachment/ParticleEmitter	rbxassetid://14550142746	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=1.00	life=1.00-1.00	rate=3.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/14842257638/Attachment/ParticleEmitter	rbxassetid://14842257638	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-2.00	life=1.00-1.00	rate=1.5	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/15011441052/Attachment/ParticleEmitter	rbxassetid://15011441052	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=1.3	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/15011447462/Attachment/ParticleEmitter	rbxassetid://15011447462	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=1.5	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/15011454473/Attachment/ParticleEmitter	rbxassetid://15011454473	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-3.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/15011456461/Attachment/ParticleEmitter	rbxassetid://15011456461	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=2.00-2.00	rate=1.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	Textures/15011464541/Attachment/ParticleEmitter	rbxassetid://15011464541	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=1.00	life=1.00-1.00	rate=1.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 1.00:0.00
+P	Textures/15011468690/Attachment/ParticleEmitter	rbxassetid://15011468690	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/15011471927/Attachment/ParticleEmitter	rbxassetid://15011471927	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-10.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/15011474319/Attachment/ParticleEmitter	rbxassetid://15011474319	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=1.00-1.00	rate=2.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.00 1.00:0.00
+P	Textures/15011478368/Attachment/ParticleEmitter	rbxassetid://15011478368	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=-5.00	life=1.00-1.00	rate=2.0	size=0.00:4.00 1.00:4.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/2	rbxassetid://8888098483	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.65-1.45	rate=5.0	size=0.00:0.00 0.05:9.51 0.19:16.75 0.40:22.19 0.63:26.04 1.00:31.24	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/3	rbxassetid://8904012224	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-1.50	rate=8.0	size=0.00:0.00 0.05:11.03 0.19:19.43 0.40:25.74 0.63:30.20 1.00:36.24	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/4	rbxassetid://6862984716	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-1.50	rate=25.0	size=0.00:0.00 0.08:15.94 0.23:33.75 0.49:49.69 1.00:59.06	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/5	rbxassetid://8048608283	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.20-0.50	rate=10.0	size=0.00:1.13 0.08:12.87 0.37:28.16 1.00:49.21	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/7	rbxassetid://8048608283	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.20-0.35	rate=10.0	size=0.00:0.00 0.08:15.31 0.26:27.21 0.46:33.45 1.00:39.68	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/Shards	rbxassetid://10439119562	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.30-0.45	rate=100.0	size=0.00:0.00 0.25:10.21 1.00:0.00	squash=0.00:0.19 1.00:0.07
+P	vfx pack/Explosion/Hit/Shards	rbxassetid://10439119562	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.30-0.45	rate=100.0	size=0.00:0.00 0.25:10.21 1.00:0.00	squash=0.00:0.19 1.00:0.07
+P	vfx pack/Explosion/Hit/Shockwave	rbxassetid://11536435403	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.12-0.17	rate=0.0	size=0.00:0.00 0.10:6.16 0.20:10.10 0.30:12.92 0.40:15.04 0.50:16.66 0.60:17.91 0.70:18.86 0.80:19.58 0.90:20.10 1.00:20.49	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/Spark	rbxassetid://8037777212	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.70-0.70	rate=31.0	size=0.00:8.27 0.21:33.74 1.00:0.00	squash=0.00:-1.00 1.00:-1.00
+P	vfx pack/Explosion/Hit/Spark	rbxassetid://8037777212	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.70-0.70	rate=31.0	size=0.00:8.27 0.21:33.74 1.00:0.00	squash=0.00:-1.00 1.00:-1.00
+P	vfx pack/Explosion/Hit/Specs	rbxassetid://9997556038	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=1.00-2.00	rate=40.0	size=0.00:0.00 0.25:4.58 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/Specs	rbxassetid://9997556038	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=1.00-2.00	rate=40.0	size=0.00:0.00 0.25:4.58 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/SpecsDark	rbxassetid://10632727506	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.20-0.30	rate=100.0	size=0.00:0.00 0.25:1.37 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/SpecsDark	rbxassetid://10632727506	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.20-0.30	rate=100.0	size=0.00:0.00 0.25:1.68 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/SpecsDark	rbxassetid://10632727506	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.45-0.80	rate=100.0	size=0.00:0.00 0.25:1.37 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/Star	http://www.roblox.com/asset/?id=4963436775	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.40-0.60	rate=10.0	size=0.00:0.98 0.54:2.73 0.69:2.40 0.75:1.15 0.84:2.62 0.90:0.98 0.96:1.09 1.00:0.00	squash=0.00:-1.68 0.50:0.00 0.75:3.00 0.87:-2.00 1.00:3.00
+P	vfx pack/Explosion/Hit/Wind	rbxassetid://10176632695	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.10-0.20	rate=60.0	size=0.00:0.00 0.30:17.19 1.00:29.22	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/Wind	rbxassetid://10176632695	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.20-0.30	rate=28.0	size=0.00:0.00 0.30:20.57 1.00:34.97	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/Wind1	rbxassetid://10553903882	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.25-0.25	rate=6.0	size=0.00:0.00 0.30:23.81 1.00:39.69	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Explosion/Hit/blue star 1	rbxassetid://10598374841	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.20-0.50	rate=100.0	size=0.00:0.00 0.29:0.31 0.36:13.00 0.66:0.31 1.00:0.00	squash=0.00:0.00 0.35:0.00 0.35:-1.00 0.36:1.00 0.37:-1.00 0.37:0.00 1.00:0.00
+P	vfx pack/Part/Line1	rbxassetid://8985611391	flip=Enum.ParticleFlipbookLayout.None	light=0.30	life=0.07-0.25	rate=100.0	size=0.00:1.00 1.00:1.00	squash=0.00:0.13 1.00:4.15
+P	vfx pack/Part/Line2	rbxassetid://9986395843	flip=Enum.ParticleFlipbookLayout.None	light=0.30	life=0.07-0.25	rate=100.0	size=0.00:3.00 1.00:3.00	squash=0.00:0.13 1.00:4.15
+P	vfx pack/Part/star	rbxassetid://10598374841	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.10-0.20	rate=100.0	size=0.00:5.00 1.00:5.00	squash=0.00:0.00 0.35:0.00 0.35:-1.00 0.36:1.00 0.37:-1.00 0.37:0.00 1.00:0.00
+P	vfx pack/Projectile/Main/Smoke	rbxassetid://11364555263	flip=Enum.ParticleFlipbookLayout.Grid8x8	light=0.00	life=1.00-2.00	rate=100.0	size=0.00:1.72 0.30:4.25 1.00:4.85	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Projectile/Main/Smoke	rbxassetid://11589526610	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.30-0.70	rate=100.0	size=0.00:0.34 0.30:1.15 1.00:1.15	squash=0.00:0.00 1.00:0.00
+P	vfx pack/Projectile/Main/Spark	rbxassetid://8037777212	flip=Enum.ParticleFlipbookLayout.None	light=0.50	life=0.70-0.70	rate=31.0	size=0.00:5.00 1.00:5.00	squash=0.00:-1.00 1.00:-1.00
+P	vfx pack/Projectile/Main/Spark	rbxassetid://8037777212	flip=Enum.ParticleFlipbookLayout.None	light=0.50	life=0.70-0.70	rate=31.0	size=0.00:5.00 1.00:5.00	squash=0.00:-1.00 1.00:-1.00
+T	vfx pack/Projectile/Trail	rbxassetid://9035707329	light=0.00
+P	vfx pack/f/Attachment/BLACKSHARDS	rbxassetid://12130244331	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.35-0.55	rate=25.0	size=0.00:1.35 1.00:0.51	squash=0.00:0.19 1.00:1.09
+P	vfx pack/f/Attachment/ParticleEmitter	rbxassetid://12318426603	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-1.25	rate=20.0	size=0.00:2.00 0.10:7.18 0.20:9.62 0.30:10.81 0.40:11.52 0.50:12.03 0.60:12.45 0.70:12.84 0.80:13.22 0.90:13.60 1.00:14.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/ParticleEmitter	rbxassetid://12318426603	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-1.25	rate=20.0	size=0.00:2.00 0.10:7.18 0.20:9.62 0.30:10.81 0.40:11.52 0.50:12.03 0.60:12.45 0.70:12.84 0.80:13.22 0.90:13.60 1.00:14.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/ParticleEmitter	rbxassetid://12318427204	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-1.25	rate=5.0	size=0.00:2.00 0.10:6.54 0.20:8.67 0.30:9.71 0.40:10.33 0.50:10.78 0.60:11.14 0.70:11.48 0.80:11.81 0.90:12.15 1.00:12.50	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/ParticleEmitter	rbxassetid://12318428585	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-1.25	rate=5.0	size=0.00:2.00 0.10:6.32 0.20:8.35 0.30:9.34 0.40:9.94 0.50:10.36 0.60:10.71 0.70:11.03 0.80:11.35 0.90:11.67 1.00:12.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/ParticleEmitter	rbxassetid://12318428842	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.50-0.50	rate=5.0	size=0.00:2.00 0.10:7.62 0.20:10.26 0.30:11.55 0.40:12.32 0.50:12.87 0.60:13.32 0.70:13.74 0.80:14.15 0.90:14.57 1.00:15.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/ParticleEmitter	rbxassetid://13520691285	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.75	rate=20.0	size=0.00:0.00 0.13:2.31 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/ParticleEmitter	rbxassetid://13520691450	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.75	rate=20.0	size=0.00:0.00 0.13:2.31 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/ParticleEmitter	rbxassetid://8121601945	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.50-0.75	rate=20.0	size=0.00:0.00 0.13:2.31 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/brightershards	rbxassetid://12130244331	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.25-0.35	rate=100.0	size=0.00:2.70 0.10:1.86 0.20:1.44 0.30:1.10 0.40:1.01 0.50:0.84 0.60:0.76 0.70:0.51 0.80:0.25 1.00:0.00	squash=0.00:0.97 0.25:0.23 1.00:0.29
+P	vfx pack/f/Attachment/crescentblack(4	rbxassetid://11948622097	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.55-1.50	rate=54.0	size=0.00:0.00 0.10:6.48 0.20:9.06 0.30:10.53 0.40:11.45 0.50:12.06 0.60:12.46 0.70:12.73 0.80:12.89 0.90:12.97 1.00:13.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/crescents	rbxassetid://12542784457	flip=Enum.ParticleFlipbookLayout.Grid4x4	light=0.00	life=0.65-0.85	rate=25.0	size=0.00:0.00 0.10:4.22 0.20:4.94 0.30:5.35 0.40:5.61 0.50:5.79 0.60:5.91 0.70:5.99 0.80:6.04 0.90:6.07 1.00:6.08	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/flash(1	rbxassetid://12761854004	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.15-0.15	rate=20.0	size=0.00:35.00 0.10:32.51 0.20:20.72 0.30:12.10 0.40:7.40 0.50:4.48 0.60:2.56 0.70:1.31 0.80:0.54 0.90:0.12 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/glow(1)	rbxassetid://12082081459	flip=Enum.ParticleFlipbookLayout.None	light=0.60	life=0.45-0.45	rate=2.0	size=0.00:0.00 0.10:10.29 0.20:11.29 0.30:11.72 0.40:11.93 0.50:12.05 0.60:12.11 0.70:12.14 0.80:12.15 0.90:12.15 1.00:12.16	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/ground1	rbxassetid://12118180335	flip=Enum.ParticleFlipbookLayout.None	light=0.00	life=0.75-0.75	rate=20.0	size=0.00:9.00 1.00:9.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/impact	rbxassetid://12761750436	flip=Enum.ParticleFlipbookLayout.Grid2x2	light=0.00	life=0.25-0.40	rate=25.0	size=0.00:0.00 0.10:4.58 0.20:5.92 0.30:6.72 0.40:7.25 0.50:7.60 0.60:7.84 0.70:7.99 0.80:8.07 0.90:8.10 1.00:8.10	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/impact2	rbxassetid://12761854004	flip=Enum.ParticleFlipbookLayout.None	light=1.00	life=0.20-0.20	rate=25.0	size=0.00:6.75 0.10:6.61 0.20:5.81 0.30:3.26 0.40:1.72 0.50:0.97 0.60:0.53 0.70:0.27 0.80:0.11 0.90:0.02 1.00:0.00	squash=0.00:0.00 1.00:0.00
+P	vfx pack/f/Attachment/rocks(14	rbxassetid://12111686783	flip=Enum.ParticleFlipbookLayout.Grid2x2	light=0.00	life=0.55-2.15	rate=100.0	size=0.00:0.75 0.30:0.44 1.00:0.00	squash=0.00:0.00 0.51:-0.04 1.00:0.00
