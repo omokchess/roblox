@@ -612,8 +612,8 @@ local function runStatusAndSkillEffects()
 	-- 출혈은 최대 체력의 5% → 200의 5% = 10
 	expect(tick.Physical == 10, "bleed must deal 5% of max health")
 	expect(tick.True == 10, "poison must deal its own value as true damage")
-	-- 화상은 수치%만큼 → 200의 10% = 20
-	expect(tick.Fire == 20, "burn must deal (value)% of max health as fire")
+	-- 화상은 최대 체력 × (3% + 0.1% × 수치)(2026-11-06) → 200 × 4% = 8
+	expect(tick.Fire == 8, "burn must deal (3% + 0.1% per stack) of max health as fire")
 	expect(dotStatus.Bleed == 2, "bleed must decay by 1")
 	expect(dotStatus.Poison == 7, "poison must decay by 3")
 	expect(dotStatus.Burn == 9, "burn must decay by 1")
@@ -629,6 +629,33 @@ local function runStatusAndSkillEffects()
 	BattleStatus.AddModifier(wardStatus, "DamageTaken", -0.5, 2, "테스트")
 	expect(BattleStatus.IncomingDamage(wardStatus, 100, "Physical") == 50, "damage-taken must scale physical damage")
 	expect(BattleStatus.IncomingDamage(wardStatus, 100, "True") == 100, "true damage must ignore modifiers")
+
+	--=== 피해 공식 (2026-11-06 사용자 확정, BattleStatus "피해 계산" 절) ===--
+	-- 손 계산 1: 스킬 20 · 무기 25(+100%) · 버프 +30%·카드 +20%(합 +50%) · 스킬 +20% · 받는 피해 +10% = 20×2×1.5×1.2×1.1 = 79.2
+	expect(math.abs(BattleStatus.Damage({ Skill = 20, Weapon = BattleStatus.WeaponRatio(25), Buffs = 0.3 + 0.2, Skills = 0.2, Def = 0.1 }) - 79.2) < 1e-9, "formula: all boxes multiply")
+	-- 손 계산 2: 치명타 = dmg × (2 + 치명타 피해량). 치명 피해 +50% → ×2.5. 같은 칸 안은 합 (버프 둘이 곱해지지 않는다)
+	expect(math.abs(BattleStatus.Damage({ Skill = 10, Buffs = 0.5, Crit = true, CritDamage = 0.5 }) - 10 * 1.5 * 2.5) < 1e-9, "formula: crit is 2 + crit damage")
+	expect(math.abs(BattleStatus.Damage({ Skill = 10, Crit = true }) - 20) < 1e-9, "formula: base crit is 200%")
+	-- 손 계산 3: 받는 피해량 칸에 [받는 피해량] +20% · 화염 저항 90% · 기름 +50% 가 모두 합산 → 1 + 0.2 + 0.5 − 0.9 = 0.8
+	local defStatus = BattleStatus.New()
+	BattleStatus.AddModifier(defStatus, "DamageTaken", 0.2, -1, "t")
+	BattleStatus.AddOil(defStatus, 3)
+	expect(math.abs(BattleStatus.TakenRatio(defStatus, "Fire", 0.9) - (-0.2)) < 1e-9, "def: taken + oil - resist are summed")
+	expect(math.abs(BattleStatus.Damage({ Skill = 100, Def = BattleStatus.TakenRatio(defStatus, "Fire", 0.9) }) - 80) < 1e-9, "def: fire vs 90% resist with oil and +20%")
+	expect(BattleStatus.TakenRatio(defStatus, "True", 0.9) == 0, "def: true damage ignores everything")
+	-- 맹독성 물질: 저항을 ignore 만큼 깎는다
+	expect(math.abs(BattleStatus.TakenRatio(BattleStatus.New(), "Fire", 0.9, 0.3) - (-0.6)) < 1e-9, "def: ignore lowers resist")
+	-- 다단히트: 보정 0 에서 총합은 옛 한 방 × 1.2
+	local BattleSkills = require(ReplicatedStorage.Shared.BattleSkills)
+	local sum = 0
+	for _, share in BattleSkills.HitShares({ HitWeights = { 4, 6 } } :: any) do
+		sum += share
+	end
+	expect(math.abs(sum - 1.2) < 1e-9, "multi-hit shares must total 1.2")
+	expect(#BattleSkills.HitShares({} :: any, 3) == 3 and #BattleSkills.HitShares({} :: any, 1) == 1, "repeats decide the hit count")
+	-- 화상·융해 (2026-11-06)
+	expect(math.abs(BattleStatus.BurnRatio(1) - 0.031) < 1e-9 and BattleStatus.BurnRatio(0) == 0, "burn: 3.1% at one stack")
+	expect(BattleStatus.MeltDamage(10, 4) == 20 and BattleStatus.MeltDamage(1000, 4) == 400, "melt: burn x melt / 2, capped at 100 per stack")
 
 	-- 기한이 다 되면 사라진다. -1은 전투 내내 남는다.
 	BattleStatus.AddModifier(wardStatus, "DamageDealt", 0.2, -1, "영구")
@@ -680,6 +707,8 @@ local function runStatusAndSkillEffects()
 		BattleStatus.Stack(musicAlly.Status, ClassResources.METER) == 1,
 		"the musician must start with 1 meter (passive)"
 	)
+	expect(BattleStatus.Stack(musicAlly.Status, ClassResources.QUARTER) == 2, "the musician must start with 2 quarter notes (2026-11-06 warm-up)")
+	BattleStatus.SpendAll(musicAlly.Status, ClassResources.QUARTER) -- 시작 음표를 비우고 스킬 효과만 본다(상한 4 에 걸리지 않게)
 	GridBattle.MoveAlly(musicBattle, 1, 2)
 	GridBattle.ResolveSkill(musicBattle, 1, "Success") -- 벨로체 → 4분음표 2 + 보호막
 	expect(BattleStatus.Stack(musicAlly.Status, ClassResources.QUARTER) == 2, "veloce must grant 2 quarter notes")
@@ -883,15 +912,15 @@ local function runStatusAndSkillEffects()
 	expect(BattleStatus.Stack(pilgrimFoe.Status, ClassResources.TETANUS) == 1, "nailing must apply 1 tetanus")
 	expect(BattleStatus.Stack(pilgrimFoe.Status, ClassResources.BRAND) == 1, "nailing must apply 1 brand")
 	expect(BattleStatus.Stack(pilgrimFoe.Status, ClassResources.SHOCK) == 1, "tetanus must give 1 shock per stack")
-	-- 파상풍: 주는 피해 ×0.8 / 스택, 10 이 되면 터지고 0 + 면역, 쇼크 3 이면 경련
+	-- 파상풍: 주는 피해 ×0.85 / 스택, 10 이 되면 터지고 0 + 면역, 쇼크 3 이면 경련
 	local st = BattleStatus.New()
 	expect(math.abs(BattleStatus.OutgoingDamage(st, 100) - 100) < 1e-9, "no tetanus = full damage")
 	BattleSkillEffects.ApplyTetanus(st, 2)
-	expect(math.abs(BattleStatus.OutgoingDamage(st, 100) - 64) < 1e-6, "tetanus 2 must multiply damage by 0.64")
+	expect(math.abs(BattleStatus.OutgoingDamage(st, 100) - 72.25) < 1e-6, "tetanus 2 must multiply damage by 0.85^2")
 	expect(BattleStatus.Stack(st, ClassResources.SPASM) == 0, "shock 2 must not spasm yet")
 	BattleSkillEffects.ApplyShock(st, 1)
 	expect(BattleStatus.Stack(st, ClassResources.SPASM) == 1, "shock 3 must give spasm")
-	expect(math.abs(BattleStatus.Total(st, "DamageTaken") - 0.24) < 1e-9, "shock must give 8% taken per stack")
+	expect(math.abs(BattleStatus.Total(st, "DamageTaken") - 0.18) < 1e-9, "shock must give 6% taken per stack")
 	expect(BattleSkillEffects.ApplyTetanus(st, 8) == true, "tetanus 10 must burst")
 	expect(BattleStatus.Stack(st, ClassResources.TETANUS) == 0, "tetanus must reset after burst")
 	expect(BattleSkillEffects.ApplyTetanus(st, 3) == false and BattleStatus.Stack(st, ClassResources.TETANUS) == 0, "tetanus immune after burst")

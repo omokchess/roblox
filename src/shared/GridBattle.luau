@@ -290,7 +290,7 @@ export type Encounter = {
 }
 
 local ALLY_ID = "player"
--- 적 치명타 기본 확률(배율은 아군과 같은 CRIT_MULTIPLIER)
+-- 적 치명타 기본 확률(배율은 아군과 같은 BattleStatus.CRIT_MULTIPLIER = 200%)
 local ENEMY_CRIT = 0.05
 
 --[[
@@ -299,9 +299,8 @@ local ENEMY_CRIT = 0.05
 ]]
 local makeEnv: (state: State) -> any
 
--- 치명타: 기본 확률 5%, 기본 배율 150%(키워드 사전 `CritDamage`: "150% + [치명타 피해량]%")
+-- 치명타: 기본 확률 5%, 기본 배율 200%(2026-11-02 사용자 공식 "dmg × (2 + crit_dmg/100)" — 옛 150%). 배율은 BattleStatus.CritMultiplier
 local CRIT_BASE = 0.05
-local CRIT_MULTIPLIER = 1.5
 
 -- 카드 훅을 쏜다(CardEffects 2판)
 local function fire(state: State, hook: string, ...: any): number
@@ -315,8 +314,7 @@ end
 
 -- 결정적 난수(카드·치명타). 선형 합동 — 같은 씨앗이면 같은 수열
 -- Park–Miller. 곱이 2^53 안에 머문다(예전 1103515245 곱은 double 정밀도를 넘어 수열이 무너졌다).
--- 연타 규칙: 한 대상이 n 번(n ≥ 2) 맞으면 한 방 피해 × MULTI_HIT_BONUS / n 씩(합 = 한 방 × 1.2)
-local MULTI_HIT_BONUS = 1.2
+-- 다단히트 규칙은 BattleSkills.HitShares (타마다 독립 타격, 타당 skill_base 를 낮춤)
 
 -- 조율자(FaithOnlyDamage)가 세는 [가하는 피해량] 출처 — 직업 자체 효과뿐(보정값 Source 이름)
 local FAITH_ONLY_SOURCES = { ["칠성"] = true, ["알카이드"] = true, ["미자르"] = true, ["핵융합 반응"] = true }
@@ -1909,20 +1907,17 @@ local function damageUnit(
 		return 0
 	end
 	local bossNow = if unit.Part then state.Boss else nil
-	if bossNow and bossNow.Overheat > 0 then
-		amount *= BOSS_OVERHEAT_TAKEN
-	end
-	local scaled = BattleStatus.IncomingDamage(unit.Status, amount, kind)
 	--[[
-		속성 저항(2026-10-04 리워크): 유닛 Resist[속성] 만큼 덜 받는다(디버그 화염 90%).
-		ignore = 연금술사 맹독성 물질(그가 건 화상의 BurnIgnore)만큼 합연산으로 뺀다 — 다른 직업 피해엔 없음.
+		받는 피해량(def, 2026-11-02 피해 공식): 맞는 쪽 보정을 **한 칸에 합산**한다 — [받는 피해량] 합 + 기름(화염 +50%) +
+		보스 과부하(+BOSS_OVERHEAT_TAKEN−1) − 속성 저항. 속성 저항(2026-10-04 리워크)은 유닛 Resist[속성](디버그 화염 90%).
+		ignore = 연금술사 맹독성 물질(그가 건 화상의 BurnIgnore)만큼 저항에서 뺀다 — 다른 직업 피해엔 없음.
 		화염 피해는 한 번에 FIRE_DAMAGE_CAP 까지만.
 	]]
-	local resist = (unit.Resist and unit.Resist[kind]) or 0
-	if resist > 0 then
-		resist = math.max(0, resist - (ignore or 0))
-		scaled *= 1 - resist
-	end
+	local overheat = if bossNow and bossNow.Overheat > 0 then BOSS_OVERHEAT_TAKEN - 1 else 0
+	local scaled = BattleStatus.Damage({
+		Skill = amount,
+		Def = BattleStatus.TakenRatio(unit.Status, kind, unit.Resist and unit.Resist[kind], ignore, overheat),
+	})
 	if kind == "Fire" then
 		scaled = math.min(scaled, FIRE_DAMAGE_CAP)
 	end
@@ -2442,7 +2437,7 @@ function GridBattle.ResolveSkill(
 	if skill.Damage > 0 and skillBonus > 0 then
 		--[[
 			스탯(사양 `### 스탯`): 근거리는 힘 5%·민첩 3%, 원거리는 지력 7% 가 피해에 붙는다.
-			치명타: 기본 5% + 운 0.7%/점 + 보정. 배율 150% + 운 1.2%/점 + 보정. 100% 넘는 확률은 배율로 넘긴다.
+			치명타: 기본 5% + 운 0.7%/점 + 보정. 배율 200% + 운 1.2%/점 + 보정(= 2 + 치명타 피해량). 100% 넘는 확률은 치명타 피해량으로 넘긴다.
 		]]
 		local stats = state.AllyStats
 		local statBonus = if skill.Range == "Ranged"
@@ -2451,23 +2446,24 @@ function GridBattle.ResolveSkill(
 		if faithOnly then
 			statBonus = ally.Faith * query(state, "FaithDamagePer", 0.02)
 		end
-		local base = BattleStatus.OutgoingDamage(
-			ally.Status,
-			(ally.Power + skill.Damage + info.Flat) * multiplier * skillBonus,
-			if faithOnly then FAITH_ONLY_SOURCES else nil
-		)
-			* math.max(0, 1 + info.Bonus + statBonus)
-			* math.max(0, info.Mult)
+		--[[
+			피해 공식(2026-11-02 사용자 지시, BattleStatus "피해 계산" 절) — 각 칸에 들어가는 것:
+			  스킬 기본 피해  skill.Damage + 카드의 기본 피해 +(info.Flat)
+			  무기            무기 공격력 × 4%(WeaponRatio) + 스탯 피해(힘·민첩·지력 / 조율자는 신앙심 2%) — 모두 캐릭터에 붙은 영구 몫
+			  가하는 피해량   상태 보정값 [가하는 피해량] 합(조율자는 직업 자체 출처만) + 카드·보스전 칸이 주는 info.Bonus + 카드의 대상별 BeforeHit 보정
+			  스킬 피해 증가  스킬 효과가 정하는 것: Before 가 돌려준 배율 − 1(소모 스택당 +N% …) + 대상별 TargetBonus(낙인·화상 스택당 …)
+			  공식 밖 곱연산  QTE 등급 multiplier · info.Mult(카드 "기본 피해량 60% 감소"·무료 스킬·적응형 패치) · 파상풍 0.8^n · 연타 분배 · 디버그 배율
+		]]
+		local weapon = BattleStatus.WeaponRatio(ally.Power) + statBonus
+		local buffs = BattleStatus.DealtBonus(ally.Status, if faithOnly then FAITH_ONLY_SOURCES else nil) + info.Bonus
+		local outside = multiplier * math.max(0, info.Mult) * BattleStatus.TetanusFactor(ally.Status)
 		if state.Debug and state.Debug.AllyDamageScale then
-			base *= state.Debug.AllyDamageScale
+			outside *= state.Debug.AllyDamageScale
 		end
 		local critChance = CRIT_BASE + BattleStatus.Total(ally.Status, "CritChance") + info.Crit + (stats.Luck or 0) * 0.007
-		local critMultiplier = CRIT_MULTIPLIER
-			+ BattleStatus.Total(ally.Status, "CritDamage")
-			+ info.CritDamage
-			+ (stats.Luck or 0) * 0.012
+		local critDamage = BattleStatus.Total(ally.Status, "CritDamage") + info.CritDamage + (stats.Luck or 0) * 0.012
 		if critChance > 1 then
-			critMultiplier += critChance - 1
+			critDamage += critChance - 1
 			critChance = 1
 		end
 		--[[
@@ -2477,24 +2473,10 @@ function GridBattle.ResolveSkill(
 		]]
 		-- 연타(2026-10-04): Before 가 context.Repeat 를 정하면 대상마다 그만큼 따로 때린다(펄서 수렴 — [공명] 수만큼).
 		-- 타격마다 치명타를 따로 굴리고 Hit 훅도 타격마다. 연출에는 대상마다 합친 피해 하나로 보낸다
-		-- 비율 연타(청의 검사 진 발도술 4/3/3): 대상마다 weights 수만큼, 한 방 × 1.2 × (그 비율 / 합)
-		local weights = skill.HitWeights
-		local weightSum = 0
-		for _, w in weights or {} do
-			weightSum += w
-		end
-		local repeats = if weights then #weights else math.max(1, math.floor(context.Repeat or 1))
-		--[[
-			연타 규칙(2026-10-04 사용자): 한 스킬에서 같은 대상이 여러 번 맞으면(공명 연타·여러 모션이 같은 대상을 다시 때림)
-			한 방의 최종 피해를 연타 수로 나누고 1.2 를 곱한 만큼씩 때린다 — 합은 한 방의 1.2배.
-			대상마다 맞는 횟수 = 그 대상이 든 모션 수 × 연타 수. 한 번만 맞는 대상은 그대로.
-		]]
-		local hitsOn: { [string]: number } = {}
-		for _, aliveHits in motionHitUnits do
-			for _, target in aliveHits do
-				hitsOn[target.Id] = (hitsOn[target.Id] or 0) + repeats
-			end
-		end
+		-- 다단히트(2026-11-06 사용자): 타 하나하나가 독립 타격 — 타마다 공식 전체와 치명타를 따로 받는다. 타 하나의 skill_base 는
+		-- 낮아져 있다(BattleSkills.HitShares: 보정 0 에서 총합 = 한 방 × 1.2). 모션 여러 개가 같은 대상을 때려도 나누지 않는다(모션마다 따로).
+		local shares = BattleSkills.HitShares(skill, math.floor(context.Repeat or 1))
+		local repeats = #shares
 		for index, aliveHits in motionHitUnits do
 			for _, target in aliveHits do
 				if not target.Alive then
@@ -2507,24 +2489,23 @@ function GridBattle.ResolveSkill(
 					end
 					local hitInfo = { Target = target, Skill = skill, Bonus = 0 }
 					fire(state, "BeforeHit", hitInfo)
-					-- 스킬이 대상마다 더하는 피해(낙인 스택당 등)
-					if effect and effect.TargetBonus then
-						hitInfo.Bonus += effect.TargetBonus(context, target)
-					end
-					local amount = base * math.max(0, 1 + hitInfo.Bonus)
-					local n = hitsOn[target.Id] or 1
-					if weights and weightSum > 0 then
-						amount *= MULTI_HIT_BONUS * weights[hitIndex] / weightSum * repeats / n
-					elseif n >= 2 then
-						amount *= MULTI_HIT_BONUS / n
-					end
+					-- 스킬이 대상마다 더하는 피해(낙인 스택당 등) — 스킬 피해 증가 칸. 카드의 대상별 보정(hitInfo.Bonus)은 가하는 피해량 칸
+					local targetBonus = if effect and effect.TargetBonus then effect.TargetBonus(context, target) else 0
 					local roll = if rng then rng() else nextRandom(state)
 					local crit = roll < critChance
 					if crit then
-						amount *= critMultiplier
 						crits += 1
 						anyCrit = true
 					end
+					local amount = BattleStatus.Damage({
+						Skill = (skill.Damage + info.Flat) * shares[hitIndex],
+						Weapon = weapon,
+						Buffs = buffs + hitInfo.Bonus,
+						Skills = skillBonus - 1 + targetBonus,
+						Mult = outside,
+						Crit = crit,
+						CritDamage = critDamage,
+					})
 					local dealt = damageUnit(state, target, amount, (skill.Element or "Physical") :: any, true)
 					total += dealt
 					sum += dealt
@@ -3523,9 +3504,9 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		Grade = grade,
 		Mult = 1,
 		AutoParry = BattleStatus.Total(ally.Status, "AutoParry"),
-		-- 적 치명타: 기본 5% · 150%. 카드가 끈다(Crit = 0)거나 배율을 깎는다.
+		-- 적 치명타: 기본 5% · 200%(= 2 + 적의 치명타 피해량). 카드가 끈다(Crit = 0)거나 배율을 깎는다.
 		Crit = ENEMY_CRIT + BattleStatus.Total(enemy.Status, "CritChance"),
-		CritMult = CRIT_MULTIPLIER,
+		CritMult = BattleStatus.CritMultiplier(BattleStatus.Total(enemy.Status, "CritDamage")),
 	}
 	if state.Boss and (state.Boss.Tester or 0) > 0 then
 		before.Mult *= TESTER_IN
@@ -3582,15 +3563,17 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	if callisto then
 		base, fixed = callistoBase(callisto, ally, skill)
 	end
-	-- 적에게 걸린 주는 피해 보정(광신·섬광·중력)을 먹인다. 보스는 보스 버프(감시식·오버클럭·커널 모드)도
-	local incoming = BattleStatus.OutgoingDamage(enemy.Status, base * multiplier)
-	-- 공격 자체의 위력(회피·막기·치명·보호막·무적을 따지기 전) — 조율자 두베가 "14 이상의 피해"를 이것으로도 센다
-	local raw = BattleStatus.OutgoingDamage(enemy.Status, base * math.max(0, before.Mult))
+	--[[
+		피해 공식(2026-11-02, BattleStatus "피해 계산" 절)을 적도 같이 쓴다: 스킬 기본 피해 = 공격력 + 스킬 피해, 무기·스킬 칸은 없다.
+		가하는 피해량 칸 = 적에게 걸린 주는 피해 보정(광신·섬광·중력) + 보스 버프(감시식·오버클럭·커널 모드). 공식 밖 곱연산 = 파상풍 ·
+		받는 쪽 배율(회피 등급·카드·검수·버프 칸·치명타). 받는 피해량(def)은 damageUnit 이 맞는 아군 쪽 것을 넣는다.
+	]]
 	local boss = if enemy.Part then state.Boss else nil
-	if boss then
-		incoming *= 1 + bossBuffTotal(boss, "Damage")
-		raw *= 1 + bossBuffTotal(boss, "Damage")
-	end
+	local buffs = BattleStatus.DealtBonus(enemy.Status) + (if boss then bossBuffTotal(boss, "Damage") else 0)
+	local tetanusMult = BattleStatus.TetanusFactor(enemy.Status)
+	local incoming = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = multiplier * tetanusMult })
+	-- 공격 자체의 위력(회피·막기·치명·보호막·무적을 따지기 전) — 조율자 두베가 "14 이상의 피해"를 이것으로도 센다
+	local raw = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = math.max(0, before.Mult) * tetanusMult })
 	local element: BattleStatus.Element = "Physical"
 	if skill.HpRatio then
 		-- 체퍼댐(궁극기): 지금 체력의 비율. 버프 칸·검수 배율은 안 먹는다(받는 쪽 등급·패리만)
@@ -3617,7 +3600,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	end
 	local parryBack = 0
 	if parried and enemy.Alive then
-		local full = BattleStatus.OutgoingDamage(enemy.Status, base * math.max(0, before.Mult))
+		local full = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = math.max(0, before.Mult) * tetanusMult })
 		parryBack = damageUnit(state, enemy, full * PARRY_REFLECT, "Physical", true)
 	end
 
@@ -3884,7 +3867,7 @@ function GridBattle.EndTurn(state: State)
 	end
 
 	--[[
-		[융해](조율자, 특수 화상): (수치 × 3) 화상을 얻고 (수치 × 100) 고정 피해를 받은 뒤 사라진다.
+		[융해](조율자, 특수 화상): (수치 × 3) 화상을 얻고 (화상 수치 × 융해 수치 ÷ 2, 최대 융해 × 100) 고정 피해를 받은 뒤 사라진다(2026-11-06).
 		2026-10-25 사용자: ×1000 그대로, 이 효과로는 죽지 않음 → 2026-10-28 사용자: ×100 으로 너프. 보스 부위는 다른 지속 피해와 같은 BOSS_DOT_CUT(지금 0)을 받는다.
 		먼저 전부 걷고 나서 터뜨린다 — 옮겨 붙는 카드(적색거성)가 남의 융해를 같은 턴에 또 터뜨리지 않게, 순서도 Id 순.
 	]]
@@ -3898,7 +3881,8 @@ function GridBattle.EndTurn(state: State)
 	for _, entry in melting do
 		local unit, melt = entry.Unit, entry.Melt
 		BattleStatus.AddBurn(unit.Status, melt * 3)
-		local burst = melt * 100 * (if unit.Part then 1 - BOSS_DOT_CUT else 1)
+		-- 2026-11-06 사용자: (대상의 화상 수치 × 융해 수치) ÷ 2, 융해 1당 최대 100. 화상은 이번에 얹은 melt × 3 까지 센다
+		local burst = BattleStatus.MeltDamage(unit.Status.Burn, melt) * (if unit.Part then 1 - BOSS_DOT_CUT else 1)
 		local dealt = damageUnit(state, unit, burst, "True", false)
 		pushLog(state, string.format("%s — 융해 %d 폭발 (%d 피해 · 화상 +%d)", unit.Name, melt, dealt, melt * 3))
 		fire(state, "MeltBurst", { Target = unit, Melt = melt, Damage = dealt })

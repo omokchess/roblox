@@ -316,7 +316,7 @@ M.Alchemist_R_Accelerant = {
 		local count = 0
 		for _, enemy in H.Enemies(c) do
 			if enemy.Status.Oil > 0 and enemy.Status.Burn > 0 then
-				local tick = math.floor(enemy.MaxHealth * enemy.Status.Burn / 100)
+				local tick = math.floor(enemy.MaxHealth * BattleStatus.BurnRatio(enemy.Status.Burn))
 				c.Rt.Env.Damage(enemy, tick * c.P(1), "Fire", false, enemy.Status.BurnIgnore)
 				count += 1
 			end

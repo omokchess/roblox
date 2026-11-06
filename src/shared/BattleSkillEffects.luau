@@ -414,7 +414,8 @@ local quasarEffects: { [string]: Effect } = {
 			local counted = math.min(spent, 20)
 			ctx.Log(string.format("특이점 %d단계 — 질량 %d 소모 (피해 +%d%%)", tier, spent, math.floor(counted * per * 100 + 0.5)))
 			-- 딜탱 계수 0.5(2026-10-03: 너프 뒤에도 풀세팅 38만으로 버서커 주력기와 같았다)
-			return 0.5 * (1 + counted * per) * (power + base) / math.max(1, power + 10)
+			-- 2026-11-06 피해 공식: 스킬 피해 10 에 무기가 %로 곱해지므로 옛 평면 합 (power + base) 을 (10 × (1 + 무기%)) 로 나눠 같은 값을 낸다
+			return 0.5 * (1 + counted * per) * (power + base) / (10 * (1 + BattleStatus.WeaponRatio(power)))
 		end,
 	},
 
@@ -606,9 +607,9 @@ end
 --[[
 	2026-10-04 월 필그림 리워크 — 적에게 거는 스택 디버프. 한 곳에서 건다(스킬·카드 공용).
 	  [낙인]   스택(최대 20) + 받는 회복 −50%(보정값 "낙인", 3턴). 갈라진 신도·합창이 스택당 피해 +5%.
-	  [파상풍] 최대 10. 수치 1당 주는 피해 ×0.8(BattleStatus.OutgoingDamage)·스킬 실패 5%(GridBattle ResolveDodge).
+	  [파상풍] 최대 10. 수치 1당 주는 피해 ×0.85(BattleStatus.OutgoingDamage)·스킬 실패 5%(GridBattle ResolveDodge).
 	           걸릴 때 수치 1당 [쇼크] 1. 10 이 되면 최대 체력 10% 피해 → 0 으로, 2턴 면역. 매 턴 수치만큼 [출혈] 받고 1 줄어듦.
-	  [쇼크]   최대 10. 수치 1당 받는 피해 +8%(보정값 "쇼크", 3턴 — 다시 걸리면 갱신). 수치가 3 이상이면 [경련].
+	  [쇼크]   최대 10. 수치 1당 받는 피해 +6%(보정값 "쇼크", 3턴 — 다시 걸리면 갱신). 수치가 3 이상이면 [경련].
 	  [경련]   최대 1. 걸린 턴에 스킬을 쓰면 최대 체력 3% 피해·그로기 게이지 10%. 턴이 끝나면 사라지고 3턴 면역.
 ]]
 local function immune(status: BattleStatus.State, id: string): boolean
@@ -659,7 +660,7 @@ function BattleSkillEffects.ApplyShock(status: BattleStatus.State, stacks: numbe
 	end
 	local now = BattleStatus.AddStack(status, R.SHOCK, math.floor(stacks), ClassResources.Cap(R.SHOCK))
 	BattleStatus.RemoveBySource(status, "쇼크")
-	BattleStatus.AddModifier(status, "DamageTaken", 0.08 * now, 3, "쇼크")
+	BattleStatus.AddModifier(status, "DamageTaken", BattleStatus.SHOCK_PER_STACK * now, 3, "쇼크")
 	if now >= 3 then
 		BattleSkillEffects.ApplySpasm(status)
 	end
@@ -1417,7 +1418,7 @@ local attunerEffects: { [string]: Effect } = {
 				for _, target in ctx.Targets do
 					local burn = ctx.StatusOf(target).Burn or 0
 					if target.Alive and burn > 0 then
-						local dealt = ctx.Damage(target, math.floor(target.MaxHealth * burn / 100), "Fire", true)
+						local dealt = ctx.Damage(target, math.floor(target.MaxHealth * BattleStatus.BurnRatio(burn)), "Fire", true)
 						ctx.Log(string.format("화상 발동 %d%% — %d 피해", burn, dealt))
 					end
 				end

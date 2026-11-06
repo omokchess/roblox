@@ -127,7 +127,7 @@ export type Skill = {
 		2026-10-25 조건부 직업(조율자·청의 검사)이 쓰는 칸.
 		  Stamina           스테미나(비우면 1·2·3번 10·15·20, 강화 25)
 		  HealthForStamina  스테미나가 모자라면 모자란 만큼 체력으로 낸다(이 효과로는 죽지 않음 — 셉텐트리오네스)
-		  HitWeights        한 대상을 이 비율로 나눠 연타(진 발도술 4/3/3). 합은 연타 규칙대로 한 방의 1.2배
+		  HitWeights        한 대상을 이 비율로 나눠 연타(진 발도술 4/6). 타마다 독립 타격, 타당 skill_base = Damage × 1.2 × 몫(HitShares)
 		  MaxTargets        범위 안에서 가까운 적부터 이만큼만 벤다(진 발도술 1, 발도술의 절정 4)
 		  Element           피해 속성. "True" = 받는 피해 보정·저항 무시(공간의 이해)
 	]]
@@ -640,7 +640,7 @@ local classSkills: { [string]: { Skill } } = {
 			Shape = { Kind = "Line", Radius = 1 , Cells = { { X = 1, Y = 1 }, { X = 2, Y = 1 }, { X = 3, Y = 1 }, { X = 4, Y = 1 }, { X = 5, Y = 1 }, { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 }, { X = 0, Y = -1 }, { X = 1, Y = -1 }, { X = 2, Y = -1 }, { X = 3, Y = -1 }, { X = 4, Y = -1 }, { X = 5, Y = -1 }, { X = -1, Y = -1 }, { X = -2, Y = -1 }, { X = -3, Y = -1 }, { X = -3, Y = 1 }, { X = -2, Y = 1 }, { X = -1, Y = 1 }, { X = 0, Y = 1 }, { X = -1, Y = 0 }, { X = -2, Y = 0 }, { X = -3, Y = 0 } } , TargetSide = "Ally" },
 		},
 		{
-			Id = "Crescendo", Cooldown = 6,
+			Id = "Crescendo", Cooldown = 3, -- 2026-11-06 사용자: 크레셴도 쿨타임 3턴 정도로(옛 6)
 			Name = "크레셴도",
 			Description = "- [음표] 1개당 [가하는 피해량] +3%.\n- 사용 후 16분음표 1개 획득.\n- [음표]가 최대치라면 대신 아래로 동작함.\n  - 보유 [음표]를 전부 초기화.\n  - 음표 1개당 [가하는 피해량]이 +4%가 됨.\n  - 사용 후 [박자표] 값이 1 증가.",
 			Damage = 26,
@@ -677,9 +677,9 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "TripleThrust", Cooldown = 4,
 			Name = "찔러찔러또찔러",
-			Description = "- 대상에게 [출혈] 3 부여.\n- 사용 후 3턴 간 [회피 시간] +(2.5×[집중])%.\n- [집중] 1 획득.\n- 피해량: 15를 3연타로 나눔(합은 한 방의 1.2배).",
-			-- 2026-10-04 연타 규칙(GridBattle MULTI_HIT_BONUS): 한 방 22 를 세 번에 나눠 × 1.2
-			Damage = 15, -- 2026-10-30 사용자: 강화 스킬 최대 70 기준 결투사 전체 ×0.65(옛 22)
+			Description = "- 대상에게 [출혈] 3 부여.\n- 사용 후 3턴 간 [회피 시간] +(2.5×[집중])%.\n- [집중] 1 획득.\n- 피해량: 6의 독립 타격 3연타(보정 0 에서 합은 옛 한 방 15의 1.2배).",
+			-- 2026-10-04 연타 규칙: 한 방 22 를 세 번에 나눠 × 1.2. 2026-11-06 다단히트 개정: 모션마다 독립 타격이라 타당 15 × 1.2 / 3 = 6
+			Damage = 6, -- 2026-10-30 사용자: 강화 스킬 최대 70 기준 결투사 전체 ×0.65(옛 22)
 			Range = "Melee",
 			Shape = { Kind = "Line", Radius = 3 , Cells = { { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, Motions = { { Kind = "Single", Cells = { { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, { Kind = "Single", Cells = { { X = 5, Y = 0 }, { X = 4, Y = 0 }, { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } } } },
 		{
@@ -735,7 +735,7 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "Converge", Cooldown = 2,
 			Name = "수렴",
-			Description = "- 보유한 [공명] 수 만큼 나눠 연타함(합은 한 방의 1.2배).\n- [공명]을 보유하지 않은 경우 한 번의 피해를 가함.\n- QTE 성공 시 [가하는 피해량] + 20%.\n- QTE 성공 시 [감극] 1 추가 부여.",
+			Description = "- 보유한 [공명] 수 만큼 연타함(타마다 독립 타격, 보정 0 에서 합은 한 방의 1.2배).\n- [공명]을 보유하지 않은 경우 한 번의 피해를 가함.\n- QTE 성공 시 [가하는 피해량] + 20%.\n- QTE 성공 시 [감극] 1 추가 부여.",
 			Damage = 18,
 			Range = "Ranged",
 			Shape = { Kind = "Line", Radius = 4 , Cells = { { X = 3, Y = 0 }, { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } },
@@ -1130,6 +1130,38 @@ function BattleSkills.AllShapes(skill: Skill): { BattleGrid.Shape }
 		table.insert(shapes, motion)
 	end
 	return shapes
+end
+
+--[[
+	다단히트(2026-11-06 사용자: "각 타마다 피해량 증가를 받게 하자. 각각이 개별된 타격인거지"):
+	한 대상을 여러 번 때리는 스킬은 타 하나하나가 **독립 타격**이다 — 타마다 피해 공식 전체(버프·스킬·받는 피해·치명)를 따로 받는다.
+	대신 타 하나의 skill_base 를 낮춘다: 보정 0 에서 총합이 옛 규칙(한 방 × 1.2)과 같도록 `Damage × MULTI_HIT_TOTAL × (그 타의 몫)`.
+	  HitWeights   타 수 = 항목 수, 몫 = 비율 / 합 (진 발도술 4:6 · 메라크 10:2:2:2:2:4 …)
+	  repeats ≥ 2  가변 연타(펄서 수렴 — [공명] 수): 몫 = 1 / repeats
+	  그 밖         한 타, 몫 1 (모션 여러 개인 스킬은 모션마다 `Damage` 가 그 모션 한 타의 몫)
+]]
+BattleSkills.MULTI_HIT_TOTAL = 1.2
+
+-- 타마다 skill_base 에 곱할 몫 목록(길이 = 타 수)
+function BattleSkills.HitShares(skill: Skill, repeats: number?): { number }
+	local shares = {}
+	local weights = skill.HitWeights
+	if weights then
+		local sum = 0
+		for _, w in weights do
+			sum += w
+		end
+		for _, w in weights do
+			table.insert(shares, BattleSkills.MULTI_HIT_TOTAL * w / sum)
+		end
+	elseif (repeats or 1) >= 2 then
+		for _ = 1, repeats :: number do
+			table.insert(shares, BattleSkills.MULTI_HIT_TOTAL / (repeats :: number))
+		end
+	else
+		shares[1] = 1
+	end
+	return shares
 end
 
 -- 적이 고르는 스킬 목록.

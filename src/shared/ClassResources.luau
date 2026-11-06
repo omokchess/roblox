@@ -249,12 +249,12 @@ end
 --[[
 	전투를 시작할 때 들고 있는 자원. `유저 아이디어(직업).md`의 패시브에서 왔다.
 
-	  음악가   전투 시작 시 박자표를 1 얻는다
+	  음악가   전투 시작 시 박자표를 1, 4분음표 2개를 얻는다(2026-11-06 예열 단축 — 크레셴도 최대치 4개의 절반에서 출발)
 	  연금술사 전투 시작 시 약재 3, 빈 병 5
 ]]
 function ClassResources.StartingStacks(classId: string): { [string]: number }
 	if classId == "Musician" then
-		return { [ClassResources.METER] = 1 }
+		return { [ClassResources.METER] = 1, [ClassResources.QUARTER] = 2 }
 	elseif classId == "Alchemist" then
 		return { [ClassResources.HERB] = 3, [ClassResources.EMPTY_BOTTLE] = 5 }
 	end

@@ -54,7 +54,7 @@ local KITS: { [string]: ClassKit } = {
 			{
 				Id = "Musician_Downbeat",
 				Name = "첫 박",
-				Description = "전투 시작 시 [박자표]를 1 얻음.",
+				Description = "전투 시작 시 [박자표]를 1, 4분음표 2개를 얻음.",
 			},
 		},
 	},
