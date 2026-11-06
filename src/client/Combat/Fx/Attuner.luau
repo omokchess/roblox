@@ -49,6 +49,29 @@ local NAMES = {
 	{ "DUBHE", "두베" },
 }
 
+-- 팩 플립북 그림(모두 Grid4x4 — tools/combat/out/vfx_textures.tsv). 2026-11-06 100배 고급화: 플립북 + 팩 묶음을 기존 선·잔상 위에 겹친다
+local TEX = {
+	Slash = "rbxassetid://16939611858",
+	Impact = "rbxassetid://16923007448",
+	Hit = "rbxassetid://16678929169",
+	Smoke = "rbxassetid://14006773822",
+	Wind = "rbxassetid://14595543880",
+	Break = "rbxassetid://15514662196",
+	Energy = "rbxassetid://15041986621",
+	Light = "rbxassetid://16664675233",
+	Flash = "rbxassetid://11372772717",
+	Shock = "rbxassetid://16477162837",
+	Explosion = "rbxassetid://11395089850",
+}
+-- 플립북 한 장(Vfx.Flipbook 이 아직 없으면 조용히 건너뛴다)
+local function fb(Vfx: any, at: any, o: { [string]: any })
+	if Vfx.Flipbook then
+		o.Layout = o.Layout or "Grid4x4"
+		o.Mode = o.Mode or "OneShot"
+		Vfx.Flipbook(at, o)
+	end
+end
+
 local Fx = {}
 
 -- 배우마다 한 번의 시전 동안 쓰는 기억(남은 선 · 레이저 자리 · 카메라 자리)
@@ -449,6 +472,7 @@ function Fx.StarTwinkle(ctx: any)
 			local p = ctx.Star(i)
 			ctx.Vfx.Flash(p, { Color = PALE, Size = 0.9, Life = 0.3, Brightness = 4 })
 			ctx.Vfx.Sparks(p, { Color = WHITE, Count = 2, Speed = 2, Accel = Vector3.new(0, 1.5, 0) })
+			fb(ctx.Vfx, p, { Texture = TEX.Flash, Size = 2.4, Color = PALE, Life = 0.35, LightEmission = 1, Transparency = 0.5 })
 		end)
 	end
 end
@@ -460,6 +484,8 @@ function Fx.Touchdown(ctx: any)
 	ctx.Vfx.Ring(CFrame.new(feet + Vector3.new(0, 0.12, 0)), { R0 = 0.5, R1 = 4, Color = STAR, Life = 0.5, Width = 0.18, Height = 0.05 })
 	ctx.Vfx.Ring(CFrame.new(feet + Vector3.new(0, 0.14, 0)), { R0 = 0.3, R1 = 2.4, Color = WHITE, Life = 0.4, Width = 0.1, Height = 0.05 })
 	ctx.Vfx.Sparks(feet + Vector3.new(0, 0.3, 0), { Color = PALE, Count = 10, Accel = Vector3.new(0, 4, 0) })
+	fb(ctx.Vfx, feet + Vector3.new(0, 0.3, 0), { Texture = TEX.Shock, Size = 8, Color = STAR, Life = 0.45, LightEmission = 0.9, Transparency = 0.45 })
+	ctx.Vfx.Pack("Loose/Sparkles", CFrame.new(feet + Vector3.new(0, 0.8, 0)), { Color = PALE, Size = 0.5 })
 end
 
 function Fx.StarShield(ctx: any)
@@ -467,12 +493,17 @@ function Fx.StarShield(ctx: any)
 	local cf = CFrame.lookAt(front, front + ctx.Forward)
 	ctx.Vfx.Ring(cf, { R0 = 0.5, R1 = 2.6, Color = STAR, Life = 0.5, Width = 0.22, Facing = true })
 	ctx.Vfx.Ring(cf, { R0 = 0.3, R1 = 1.6, Color = WHITE, Life = 0.35, Width = 0.12, Facing = true })
+	-- 별 방패: 별빛 방패가 깨졌다 맺히는 플립북
+	fb(ctx.Vfx, front, { Texture = TEX.Break, Size = 6, Color = STAR, Life = 0.4, LightEmission = 0.9, Transparency = 0.4 })
+	ctx.Vfx.Pack("Anime/Shield-01", cf, { Color = STAR, Size = 0.4 })
 end
 
 function Fx.StarBlink(ctx: any)
 	local at = ctx.Root.Position
 	ctx.Vfx.Flash(at, { Color = PALE, Size = 6, Life = 0.25, Brightness = 4 })
 	ctx.Vfx.Burst(at, { Count = 10, Color = WHITE, Size = 0.18, Speed = 8, Gravity = 0, Life = 0.4 })
+	fb(ctx.Vfx, at, { Texture = TEX.Energy, Size = 5, Color = PALE, Life = 0.35, LightEmission = 1, Transparency = 0.45 })
+	ctx.Vfx.Pack("Loose/Flare", CFrame.new(at), { Color = PALE, Size = 0.4 })
 end
 
 function Fx.Meditate(ctx: any)
@@ -491,6 +522,7 @@ function Fx.StarScatter(ctx: any)
 		local off = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-0.6, 1), rng:NextNumber(-1, 1)).Unit * rng:NextNumber(0.4, 0.9)
 		local t = 0
 		ctx.Vfx.Flash(from, { Color = PALE, Size = 0.8, Life = 0.2, Brightness = 3 })
+		fb(ctx.Vfx, from, { Texture = TEX.Hit, Size = 1.8, Color = PALE, Life = 0.25, LightEmission = 1, Transparency = 0.4 })
 		weapons:Drive(i, function(dt: number): Vector3?
 			t += dt
 			if t >= 0.45 then
@@ -512,6 +544,8 @@ function Fx.TeleGrab(ctx: any, ev: any)
 		ripple(ctx, p, 0.8)
 		ctx.Vfx.Flash(p, { Color = STAR, Size = 1.6, Life = 0.25, Brightness = 4 })
 	end)
+	-- 염동력: 손끝에 별빛이 모이는 플립북
+	fb(ctx.Vfx, ctx.Hand("R"), { Texture = TEX.Energy, Size = 3, Color = STAR, Life = 0.3, LightEmission = 1, Transparency = 0.4 })
 end
 
 function Fx.StarHit(ctx: any, _ev: any, at: Vector3?)
@@ -519,6 +553,11 @@ function Fx.StarHit(ctx: any, _ev: any, at: Vector3?)
 	ctx.Vfx.Flash(p, { Color = STAR, Size = 5, Life = 0.25, Brightness = 4 })
 	ctx.Vfx.Sparks(p, { Color = WHITE, Count = 12, Speed = 16 })
 	ctx.Vfx.Burst(p, { Count = 5, Color = MELT, Size = 0.2, Speed = 9, Gravity = 10, Life = 0.45 })
+	-- 별 타격: 별 폭발 임팩트 + 분홍 융해 번짐 + 별가루
+	fb(ctx.Vfx, p, { Texture = TEX.Impact, Size = 6, Color = STAR, Life = 0.32, LightEmission = 1, Transparency = 0.3 })
+	fb(ctx.Vfx, p, { Texture = TEX.Hit, Size = 3.5, Color = WHITE, Life = 0.22, LightEmission = 1, Transparency = 0.35 })
+	fb(ctx.Vfx, p, { Texture = TEX.Energy, Size = 5, Color = MELT, Life = 0.4, LightEmission = 0.8, Transparency = 0.6 })
+	ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(p), { Color = PALE, Size = 0.4 })
 end
 
 --=== 메그레즈 ===--
@@ -532,9 +571,11 @@ function Fx.MegrezFling(ctx: any)
 	end } }, 0.3)
 	task.delay(0.1, function()
 		ctx.Vfx.Flash(a, { Color = STAR, Size = 3, Life = 0.2, Brightness = 5 })
+		fb(ctx.Vfx, a, { Texture = TEX.Energy, Size = 4, Color = STAR, Life = 0.3, LightEmission = 1, Transparency = 0.4 })
 	end)
 	task.delay(0.28, function()
 		line(ctx, a, b, STAR, 0.5, 0.4)
+		fb(ctx.Vfx, b, { Texture = TEX.Shock, Size = 5, Color = STAR, Life = 0.35, LightEmission = 0.9, Transparency = 0.45 })
 	end)
 end
 
@@ -546,6 +587,7 @@ function Fx.MerakDash(ctx: any)
 	local a, b = rowEnds(ctx, 1.4)
 	s.merakDone = {}
 	ripple(ctx, ctx.Hand("R"), 1.4)
+	fb(ctx.Vfx, a, { Texture = TEX.Energy, Size = 4, Color = PALE, Life = 0.3, LightEmission = 1, Transparency = 0.4 })
 	fly(ctx, 2, { { 0.09, a }, { 0.2, b }, { 0.3, b }, { 0.4, function()
 		return fingertip(ctx)
 	end } }, 0.32)
@@ -559,6 +601,8 @@ function Fx.MerakPass(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	ctx.Vfx.Flash(p, { Color = WHITE, Size = 5, Life = 0.2, Brightness = 5 })
 	ctx.Vfx.Sparks(p, { Color = STAR, Count = 12, Speed = 18 })
+	fb(ctx.Vfx, p, { Texture = TEX.Slash, Size = 6, Color = PALE, Life = 0.22, LightEmission = 1, Transparency = 0.3 })
+	fb(ctx.Vfx, p, { Texture = TEX.Hit, Size = 3.5, Color = WHITE, Life = 0.2, LightEmission = 1, Transparency = 0.35 })
 end
 
 -- 2~5타: 남은 선 위 무작위 자리가 번쩍 터진다 · 6타(마지막): 선이 통째로 터진다. 대상이 여럿이어도 타격 하나에 한 번(타격 번호로 가린다)
@@ -571,11 +615,22 @@ function Fx.MerakBurst(ctx: any, ev: any, at: Vector3?)
 		if i >= 6 then
 			obj.Burst()
 			ctx.Vfx.Flash(obj.A:Lerp(obj.B, 0.5), { Color = WHITE, Size = 10, Life = 0.35, Brightness = 6 })
+			-- 마지막 통째 폭발: 별 폭발 · 성운(번지는 푸른 구름) · 선 따라 연달아 터지는 불꽃
+			local mid = obj.A:Lerp(obj.B, 0.5)
+			fb(ctx.Vfx, mid, { Texture = TEX.Explosion, Size = 14, Color = STAR, Life = 0.5, LightEmission = 0.9, Transparency = 0.4 })
+			fb(ctx.Vfx, mid, { Texture = TEX.Energy, Size = 12, Color = PALE, Life = 0.7, LightEmission = 0.9, Transparency = 0.55 })
+			ctx.Vfx.Pack("Loose/Rays", CFrame.new(mid), { Color = PALE, Size = 0.5 })
+			for k = 0, 6 do
+				task.delay(k * 0.03, function()
+					fb(ctx.Vfx, obj.A:Lerp(obj.B, k / 6), { Texture = TEX.Hit, Size = 4, Color = WHITE, Life = 0.25, LightEmission = 1, Transparency = 0.4 })
+				end)
+			end
 			for k = 0, 6 do
 				ctx.Vfx.Burst(obj.A:Lerp(obj.B, k / 6), { Count = 5, Colors = { STAR, WHITE }, Size = 0.2, Speed = 10, Gravity = 6, Life = 0.5 })
 			end
 		else
 			obj.Flare(obj.A:Lerp(obj.B, 0.1 + 0.8 * math.random()))
+			fb(ctx.Vfx, obj.A:Lerp(obj.B, 0.1 + 0.8 * math.random()), { Texture = TEX.Hit, Size = 3, Color = PALE, Life = 0.22, LightEmission = 1, Transparency = 0.4 })
 		end
 	end
 	if at then
@@ -704,11 +759,13 @@ function Fx.AliothStrike(ctx: any, ev: any, at: Vector3?)
 		s.aliothPath = { From = ctx.Star(3), To = to, T = 0, D = d }
 		task.delay(d, function()
 			ctx.Vfx.Flash(to, { Color = STAR, Size = 3, Life = 0.2, Brightness = 5 })
+			fb(ctx.Vfx, to, { Texture = TEX.Energy, Size = 3.5, Color = STAR, Life = 0.25, LightEmission = 1, Transparency = 0.4 })
 		end)
 	end
 	if at then
 		ctx.Vfx.Flash(at, { Color = WHITE, Size = 3, Life = 0.16, Brightness = 4 })
 		ctx.Vfx.Sparks(at, { Color = STAR, Count = 6, Speed = 14 })
+		fb(ctx.Vfx, at, { Texture = TEX.Slash, Size = 5, Color = PALE, Life = 0.2, LightEmission = 1, Transparency = 0.35, Rotation = math.random(-60, 60) })
 	end
 end
 
@@ -1012,6 +1069,7 @@ function Fx.SeptRise(ctx: any, ev: any)
 	ripple(ctx, ctx.Hand("R"), 2)
 	for i = 1, 7 do
 		ctx.Vfx.Flash(ctx.Star(i), { Color = STAR, Size = 1.6, Life = 0.3, Brightness = 4 })
+		fb(ctx.Vfx, ctx.Star(i), { Texture = TEX.Energy, Size = 3, Color = STAR, Life = 0.4, LightEmission = 1, Transparency = 0.45 })
 	end
 	local from = camNow(s)
 	local r = ctx.Forward:Cross(Vector3.yAxis)
@@ -1101,6 +1159,7 @@ function Fx.SeptLaser(ctx: any, ev: any)
 	local star = ctx.Star(i)
 	local cam = workspace.CurrentCamera
 	ctx.Vfx.Implode(star, { Color = PALE, Radius = 4, Count = 10, Life = AIM })
+	fb(ctx.Vfx, star, { Texture = TEX.Energy, Size = 5, Color = PALE, Life = AIM + 0.1, LightEmission = 1, Transparency = 0.4 })
 	ctx.Vfx.Ring(CFrame.lookAt(star, if cam then cam.CFrame.Position else star + ctx.Forward), {
 		R0 = 3,
 		R1 = 0.3,
@@ -1114,9 +1173,14 @@ function Fx.SeptLaser(ctx: any, ev: any)
 		sept.Pulse += 1
 		grade(ctx, LASER_GRADE[k] or LASER_GRADE[1], 0, 0.3)
 		ctx.Vfx.Flash(ctx.Star(i), { Color = WHITE, Size = 2.4, Life = 0.15, Brightness = 6 })
+		fb(ctx.Vfx, ctx.Star(i), { Texture = TEX.Flash, Size = 5, Color = STAR, Life = 0.2, LightEmission = 1, Transparency = 0.5 })
 	end)
 	task.delay(AIM + GROW, function()
 		groundRune(ctx, sept, g)
+		-- 떨어진 자리: 별 폭발 충격 + 룬 고리 번짐 + 별가루
+		fb(ctx.Vfx, g + Vector3.new(0, 0.5, 0), { Texture = TEX.Shock, Size = 10, Color = STAR, Life = 0.45, LightEmission = 0.9, Transparency = 0.45 })
+		fb(ctx.Vfx, g + Vector3.new(0, 0.8, 0), { Texture = TEX.Impact, Size = 6, Color = PALE, Life = 0.3, LightEmission = 1, Transparency = 0.35 })
+		ctx.Vfx.Pack("Loose/Sparkles", CFrame.new(g + Vector3.new(0, 1, 0)), { Color = PALE, Size = 0.6 })
 		linkLines(ctx, sept, i)
 	end)
 	local f = ctx.Forward
@@ -1147,6 +1211,7 @@ end
 function Fx.SeptLaserHit(ctx: any, _ev: any, at: Vector3?)
 	if at then
 		ctx.Vfx.Flash(at, { Color = STAR, Size = 3.5, Life = 0.2, Brightness = 4 })
+		fb(ctx.Vfx, at, { Texture = TEX.Break, Size = 5, Color = STAR, Life = 0.3, LightEmission = 0.9, Transparency = 0.4 })
 		ctx.Vfx.Sparks(at, { Color = WHITE, Count = 8, Speed = 16 })
 	end
 end
@@ -1167,6 +1232,7 @@ function Fx.SeptGather(ctx: any)
 		sum += p
 		ctx.Vfx.Implode(p, { Color = WHITE, Radius = 5, Count = 8, Life = 0.3 })
 		ctx.Vfx.Flash(p, { Color = PALE, Size = 3, Life = 0.35, Brightness = 6 })
+		fb(ctx.Vfx, p, { Texture = TEX.Energy, Size = 6, Color = PALE, Life = 0.3, LightEmission = 1, Transparency = 0.4 })
 	end
 	grade(ctx, { Saturation = -0.85, Contrast = 0.8, Brightness = -0.14 }, 0.7, 0.6)
 	local f = ctx.Forward
@@ -1230,6 +1296,8 @@ function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 			laser(ctx, i, P[i], 2.4, 0.05, 0.4)
 			ctx.Vfx.Flash(ctx.Star(i), { Color = WHITE, Size = 4, Life = 0.3, Brightness = 8 })
 			ctx.Vfx.Pillar(P[i], { Height = 18, Width = 2.6, Color = STAR, Life = 0.6 })
+			fb(ctx.Vfx, P[i] + Vector3.new(0, 1, 0), { Texture = TEX.Impact, Size = 10, Color = STAR, Life = 0.4, LightEmission = 1, Transparency = 0.4 })
+			fb(ctx.Vfx, P[i] + Vector3.new(0, 0.5, 0), { Texture = TEX.Shock, Size = 14, Color = PALE, Life = 0.6, LightEmission = 0.8, Transparency = 0.5 })
 			ctx.Vfx.Shockwave(P[i] + Vector3.new(0, 0.05, 0), { Color = WHITE, Radius = 7, Life = 0.6 })
 		end
 		for _, pair in LINES do
@@ -1238,6 +1306,14 @@ function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 		local center = ctx.EnemyCenter
 		local floor = Vector3.new(center.X, ctx.Ground + 0.1, center.Z)
 		ctx.Vfx.Flash(center + Vector3.new(0, 3, 0), { Color = FUSION, Size = 30, Life = 0.6, Brightness = 10 })
+		-- 강타의 성운: 별 폭발 · 번지는 푸른 성운 구름 · 룬 고리처럼 퍼지는 충격 · 별가루 비(흰 섬광은 위 Flash 하나뿐)
+		fb(ctx.Vfx, center + Vector3.new(0, 3, 0), { Texture = TEX.Explosion, Size = 26, Color = STAR, Life = 0.7, LightEmission = 0.9, Transparency = 0.4 })
+		fb(ctx.Vfx, center + Vector3.new(0, 5, 0), { Texture = TEX.Energy, Size = 24, Color = PALE, Life = 1.1, LightEmission = 0.9, Transparency = 0.6 })
+		fb(ctx.Vfx, floor + Vector3.new(0, 0.4, 0), { Texture = TEX.Shock, Size = 40, Color = STAR, Life = 0.9, LightEmission = 0.8, Transparency = 0.55 })
+		fb(ctx.Vfx, floor + Vector3.new(0, 1, 0), { Texture = TEX.Smoke, Size = 14, Color = PALE, Life = 1.6, Transparency = 0.6, Speed = 10, Spread = 180, Count = 4, Accel = Vector3.new(0, 3, 0) })
+		ctx.Vfx.Pack("Loose/Rays", CFrame.new(center + Vector3.new(0, 3, 0)), { Color = PALE, Size = 1.2 })
+		ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(center + Vector3.new(0, 6, 0)), { Color = PALE, Size = 1.6 })
+		ctx.Vfx.Pack("Loose/Sparkles", CFrame.new(center + Vector3.new(0, 4, 0)), { Color = WHITE, Size = 1.5 })
 		ctx.Vfx.Shockwave(floor, { Color = FUSION, Radius = 22, Life = 0.9 })
 		task.delay(0.12, function()
 			ctx.Vfx.Shockwave(floor, { Color = STAR, Radius = 30, Life = 1.1 })
@@ -1256,6 +1332,7 @@ function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 	if at then
 		ctx.Vfx.Sparks(at, { Color = WHITE, Count = 16, Speed = 24 })
 		ctx.Vfx.Burst(at, { Count = 6, Color = MELT, Size = 0.24, Speed = 12, Gravity = 16, Life = 0.6 })
+		fb(ctx.Vfx, at, { Texture = TEX.Impact, Size = 7, Color = STAR, Life = 0.35, LightEmission = 1, Transparency = 0.35 })
 	end
 end
 

@@ -31,6 +31,29 @@ local SOUND = { Ching = 9119742466 }
 -- 발도술의 절정 검로·칼날이 줄 방향에서 위아래로 기우는 무작위 범위(±도)
 local TILT = 70
 
+-- 팩 플립북 그림(모두 Grid4x4 — tools/combat/out/vfx_textures.tsv). 2026-11-06 100배 고급화: 플립북 + 팩 묶음을 기존 선·잔상 위에 겹친다
+local TEX = {
+	Slash = "rbxassetid://16939611858",
+	Impact = "rbxassetid://16923007448",
+	Hit = "rbxassetid://16678929169",
+	Smoke = "rbxassetid://14006773822",
+	Wind = "rbxassetid://14595543880",
+	Break = "rbxassetid://15514662196",
+	Energy = "rbxassetid://15041986621",
+	Light = "rbxassetid://16664675233",
+	Flash = "rbxassetid://11372772717",
+	Shock = "rbxassetid://16477162837",
+	Explosion = "rbxassetid://11395089850",
+}
+-- 플립북 한 장(Vfx.Flipbook 이 아직 없으면 조용히 건너뛴다)
+local function fb(Vfx: any, at: any, o: { [string]: any })
+	if Vfx.Flipbook then
+		o.Layout = o.Layout or "Grid4x4"
+		o.Mode = o.Mode or "OneShot"
+		Vfx.Flipbook(at, o)
+	end
+end
+
 local Fx = {}
 
 -- 잔상 자세(늦게 읽는다 — 모션 묶음은 처음 쓸 때 부른다)
@@ -165,23 +188,32 @@ function Fx.Glint(ctx: any)
 	local p = tsuba(ctx)
 	ctx.Vfx.Flash(p, { Color = WHITE, Size = 2.2, Life = 0.25, Brightness = 4 })
 	ctx.Vfx.Sparks(p, { Color = ICE, Count = 5, MinSpeed = 2, Speed = 5 })
+	fb(ctx.Vfx, p, { Texture = TEX.Flash, Size = 1.8, Color = ICE, Life = 0.25, LightEmission = 1, Transparency = 0.5 })
+	ctx.Vfx.Pack("Loose/Flare", CFrame.new(p), { Color = ICE, Size = 0.2 })
 end
 
 function Fx.Click(ctx: any)
 	local p = tsuba(ctx)
 	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.2, R1 = 1.1, Color = ICE, Life = 0.18, Width = 0.08, Facing = true })
 	ctx.Vfx.Sparks(p, { Color = WHITE, Count = 4, MinSpeed = 1, Speed = 3 })
+	fb(ctx.Vfx, p, { Texture = TEX.Hit, Size = 1.6, Color = ICE, Life = 0.18, LightEmission = 1, Transparency = 0.3 })
 end
 
 function Fx.Touchdown(ctx: any)
 	local feet = Common.Feet(ctx)
 	ctx.Vfx.Ring(CFrame.new(feet + Vector3.new(0, 0.12, 0)), { R0 = 0.5, R1 = 3.6, Color = AZURE, Life = 0.4, Width = 0.18, Height = 0.05 })
 	Common.Land(ctx.Vfx, feet, 0.6)
+	fb(ctx.Vfx, feet + Vector3.new(0, 0.3, 0), { Texture = TEX.Shock, Size = 5, Color = AZURE, Life = 0.35, LightEmission = 0.8, Transparency = 0.4 })
+	fb(ctx.Vfx, feet + Vector3.new(0, 0.3, 0), { Texture = TEX.Smoke, Size = 3, Color = ICE, Life = 0.6, Transparency = 0.6 })
 end
 
 function Fx.Block(ctx: any)
 	Common.GuardRing(ctx.Vfx, ctx, AZURE)
 	ctx.Vfx.Sparks(ctx.Root.Position + ctx.Forward * 1.6, { Color = ICE, Count = 10, Speed = 14 })
+	local guard = ctx.Root.Position + ctx.Forward * 1.6 + Vector3.new(0, 0.8, 0)
+	fb(ctx.Vfx, guard, { Texture = TEX.Break, Size = 5, Color = AZURE, Life = 0.35, LightEmission = 0.8, Transparency = 0.35 })
+	fb(ctx.Vfx, guard, { Texture = TEX.Hit, Size = 3.5, Color = WHITE, Life = 0.2, LightEmission = 1, Transparency = 0.2 })
+	ctx.Vfx.Pack("Anime/Shield-Break-01", CFrame.new(guard), { Color = AZURE, Size = 0.4 })
 end
 
 -- 회피: 비켜서기 전 자리에 선 자세 그대로의 잔상이 남았다 흩어진다
@@ -193,16 +225,23 @@ function Fx.Afterimage(ctx: any)
 		end)
 	end
 	ctx.Vfx.Burst(ctx.Root.Position, { Count = 8, Color = ICE, Size = 0.16, Speed = 7, Gravity = 0, Life = 0.35 })
+	-- 잔상이 흩어지는 푸른 바람 결
+	fb(ctx.Vfx, ctx.Root.Position + Vector3.new(0, 0.5, 0), { Texture = TEX.Wind, Size = 5, Color = AZURE, Life = 0.4, Transparency = 0.6, Speed = 3, Spread = 180 })
 end
 
 function Fx.SheathHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	Common.Impact(ctx.Vfx, p, ICE, 0.9)
 	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.4, R1 = 2.4, Color = AZURE, Life = 0.25, Width = 0.2, Facing = true })
+	fb(ctx.Vfx, p, { Texture = TEX.Impact, Size = 5, Color = ICE, Life = 0.3, LightEmission = 1, Transparency = 0.25 })
+	ctx.Vfx.Pack("Anime/Slash-Impact-01", CFrame.new(p), { Color = AZURE, Size = 0.4 })
 end
 
 function Fx.CutHit(ctx: any, _ev: any, at: Vector3?)
 	cuts(ctx, at or ctx.Target, 2, 1.8)
+	local hit = at or ctx.Target
+	fb(ctx.Vfx, hit, { Texture = TEX.Slash, Size = 6, Color = AZURE, Life = 0.2, LightEmission = 1, Transparency = 0.2, Rotation = math.random(-40, 40) })
+	fb(ctx.Vfx, hit, { Texture = TEX.Hit, Size = 3.5, Color = WHITE, Life = 0.2, LightEmission = 1, Transparency = 0.3 })
 end
 
 --=== 천천히 뽑기 ===--
@@ -213,6 +252,7 @@ function Fx.DrawGlint(ctx: any)
 		task.delay(i * 0.07, function()
 			local p = tsuba(ctx):Lerp(mouth(ctx), 0.25 + i * 0.22)
 			ctx.Vfx.Flash(p, { Color = ICE, Size = 1.6, Life = 0.16, Brightness = 3 })
+			fb(ctx.Vfx, p, { Texture = TEX.Flash, Size = 1.4, Color = ICE, Life = 0.2, LightEmission = 1, Transparency = 0.5 })
 		end)
 	end
 end
@@ -223,6 +263,10 @@ function Fx.Release(ctx: any)
 	ctx.Vfx.Flash(p, { Color = WHITE, Size = 4, Life = 0.2, Brightness = 6 })
 	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.2, R1 = 1.6, Color = ICE, Life = 0.22, Width = 0.1, Facing = true })
 	ctx.Vfx.Sparks(p, { Color = ICE, Count = 8, Speed = 10 })
+	-- 칼끝이 빠져나오는 순간: 챙 하는 빛무리와 푸른 파문
+	fb(ctx.Vfx, p, { Texture = TEX.Flash, Size = 4, Color = ICE, Life = 0.2, LightEmission = 1, Transparency = 0.45 })
+	fb(ctx.Vfx, p, { Texture = TEX.Shock, Size = 4, Color = AZURE, Life = 0.3, LightEmission = 0.9, Transparency = 0.4 })
+	ctx.Vfx.Pack("Loose/Flare", CFrame.new(p), { Color = ICE, Size = 0.35 })
 end
 
 --=== 진 발도술(2026-10-30 다시 — 강한 세로베기로 검기를 날려 내 행(라인) 전체를 벤다) ===--
@@ -265,6 +309,17 @@ function Fx.WaveLaunch(ctx: any)
 	s.waveLines = {}
 	table.insert(s.waveLines, stroke(start, finish, { Width = 0.06, Color = ICE, Grow = WAVE_TIME, Keep = true, Bits = 3 }))
 	ctx.Vfx.Flash(start, { Color = WHITE, Size = 5, Life = 0.18, Brightness = 6 })
+	-- 푸른 검기 슬래시: 출발 순간 크게 한 장, 날아가는 동안 점점 앞으로 한 장씩(세로로 선 초승달) + 바람 꼬리
+	fb(ctx.Vfx, start, { Texture = TEX.Slash, Size = 9, Color = AZURE, Life = 0.25, LightEmission = 1, Transparency = 0.15, Rotation = 90 })
+	fb(ctx.Vfx, start, { Texture = TEX.Impact, Size = 6, Color = ICE, Life = 0.25, LightEmission = 1, Transparency = 0.35 })
+	ctx.Vfx.Pack("Anime/Slash-01", CFrame.lookAt(start, start + f), { Color = AZURE, Size = 0.9 })
+	for k = 1, 4 do
+		task.delay(k / 5 * WAVE_TIME, function()
+			local at = start:Lerp(finish, 1 - (1 - k / 5) ^ 3)
+			fb(ctx.Vfx, at, { Texture = TEX.Slash, Size = 7, Color = AZURE, Life = 0.22, LightEmission = 1, Transparency = 0.3, Rotation = 90 })
+			fb(ctx.Vfx, at, { Texture = TEX.Wind, Size = 5, Color = ICE, Life = 0.35, Transparency = 0.65 })
+		end)
+	end
 	local n, radius = 10, 2.7
 	local segs = {}
 	for i = 1, n do
@@ -308,6 +363,9 @@ function Fx.WaveHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	Common.Arc(ctx, p, 0, 70, -70, { Radius = 2.4, Width = 0.5, Color = AZURE, Core = WHITE, Sweep = 0.03, Life = 0.2 })
 	ctx.Vfx.Sparks(p, { Color = WHITE, Count = 10, Speed = 18 })
+	fb(ctx.Vfx, p, { Texture = TEX.Slash, Size = 8, Color = AZURE, Life = 0.22, LightEmission = 1, Transparency = 0.2, Rotation = 90 })
+	fb(ctx.Vfx, p, { Texture = TEX.Impact, Size = 5, Color = ICE, Life = 0.3, LightEmission = 1, Transparency = 0.3 })
+	ctx.Vfx.Pack("Anime/Slash-Impact-01", CFrame.new(p), { Color = AZURE, Size = 0.5 })
 end
 
 -- 2타(칼을 꽂는 순간): 검기를 따라간 선과 행을 따라 남은 바닥 선에 번개처럼 빛이 달리고 터진다
@@ -325,6 +383,11 @@ function Fx.LineStrike(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	cuts(ctx, p, 2, 2.4)
 	ctx.Vfx.Sparks(p, { Color = ICE, Count = 10, Speed = 20 })
+	-- 2타: 번개처럼 달린 빛이 터진다 — 임팩트 · 균열 · 번개 플립북
+	fb(ctx.Vfx, p, { Texture = TEX.Impact, Size = 9, Color = ICE, Life = 0.32, LightEmission = 1, Transparency = 0.25 })
+	fb(ctx.Vfx, p, { Texture = TEX.Light, Size = 7, Color = AZURE, Life = 0.4, LightEmission = 1, Transparency = 0.3 })
+	fb(ctx.Vfx, p, { Texture = TEX.Break, Size = 6, Color = AZURE, Life = 0.35, LightEmission = 0.8, Transparency = 0.4 })
+	ctx.Vfx.Pack("Anime/Crack-01", CFrame.new(Vector3.new(p.X, ctx.Ground + 0.2, p.Z)), { Color = AZURE, Size = 0.35 })
 end
 
 --=== 발도술의 절정 ===--
@@ -338,6 +401,8 @@ function Fx.Ching(ctx: any)
 	local p = tsuba(ctx):Lerp(mouth(ctx), 0.55)
 	twinkle(ctx, p, 1.6)
 	ctx.Vfx.Sparks(p, { Color = WHITE, Count = 10, Speed = 9 })
+	fb(ctx.Vfx, p, { Texture = TEX.Flash, Size = 4.5, Color = ICE, Life = 0.25, LightEmission = 1, Transparency = 0.45 })
+	ctx.Vfx.Pack("Loose/Flare", CFrame.new(p), { Color = ICE, Size = 0.4 })
 end
 
 -- 사라지는 순간: 반쯤 뽑은 자세의 잔상만 남는다(출발 자리를 적어 둔다 — 검로·줄 칼날이 여기서 시작)
@@ -351,6 +416,9 @@ function Fx.Vanish(ctx: any)
 		end)
 	end
 	ctx.Vfx.Flash(ctx.Root.Position, { Color = ICE, Size = 6, Life = 0.2, Brightness = 5 })
+	-- 사라지는 자리: 공간이 찢긴 듯 푸른 균열 + 바람
+	fb(ctx.Vfx, ctx.Root.Position, { Texture = TEX.Break, Size = 7, Color = AZURE, Life = 0.35, LightEmission = 0.9, Transparency = 0.3 })
+	fb(ctx.Vfx, ctx.Root.Position, { Texture = TEX.Wind, Size = 6, Color = ICE, Life = 0.45, Transparency = 0.6, Speed = 4, Spread = 180 })
 	ctx.Vfx.Dust(Common.Feet(ctx), { Color = ICE, Count = 10 })
 end
 
@@ -403,9 +471,16 @@ function Fx.RowFlash(ctx: any, ev: any, at: Vector3?)
 			local q = a:Lerp(b, rng:NextNumber(0.1, 0.9))
 			twinkle(ctx, Vector3.new(q.X, ctx.Ground + rng:NextNumber(0.8, 4), q.Z), 1.1 * MARK)
 		end
+		-- 줄을 가르는 푸른 검기 슬래시 플립북(제각각 기울어)
+		for _ = 1, 4 do
+			local q = a:Lerp(b, rng:NextNumber(0.1, 0.9))
+			fb(ctx.Vfx, Vector3.new(q.X, ctx.Ground + rng:NextNumber(1, 4), q.Z), { Texture = TEX.Slash, Size = 10, Color = if rng:NextNumber() < 0.5 then AZURE else ICE, Life = 0.2, LightEmission = 1, Transparency = 0.3, Rotation = rng:NextNumber(-TILT, TILT) })
+		end
 	end
 	local p = at or ctx.Target
 	cuts(ctx, p, 2, 2.4 * MARK, 0.35 * MARK)
+	fb(ctx.Vfx, p, { Texture = TEX.Impact, Size = 6, Color = ICE, Life = 0.28, LightEmission = 1, Transparency = 0.3 })
+	ctx.Vfx.Pack("Anime/Slash-Impact-01", CFrame.new(p), { Color = AZURE, Size = 0.45 })
 	ctx.Vfx.Sparks(p, { Color = ICE, Count = 10, Speed = 20 })
 end
 
@@ -421,6 +496,7 @@ function Fx.Slip(ctx: any, ev: any)
 		end)
 	end
 	ctx.Vfx.Flash(ctx.Root.Position, { Color = ICE, Size = 4, Life = 0.15, Brightness = 4 })
+	fb(ctx.Vfx, ctx.Root.Position, { Texture = TEX.Wind, Size = 5, Color = ICE, Life = 0.4, Transparency = 0.6, Speed = 3, Spread = 180 })
 end
 
 -- 베며 두 칸 앞으로 지나간 뒤: 지나간 길(마지막 Slip 자리 → 지금 자리)에 작게 기운 곧은 검흔 몇 줄이 반짝(발도술의 절정 칼날의 작은 판).
@@ -439,6 +515,10 @@ function Fx.SmallCuts(ctx: any)
 	for _ = 1, 2 do
 		local q = a:Lerp(b, rng:NextNumber(0.3, 0.9))
 		twinkle(ctx, Vector3.new(q.X, ctx.Ground + rng:NextNumber(1, 2.4), q.Z), 0.9)
+	end
+	for k = 1, 2 do
+		local q = a:Lerp(b, 0.35 + 0.3 * k)
+		fb(ctx.Vfx, Vector3.new(q.X, ctx.Ground + rng:NextNumber(1, 2.4), q.Z), { Texture = TEX.Slash, Size = 5, Color = AZURE, Life = 0.2, LightEmission = 1, Transparency = 0.35, Rotation = rng:NextNumber(-50, 50) })
 	end
 end
 
@@ -608,6 +688,7 @@ function Fx.StepDust(ctx: any)
 	local feet = Common.Feet(ctx)
 	Common.Land(ctx.Vfx, feet, 0.45)
 	ctx.Vfx.Ring(CFrame.new(feet + Vector3.new(0, 0.1, 0)), { R0 = 0.3, R1 = 2.2, Color = ICE, Life = 0.35, Width = 0.08, Height = 0.03 })
+	fb(ctx.Vfx, feet + Vector3.new(0, 0.3, 0), { Texture = TEX.Smoke, Size = 3.5, Color = ICE, Life = 0.6, Transparency = 0.55, Speed = 3, Spread = 180 })
 end
 
 -- 시전자 몸(무기까지)을 내 화면에서만 숨긴다/보인다(LocalTransparencyModifier — 원래 투명도는 건드리지 않는다)
@@ -749,6 +830,8 @@ function Fx.Phantom(ctx: any)
 	s.lastAt = at
 	table.insert(s.phantoms, { Ghost = ghost, Mark = mark, Link = link, Width = width, At = a:Lerp(b, 0.5) })
 	ctx.Vfx.Flash(at, { Color = ICE, Size = 4, Life = 0.15, Brightness = 4 })
+	fb(ctx.Vfx, at + Vector3.new(0, 1.2, 0), { Texture = TEX.Slash, Size = 6, Color = AZURE, Life = 0.2, LightEmission = 1, Transparency = 0.35, Rotation = rng:NextNumber(-60, 60) })
+	fb(ctx.Vfx, at + Vector3.new(0, 0.6, 0), { Texture = TEX.Wind, Size = 4, Color = ICE, Life = 0.35, Transparency = 0.65 })
 end
 
 -- 마지막 잔상에서 제자리로 이어지는 선을 그으며, 제자리를 가로로 베며 나타난다(SLASHR 의 곧은 검로가 한 번 번쩍)
@@ -763,6 +846,8 @@ function Fx.Return(ctx: any)
 	local a, b = cutLine(ctx, Random.new(), "SLASHR", ctx.Actor.Home, CUT_LENGTH)
 	stroke(a, b, { Width = CUT_WIDTH[2], Color = ICE, Grow = 0.04, Life = 0.35 })
 	ctx.Vfx.Flash(ctx.Root.Position, { Color = WHITE, Size = 6, Life = 0.2, Brightness = 6 })
+	fb(ctx.Vfx, ctx.Root.Position, { Texture = TEX.Slash, Size = 9, Color = ICE, Life = 0.25, LightEmission = 1, Transparency = 0.3 })
+	fb(ctx.Vfx, ctx.Root.Position, { Texture = TEX.Shock, Size = 7, Color = AZURE, Life = 0.35, LightEmission = 0.8, Transparency = 0.45 })
 	ctx.Vfx.Dust(Common.Feet(ctx), { Color = ICE, Count = 10 })
 end
 
@@ -798,6 +883,9 @@ function Fx.MarkHit(ctx: any, ev: any, at: Vector3?)
 			ctx.Vfx.Flash(p.At, { Color = WHITE, Size = 5, Life = 0.12, Brightness = 6 })
 			local d = (p.Mark.To - p.Mark.From).Unit
 			stroke(p.Mark.From - d, p.Mark.To + d, { Width = p.Width * 1.3, Color = WHITE, Grow = 0.03, Life = 0.12 })
+			-- 17연타 한 번: 푸른 슬래시 플립북 + 작은 임팩트(연타라 가볍게)
+			fb(ctx.Vfx, p.At, { Texture = TEX.Slash, Size = 7, Color = AZURE, Life = 0.18, LightEmission = 1, Transparency = 0.3, Rotation = math.random(-70, 70) })
+			fb(ctx.Vfx, p.At, { Texture = TEX.Hit, Size = 4, Color = ICE, Life = 0.2, LightEmission = 1, Transparency = 0.4 })
 		end
 	end
 	if at then
@@ -819,6 +907,14 @@ function Fx.FinalBreak(ctx: any)
 	local field = ctx.EnemyCenter
 	ctx.Vfx.Flash(field, { Color = WHITE, Size = 22, Life = 0.4, Brightness = 7 })
 	ctx.Vfx.Shockwave(Vector3.new(field.X, ctx.Ground + 0.1, field.Z), { Color = ICE, Radius = 16, Life = 0.55 })
+	-- 임팩트 프레임: 공간이 쪼개지는 균열 · 큰 푸른 폭발 · 퍼지는 충격 · 가라앉는 연기(흰 섬광은 위 Flash 하나뿐)
+	local floor = Vector3.new(field.X, ctx.Ground + 0.4, field.Z)
+	fb(ctx.Vfx, field, { Texture = TEX.Break, Size = 20, Color = AZURE, Life = 0.5, LightEmission = 0.9, Transparency = 0.35 })
+	fb(ctx.Vfx, field, { Texture = TEX.Impact, Size = 18, Color = ICE, Life = 0.4, LightEmission = 1, Transparency = 0.35 })
+	fb(ctx.Vfx, floor, { Texture = TEX.Shock, Size = 28, Color = AZURE, Life = 0.6, LightEmission = 0.8, Transparency = 0.5 })
+	fb(ctx.Vfx, floor, { Texture = TEX.Smoke, Size = 12, Color = ICE, Life = 1.2, Transparency = 0.55, Speed = 8, Spread = 180, Count = 3 })
+	ctx.Vfx.Pack("Anime/Portal-01", CFrame.lookAt(field, field + ctx.Forward), { Color = AZURE, Size = 0.9 })
+	ctx.Vfx.Pack("Anime/Slash-Impact-01", CFrame.new(field), { Color = AZURE, Size = 1.4 })
 	local cc = grading(ctx)
 	if cc then
 		CombatVfx.Timed(0.6, function(a)
@@ -845,10 +941,12 @@ function Fx.Taunt(ctx: any)
 	local hand = ctx.Hand("L")
 	ctx.Vfx.Ring(CFrame.lookAt(hand, hand + ctx.Forward), { R0 = 0.2, R1 = 1.6, Color = AZURE, Life = 0.35, Width = 0.1, Facing = true })
 	ctx.Vfx.Flash(Common.Head(ctx) + Vector3.new(0, 1, 0), { Color = ICE, Size = 3, Life = 0.3, Brightness = 3 })
+	fb(ctx.Vfx, hand, { Texture = TEX.Hit, Size = 2.5, Color = ICE, Life = 0.25, LightEmission = 1, Transparency = 0.4 })
 end
 
 function Fx.Meditate(ctx: any)
 	Common.Meditate(ctx.Vfx, Common.Feet(ctx), AZURE)
+	ctx.Vfx.Pack("Loose/Sparkles", CFrame.new(Common.Feet(ctx) + Vector3.new(0, 1.2, 0)), { Color = ICE, Size = 0.5 })
 end
 
 return Fx

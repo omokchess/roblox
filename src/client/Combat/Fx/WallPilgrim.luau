@@ -10,6 +10,27 @@ local RUST = c(150, 40, 36)
 local CANDLE = c(255, 200, 120)
 local IRON = c(120, 112, 106)
 
+-- 팩 플립북 그림(모두 Grid4x4 — tools/combat/out/vfx_textures.tsv). 2026-11-06 100배 고급화: 플립북 + 팩 묶음을 블록 이펙트 위에 겹친다
+local TEX = {
+	Slash = "rbxassetid://16939611858",
+	Impact = "rbxassetid://16923007448",
+	Hit = "rbxassetid://16678929169",
+	Smoke = "rbxassetid://14006773822",
+	Blood = "rbxassetid://16668936898",
+	Break = "rbxassetid://15514662196",
+	Energy = "rbxassetid://15041986621",
+	Light = "rbxassetid://16664675233",
+	Flash = "rbxassetid://11372772717",
+}
+-- 플립북 한 장(Vfx.Flipbook 이 아직 없으면 조용히 건너뛴다)
+local function fb(Vfx: any, at: any, o: { [string]: any })
+	if Vfx.Flipbook then
+		o.Layout = o.Layout or "Grid4x4"
+		o.Mode = o.Mode or "OneShot"
+		Vfx.Flipbook(at, o)
+	end
+end
+
 local Fx = {}
 
 -- 못 하나(떨어뜨리기용)
@@ -40,6 +61,10 @@ function Fx.Genuflect(ctx: any)
 	ctx.Vfx.Sparks(front, { Color = CANDLE, Count = 14 })
 	ctx.Vfx.Dust(front, { Count = 8, Color = c(150, 140, 130) })
 	crossMark(ctx.Vfx, front, ctx.Forward)
+	-- 무릎 꿇는 자리: 촛불 한 송이 + 가라앉는 먼지
+	fb(ctx.Vfx, front + Vector3.new(0, 0.6, 0), { Texture = TEX.Energy, Size = 3, Color = CANDLE, Life = 0.5, LightEmission = 0.8, Transparency = 0.3 })
+	fb(ctx.Vfx, front + Vector3.new(0, 0.4, 0), { Texture = TEX.Smoke, Size = 3.5, Color = c(150, 140, 130), Life = 0.7, Transparency = 0.5 })
+	ctx.Vfx.Pack("Loose/Sparkles", CFrame.new(front + Vector3.new(0, 0.8, 0)), { Color = CANDLE, Size = 0.5 })
 end
 
 -- 고통을 반김: 머리 위에 희미한 후광이 번쩍
@@ -47,6 +72,10 @@ function Fx.Rapture(ctx: any)
 	local head = Common.Head(ctx) + Vector3.new(0, 1, 0)
 	ctx.Vfx.Ring(CFrame.new(head), { R0 = 0.6, R1 = 1.4, Color = CANDLE, Life = 0.6, Width = 0.12, Height = 0.08 })
 	Common.Blood(ctx.Vfx, ctx.Root.Position + Vector3.new(0, 0.5, 0), Vector3.new(0, 1, 0), 6, 10)
+	-- 후광이 번지고 피가 한 줄기 튄다
+	fb(ctx.Vfx, head, { Texture = TEX.Light, Size = 5, Color = CANDLE, Life = 0.6, LightEmission = 1, Transparency = 0.35 })
+	fb(ctx.Vfx, ctx.Root.Position + Vector3.new(0, 0.6, 0), { Texture = TEX.Blood, Size = 4, Color = RUST, Life = 0.5, Transparency = 0.2 })
+	ctx.Vfx.Pack("Anime/Shiny-01", CFrame.new(head), { Color = CANDLE, Size = 0.5 })
 end
 
 function Fx.CrossBlock(ctx: any)
@@ -54,10 +83,15 @@ function Fx.CrossBlock(ctx: any)
 	ctx.Vfx.Sparks(p, { Color = CANDLE, Count = 18, Speed = 20 })
 	ctx.Vfx.Flash(p, { Color = CANDLE, Size = 5, Life = 0.2 })
 	ctx.Vfx.Shake(0.15, 0.15)
+	-- 십자 막이 부딪는 자리: 방패 깨짐 플립북 + 충격
+	fb(ctx.Vfx, p, { Texture = TEX.Break, Size = 6, Color = CANDLE, Life = 0.4, LightEmission = 0.8, Transparency = 0.3 })
+	fb(ctx.Vfx, p, { Texture = TEX.Hit, Size = 4, Color = CANDLE, Life = 0.3, LightEmission = 1 })
+	ctx.Vfx.Pack("Anime/Shield-Break-01", CFrame.new(p), { Color = CANDLE, Size = 0.45 })
 end
 
 function Fx.Scuttle(ctx: any)
 	ctx.Vfx.Dust(Common.Feet(ctx), { Count = 6, Color = c(140, 130, 120), Size = 0.9 })
+	fb(ctx.Vfx, Common.Feet(ctx) + Vector3.new(0, 0.4, 0), { Texture = TEX.Smoke, Size = 3, Color = c(140, 130, 120), Life = 0.6, Transparency = 0.55 })
 end
 
 -- 못질: 두 못이 박히며 불꽃 + 핏빛 십자
@@ -70,6 +104,13 @@ function Fx.NailDown(ctx: any, _ev: any, at: Vector3?)
 	crossMark(Vfx, Vector3.new(p.X, ctx.Ground, p.Z), ctx.Forward)
 	Vfx.Pack("Anime/Punch-02", CFrame.new(p), { Color = CANDLE, Size = 0.8 })
 	Vfx.Pack("Anime/Blood-Punch-01", CFrame.new(p), { Color = RUST, Size = 0.8 })
+	-- 못 박히는 층: 충격 플립북 → 핏빛 번짐 → 금 가는 바닥 → 가라앉는 연기
+	local g = Vector3.new(p.X, ctx.Ground + 0.3, p.Z)
+	fb(Vfx, p, { Texture = TEX.Impact, Size = 8, Color = CANDLE, Life = 0.35, LightEmission = 1, Transparency = 0.15 })
+	fb(Vfx, p, { Texture = TEX.Blood, Size = 6, Color = RUST, Life = 0.55, Transparency = 0.1 })
+	fb(Vfx, g, { Texture = TEX.Smoke, Size = 6, Color = c(150, 140, 130), Life = 0.9, Transparency = 0.45, Speed = 3, Spread = 180 })
+	Vfx.Pack("Anime/Crack-01", CFrame.new(g), { Color = RUST, Size = 0.5 })
+	Vfx.Pack("Loose/Sparkles", CFrame.new(p), { Color = CANDLE, Size = 0.6 })
 end
 
 -- 갈라진 신도: X 로 긋는 두 줄기
@@ -80,6 +121,13 @@ function Fx.CrossSlash(ctx: any, _ev: any, at: Vector3?)
 	Common.Arc(ctx, center, -40, 120, -60, { Radius = 2.6, Color = RUST, Core = CANDLE, Width = 0.6, Sweep = 0.04 })
 	ctx.Vfx.Sparks(p, { Color = CANDLE, Count = 14 })
 	Common.Blood(ctx.Vfx, p, ctx.Forward, 8, 16)
+	-- X 로 긋는 두 줄기에 슬래시 플립북을 한 장씩(서로 엇갈리게)
+	local Vfx = ctx.Vfx
+	fb(Vfx, center, { Texture = TEX.Slash, Size = 9, Color = RUST, Life = 0.25, LightEmission = 0.6, Transparency = 0.1, Rotation = 35 })
+	fb(Vfx, center, { Texture = TEX.Slash, Size = 9, Color = CANDLE, Life = 0.25, LightEmission = 0.8, Transparency = 0.2, Rotation = -35 })
+	fb(Vfx, p, { Texture = TEX.Impact, Size = 6, Color = CANDLE, Life = 0.3, LightEmission = 1 })
+	fb(Vfx, p, { Texture = TEX.Blood, Size = 5, Color = RUST, Life = 0.5 })
+	Vfx.Pack("Anime/Slashes-01", CFrame.new(p), { Color = RUST, Size = 0.6 })
 end
 
 -- 갈라 벌리기: 양옆으로 핏빛 줄기가 뻗는다(두 칸)
@@ -88,6 +136,12 @@ function Fx.Split(ctx: any)
 	local side = ctx.Forward:Cross(Vector3.new(0, 1, 0))
 	ctx.Vfx.Thrust(p, side, { Length = 5, Color = RUST, Width = 0.35 })
 	ctx.Vfx.Thrust(p, -side, { Length = 5, Color = RUST, Width = 0.35 })
+	-- 양옆으로 번지는 핏빛 · 먼지 플립북(가운데서 갈라져 나간다)
+	for _, d in { side, -side } do
+		fb(ctx.Vfx, p + d * 1.5, { Texture = TEX.Blood, Size = 5, Color = RUST, Life = 0.5, Speed = 12, Spread = 10, Transparency = 0.15 })
+		fb(ctx.Vfx, p + d * 1.2, { Texture = TEX.Smoke, Size = 4, Color = c(150, 140, 130), Life = 0.7, Speed = 8, Spread = 15, Transparency = 0.5 })
+	end
+	fb(ctx.Vfx, p, { Texture = TEX.Hit, Size = 5, Color = CANDLE, Life = 0.25, LightEmission = 1 })
 end
 
 function Fx.Halo(ctx: any)
@@ -96,6 +150,13 @@ function Fx.Halo(ctx: any)
 	Vfx.Ring(CFrame.new(head), { R0 = 0.4, R1 = 1.8, Color = CANDLE, Life = 1.0, Width = 0.18, Height = 0.1 })
 	Vfx.Pillar(Common.Feet(ctx), { Color = CANDLE, Height = 18, Width = 1.6, Life = 0.9 })
 	Vfx.Sparks(head, { Color = CANDLE, Count = 16, Accel = Vector3.new(0, 6, 0), MinSpeed = 2, Speed = 6, Lifetime = 1 })
+	-- 종소리 빛: 발치에서 올라오는 빛 기둥 플립북 + 머리 위 후광 + 떠오르는 빛가루
+	-- (흰 섬광은 짧고 옅게 — 캐릭터를 덮지 않는다)
+	fb(Vfx, Common.Feet(ctx) + Vector3.new(0, 0.5, 0), { Texture = TEX.Energy, Size = 7, Color = CANDLE, Life = 0.6, LightEmission = 0.8, Transparency = 0.4 })
+	fb(Vfx, head, { Texture = TEX.Light, Size = 6, Color = CANDLE, Life = 0.9, LightEmission = 1, Transparency = 0.45 })
+	fb(Vfx, head, { Texture = TEX.Flash, Size = 8, Color = CANDLE, Life = 0.25, LightEmission = 1, Transparency = 0.5 })
+	Vfx.Pack("Loose/Sparkles", CFrame.new(head), { Color = CANDLE, Size = 0.8 })
+	Vfx.Pack("Anime/Stars-01", CFrame.new(head - Vector3.new(0, 1, 0)), { Color = CANDLE, Size = 0.5 })
 end
 
 -- 합창: 대상 줄(아군이 보는 방향으로 뻗은 라인) 위 하늘에서 못이 줄지어 떨어진다(도착 ≈ 0.3초)
@@ -132,6 +193,8 @@ function Fx.NailRain(ctx: any)
 			model:PivotTo(CFrame.new(ground + Vector3.new(0, 0.8, 0)) * CFrame.Angles(math.pi, 0, 0))
 			Vfx.Sparks(ground + Vector3.new(0, 0.2, 0), { Color = CANDLE, Count = 8 })
 			Vfx.Dust(ground, { Count = 4, Color = c(140, 130, 120), Size = 0.8 })
+			fb(Vfx, ground + Vector3.new(0, 0.5, 0), { Texture = TEX.Hit, Size = 3.5, Color = CANDLE, Life = 0.25, LightEmission = 1 })
+			fb(Vfx, ground + Vector3.new(0, 0.4, 0), { Texture = TEX.Smoke, Size = 3, Color = c(140, 130, 120), Life = 0.7, Transparency = 0.5 })
 			task.wait(0.8)
 			model:Destroy()
 		end)
@@ -142,10 +205,14 @@ function Fx.NailRainHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	Common.Blood(ctx.Vfx, p, Vector3.new(0, 1, 0), 10, 14)
 	ctx.Vfx.Flash(p, { Color = CANDLE, Size = 6, Life = 0.25 })
+	fb(ctx.Vfx, p, { Texture = TEX.Blood, Size = 6, Color = RUST, Life = 0.5 })
+	fb(ctx.Vfx, p, { Texture = TEX.Impact, Size = 6, Color = CANDLE, Life = 0.3, LightEmission = 1 })
+	ctx.Vfx.Pack("Anime/Blood-01", CFrame.new(p), { Color = RUST, Size = 0.5 })
 end
 
 function Fx.Meditate(ctx: any)
 	Common.Meditate(ctx.Vfx, Common.Feet(ctx), CANDLE)
+	ctx.Vfx.Pack("Loose/Sparkles", CFrame.new(Common.Feet(ctx) + Vector3.new(0, 1.2, 0)), { Color = CANDLE, Size = 0.5 })
 end
 
 return Fx
