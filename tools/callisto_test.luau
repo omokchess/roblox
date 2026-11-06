@@ -179,7 +179,8 @@ do
 	local before = b.Health
 	GridBattle.EndTurn(s)
 	local lost = before - b.Health
-	check(lost == 10000, "화상 10 = 최대 체력 10% ×2 = 10000 — " .. lost)
+	-- 2026-11-06 화상 공식: 최대 체력 × (3% + 0.1% × 수치) → 수치 10 = 4%
+	check(lost == 4000, "화상 10 = 최대 체력 4% ×2 = 4000 — " .. lost)
 	print("6 그날의 기억 OK")
 end
 
