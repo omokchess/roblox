@@ -772,9 +772,9 @@ function BattleClient:_syncTiles()
 			for _, part in row do
 				local off = sideOff or keep[part] == true
 				part.LocalTransparencyModifier = if off then 1 else 0
-				local box = part:FindFirstChild("Mark") :: SelectionBox?
+				local box = part:FindFirstChild("Mark") :: SurfaceGui?
 				if box then
-					box.Visible = not off
+					box.Enabled = not off
 				end
 				local tag = part:FindFirstChild("Tag") :: BillboardGui?
 				if tag then
@@ -1818,14 +1818,33 @@ function BattleClient:_paintTiles()
 	end
 	if self.director then
 		for id, unit in snapshot.Units do
-			if unit.Side ~= "Enemy" then
-				continue
-			end
 			local model = self.director:Model(id)
 			if not model then
 				continue
 			end
+			-- 2026-11-06 사용자: "너무 밝아서 캐릭터가 잘 안 보인다 … 캐릭터에 하이라이트를 넣고"
+			-- 편 구분 윤곽(아군 청백/적 붉은빛), 채움은 거의 투명, 은하 빛에 묻히지 않게 AlwaysOnTop.
+			-- 모델에 Highlight 가 둘이면 하나만 그려질 수 있어 대상 표시(TargetMark)가 켜진 동안은 끈다.
+			local ring = model:FindFirstChild("UnitMark") :: Highlight?
+			if not ring then
+				local r = Instance.new("Highlight")
+				r.Name = "UnitMark"
+				local ally = unit.Side ~= "Enemy"
+				r.FillColor = if ally then Color3.fromRGB(190, 225, 255) else Color3.fromRGB(255, 150, 140)
+				r.OutlineColor = if ally then Color3.fromRGB(235, 245, 255) else Color3.fromRGB(255, 90, 80)
+				r.FillTransparency = 0.92
+				r.OutlineTransparency = 0.1
+				r.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				r.Parent = model
+				ring = r
+			end
+			local unitMark = ring :: Highlight
+			if unit.Side ~= "Enemy" then
+				unitMark.Enabled = unit.Alive
+				continue
+			end
 			local want = unit.Alive and hitIds[id] == true and not self.dragging
+			unitMark.Enabled = unit.Alive and not want
 			local mark = model:FindFirstChild("TargetMark") :: Highlight?
 			if want and not mark then
 				local h = Instance.new("Highlight")

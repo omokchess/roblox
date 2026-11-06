@@ -196,39 +196,41 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 			n.Alpha = { { 0, 1 }, { 0.12, 0.7 }, { 0.88, 0.7 }, { 1, 1 } }
 			add2(beams, n)
 		end
-		-- ⑧ 별자리 실: 팽대부(반지름 16)의 1.8배 바깥(r ≥ 36)부터, 팔 곡선 위 호 길이 28 간격(r 이 5.75 씩)으로 별 5개 → 4줄 + 가운데 별에서 곁가지 1줄 = 팔당 5줄.
-		-- 팔마다 시작 반지름을 달리해(36·50·64·78) 고리처럼 겹치지 않고, 곁가지·좌우 흔들림은 팔 띠 폭 안에 머문다. 교차 없음은 tools/combat/galaxy_layout.py 가 계산으로 검사한다.
+		-- ⑧ 별자리 실: 팽대부(반지름 16)의 1.8배 바깥(r ≥ 34)부터, 팔 곡선 위 호 길이 28 간격(r 이 5.75 씩)으로 별 5개 → 4줄 + 가운데 별에서 곁가지 1줄 = 사슬 하나 5줄.
+		-- 팔마다 사슬 둘(중간 구간 r 34~·바깥 구간 r 78~)로 팔당 10줄, 시작 반지름을 팔마다 달리해 겹치지 않고, 곁가지·좌우 흔들림은 팔 띠 폭 안에 머문다.
+		-- 교차 없음은 tools/combat/galaxy_layout.py 가 계산으로 검사한다.
 		local ARC = 28 -- 별 사이 호 길이(스터드). 호 길이 = 1.022·Δr/K ≈ 4.87·Δr
-		local stars: { { number } } = {}
-		for i = 0, 4 do
-			local r = 36 + arm * 14 + i * ARC / (1.022 / K)
-			if r <= rmax then
-				local t = math.log(r / R0) / K
-				local x, z, _, _, rx, rz = pt(arm, t)
-				local off = (if i % 2 == 0 then -1 else 1) * (1.2 + r * 0.03)
-				table.insert(stars, { x + rx * off, 1.5, z + rz * off })
-			end
-		end
 		local function link(name: string, a: { number }, b: { number })
 			local dx, dz = b[1] - a[1], b[3] - a[3]
 			local n = math.sqrt(dx * dx + dz * dz)
 			add2(beams, {
 				Name = name, Layer = "Constellation", Arm = arm, Segments = 1,
 				P0 = a, P1 = b, D0 = { dx / n, dz / n }, D1 = { dx / n, dz / n }, C0 = 0, C1 = 0,
-				W0 = 0.7, W1 = 0.7, Tex = "None", Glow = 1, TexLen = 12, TexSpeed = 0, -- 텍스처 없이 색·투명도만(점선처럼 안 보이게)
-				Color = grad(WHITE, BLUE, WHITE), Alpha = { { 0, 1 }, { 0.12, 0.3 }, { 0.35, 0.72 }, { 0.55, 0.25 }, { 0.8, 0.68 }, { 0.92, 0.35 }, { 1, 1 } },
+				W0 = 1.8, W1 = 1.8, Tex = "None", Glow = 1, TexLen = 12, TexSpeed = 0, -- 텍스처 없이 색·투명도만(점선처럼 안 보이게)
+				Color = grad(WHITE, BLUE, WHITE), Alpha = { { 0, 1 }, { 0.12, 0.12 }, { 0.35, 0.5 }, { 0.55, 0.1 }, { 0.8, 0.45 }, { 0.92, 0.2 }, { 1, 1 } },
 			})
 		end
-		for i = 1, #stars - 1 do
-			link(("Const_%d_%d"):format(arm, i), stars[i], stars[i + 1])
-		end
-		if #stars == 5 then -- 곁가지: 가운데 별에서 바깥쪽으로 한 가닥
-			local m = stars[3]
-			local rr = math.sqrt(m[1] * m[1] + m[3] * m[3])
-			local ux, uz = m[1] / rr, m[3] / rr
-			local tx, tz = -uz, ux -- 접선 근사(반지름에 수직)
-			local side = { m[1] + ux * (0.1 * rr + 4) + tx * 8, 1.5, m[3] + uz * (0.1 * rr + 4) + tz * 8 }
-			link(("Const_%d_5"):format(arm), m, side)
+		for chain, r0 in { 34 + arm * 5, 78 + arm * 6 } do
+			local stars: { { number } } = {}
+			for i = 0, 4 do
+				local r = r0 + i * ARC / (1.022 / K)
+				if r <= rmax then
+					local t = math.log(r / R0) / K
+					local x, z, _, _, rx, rz = pt(arm, t)
+					local off = (if i % 2 == 0 then -1 else 1) * (1.2 + r * 0.03)
+					table.insert(stars, { x + rx * off, 1.5, z + rz * off })
+				end
+			end
+			for i = 1, #stars - 1 do
+				link(("Const_%d_%d_%d"):format(arm, chain, i), stars[i], stars[i + 1])
+			end
+			if #stars == 5 then -- 곁가지: 가운데 별에서 바깥쪽으로 한 가닥
+				local m = stars[3]
+				local rr = math.sqrt(m[1] * m[1] + m[3] * m[3])
+				local ux, uz = m[1] / rr, m[3] / rr
+				local tx, tz = -uz, ux -- 접선 근사(반지름에 수직)
+				link(("Const_%d_%d_5"):format(arm, chain), m, { m[1] + ux * (0.1 * rr + 4) + tx * 8, 1.5, m[3] + uz * (0.1 * rr + 4) + tz * 8 })
+			end
 		end
 	end
 	return list, beams

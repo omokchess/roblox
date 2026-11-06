@@ -25,26 +25,47 @@ local function tile(name: string, cf: CFrame, size: Vector3, parent: Instance): 
 	p.Size = size
 	p.CFrame = cf
 	p.Parent = parent
-	local box = Instance.new("SelectionBox")
-	box.Name = "Mark"
-	box.Adornee = p
-	box.LineThickness = 0.05
-	box.Parent = p
+	-- 2026-11-06 사용자: "판 레이어를 제일 앞에다 놔서 해결하자. 정확히는 UI보다 한 칸 낮게."
+	-- SelectionBox 는 AlwaysOnTop 이 없어 우주 은하(파티클·Beam)의 빛에 묻혔다 → AlwaysOnTop SurfaceGui
+	-- (월드 위·ScreenGui 아래)에 면(Fill)+윤곽(UIStroke)을 그린다. 이름 "Mark" 는 그대로.
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "Mark"
+	gui.Adornee = p
+	gui.Face = Enum.NormalId.Top
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 24
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BorderSizePixel = 0
+	fill.Parent = gui
+	local stroke = Instance.new("UIStroke")
+	stroke.Name = "Line"
+	stroke.Thickness = 3
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = fill
+	gui.Parent = p
 	return p
+end
+
+-- 칸 표시 한 번에 칠하기(윤곽색·윤곽 투명도·면색·면 투명도)
+local function setMark(part: Instance, line: Color3, lineT: number, fillC: Color3, fillT: number)
+	local fill = part:FindFirstChild("Mark") and part.Mark:FindFirstChild("Fill") :: Frame?
+	if not fill then
+		return
+	end
+	local stroke = fill:FindFirstChild("Line") :: UIStroke
+	stroke.Color, stroke.Transparency = line, lineT
+	fill.BackgroundColor3, fill.BackgroundTransparency = fillC, fillT
 end
 
 --[[
 	칸 하나의 색. active 면 면을 진하게(범위·위협·내 자리), 아니면 옅은 윤곽만.
 ]]
 function BattleStage.Paint(part: BasePart, color: Color3, active: boolean?)
-	local box = part:FindFirstChild("Mark") :: SelectionBox?
-	if not box then
-		return
-	end
-	box.Color3 = color
-	box.SurfaceColor3 = color
-	box.Transparency = if active then 0.05 else 0.45
-	box.SurfaceTransparency = if active then 0.45 else 0.9
+	setMark(part, color, if active then 0.05 else 0.45, color, if active then 0.45 else 0.9)
 end
 
 --[[
@@ -52,14 +73,7 @@ end
 ]]
 local VOID = Color3.new(0, 0, 0)
 function BattleStage.PaintGone(part: BasePart)
-	local box = part:FindFirstChild("Mark") :: SelectionBox?
-	if not box then
-		return
-	end
-	box.Color3 = Color3.fromRGB(20, 20, 20)
-	box.SurfaceColor3 = VOID
-	box.Transparency = 0.1
-	box.SurfaceTransparency = 0.02
+	setMark(part, Color3.fromRGB(20, 20, 20), 0.1, VOID, 0.02)
 end
 
 --[[
@@ -232,10 +246,11 @@ local function hideTileMarks(tiles: { [string]: { { BasePart } } }, kind: string
 		local x, y = string.match(key, "(%d+),(%d+)")
 		local row = tiles.Ally[tonumber(y) :: number]
 		local t = row and row[tonumber(x) :: number]
-		local box = t and t:FindFirstChild("Mark") :: SelectionBox?
-		if box and (if kind == "Pending" then box.Color3 == BattleStage.BOARD.Pending else box.SurfaceColor3 == VOID) then
-			box.Transparency = 1
-			box.SurfaceTransparency = 1
+		local fill = t and t:FindFirstChild("Mark") and t.Mark:FindFirstChild("Fill") :: Frame?
+		local stroke = fill and fill:FindFirstChild("Line") :: UIStroke?
+		if fill and stroke and (if kind == "Pending" then stroke.Color == BattleStage.BOARD.Pending else fill.BackgroundColor3 == VOID) then
+			stroke.Transparency = 1
+			fill.BackgroundTransparency = 1
 		end
 	end
 end
@@ -566,9 +581,9 @@ end
 function BattleStage.SetSideVisible(tiles: { [string]: { { BasePart } } }, side: string, visible: boolean)
 	for _, row in tiles[side] or {} do
 		for _, part in row do
-			local box = part:FindFirstChild("Mark") :: SelectionBox?
+			local box = part:FindFirstChild("Mark") :: SurfaceGui?
 			if box then
-				box.Visible = visible
+				box.Enabled = visible
 			end
 			local tag = part:FindFirstChild("Tag") :: BillboardGui?
 			if tag then
