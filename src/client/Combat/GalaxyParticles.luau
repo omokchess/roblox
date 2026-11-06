@@ -3,7 +3,7 @@
 	GalaxyParticles — 칼리스토 3페이즈 "필드 아래 우리은하"를 파티클로 짠다(2026-11-06 사용자:
 	  "은하수 전체를 이루는 파티클이 여러개 필요해. sol's rng를 참고해서 만들면 퀄리티 좋게 만들 수 있을거야")
 	Plan(radius)        순수 수치 배치표(인스턴스 없음 — tools/combat/galaxy_plan.luau 가 읽어 예산 계산·평면도를 그린다)
-	Build(g, cf, radius) 배치표대로 부품·이미터를 g(은하 모형) 아래에 만들고 이미터 목록을 돌려준다(처음엔 모두 꺼 둔다)
+	Build(g, cf, radius) 배치표(이미터 Plan 의 첫째 값, Beam 은 둘째 값)대로 부품·이미터를 g(은하 모형) 아래에 만들고 이미터 목록을 돌려준다(처음엔 모두 꺼 둔다)
 
 	조사 요약(Sol's RNG 오라 — 정확한 제작 방식은 공개 자료가 없다. 확인된 것만):
 	  · 작품 설명·모음 글에서 Galaxy 오라(1/500,000, 별 떨어지는 바이옴) = "우주 같은 웅웅 소리 + 눈에 띄는 외형" 정도만 공개
@@ -18,6 +18,7 @@
 	쓴 ParticleEmitter 속성(전부 create.roblox.com/docs/reference/engine/classes/ParticleEmitter 확인):
 	  Enabled · LockedToPart · LightInfluence · LightEmission · Texture · Rate · Color · Size · Transparency · Lifetime · Speed · SpreadAngle
 	  · Rotation · RotSpeed · Shape · ShapeStyle · EmissionDirection(Enum.NormalId) · Orientation(Enum.ParticleOrientation) · Squash(NumberSequence)
+	쓴 Beam 속성(Beam 문서 확인): Enabled · Attachment0/1 · CurveSize0/1(0=Attachment0 의 +X, 1=Attachment1 의 -X 쪽 제어점) · Segments · Width0/1 · FaceCamera · LightEmission · LightInfluence · Texture · TextureMode(Wrap) · TextureLength · TextureSpeed · Color · Transparency
 	쓴 Enum 항목(문서 확인): ParticleEmitterShape Box/Sphere · ParticleEmitterShapeStyle Volume · ParticleOrientation FacingCamera/VelocityParallel · NormalId Front.
 	미확인(스튜디오에서 볼 것): Squash 부호(+가 늘이는지)·VelocityParallel 에서 어느 축이 길어지는지 — 문서에 설명 없음 → 아래 METEOR_SQUASH 한 곳만 고치면 된다.
 ]]
@@ -26,14 +27,14 @@ local GalaxyParticles = {}
 
 local K, R0 = 0.21, 14 -- 로그 나선 r = 14·e^(0.21t) (build_callisto_space.py 와 같다), 팔 사이 90°
 local ARMS = 4
-local SEGMENTS = 7 -- 팔 하나를 이어 붙인 Part 수(곧은 상자로 곡선을 근사 — 겹쳐 놓는다)
+local SEGMENTS = 8 -- 팔 하나를 이어 붙인 Part 수(곧은 상자로 곡선을 근사 — 겹쳐 놓는다). 이미터 한도 60 때문에 이 이상은 못 늘린다 — 끊김은 빛 띠 Beam 이 메운다
 local METEOR_SQUASH = 0.8 -- 유성 입자를 길게 늘이는 Squash 값(부호 스튜디오 확인)
 
 type Spec = { [string]: any }
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
-local TEX: { [string]: string } = { Sparkle = SPARKLE, Smoke = SMOKE }
+local TEX: { [string]: string } = { Sparkle = SPARKLE, Smoke = SMOKE, None = "" }
 
 local GOLD = { 255, 207, 138 }
 local PALEGOLD = { 255, 238, 200 }
@@ -60,8 +61,9 @@ local function fadeAlpha(mid: number): { any } -- 투명도: 1 → mid → 1
 	return { { 0, 1 }, { 0.2, mid }, { 0.8, mid + (1 - mid) * 0.3 }, { 1, 1 } }
 end
 
-function GalaxyParticles.Plan(radius: number): { Spec }
+function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 	local list: { Spec } = {}
+	local beams: { Spec } = {}
 	local rmax = math.min(radius * 0.95, 130)
 	local T0, T1 = 2.2, math.log(rmax / R0) / K
 	local function pt(arm: number, t: number): (number, number, number, number, number, number)
@@ -75,6 +77,9 @@ function GalaxyParticles.Plan(radius: number): { Spec }
 	local function add(s: Spec)
 		table.insert(list, s)
 	end
+	local function add2(to: { Spec }, s: Spec)
+		table.insert(to, s)
+	end
 
 	for arm = 0, ARMS - 1 do
 		-- ① 밝은 별 띠: 팔을 따라 7 토막, 안쪽은 금빛 → 바깥은 청백
@@ -84,13 +89,13 @@ function GalaxyParticles.Plan(radius: number): { Spec }
 			local tc = (t0 + t1) / 2
 			local x, z, dx, dz = pt(arm, tc)
 			local r0, r1 = R0 * math.exp(K * t0), R0 * math.exp(K * t1)
-			local len = 1.022 * (r1 - r0) / K * 1.2 -- 곡선 호 길이 + 겹침
+			local len = 1.022 * (r1 - r0) / K * 1.4 -- 곡선 호 길이 + 겹침(토막 사이 틈 없게)
 			local r = R0 * math.exp(K * tc)
 			local width = 3 + r * 0.07
 			add({
 				Name = ("ArmStars_%d_%d"):format(arm, k), Layer = "ArmStars", Arm = arm,
 				Pos = { x, 0, z }, Look = { dx, dz }, Size = { width, 2 + (1 - r / 135) * 3, len },
-				Shape = "Box", Dir = "Front", Rate = 2.5 + 0.06 * len, Life = { 5, 7 }, Speed = { 2, 5 }, Spread = 4,
+				Shape = "Box", Dir = "Front", Rate = 2.5 + 0.04 * len, Life = { 5, 7 }, Speed = { 3, 6 }, Spread = 4,
 				Tex = "Sparkle", Glow = 1, RotSpeed = { -40, 40 },
 				Color = if r < 45 then grad(GOLD, WHITE) else grad(WHITE, BLUE), Scale = bell(3, 1.4), Alpha = fadeAlpha(0.1),
 			})
@@ -164,7 +169,69 @@ function GalaxyParticles.Plan(radius: number): { Spec }
 			Alpha = { { 0, 1 }, { 0.15, 0 }, { 0.7, 0.2 }, { 1, 1 } },
 		})
 	end
-	return list
+	-- ⑦ 빛 띠(Beam): 팔 곡선을 6 토막 3차 곡선으로 이어 별들이 한 줄기 강처럼 이어져 보이게. 넓고 옅은 색 띠 + 좁고 밝은 띠, 토막 끝은 겹치고 투명도로 흐려 이음매를 감춘다.
+	-- 곡선: 양쪽 Attachment 의 X 축(오른쪽)을 접선으로 두고 CurveSize0/1 = 호 길이/3 (CurveSize1 은 Attachment1 의 -X 쪽 — 문서 확인).
+	local BAND = 6
+	local function bez(arm: number, ta: number, tb: number): Spec
+		local xa, za, dxa, dza = pt(arm, ta)
+		local xb, zb, dxb, dzb = pt(arm, tb)
+		local ra, rb = R0 * math.exp(K * ta), R0 * math.exp(K * tb)
+		local c = 1.022 * (rb - ra) / K / 3
+		return { P0 = { xa, 0, za }, P1 = { xb, 0, zb }, D0 = { dxa, dza }, D1 = { dxb, dzb }, C0 = c, C1 = c, R0 = ra, R1 = rb }
+	end
+	for arm = 0, ARMS - 1 do
+		for k = 1, BAND do
+			local ta = T0 + (T1 - T0) * (k - 1) / BAND
+			local tb = T0 + (T1 - T0) * k / BAND
+			local pad = (tb - ta) * 0.1
+			local b = bez(arm, ta - (if k > 1 then pad else 0), tb + (if k < BAND then pad else 0))
+			b.Name, b.Layer, b.Arm, b.Segments = ("BandWide_%d_%d"):format(arm, k), "BandWide", arm, 12
+			b.W0, b.W1, b.Tex, b.Glow, b.TexLen, b.TexSpeed = 5 + b.R0 * 0.16, 5 + b.R1 * 0.16, "Smoke", 1, 40, 0.1
+			b.Color, b.Alpha = grad(NEBULA[arm + 1], BLUE), { { 0, 1 }, { 0.12, 0.88 }, { 0.88, 0.88 }, { 1, 1 } }
+			add2(beams, b)
+			local n = bez(arm, ta - (if k > 1 then pad else 0), tb + (if k < BAND then pad else 0))
+			n.Name, n.Layer, n.Arm, n.Segments = ("BandCore_%d_%d"):format(arm, k), "BandCore", arm, 12
+			n.W0, n.W1, n.Tex, n.Glow, n.TexLen, n.TexSpeed = 1.5 + n.R0 * 0.05, 1.5 + n.R1 * 0.05, "Smoke", 1, 25, 0.2
+			n.Color = if n.R1 < 50 then grad(GOLD, WHITE) else grad(WHITE, BLUE)
+			n.Alpha = { { 0, 1 }, { 0.12, 0.7 }, { 0.88, 0.7 }, { 1, 1 } }
+			add2(beams, n)
+		end
+		-- ⑧ 별자리 실: 팽대부(반지름 16)의 1.8배 바깥(r ≥ 36)부터, 팔 곡선 위 호 길이 28 간격(r 이 5.75 씩)으로 별 5개 → 4줄 + 가운데 별에서 곁가지 1줄 = 팔당 5줄.
+		-- 팔마다 시작 반지름을 달리해(36·50·64·78) 고리처럼 겹치지 않고, 곁가지·좌우 흔들림은 팔 띠 폭 안에 머문다. 교차 없음은 tools/combat/galaxy_layout.py 가 계산으로 검사한다.
+		local ARC = 28 -- 별 사이 호 길이(스터드). 호 길이 = 1.022·Δr/K ≈ 4.87·Δr
+		local stars: { { number } } = {}
+		for i = 0, 4 do
+			local r = 36 + arm * 14 + i * ARC / (1.022 / K)
+			if r <= rmax then
+				local t = math.log(r / R0) / K
+				local x, z, _, _, rx, rz = pt(arm, t)
+				local off = (if i % 2 == 0 then -1 else 1) * (1.2 + r * 0.03)
+				table.insert(stars, { x + rx * off, 1.5, z + rz * off })
+			end
+		end
+		local function link(name: string, a: { number }, b: { number })
+			local dx, dz = b[1] - a[1], b[3] - a[3]
+			local n = math.sqrt(dx * dx + dz * dz)
+			add2(beams, {
+				Name = name, Layer = "Constellation", Arm = arm, Segments = 1,
+				P0 = a, P1 = b, D0 = { dx / n, dz / n }, D1 = { dx / n, dz / n }, C0 = 0, C1 = 0,
+				W0 = 0.7, W1 = 0.7, Tex = "None", Glow = 1, TexLen = 12, TexSpeed = 0, -- 텍스처 없이 색·투명도만(점선처럼 안 보이게)
+				Color = grad(WHITE, BLUE, WHITE), Alpha = { { 0, 1 }, { 0.12, 0.3 }, { 0.35, 0.72 }, { 0.55, 0.25 }, { 0.8, 0.68 }, { 0.92, 0.35 }, { 1, 1 } },
+			})
+		end
+		for i = 1, #stars - 1 do
+			link(("Const_%d_%d"):format(arm, i), stars[i], stars[i + 1])
+		end
+		if #stars == 5 then -- 곁가지: 가운데 별에서 바깥쪽으로 한 가닥
+			local m = stars[3]
+			local rr = math.sqrt(m[1] * m[1] + m[3] * m[3])
+			local ux, uz = m[1] / rr, m[3] / rr
+			local tx, tz = -uz, ux -- 접선 근사(반지름에 수직)
+			local side = { m[1] + ux * (0.1 * rr + 4) + tx * 8, 1.5, m[3] + uz * (0.1 * rr + 4) + tz * 8 }
+			link(("Const_%d_5"):format(arm), m, side)
+		end
+	end
+	return list, beams
 end
 
 local function nseq(t: { any }): NumberSequence
@@ -183,12 +250,13 @@ local function cseq(t: { any }): ColorSequence
 	return ColorSequence.new(keys)
 end
 
-function GalaxyParticles.Build(g: Model, cf: CFrame, radius: number): { ParticleEmitter }
+function GalaxyParticles.Build(g: Model, cf: CFrame, radius: number): { ParticleEmitter | Beam }
 	local anchor = Instance.new("Folder")
 	anchor.Name = "GalaxyFx"
 	anchor.Parent = g
-	local out: { ParticleEmitter } = {}
-	for _, s in GalaxyParticles.Plan(radius) do
+	local out: { ParticleEmitter | Beam } = {}
+	local emitters, beams = GalaxyParticles.Plan(radius)
+	for _, s in emitters do
 		local p = Instance.new("Part")
 		p.Name = s.Name
 		p.Transparency = 1
@@ -224,6 +292,40 @@ function GalaxyParticles.Build(g: Model, cf: CFrame, radius: number): { Particle
 		end
 		e.Parent = p
 		table.insert(out, e)
+	end
+	-- 빛 띠·별자리 실: Attachment 한 쌍(X 축 = 접선)마다 Beam 하나. 은하 모형과 같이 돌도록 은하 자리의 Part 하나에 모두 건다.
+	local rig = Instance.new("Part")
+	rig.Name = "GalaxyBeams"
+	rig.Transparency = 1
+	rig.Anchored, rig.CanCollide, rig.CanQuery, rig.CanTouch, rig.CastShadow = true, false, false, false, false
+	rig.Size = Vector3.one
+	rig.CFrame = cf
+	rig.Parent = anchor
+	local function att(p: { number }, d: { number }): Attachment
+		local a = Instance.new("Attachment")
+		a.CFrame = CFrame.fromMatrix(Vector3.new(p[1], p[2], p[3]), Vector3.new(d[1], 0, d[2]), Vector3.yAxis)
+		a.Parent = rig
+		return a
+	end
+	for _, s in beams do
+		local b = Instance.new("Beam")
+		b.Name = s.Name
+		b.Enabled = false
+		b.Attachment0, b.Attachment1 = att(s.P0, s.D0), att(s.P1, s.D1)
+		b.CurveSize0, b.CurveSize1 = s.C0, s.C1
+		b.Segments = s.Segments
+		b.Width0, b.Width1 = s.W0, s.W1
+		b.FaceCamera = true
+		b.LightEmission = s.Glow
+		b.LightInfluence = 0
+		b.Texture = TEX[s.Tex]
+		b.TextureMode = Enum.TextureMode.Wrap
+		b.TextureLength = s.TexLen
+		b.TextureSpeed = s.TexSpeed
+		b.Color = cseq(s.Color)
+		b.Transparency = nseq(s.Alpha)
+		b.Parent = rig
+		table.insert(out, b)
 	end
 	return out
 end

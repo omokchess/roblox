@@ -16,7 +16,8 @@ def blob(x, y, rad, c, a):
                 w = a * (1 - d) ** 2
                 p = img[j][i]
                 for k in range(3): p[k] = max(0.0, p[k] + c[k] * w)
-plan = json.load(open("tools/combat/out/galaxy_plan.json"))
+data = json.load(open("tools/combat/out/galaxy_plan.json"))
+plan, beams = data["emitters"], data["beams"]
 def col(s, f=0.0):
     ks = s["Color"]; c = ks[0][1] if f < 0.5 else ks[-1][1]; return c
 order = {"Disc": 0, "Nebula": 1, "Dust": 2, "ArmStars": 3, "Bulge": 4, "Meteor": 5}
@@ -46,7 +47,22 @@ for s in sorted(plan, key=lambda s: order[s["Layer"]]):
             blob(x, y, big * 0.5, [v * 0.55 for v in c], 0.16)
         else:
             blob(x, y, max(1.2, big * 0.5), c, 0.9)
-for arm in range(4):
+def bez_pts(b, n=70):                                   # Beam 곡선(문서: 제어점 = P0+D0*C0, P1-D1*C1 — 로블록스 z 는 위로 뒤집어 그린다)
+    p0, p3 = (b["P0"][0], b["P0"][2]), (b["P1"][0], b["P1"][2])
+    p1 = (p0[0] + b["D0"][0] * b["C0"], p0[1] + b["D0"][1] * b["C0"])
+    p2 = (p3[0] - b["D1"][0] * b["C1"], p3[1] - b["D1"][1] * b["C1"])
+    for i in range(n + 1):
+        t = i / n; u = 1 - t
+        yield tuple(u**3 * p0[k] + 3 * u * u * t * p1[k] + 3 * u * t * t * p2[k] + t**3 * p3[k] for k in range(2))
+for b in beams:
+    wide = b["Layer"] == "BandWide"
+    c = b["Color"][0][1] if b["Layer"] != "BandCore" else (255, 240, 220)
+    for x, z in bez_pts(b):
+        w = b["W0"] / 2 if wide else max(1.0, b["W0"] / 2)
+        if wide: blob(x, -z, w, [v * 0.5 for v in c], 0.03)
+        elif b["Layer"] == "BandCore": blob(x, -z, w, c, 0.06)
+        else: blob(x, -z, 0.8, (255, 255, 255), 0.4)
+for arm in range(0):
     for k in range(240):
         t = 1.0 + k * 0.04; r = 14 * math.exp(0.21 * t)
         if r > 135: break
@@ -56,3 +72,10 @@ for arm in range(4):
 raw = b"".join(b"\x00" + bytes(min(255, int(255 * (1 - math.exp(-v / 110.0)))) for p in row for v in p) for row in img)
 def chunk(t, d): c = struct.pack(">I", len(d)) + t + d; return c + struct.pack(">I", zlib.crc32(t + d))
 open("tools/combat/out/galaxy_layout.png", "wb").write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", N, N, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 6)) + chunk(b"IEND", b""))
+
+# 별자리 실 교차 검사: 같은 줄(끝점을 나누는 이웃 포함)을 뺀 모든 쌍(팔 안·팔 사이)이 만나지 않아야 한다
+def ccw(a, b, c): return (c[1] - a[1]) * (b[0] - a[0]) - (b[1] - a[1]) * (c[0] - a[0])
+def cross(a, b, c, d): return ccw(a, c, d) * ccw(b, c, d) < 0 and ccw(a, b, c) * ccw(a, b, d) < 0
+lines = [((b["P0"][0], b["P0"][2]), (b["P1"][0], b["P1"][2]), b["Name"]) for b in beams if b["Layer"] == "Constellation"]
+bad = [(l1[2], l2[2]) for i, l1 in enumerate(lines) for l2 in lines[i + 1:] if cross(l1[0], l1[1], l2[0], l2[1])]
+print("별자리 실 %d줄, 교차 %d쌍 %s" % (len(lines), len(bad), bad))

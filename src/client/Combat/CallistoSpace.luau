@@ -36,7 +36,7 @@ type State = {
 	Space: Model,
 	Galaxy: Model?,
 	GalaxyOn: boolean,
-	GalaxyFx: { ParticleEmitter },
+	GalaxyFx: { ParticleEmitter | Beam },
 	Angle: number,
 	GalaxyAngle: number,
 	SpinNow: number,
@@ -87,7 +87,7 @@ end
 -- 은하 모형에 붙어 함께 돈다(LockedToPart). 모형 자체는 GALAXY_MODEL_ALPHA 만큼만 보이게 옅게 남겨 파티클의 뼈대로 쓴다. 처음엔 꺼 두고 Galaxy(on) 이 켠다.
 local GALAXY_MODEL_ALPHA = 0.5 -- 블렌더 은하 모형이 보이는 비율(1=그대로, 0=없앰)
 
-function CallistoSpace._GalaxyParticles(g: Model): { ParticleEmitter }
+function CallistoSpace._GalaxyParticles(g: Model): { ParticleEmitter | Beam }
 	local cf, size = g:GetBoundingBox()
 	local radius = math.clamp(math.max(size.X, size.Z) / 2, 30, 140)
 	return GalaxyParticles.Build(g, cf, radius)
@@ -112,7 +112,7 @@ function CallistoSpace.Show(fadeTime: number?)
 	fade(space, 0, 1, fadeTime or 0)
 	local galaxySource = kit and kit:FindFirstChild("Galaxy")
 	local galaxy: Model? = nil
-	local galaxyFx: { ParticleEmitter } = {}
+	local galaxyFx: { ParticleEmitter | Beam } = {}
 	if galaxySource and galaxySource:IsA("Model") then
 		local g = galaxySource:Clone()
 		fade(g, 0, 0, 0)

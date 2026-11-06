@@ -5,7 +5,7 @@ local fs = require("@lune/fs")
 local serde = require("@lune/serde")
 local G = require("../../src/client/Combat/GalaxyParticles")
 
-local plan = G.Plan(135)
+local plan, beams = G.Plan(135)
 local live, byLayer, emittersBy = 0, {}, {}
 for _, s in plan do
 	local n = s.Rate * (s.Life[1] + s.Life[2]) / 2
@@ -17,4 +17,5 @@ print(("이미터 %d (한도 60) · 살아 있는 입자 약 %d (한도 2000)"):
 for layer, n in byLayer do
 	print(("  %-9s 이미터 %2d · 입자 %4d"):format(layer, emittersBy[layer], n))
 end
-fs.writeFile("tools/combat/out/galaxy_plan.json", serde.encode("json", plan, true))
+print(("Beam %d (한도 80)"):format(#beams))
+fs.writeFile("tools/combat/out/galaxy_plan.json", serde.encode("json", { emitters = plan, beams = beams }, true))
