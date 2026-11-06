@@ -339,8 +339,10 @@ function CombatVfx.Sparks(pos: Vector3, opts: { [string]: any })
 	e.LightInfluence = 0
 	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, opts.Size or 0.6), NumberSequenceKeypoint.new(1, 0) })
 	e.Transparency = NumberSequence.new(0, 1)
-	e.Lifetime = NumberRange.new(0.25, opts.Lifetime or 0.55)
-	e.Speed = NumberRange.new(opts.MinSpeed or 8, opts.Speed or 22)
+	-- 최솟값이 최댓값보다 크면 NumberRange 가 오류를 낸다(Speed 2 만 준 별 반짝임이 기본 최소 8 에 걸렸다) — 최솟값을 최댓값 이하로
+	local life, speed = opts.Lifetime or 0.55, opts.Speed or 22
+	e.Lifetime = NumberRange.new(math.min(0.25, life), life)
+	e.Speed = NumberRange.new(math.min(opts.MinSpeed or 8, speed), speed)
 	e.SpreadAngle = Vector2.new(180, 180)
 	e.Drag = 4
 	e.Acceleration = opts.Accel or Vector3.new(0, -20, 0)
@@ -361,7 +363,7 @@ function CombatVfx.Dust(pos: Vector3, opts: { [string]: any })
 	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, opts.Size or 1.4), NumberSequenceKeypoint.new(1, (opts.Size or 1.4) * 2.6) })
 	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) })
 	e.Lifetime = NumberRange.new(0.5, 0.9)
-	e.Speed = NumberRange.new(4, opts.Speed or 12)
+	e.Speed = NumberRange.new(math.min(4, opts.Speed or 12), opts.Speed or 12)
 	e.SpreadAngle = Vector2.new(180, 10)
 	e.EmissionDirection = Enum.NormalId.Top
 	e.Drag = 5
