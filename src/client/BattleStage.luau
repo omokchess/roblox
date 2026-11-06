@@ -219,7 +219,7 @@ end
 
 local function pixels(parent: BasePart, colors: { Color3 }, rate: number, speed: number, life: number)
 	local e = Instance.new("ParticleEmitter")
-	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Texture = "rbxassetid://1084970835"
 	e.Shape = Enum.ParticleEmitterShape.Box
 	e.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
 	e.EmissionDirection = Enum.NormalId.Top
@@ -393,7 +393,7 @@ local function laserEdge(mid: Vector3, half: Vector3, color: Color3, strong: boo
 		beam.Parent = holder
 	end
 	local e = Instance.new("ParticleEmitter")
-	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Texture = "rbxassetid://1084970835"
 	e.Shape = Enum.ParticleEmitterShape.Box
 	e.EmissionDirection = Enum.NormalId.Top
 	e.Rate = half.Magnitude * 9

@@ -21,8 +21,8 @@ local TweenService = game:GetService("TweenService")
 local RegionAtmosphere = {}
 
 local RGB = Color3.fromRGB
-local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
-local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
+local SMOKE = "rbxassetid://275871881"
+local SPARK = "rbxassetid://1084970835"
 
 -- { 이름, 중심 x, 중심 z, 반지름 } — 섬 모양이 길면 점을 둘로
 local REGIONS: { { any } } = {

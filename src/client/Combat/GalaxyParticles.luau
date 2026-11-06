@@ -32,8 +32,9 @@ local METEOR_SQUASH = 0.8 -- 유성 입자를 길게 늘이는 Squash 값(부호
 
 type Spec = { [string]: any }
 
-local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
-local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
+-- FX 팩(VfxLibrary) 텍스처: Loose/Sparkles(별 반짝임)·Waterfall-01 Clouds(부드러운 구름)
+local SPARKLE = "rbxassetid://1084970835"
+local SMOKE = "rbxassetid://275871881"
 local TEX: { [string]: string } = { Sparkle = SPARKLE, Smoke = SMOKE, None = "" }
 
 local GOLD = { 255, 207, 138 }

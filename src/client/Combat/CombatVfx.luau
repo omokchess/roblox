@@ -309,7 +309,7 @@ function CombatVfx.Flash(pos: Vector3, opts: { [string]: any })
 	img.Size = UDim2.fromScale(1, 1)
 	img.AnchorPoint = Vector2.new(0.5, 0.5)
 	img.Position = UDim2.fromScale(0.5, 0.5)
-	img.Image = "rbxasset://textures/glow.png"
+	img.Image = "rbxassetid://12082081459"
 	img.ImageColor3 = color
 	img.Parent = bb
 	local light = Instance.new("PointLight")
@@ -333,7 +333,7 @@ function CombatVfx.Sparks(pos: Vector3, opts: { [string]: any })
 	local anchor = part(Vector3.new(0.2, 0.2, 0.2), CFrame.new(pos), Color3.new(1, 1, 1))
 	anchor.Transparency = 1
 	local e = Instance.new("ParticleEmitter")
-	e.Texture = opts.Texture or "rbxasset://textures/particles/sparkles_main.dds"
+	e.Texture = opts.Texture or "rbxassetid://1084970835"
 	e.Color = ColorSequence.new(opts.Color or Color3.fromRGB(255, 230, 160))
 	e.LightEmission = 1
 	e.LightInfluence = 0
@@ -357,7 +357,7 @@ function CombatVfx.Dust(pos: Vector3, opts: { [string]: any })
 	local anchor = part(Vector3.new(0.2, 0.2, 0.2), CFrame.new(pos), Color3.new(1, 1, 1))
 	anchor.Transparency = 1
 	local e = Instance.new("ParticleEmitter")
-	e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	e.Texture = "rbxassetid://10180479311"
 	e.Color = ColorSequence.new(opts.Color or Color3.fromRGB(170, 160, 140))
 	e.LightInfluence = 1
 	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, opts.Size or 1.4), NumberSequenceKeypoint.new(1, (opts.Size or 1.4) * 2.6) })
