@@ -123,17 +123,20 @@ local function star(ctx: any, at: Vector3, size: number, life: number, color: Co
 end
 
 -- 칼날 궤적: 대상 앞에서 비스듬한 원호 + 별가루(트로히아는 style = "Back" — 수평 등손 베기, 팩의 여러 줄 베기 자국)
+-- 연타(트로히아 5연격 2026-11-06): ev.sz = 크기 배율(약 0.7 · 중 0.95 · 강 1.5), ev.flip = 베는 방향 뒤집기(좌↔우 번갈아)
 function Fx.BladeArc(ctx: any, ev: any)
 	local p = ctx.Target
 	local back = ev and ev.style == "Back"
+	local sz = (ev and ev.sz) or 1
+	local sw = if ev and ev.flip then -1 else 1
 	if back then
-		Common.Arc(ctx, p - ctx.Forward * 1.2, 90 + math.random(-12, 12), -130, 130, { Radius = 3.4, Color = STAR, Core = STAR_CORE, Life = 0.24, Width = 0.6 })
-		ctx.Vfx.Pack("Anime/Slashes-01", CFrame.new(p), { Color = STAR, Size = 0.7 })
+		Common.Arc(ctx, p - ctx.Forward * 1.2, 90 + math.random(-12, 12), -130 * sw, 130 * sw, { Radius = 3.4 * sz, Color = STAR, Core = STAR_CORE, Life = 0.2 + 0.04 * sz, Width = 0.6 * sz })
+		ctx.Vfx.Pack("Anime/Slashes-01", CFrame.new(p), { Color = STAR, Size = 0.7 * sz })
 	else
-		Common.Arc(ctx, p - ctx.Forward * 1.2, 30 + math.random(-25, 25), 140, -60, { Radius = 3.6, Color = STAR, Core = STAR_CORE, Life = 0.3, Width = 0.7 })
-		ctx.Vfx.Pack("Anime/Slash-01", CFrame.new(p), { Color = STAR_CORE, Size = 0.8 })
+		Common.Arc(ctx, p - ctx.Forward * 1.2, 30 + math.random(-25, 25), 140, -60, { Radius = 3.6 * sz, Color = STAR, Core = STAR_CORE, Life = 0.3, Width = 0.7 * sz })
+		ctx.Vfx.Pack("Anime/Slash-01", CFrame.new(p), { Color = STAR_CORE, Size = 0.8 * sz })
 	end
-	ctx.Vfx.Sparks(p, { Color = STAR_CORE, Count = 10, Speed = 22 })
+	ctx.Vfx.Sparks(p, { Color = STAR_CORE, Count = math.floor(10 * sz), Speed = 22 })
 end
 
 -- 칼날 번뜩(말레니아 — "의수가 반짝이면 큰 기술"): 칼끝에 네 갈래 별빛이 반짝 켜진다

@@ -4134,6 +4134,7 @@ function GridBattle.EndTurn(state: State)
 		BattleStatus.SpendAll(a.Status, ClassResources.BIND)
 	end
 	fire(state, "TurnEnd", { Acted = state.Acted, Moved = state.Moved, Attacked = state.Attacked })
+	local dotSpent: { [string]: number } = {}
 	for _, unit in state.Units do
 		if unit.Alive then
 			--[[
@@ -4173,6 +4174,7 @@ function GridBattle.EndTurn(state: State)
 			total += damageUnit(state, unit, tick.Physical, "Physical", false)
 			total += damageUnit(state, unit, tick.Fire, "Fire", false, burnIgnore)
 			total += damageUnit(state, unit, tick.True, "True", false)
+			dotSpent[unit.Id] = total -- 융해 폭발이 DotCap 남은 몫을 셀 때 쓴다
 			if #tick.Notes > 0 then
 				-- 보스 부위는 깎인 실제 피해를 적는다(원래 줄은 경감 전 수치)
 				local note = if unit.Part and BOSS_DOT_CUT > 0
@@ -4233,6 +4235,11 @@ function GridBattle.EndTurn(state: State)
 		BattleStatus.AddBurn(unit.Status, melt * 3)
 		-- 2026-11-06 사용자: (대상의 화상 수치 × 융해 수치) ÷ 2, 융해 1당 최대 100. 화상은 이번에 얹은 melt × 3 까지 센다
 		local burst = BattleStatus.MeltDamage(unit.Status.Burn, melt) * (if unit.Part then 1 - BOSS_DOT_CUT else 1)
+		-- 2026-11-06 조율자 도트 너프: 융해 폭발도 도트다 — DotCap 적은 이번 턴 틱이 쓰고 남은 몫까지만
+		local meltCap = if unit.DefId then EnemyDefinitions.Get(unit.DefId).DotCap else nil
+		if meltCap then
+			burst = math.min(burst, math.max(0, unit.MaxHealth * meltCap - (dotSpent[unit.Id] or 0)))
+		end
 		local dealt = damageUnit(state, unit, burst, "True", false)
 		pushLog(state, string.format("%s — 융해 %d 폭발 (%d 피해 · 화상 +%d)", unit.Name, melt, dealt, melt * 3))
 		fire(state, "MeltBurst", { Target = unit, Melt = melt, Damage = dealt })

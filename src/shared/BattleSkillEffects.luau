@@ -36,6 +36,7 @@
 
 local BattleStatus = require(script.Parent.BattleStatus)
 local ClassResources = require(script.Parent.ClassResources)
+local EnemyDefinitions = require(script.Parent.EnemyDefinitions)
 
 local R = ClassResources
 
@@ -1418,7 +1419,13 @@ local attunerEffects: { [string]: Effect } = {
 				for _, target in ctx.Targets do
 					local burn = ctx.StatusOf(target).Burn or 0
 					if target.Alive and burn > 0 then
-						local dealt = ctx.Damage(target, math.floor(target.MaxHealth * BattleStatus.BurnRatio(burn)), "Fire", true)
+						local amount = math.floor(target.MaxHealth * BattleStatus.BurnRatio(burn))
+						-- 2026-11-06 조율자 도트 너프: 발동도 도트다 — 칼리스토 같은 DotCap 적은 한 번에 최대 체력의 DotCap 까지(전엔 우회해 화상 346 에 최대 체력 36%)
+						local dotCap = if target.DefId then EnemyDefinitions.Get(target.DefId).DotCap else nil
+						if dotCap then
+							amount = math.min(amount, math.floor(target.MaxHealth * dotCap))
+						end
+						local dealt = ctx.Damage(target, amount, "Fire", true)
 						ctx.Log(string.format("화상 발동 %d%% — %d 피해", burn, dealt))
 					end
 				end
@@ -1451,6 +1458,8 @@ function BattleSkillEffects.GrantConcentration(ally: any, turn: number, turns: n
 	return gained
 end
 
+local SPACECUT_BONUS = 2 -- 공간의 이해: 스킬 자체 피해 증가(+200%)
+
 local azureBladeEffects: { [string]: Effect } = {
 	Provoke = {
 		After = function(ctx)
@@ -1464,11 +1473,12 @@ local azureBladeEffects: { [string]: Effect } = {
 		end,
 	},
 	-- 공간의 이해: 모든 집중력을 소모한다(피해 속성 True 는 스킬 표의 Element)
+	-- 2026-11-06 사용자: "스킬 자체 피해 증가를 엄청 줘야" → 스킬 피해 증가 칸 +200%(턴당 피해 140 → 320, 최상위 직업 Berserker 316·월 필그림 368 과 같은 눈금)
 	SpaceCut = {
 		Before = function(ctx)
 			BattleStatus.SpendAll(ctx.Status, R.CONCENTRATION)
 			ctx.Ally.ConcentrationLeft = 0
-			return 1
+			return 1 + SPACECUT_BONUS
 		end,
 	},
 }

@@ -712,7 +712,7 @@ end
 --[[
 	2026-11-06 사용자: "2페이즈에 진입했을 때 전장이 하늘전장이라면, 칼리스토가 밟고 있는 발판을 투명하게 처리한다."
 	하늘 전장(arena.Kind == "Sky")이고 보이는 페이즈가 2 이상이면 이 사람 화면에서만(LocalTransparencyModifier) 전장 바닥 판(서버가 지은 SkyArenas/ArenaNN —
-	한 장이라 통째로)과 칼리스토가 선 칸을 투명하게 — 우주에 떠 있는 느낌. 지상 전장·1페이즈면 그대로. id = nil 이면 전부 되돌린다(전투가 끝날 때).
+	한 장이라 통째로)과 그 가장자리 난간 넷, 칼리스토가 선 칸을 투명하게 — 우주에 떠 있는 느낌. 지상 전장·1페이즈면 그대로. id = nil 이면 전부 되돌린다(전투가 끝날 때).
 	아군·다른 적 칸은 그대로(범위 표시가 거기 칠해진다).
 ]]
 function BattleClient:_callistoPlatform(id: string?)
@@ -723,6 +723,13 @@ function BattleClient:_callistoPlatform(id: string?)
 		local floor = floors and arena.Slot and floors:FindFirstChild(string.format("Arena%02d", arena.Slot))
 		if floor and floor:IsA("BasePart") then
 			hidden[floor] = true
+		end
+		-- 2026-11-06 사용자: "발판 옆에 있는 사이드바들은 삭제가 안됐어." — 같은 전장의 난간 넷(Arena%02dRail1~4, 서버가 바닥 가장자리에 세운 반투명 Neon)도 같이
+		for railIndex = 1, 4 do
+			local rail = floors and arena.Slot and floors:FindFirstChild(string.format("Arena%02dRail%d", arena.Slot, railIndex))
+			if rail and rail:IsA("BasePart") then
+				hidden[rail] = true
+			end
 		end
 		local unit = self.snapshot and self.snapshot.Units and self.snapshot.Units[id]
 		local cells = if unit then (unit.Cells or (if unit.X then { { unit.X, unit.Y } } else {})) else {}
@@ -749,7 +756,7 @@ end
 
 --[[
 	2026-11-06 사용자: "배치와 스킬 지정을 마치면 타일을 숨기고, 턴이 시작될 때 다시 표시한다."
-	칸(윤곽·글자)이 보이는지 한 곳에서 정한다 — 내 연출이 도는 동안(tilesHidden) · 보스 디버그의 적 쪽 칸(늘 숨김) · 칼리스토가 선 칸(하늘 전장 2페이즈).
+	칸(윤곽·글자)이 보이는지 한 곳에서 정한다 — (2026-11-06 사용자: 연출 중 칸 숨김은 롤백 — 칸은 늘 보인다) 보스 디버그의 적 쪽 칸(늘 숨김) · 칼리스토가 선 칸(하늘 전장 2페이즈).
 	칸 말고 따로 깔린 표시(위협 레이저·검수 칸 묶음·몸 윤곽)는 건드리지 않는다 — 적 공격 예고는 연출 중에도 보여야 피할 곳을 안다.
 ]]
 function BattleClient:_syncTiles()
@@ -758,13 +765,12 @@ function BattleClient:_syncTiles()
 		return
 	end
 	local snapshot = self.snapshot
-	local all = self.tilesHidden == true
 	local keep: { [BasePart]: boolean } = self.platformHidden or {}
 	for side, rows in tiles :: any do
 		local sideOff = side == "Enemy" and snapshot ~= nil and snapshot.Boss ~= nil
 		for _, row in rows do
 			for _, part in row do
-				local off = all or sideOff or keep[part] == true
+				local off = sideOff or keep[part] == true
 				part.LocalTransparencyModifier = if off then 1 else 0
 				local box = part:FindFirstChild("Mark") :: SelectionBox?
 				if box then
@@ -1229,7 +1235,6 @@ function BattleClient:_teardownBattle()
 	end
 	self.active = false
 	self.arenaOrigin = nil
-	self.tilesHidden = nil
 	self.bossCamStart = nil
 	self.bossCamBase = nil
 	self.bossCamFollow = nil
@@ -2151,18 +2156,6 @@ function BattleClient:_bindInput()
 				self.director:HoldAt("player", self:_home("Ally", hover.X, hover.Y).Position + Vector3.new(0, 2.2, 0))
 			end
 		end
-		-- 내 스킬·적 연출이 도는 동안 칸을 숨긴다 — 위협(예고)·회피·QTE·끌기 중이거나 연출이 끝난 계획 단계면 보인다
-		local resolving = self.director ~= nil
-			and self.director:IsBusy()
-			and not self.qte
-			and not self.dragging
-			and not self.threatWaiting
-			and not self.pendingThreat
-			and #((self.snapshot and self.snapshot.Threats) or {}) == 0
-		if resolving ~= (self.tilesHidden == true) then
-			self.tilesHidden = resolving
-			self:_syncTiles()
-		end
 		if self.bossCamStart and self.bossCamBase then
 			local now = os.clock()
 			local cf = if self.snapshot and self.snapshot.Callisto
@@ -2268,7 +2261,7 @@ function BattleClient:_startQte(role: QteDefinitions.Role)
 	end
 	local rng = Random.new(os.clock() * 1000)
 	local beats = if role == "Dodge" and self.pendingThreat then self.pendingThreat.Chain or 1 else 1
-	if beats > 1 then
+	if beats > 1 and not self.pendingThreat.Same then
 		-- 칼리스토 신데시·쏟아지는 뭇별: 연타 QTE 하나(화살표 5개 × 비트, 6,000ms)
 		self.qte = QteDefinitions.CreateChain(function()
 			return rng:NextNumber()

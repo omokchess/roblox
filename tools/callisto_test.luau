@@ -92,6 +92,22 @@ do
 	if ripe then
 		check(stack(ally, ClassResources.SEONGWI) == 0 and stack(ally, ClassResources.MUTBYEOL) > 0, "렌즈가 성위를 뭇별로 바꿈")
 	end
+	-- 2026-11-06 트로히아 다단히트: 회피 QTE 하나(ChainQte)의 등급 하나(SameGrade)가 5타 모두에 — 타마다 같은 피해
+	local tro = loadShared("BattleSkills").ById("CallistoTrohia")
+	check(tro.ChainQte == true and tro.SameGrade == true and tro.Strikes == 5, "트로히아 QTE 한 번 · 5타 같은 등급")
+	local ts = battle()
+	local tb = boss(ts)
+	tb.Plans = {}
+	for k = 1, 5 do
+		tb.Plans[k] = { SkillId = "CallistoTrohia", Cells = { { 1, 2 } } }
+	end
+	tb.Plan = tb.Plans[1]
+	ts.Planned = { tb.Id, tb.Id, tb.Id, tb.Id, tb.Id }
+	local before = GridBattle.Ally(ts).Health
+	for k = 1, 5 do
+		GridBattle.ResolveDodge(ts, tb.Id, "Success", k)
+	end
+	check(GridBattle.Ally(ts).Health == before, "트로히아 5타 회피 성공 — 피해 없음")
 	print("2 1페이즈 박자 OK")
 end
 

@@ -228,7 +228,7 @@ function BattleStatus.AddPoison(state: State, amount: number): number
 end
 
 function BattleStatus.AddBurn(state: State, amount: number, ignore: number?): number
-	state.Burn = math.max(0, state.Burn + math.floor(amount))
+	state.Burn = math.min(BattleStatus.BURN_MAX_STACK, math.max(0, state.Burn + math.floor(amount)))
 	if ignore and ignore > 0 then
 		state.BurnIgnore = ignore
 	end
@@ -332,6 +332,8 @@ BattleStatus.TETANUS_DAMAGE = 0.85 -- 2026-11-06 0.8 → 0.85 (파상풍·쇼크
 -- 화상: 최대 체력 × (2% + 0.1% × 화상 수치)(2026-11-06 사용자). 수치 1 이상이면 최소 2.1%
 BattleStatus.BURN_BASE_RATIO = 0.02
 BattleStatus.BURN_PER_STACK_RATIO = 0.001
+-- 화상 최대 스택(`Keywords` 의 "최대 스택 40" 인데 코드가 막지 않아 조율자 화상이 438 까지 쌓였다 — 2026-11-06 조율자 도트 너프). AddBurn 이 막는다
+BattleStatus.BURN_MAX_STACK = 40
 -- 융해: (대상의 화상 수치 × 융해 수치) ÷ 2 피해, 융해 1당 최대 100(2026-11-06 사용자)
 BattleStatus.MELT_DAMAGE_CAP_PER_STACK = 100
 -- 쇼크: 수치 1당 받는 피해량 +6%(옛 8%, 2026-11-06 약화)

@@ -142,6 +142,8 @@ export type Skill = {
 	Strikes: number?,
 	-- 연타 회피 QTE 를 하나로 합친다(칼리스토 신데시·쏟아지는 뭇별 — QteDefinitions CreateChain)
 	ChainQte: boolean?,
+	-- 2026-11-06 사용자: 연타 회피 기술은 회피 QTE 한 번 + 다단히트 — 묶인 모든 타에 그 한 번의 등급을 똑같이 적용(칼리스토 트로히아). ChainQte 와 같이 쓴다
+	SameGrade: boolean?,
 	-- 칼리스토 추적 공격의 기믹(2026-11-06 사용자 답 Q3): 조건을 채우고 맞으면 피해 Reduce 만큼 감소(GridBattle callistoGimmickMet — Id 는 조건 이름)
 	Gimmick: { Id: string, Name: string, Reduce: number, Text: string }?,
 }
@@ -448,11 +450,13 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoTrohia",
 		Name = "트로히아",
-		Description = "- 팔등에서 나온 칼날로 5번 연달아 벰(5 × 5).\n- 한 번씩 따로 회피(5번 회피).\n- 맞을 때마다 [성위] 1.\n- 대상에게 [뭇별]이 있으면 한 번마다 [성위] 대신 [화상] 3.",
+		Description = "- 팔등에서 나온 칼날로 5번 연달아 벰(5 × 5).\n- 회피 QTE 한 번(5타 모두 같은 등급).\n- 맞을 때마다 [성위] 1.\n- 대상에게 [뭇별]이 있으면 한 번마다 [성위] 대신 [화상] 3.",
 		Damage = 5,
 		Range = "Melee",
 		Shape = { Kind = "Square", Radius = 1 },
 		Strikes = 5,
+		ChainQte = true,
+		SameGrade = true,
 		BossKind = "Attack",
 	},
 	{
@@ -1032,8 +1036,8 @@ local focusSkills: { Skill } = {
 	{
 		Id = "SpaceCut",
 		Name = "공간의 이해",
-		Description = "- [집중력] 변형.\n- 보이지 않게 17번 블링크하며 적진 곳곳에 잔상과 검흔을 남기고, 제자리로 돌아와 칼을 꽂으면 검흔이 하나씩 터지며 필드 전체를 17번 벤다.\n- 적의 방어와 상관없는 고정 피해(트루 데미지).\n- 모든 [집중력]을 소모.",
-		Damage = 51, -- 2026-10-30 사용자: 청의 검사 기본 피해 +50%(옛 34)
+		Description = "- [집중력] 변형.\n- 보이지 않게 17번 블링크하며 적진 곳곳에 잔상과 검흔을 남기고, 제자리로 돌아와 칼을 꽂으면 검흔이 하나씩 터지며 필드 전체를 17번 벤다.\n- 적의 방어와 상관없는 고정 피해(트루 데미지).\n- 이 스킬의 피해량 +200%.\n- 모든 [집중력]을 소모.",
+		Damage = 51, -- 2026-10-30 사용자: 청의 검사 기본 피해 +50%(옛 34). 2026-11-06 스킬 피해 증가 +200%는 BattleSkillEffects.SpaceCut
 		Range = "Melee",
 		-- 2026-10-26 사용자: 필드 전체 타격기로(전엔 적 칸 기준 앞뒤 2칸 × 3줄)
 		Shape = { Kind = "All" },

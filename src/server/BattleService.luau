@@ -207,7 +207,7 @@ function BattleService:_buildSkyArenas()
 		}
 		for railIndex, spec in rails do
 			local rail = Instance.new("Part")
-			rail.Name = string.format("Rail%d", railIndex)
+			rail.Name = string.format("Arena%02dRail%d", index, railIndex) -- 2026-11-06: 어느 전장 난간인지 이름으로 안다(클라가 2페이즈에 투명하게)
 			rail.Anchored = true
 			rail.Size = spec[1]
 			rail.Position = Vector3.new(origin.X, origin.Y, origin.Z) + spec[2]
@@ -815,6 +815,7 @@ function BattleService:_queueThreats(player: Player)
 			GuardOnly = foeSkill.GuardOnly == true,
 			Unavoidable = GridBattle.IsUnavoidable(battle, foeSkill),
 			Chain = if foeSkill.ChainQte and not GridBattle.IsUnavoidable(battle, foeSkill) then 1 else nil,
+			Same = foeSkill.SameGrade == true, -- 트로히아: QTE 한 번의 등급을 모든 타에
 		})
 	end
 	session.Threats = threats
@@ -896,7 +897,7 @@ function BattleService:HandleGridAction(player: Player, request: any)
 		local pending = table.remove(session.Threats, 1)
 		local function gradeOf(beat: number): string
 			local given = if type(request.Grades) == "table" then tostring(request.Grades[beat]) else nil
-			return if given and VALID_GRADES[given] then given else grade
+			return if given and VALID_GRADES[given] and not pending.Same then given else grade
 		end
 		GridBattle.ResolveDodge(battle, pending.Id, gradeOf(1) :: any, pending.PlanIndex)
 		-- 3연타 QTE: 이어지는 비트(Tail)를 비트별 등급(Grades)으로 마저 해소한다. Grades 가 모자라거나 틀리면 Grade 로 채운다
