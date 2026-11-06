@@ -608,9 +608,9 @@ end
 	2026-10-04 월 필그림 리워크 — 적에게 거는 스택 디버프. 한 곳에서 건다(스킬·카드 공용).
 	  [낙인]   스택(최대 20) + 받는 회복 −50%(보정값 "낙인", 3턴). 갈라진 신도·합창이 스택당 피해 +5%.
 	  [파상풍] 최대 10. 수치 1당 주는 피해 ×0.85(BattleStatus.OutgoingDamage)·스킬 실패 5%(GridBattle ResolveDodge).
-	           걸릴 때 수치 1당 [쇼크] 1. 10 이 되면 최대 체력 10% 피해 → 0 으로, 2턴 면역. 매 턴 수치만큼 [출혈] 받고 1 줄어듦.
+	           걸릴 때 수치 1당 [쇼크] 1. 10 이 되면 최대 체력 4% 피해 → 0 으로, 2턴 면역. 매 턴 수치만큼 [출혈] 받고 1 줄어듦.
 	  [쇼크]   최대 10. 수치 1당 받는 피해 +6%(보정값 "쇼크", 3턴 — 다시 걸리면 갱신). 수치가 3 이상이면 [경련].
-	  [경련]   최대 1. 걸린 턴에 스킬을 쓰면 최대 체력 3% 피해·그로기 게이지 10%. 턴이 끝나면 사라지고 3턴 면역.
+	  [경련]   최대 1. 걸린 턴에 스킬을 쓰면 최대 체력 1% 피해·그로기 게이지 10%. 턴이 끝나면 사라지고 3턴 면역.
 ]]
 local function immune(status: BattleStatus.State, id: string): boolean
 	return status.Immune ~= nil and (status.Immune[id] or 0) > 0
@@ -685,7 +685,7 @@ end
 
 --[[
 	파상풍을 걸고(스킬·카드 공용), 10 을 채워 터지면 발작 피해. 카드가 질의로 바꾸는 것(2026-10-04 파상풍 카드):
-	  TetanusBonus(녹 번짐: 걸 때마다 +) · TetanusBurstRatio(파상풍 발작: 최대 체력 비, 기본 0.10) ·
+	  TetanusBonus(녹 번짐: 걸 때마다 +) · TetanusBurstRatio(파상풍 발작: 최대 체력 비, 기본 0.04 — 2026-11-06 체퍼댐 너프, 옛 0.10) ·
 	  TetanusSpread(경직: 터지면 다른 적 모두에게 +)
 	damage(unit, amount) · enemies() · log(text) 는 부르는 쪽(스킬 ctx / 카드 환경)이 넘긴다.
 ]]
@@ -696,7 +696,7 @@ function BattleSkillEffects.TetanusHit(target: any, stacks: number, query: TQuer
 	end
 	stacks += math.floor(query("TetanusBonus", 0))
 	if BattleSkillEffects.ApplyTetanus(target.Status, stacks) then
-		local ratio = query("TetanusBurstRatio", 0.1)
+		local ratio = query("TetanusBurstRatio", 0.04)
 		damage(target, target.MaxHealth * ratio)
 		if log then
 			log(string.format("%s — 파상풍 발작(최대 체력 %d%%)", target.Name, math.floor(ratio * 100 + 0.5)))

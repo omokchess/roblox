@@ -464,9 +464,11 @@ local BOSS_DOT_CUT = 0
 local FIRE_DAMAGE_CAP = 90000
 -- 검수 준비중: 그 칸에서 쓰는 스킬 주는 피해 +400%
 local PENDING_OUT = 4.0
--- 검수중: 받는 피해 +200%, 턴 끝 최대 체력 9% 고정 피해(이 효과로는 죽지 않음), 2턴 뒤 스테미나 20
+-- 검수중: 받는 피해 +200%, 턴 끝 최대 체력 4% 고정 피해(이 효과로는 죽지 않음), 2턴 뒤 스테미나 20
 --   (2026-10-02 사용자 너프: 20% → 9%, 죽지 않게)
-local CHECKING_IN, CHECKING_COST, CHECKING_STAMINA, CHECKING_STAMINA_TURNS = 3.0, 0.09, 20, 2
+-- 검수 비용 9% → 4%, 블루스크린 연쇄 35% → 15%(2026-11-06 사용자 "체퍼댐 대폭 너프")
+local BLUE_CHAIN_RATIO = 0.15
+local CHECKING_IN, CHECKING_COST, CHECKING_STAMINA, CHECKING_STAMINA_TURNS = 3.0, 0.04, 20, 2
 -- 테스터: 주는 피해 +3500%, 치명 +100%, 받는 피해 −80%, 방어막 80(1턴) (2026-10-02 사용자: +3000% → +3500%, 2026-10-03: 방어막 200 → 80)
 local TESTER_OUT, TESTER_CRIT, TESTER_IN, TESTER_SHIELD = 35.0, 1.0, 0.2, 30 -- 2026-10-04 방어막 80 → 30
 -- 묶임 면역(2026-10-03 사용자: 묶임을 한 번 당한 뒤 2턴은 다시 묶이지 않게). 묶이는 순간 3 — 묶인 그 턴 끝과 다음 두 턴 끝에는 안 묶인다
@@ -497,7 +499,7 @@ local DEBUFF_OUT, DEBUFF_IN = -0.3, 1.4
 	  충전      포맷·커널 패닉 — 한 턴 충전, 그 부위에 BreakRatio 만큼 피해를 주면 끊긴다(다음 턴 터지기 전까지 두 턴 기회).
 	  궁극기    블루스크린 — 3턴째부터, 아군 칸 전부 지금 체력 50%(회피·막기 불가), 맞으면 3턴 회복 불가.
 	  검수 칸   부위가 모두 부서져도 계속(서브코어-삭제가 부서지면 코어가 이어 한다). 검은 칸 부작용은 부위를 부술 때마다 하나씩 사라진다:
-	            머리 → 스테미나 후유증 · 서브코어-삭제 → 최대 체력 9% 고정 피해 · 서브코어-패치 → 받는 피해 +200%.
+	            머리 → 스테미나 후유증 · 서브코어-삭제 → 최대 체력 4% 고정 피해 · 서브코어-패치 → 받는 피해 +200%.
 ]]
 local BOSS_STAMINA_MAX, BOSS_STAMINA_START, BOSS_STAMINA_REGEN = 100, 80, 40
 local BOSS_OVERHEAT_AT, BOSS_OVERHEAT_TAKEN = 15, 1.5
@@ -535,7 +537,7 @@ local BOSS_VARIANTS: { { Id: string, Name: string, Text: string } } = {
 GridBattle.BOSS_VARIANTS = BOSS_VARIANTS
 local LAST_STANDS: { { Id: string, Name: string, Text: string } } = {
 	{ Id = "Overdrive", Name = "코어 폭주", Text = "코어가 한 턴에 세 번 행동 · 스킬 비용 −50%." },
-	{ Id = "BlueChain", Name = "블루스크린 연쇄", Text = "블루스크린 재사용 2턴 · 대신 지금 체력 35%." },
+	{ Id = "BlueChain", Name = "블루스크린 연쇄", Text = "블루스크린 재사용 2턴 · 대신 지금 체력 15%." },
 	{ Id = "Purge", Name = "검수 폭주", Text = "검수가 네 칸만 남기고 · 검은 칸이 2턴 남음." },
 }
 GridBattle.BOSS_LAST_STANDS = LAST_STANDS
@@ -2444,23 +2446,28 @@ function GridBattle.ResolveSkill(
 			치명타: 기본 5% + 운 0.7%/점 + 보정. 배율 200% + 운 1.2%/점 + 보정(= 2 + 치명타 피해량). 100% 넘는 확률은 치명타 피해량으로 넘긴다.
 		]]
 		local stats = state.AllyStats
-		local statBonus = if skill.Range == "Ranged"
-			then (stats.Intellect or 0) * 0.07
-			else (stats.Strength or 0) * 0.05 + (stats.Agility or 0) * 0.03
+		-- 무기 칸 항목: 무기 공격력 + 스탯 피해(힘·민첩·지력은 각각 한 항, 조율자는 신앙심 한 항) — 칸 안은 곱연산이라 항목마다 따로 둔다
+		local weapon = { BattleStatus.WeaponRatio(ally.Power) }
 		if faithOnly then
-			statBonus = ally.Faith * query(state, "FaithDamagePer", 0.02)
+			table.insert(weapon, ally.Faith * query(state, "FaithDamagePer", 0.02))
+		elseif skill.Range == "Ranged" then
+			table.insert(weapon, (stats.Intellect or 0) * 0.07)
+		else
+			table.insert(weapon, (stats.Strength or 0) * 0.05)
+			table.insert(weapon, (stats.Agility or 0) * 0.03)
 		end
 		--[[
-			피해 공식(2026-11-02 사용자 지시, BattleStatus "피해 계산" 절) — 각 칸에 들어가는 것:
+			피해 공식(2026-11-02 사용자 지시, BattleStatus "피해 계산" 절) — 각 칸에 들어가는 것(칸 안은 항목마다 (1+x) 곱):
 			  스킬 기본 피해  skill.Damage + 카드의 기본 피해 +(info.Flat)
-			  무기            무기 공격력 × 4%(WeaponRatio) + 스탯 피해(힘·민첩·지력 / 조율자는 신앙심 2%) — 모두 캐릭터에 붙은 영구 몫
-			  가하는 피해량   상태 보정값 [가하는 피해량] 합(조율자는 직업 자체 출처만) + 카드·보스전 칸이 주는 info.Bonus + 카드의 대상별 BeforeHit 보정
-			  스킬 피해 증가  스킬 효과가 정하는 것: Before 가 돌려준 배율 − 1(소모 스택당 +N% …) + 대상별 TargetBonus(낙인·화상 스택당 …)
-			  공식 밖 곱연산  QTE 등급 multiplier · info.Mult(카드 "기본 피해량 60% 감소"·무료 스킬·적응형 패치) · 파상풍 0.8^n · 연타 분배 · 디버그 배율
+			  무기            무기 공격력 × 1%(WeaponRatio) · 스탯 피해(힘 · 민첩 · 지력 / 조율자는 신앙심 2%) — 캐릭터에 붙은 영구 몫
+			  가하는 피해량   상태 보정값 [가하는 피해량] 하나하나(조율자는 직업 자체 출처만) · 카드·보스전 칸이 주는 info.Bonus · 카드의 대상별 BeforeHit 보정 · 파상풍 0.85^n
+			  스킬 피해 증가  스킬 효과가 정하는 것: Before 가 돌려준 배율 − 1(소모 스택당 +N% …) · 대상별 TargetBonus(낙인·화상 스택당 …)
+			  공식 밖 곱연산  QTE 등급 multiplier · info.Mult(카드 "기본 피해량 60% 감소"·무료 스킬·적응형 패치) · 디버그 배율
 		]]
-		local weapon = BattleStatus.WeaponRatio(ally.Power) + statBonus
-		local buffs = BattleStatus.DealtBonus(ally.Status, if faithOnly then FAITH_ONLY_SOURCES else nil) + info.Bonus
-		local outside = multiplier * math.max(0, info.Mult) * BattleStatus.TetanusFactor(ally.Status)
+		local buffs = BattleStatus.DealtTerms(ally.Status, if faithOnly then FAITH_ONLY_SOURCES else nil)
+		table.insert(buffs, info.Bonus)
+		table.insert(buffs, BattleStatus.TetanusTerm(ally.Status))
+		local outside = multiplier * math.max(0, info.Mult)
 		if state.Debug and state.Debug.AllyDamageScale then
 			outside *= state.Debug.AllyDamageScale
 		end
@@ -2501,11 +2508,13 @@ function GridBattle.ResolveSkill(
 						crits += 1
 						anyCrit = true
 					end
+					local hitBuffs = table.clone(buffs)
+					table.insert(hitBuffs, hitInfo.Bonus)
 					local amount = BattleStatus.Damage({
 						Skill = (skill.Damage + info.Flat) * shares[hitIndex],
 						Weapon = weapon,
-						Buffs = buffs + hitInfo.Bonus,
-						Skills = skillBonus - 1 + targetBonus,
+						Buffs = hitBuffs,
+						Skills = { skillBonus - 1, targetBonus },
 						Mult = outside,
 						Crit = crit,
 						CritDamage = critDamage,
@@ -3573,11 +3582,11 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		  [파상풍] 수치 1당 5% 확률로 스킬 실패(공격이 안 나간다)
 	]]
 	if BattleStatus.Stack(enemy.Status, ClassResources.SPASM) > 0 then
-		damageUnit(state, enemy, enemy.MaxHealth * 0.03, "True", false)
+		damageUnit(state, enemy, enemy.MaxHealth * 0.01, "True", false)
 		if enemy.Groggy then
 			GroggyGauge.Add(enemy.Groggy, GroggyGauge.MAX * 0.1)
 		end
-		pushLog(state, enemy.Name .. " — 경련(최대 체력 3%, 그로기 10%)")
+		pushLog(state, enemy.Name .. " — 경련(최대 체력 1%, 그로기 10%)")
 	end
 	local tetanus = BattleStatus.Stack(enemy.Status, ClassResources.TETANUS)
 	if tetanus > 0 and nextRandom(state) < tetanus * query(state, "TetanusFail", 0.05) then -- 쇠약 카드가 올린다
@@ -3656,19 +3665,20 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	end
 	--[[
 		피해 공식(2026-11-02, BattleStatus "피해 계산" 절)을 적도 같이 쓴다: 스킬 기본 피해 = 공격력 + 스킬 피해, 무기·스킬 칸은 없다.
-		가하는 피해량 칸 = 적에게 걸린 주는 피해 보정(광신·섬광·중력) + 보스 버프(감시식·오버클럭·커널 모드). 공식 밖 곱연산 = 파상풍 ·
+		가하는 피해량 칸 = 적에게 걸린 주는 피해 보정(광신·섬광·중력) + 보스 버프(감시식·오버클럭·커널 모드). 파상풍은 이 칸의 한 항. 공식 밖 곱연산 =
 		받는 쪽 배율(회피 등급·카드·검수·버프 칸·치명타). 받는 피해량(def)은 damageUnit 이 맞는 아군 쪽 것을 넣는다.
 	]]
 	local boss = if enemy.Part then state.Boss else nil
-	local buffs = BattleStatus.DealtBonus(enemy.Status) + (if boss then bossBuffTotal(boss, "Damage") else 0)
-	local tetanusMult = BattleStatus.TetanusFactor(enemy.Status)
-	local incoming = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = multiplier * tetanusMult })
+	local buffs = BattleStatus.DealtTerms(enemy.Status)
+	table.insert(buffs, if boss then bossBuffTotal(boss, "Damage") else 0)
+	table.insert(buffs, BattleStatus.TetanusTerm(enemy.Status))
+	local incoming = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = multiplier })
 	-- 공격 자체의 위력(회피·막기·치명·보호막·무적을 따지기 전) — 조율자 두베가 "14 이상의 피해"를 이것으로도 센다
-	local raw = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = math.max(0, before.Mult) * tetanusMult })
+	local raw = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = math.max(0, before.Mult) })
 	local element: BattleStatus.Element = "Physical"
 	if skill.HpRatio then
 		-- 체퍼댐(궁극기): 지금 체력의 비율. 버프 칸·검수 배율은 안 먹는다(받는 쪽 등급·패리만)
-		local ratio = if boss and boss.LastStand == "BlueChain" then 0.35 else skill.HpRatio
+		local ratio = if boss and boss.LastStand == "BlueChain" then BLUE_CHAIN_RATIO else skill.HpRatio
 		incoming = ally.Health * ratio * (if parried then PARRY_KEEP else QteDefinitions.Multiplier("Dodge", grade))
 		raw = ally.Health * ratio
 		element = "True"
@@ -3691,7 +3701,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	end
 	local parryBack = 0
 	if parried and enemy.Alive then
-		local full = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = math.max(0, before.Mult) * tetanusMult })
+		local full = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = math.max(0, before.Mult) })
 		parryBack = damageUnit(state, enemy, full * PARRY_REFLECT, "Physical", true)
 	end
 
@@ -3770,7 +3780,7 @@ end
 	검수 턴 끝 처리(EndTurn). 칸이 바뀌기 **전에** 어디 서 있었는지 본다.
 	  1. 지난 턴에 걸린 것이 한 턴 흐른다(테스터·묶임·스테미나 빚)
 	  2. 검은 칸 갱신(bossEndTurn)
-	  3. 검은 칸에서 마쳤으면 검수중 값(최대 체력 9% 고정 피해 — 죽지 않음·스테미나 빚) → 다음 턴 테스터
+	  3. 검은 칸에서 마쳤으면 검수중 값(최대 체력 4% 고정 피해 — 죽지 않음·스테미나 빚) → 다음 턴 테스터
 	  4. 검수 준비중 칸에서 마쳤으면 다음 턴 묶임
 ]]
 local function bossTurnEffects(state: State, boss: BossState)

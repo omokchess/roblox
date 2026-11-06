@@ -609,11 +609,11 @@ local function runStatusAndSkillEffects()
 	BattleStatus.AddPoison(dotStatus, 10)
 	BattleStatus.AddBurn(dotStatus, 10)
 	local tick = BattleStatus.TickDots(dotStatus, 200)
-	-- 출혈은 최대 체력의 5% → 200의 5% = 10
-	expect(tick.Physical == 10, "bleed must deal 5% of max health")
+	-- 출혈은 지금 체력의 2%(2026-11-06 체퍼댐 너프) → 200의 2% = 4
+	expect(tick.Physical == 4, "bleed must deal 2% of current health")
 	expect(tick.True == 10, "poison must deal its own value as true damage")
-	-- 화상은 최대 체력 × (3% + 0.1% × 수치)(2026-11-06) → 200 × 4% = 8
-	expect(tick.Fire == 8, "burn must deal (3% + 0.1% per stack) of max health as fire")
+	-- 화상은 최대 체력 × (2% + 0.1% × 수치)(2026-11-06) → 200 × 3% = 6
+	expect(tick.Fire == 6, "burn must deal (2% + 0.1% per stack) of max health as fire")
 	expect(dotStatus.Bleed == 2, "bleed must decay by 1")
 	expect(dotStatus.Poison == 7, "poison must decay by 3")
 	expect(dotStatus.Burn == 9, "burn must decay by 1")
@@ -631,11 +631,22 @@ local function runStatusAndSkillEffects()
 	expect(BattleStatus.IncomingDamage(wardStatus, 100, "True") == 100, "true damage must ignore modifiers")
 
 	--=== 피해 공식 (2026-11-06 사용자 확정, BattleStatus "피해 계산" 절) ===--
-	-- 손 계산 1: 스킬 20 · 무기 25(+100%) · 버프 +30%·카드 +20%(합 +50%) · 스킬 +20% · 받는 피해 +10% = 20×2×1.5×1.2×1.1 = 79.2
-	expect(math.abs(BattleStatus.Damage({ Skill = 20, Weapon = BattleStatus.WeaponRatio(25), Buffs = 0.3 + 0.2, Skills = 0.2, Def = 0.1 }) - 79.2) < 1e-9, "formula: all boxes multiply")
-	-- 손 계산 2: 치명타 = dmg × (2 + 치명타 피해량). 치명 피해 +50% → ×2.5. 같은 칸 안은 합 (버프 둘이 곱해지지 않는다)
-	expect(math.abs(BattleStatus.Damage({ Skill = 10, Buffs = 0.5, Crit = true, CritDamage = 0.5 }) - 10 * 1.5 * 2.5) < 1e-9, "formula: crit is 2 + crit damage")
+	-- 손 계산 1: 스킬 20 · 무기 25(+25%) · 버프 +30%·카드 +20%(칸 안도 곱: 1.3 × 1.2) · 스킬 +20% · 받는 피해 +10% = 20 × 1.25 × 1.56 × 1.2 × 1.1
+	expect(
+		math.abs(BattleStatus.Damage({ Skill = 20, Weapon = { BattleStatus.WeaponRatio(25) }, Buffs = { 0.3, 0.2 }, Skills = { 0.2 }, Def = 0.1 }) - 20 * 1.25 * 1.56 * 1.2 * 1.1) < 1e-9,
+		"formula: boxes multiply and so do the terms inside one box"
+	)
+	-- 손 계산 2: 치명타 = dmg × (2 + 치명타 피해량). 치명 피해 +50% → ×2.5. 받는 피해량 칸만 더한다(+10% 와 +20% → 1.3)
+	expect(math.abs(BattleStatus.Damage({ Skill = 10, Buffs = { 0.5 }, Crit = true, CritDamage = 0.5 }) - 10 * 1.5 * 2.5) < 1e-9, "formula: crit is 2 + crit damage")
 	expect(math.abs(BattleStatus.Damage({ Skill = 10, Crit = true }) - 20) < 1e-9, "formula: base crit is 200%")
+	local takenSum = BattleStatus.New()
+	BattleStatus.AddModifier(takenSum, "DamageTaken", 0.1, -1, "a")
+	BattleStatus.AddModifier(takenSum, "DamageTaken", 0.2, -1, "b")
+	expect(math.abs(BattleStatus.Damage({ Skill = 100, Def = BattleStatus.TakenRatio(takenSum, "Physical") }) - 130) < 1e-9, "def box adds its terms")
+	-- 파상풍은 가하는 피해량 칸의 한 항: 2스택 → ×0.85²
+	local tetStatus = BattleStatus.New()
+	tetStatus.Stacks.Tetanus = 2
+	expect(math.abs(BattleStatus.Damage({ Skill = 100, Buffs = { BattleStatus.TetanusTerm(tetStatus), 0.5 } }) - 100 * 0.7225 * 1.5) < 1e-9, "tetanus is a buffs term")
 	-- 손 계산 3: 받는 피해량 칸에 [받는 피해량] +20% · 화염 저항 90% · 기름 +50% 가 모두 합산 → 1 + 0.2 + 0.5 − 0.9 = 0.8
 	local defStatus = BattleStatus.New()
 	BattleStatus.AddModifier(defStatus, "DamageTaken", 0.2, -1, "t")
@@ -654,7 +665,7 @@ local function runStatusAndSkillEffects()
 	expect(math.abs(sum - 1.2) < 1e-9, "multi-hit shares must total 1.2")
 	expect(#BattleSkills.HitShares({} :: any, 3) == 3 and #BattleSkills.HitShares({} :: any, 1) == 1, "repeats decide the hit count")
 	-- 화상·융해 (2026-11-06)
-	expect(math.abs(BattleStatus.BurnRatio(1) - 0.031) < 1e-9 and BattleStatus.BurnRatio(0) == 0, "burn: 3.1% at one stack")
+	expect(math.abs(BattleStatus.BurnRatio(1) - 0.021) < 1e-9 and BattleStatus.BurnRatio(0) == 0, "burn: 2.1% at one stack")
 	expect(BattleStatus.MeltDamage(10, 4) == 20 and BattleStatus.MeltDamage(1000, 4) == 400, "melt: burn x melt / 2, capped at 100 per stack")
 
 	-- 기한이 다 되면 사라진다. -1은 전투 내내 남는다.

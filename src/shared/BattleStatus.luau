@@ -26,9 +26,9 @@
 	--------------------------------------------------------------------------
 	지속 피해 규칙 (`상태이상.md` 그대로)
 
-	  출혈  매 턴 최대 체력의 5% 물리 피해. 턴 종료 시 1 감소.
+	  출혈  매 턴 지금 체력의 2% 물리 피해(2026-11-06, 옛 5%). 턴 종료 시 1 감소.
 	  독    매 턴 (독 수치)만큼 고정 피해. 턴 종료 시 3 감소.
-	  화상  매 턴 최대 체력 × (3% + 0.1% × 화상 수치) 화염 피해(2026-11-06). 턴 종료 시 1 감소.
+	  화상  매 턴 최대 체력 × (2% + 0.1% × 화상 수치) 화염 피해(2026-11-06). 턴 종료 시 1 감소.
 	  기름  화염 속성으로 받는 피해 50% 증가. (남은 턴 수로 관리)
 
 	**세 가지 모두 이 효과로는 죽지 않는다.** 그래서 `Tick`은 피해량을 돌려주기만
@@ -37,8 +37,8 @@
 
 local BattleStatus = {}
 
--- 출혈 한 번이 주는 피해: 최대 체력의 5%.
-BattleStatus.BLEED_MAX_HEALTH_RATIO = 0.05
+-- 출혈 한 번이 주는 피해: 지금 체력의 2%(옛 5%).
+BattleStatus.BLEED_MAX_HEALTH_RATIO = 0.02 -- 2026-11-06 체퍼댐 대폭 너프: 5% → 2%
 -- 턴 종료 시 각 지속 피해가 빠지는 양.
 BattleStatus.BLEED_DECAY = 1
 BattleStatus.POISON_DECAY = 3
@@ -306,7 +306,7 @@ end
 --=== 피해 계산 ===--
 
 --[[
-	피해 공식(2026-11-02 사용자 지시). **전투의 피해 계산은 전부 이 절에서 나온다.**
+	피해 공식(2026-11-02 사용자 지시, 11-06 확정·칸 안 곱연산 답). **전투의 피해 계산은 전부 이 절에서 나온다.**
 	코드 안에서는 모두 비율(0.2 = 20%)로 다룬다 — 지시문의 `/100` 은 "퍼센트 값"이라는 뜻일 뿐이다.
 
 	  1) base = 스킬 기본 피해 × (1 + 무기)
@@ -314,23 +314,23 @@ end
 	  3) dmg  = flat × (1 + 스킬 피해 증가) × (1 + 받는 피해량)
 	  4) 치명타 = dmg × (2 + 치명타 피해량)           기본 200%. 확률 100% 초과분은 치명타 피해량으로 넘어간다(GridBattle)
 
-	**각 칸 안은 합연산**(같은 칸의 보정은 더한 뒤 1+ 를 곱한다), **칸끼리는 곱연산**.
-	받는 피해량(def) = 맞는 쪽의 [받는 피해량] 합 + 속성 저항(저항은 음수로 들어간다) + 기름의 화염 +50% + 보스 과부하 — 한 칸에 모두 더한다
-	(그래서 화염 저항 90% 인 적이 기름을 쓰면 ×0.1 이 아니라 1 + 0.5 − 0.9 = ×0.6).
+	**칸 안도 곱연산**(2026-11-06 사용자: 같은 칸의 보정 하나하나가 각각 (1 + x) 로 곱해진다. 무기 칸·가하는 피해량 칸·스킬 칸은 항목 목록을 받는다).
+	단 **받는 피해량(def) 칸은 더한다**: 맞는 쪽의 [받는 피해량] 합 + 속성 저항(음수) + 기름의 화염 +50% + 보스 과부하 — 한 칸에 모두 더한다
+	(그래서 화염 저항 90% 인 적이 기름을 쓰면 ×0.1 이 아니라 1 + 0.5 − 0.9 = ×0.6). 치명타 피해량도 한 항(합)이다.
 
-	공식 밖 곱연산(`Mult`): QTE 등급 배율 · 카드의 스킬 배율(기본 피해량 60% 감소 …) · 파상풍 0.8^n · 연타 분배(×1.2/n) · 디버그 배율.
-	고정 피해(True)는 def 의 [받는 피해량]·저항을 받지 않는다. 손 계산 예시는 PrototypeTests "damage formula" 절.
+	공식 밖 곱연산(`Mult`): QTE 등급 배율 · 카드의 스킬 배율(기본 피해량 60% 감소 …) · 디버그 배율.
+	파상풍(수치 1당 ×0.85)은 가하는 피해량 칸의 한 항(0.85^n − 1)으로 들어간다. 고정 피해(True)는 def 의 [받는 피해량]·저항을 받지 않는다.
+	손 계산 예시는 PrototypeTests "피해 공식" 절.
 ]]
 
 -- 치명타 기본 배율: 200%(2026-11-02 사용자 "dmg × (2 + crit_dmg/100)" — 옛 150%)
 BattleStatus.CRIT_MULTIPLIER = 2
--- 무기 공격력 1당 스킬 피해 +4%. 옛 공식은 (무기 공격력 + 스킬 피해) 평면 합이었다 — 직업 스킬 평균 피해(약 27)에서 같은 값이 나오게 옮긴 수치
--- (무기 11~26 → +44~104%). 사용자 지시 문자 그대로(1당 +1%)면 전체 피해가 절반 아래로 떨어진다 → 질문 문서에 올림.
-BattleStatus.WEAPON_PERCENT_PER_POWER = 4
+-- 무기 공격력 1당 스킬 피해 +1%(2026-11-06 사용자: 글자 그대로. 옛 평면 합이 아니라 전체 피해가 절반 아래로 내려가는 것을 알고 고름)
+BattleStatus.WEAPON_PERCENT_PER_POWER = 1
 -- 파상풍 한 칸당 주는 피해 곱(2026-10-04 월 필그림 리워크)
 BattleStatus.TETANUS_DAMAGE = 0.85 -- 2026-11-06 0.8 → 0.85 (파상풍·쇼크 약화)
--- 화상: 최대 체력 × (3% + 0.1% × 화상 수치)(2026-11-06 사용자). 수치 1 이상이면 최소 3.1%
-BattleStatus.BURN_BASE_RATIO = 0.03
+-- 화상: 최대 체력 × (2% + 0.1% × 화상 수치)(2026-11-06 사용자). 수치 1 이상이면 최소 2.1%
+BattleStatus.BURN_BASE_RATIO = 0.02
 BattleStatus.BURN_PER_STACK_RATIO = 0.001
 -- 융해: (대상의 화상 수치 × 융해 수치) ÷ 2 피해, 융해 1당 최대 100(2026-11-06 사용자)
 BattleStatus.MELT_DAMAGE_CAP_PER_STACK = 100
@@ -353,17 +353,17 @@ end
 export type DamageParts = {
 	-- 스킬 기본 피해(스킬 표 값 + 카드의 기본 피해 +)
 	Skill: number,
-	-- 1) 무기 칸(비율). 무기 공격력 환산(WeaponRatio) + 스탯 피해
-	Weapon: number?,
-	-- 2) 가하는 피해량 칸(비율). 전투 중 버프(DealtBonus) + 카드가 주는 것
-	Buffs: number?,
-	-- 3) 스킬 피해 증가 칸(비율). 그 스킬 자체의 증가(스택당·대상 조건)
-	Skills: number?,
-	-- 3) 받는 피해량 칸(비율). TakenRatio
+	-- 1) 무기 칸 항목들(비율). 무기 공격력 환산(WeaponRatio) · 스탯 피해 …  각각 (1 + x) 로 곱해진다
+	Weapon: { number }?,
+	-- 2) 가하는 피해량 칸 항목들. 전투 중 버프 하나하나(DealtTerms) · 카드가 주는 것 · 파상풍 …
+	Buffs: { number }?,
+	-- 3) 스킬 피해 증가 칸 항목들. 그 스킬 자체의 증가(스택당·대상 조건)
+	Skills: { number }?,
+	-- 3) 받는 피해량 칸(비율, 합산). TakenRatio
 	Def: number?,
 	-- 공식 밖 곱연산(기본 1)
 	Mult: number?,
-	-- 4) 치명타로 터졌는가 · 치명타 피해량(비율)
+	-- 4) 치명타로 터졌는가 · 치명타 피해량(비율, 합)
 	Crit: boolean?,
 	CritDamage: number?,
 }
@@ -373,19 +373,26 @@ function BattleStatus.CritMultiplier(critDamage: number?): number
 	return BattleStatus.CRIT_MULTIPLIER + (critDamage or 0)
 end
 
--- 무기 공격력 → 무기 칸 비율
+-- 무기 공격력 → 무기 칸 항목
 function BattleStatus.WeaponRatio(power: number): number
 	return power * BattleStatus.WEAPON_PERCENT_PER_POWER / 100
 end
 
+-- 칸 하나: 항목마다 (1 + x) 를 곱한다. 항목 하나가 −100% 아래여도 0 에서 멈춘다(음수 피해 방지)
+local function box(terms: { number }?): number
+	local product = 1
+	for _, x in terms or {} do
+		product *= math.max(0, 1 + x)
+	end
+	return product
+end
+BattleStatus.Box = box
+
 --[[
 	피해 공식 한 번. 위 네 줄 그대로다 — 어느 칸에 무엇을 넣을지는 부르는 쪽(GridBattle)이 정한다.
-	칸 하나가 −100% 아래로 가도 음수 피해가 되지 않게 각 칸은 0 에서 멈춘다.
 ]]
 function BattleStatus.Damage(parts: DamageParts): number
-	local base = parts.Skill * math.max(0, 1 + (parts.Weapon or 0))
-	local flat = base * math.max(0, 1 + (parts.Buffs or 0))
-	local dmg = flat * math.max(0, 1 + (parts.Skills or 0)) * (parts.Mult or 1) * math.max(0, 1 + (parts.Def or 0))
+	local dmg = parts.Skill * box(parts.Weapon) * box(parts.Buffs) * box(parts.Skills) * (parts.Mult or 1) * math.max(0, 1 + (parts.Def or 0))
 	if parts.Crit then
 		dmg *= BattleStatus.CritMultiplier(parts.CritDamage)
 	end
@@ -393,31 +400,34 @@ function BattleStatus.Damage(parts: DamageParts): number
 end
 
 --[[
-	공격 쪽의 [가하는 피해량] 합(전투 중 버프). 치명타는 부르는 쪽이 따로 굴린다 — 굴림 결과를 로그에
+	공격 쪽의 [가하는 피해량] 항목들(전투 중 버프 하나하나). 치명타는 부르는 쪽이 따로 굴린다 — 굴림 결과를 로그에
 	남겨야 해서 여기서 숨기면 안 된다.
+	tail 이 오면 그 표에 이어 붙인다(칸 항목을 한 표에 모으려고).
 ]]
 -- allow: 이 출처의 [가하는 피해량]만 센다(조율자 알카이드 — "신앙심 말고는 가하는 피해량을 올릴 수 없음")
-function BattleStatus.DealtBonus(attacker: State, allow: { [string]: boolean }?): number
-	local dealt = 0
+function BattleStatus.DealtTerms(attacker: State, allow: { [string]: boolean }?, into: { number }?): { number }
+	local terms = into or {}
 	for _, modifier in attacker.Modifiers do
 		if modifier.Kind == "DamageDealt" and (allow == nil or allow[modifier.Source]) then
-			dealt += modifier.Value
+			table.insert(terms, modifier.Value)
 		end
 	end
-	return dealt
+	return terms
 end
 
--- [파상풍] 수치 1당 주는 피해 ×0.8(곱연산, 2026-10-04 월 필그림 리워크) — 공식 밖 곱연산
-function BattleStatus.TetanusFactor(attacker: State): number
-	return BattleStatus.TETANUS_DAMAGE ^ (attacker.Stacks.Tetanus or 0)
+-- [파상풍] 수치 1당 주는 피해 ×0.85 — 가하는 피해량 칸의 한 항(2026-10-04 월 필그림 리워크, 2026-11-06 사용자: 칸 안 항목으로)
+function BattleStatus.TetanusTerm(attacker: State): number
+	return BattleStatus.TETANUS_DAMAGE ^ (attacker.Stacks.Tetanus or 0) - 1
 end
 
 --[[
 	공격 쪽 보정만 먹인 피해량(무기·스킬 칸이 없는 공격: 적 공격 · 카드 고유 피해).
-	[가하는 피해량] 칸 + 파상풍.
+	[가하는 피해량] 칸(상태 보정값 + 파상풍).
 ]]
 function BattleStatus.OutgoingDamage(attacker: State, base: number, allow: { [string]: boolean }?): number
-	return BattleStatus.Damage({ Skill = base, Buffs = BattleStatus.DealtBonus(attacker, allow), Mult = BattleStatus.TetanusFactor(attacker) })
+	local buffs = BattleStatus.DealtTerms(attacker, allow)
+	table.insert(buffs, BattleStatus.TetanusTerm(attacker))
+	return BattleStatus.Damage({ Skill = base, Buffs = buffs })
 end
 
 --[[

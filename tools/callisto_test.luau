@@ -179,16 +179,16 @@ do
 	local before = b.Health
 	GridBattle.EndTurn(s)
 	local lost = before - b.Health
-	-- 2026-11-06 화상 공식: 최대 체력 × (3% + 0.1% × 수치) → 수치 10 = 4%
+	-- 2026-11-06 화상 공식: 최대 체력 × (2% + 0.1% × 수치) → 수치 10 = 3%
 	-- 2026-11-06 개선안 6절: 도트 총합 상한 최대 체력 3%(화상 10 ×2 = 8% → 3% = 1500)
-	check(lost == 1500, "화상 10 ×2 = 8% 지만 도트 상한 3% = 1500 — " .. lost)
-	-- 출혈은 칼리스토만 3%(기본 5%): 출혈 1 = 지금 체력 3% = 1500, 상한과 같다
+	check(lost == 1500, "화상 10 ×2 = 6% 지만 도트 상한 3% = 1500 — " .. lost)
+	-- 출혈은 모두 지금 체력 2%(칼리스토 전용 비율 없음 — 체퍼댐 너프): 출혈 1 = 1000, 상한 3% 안
 	local s2 = battle()
 	local b2 = boss(s2)
 	BattleStatus.AddBleed(b2.Status, 1)
 	local before2 = b2.Health
 	GridBattle.EndTurn(s2)
-	check(before2 - b2.Health == 1500, "칼리스토 출혈 3% — " .. (before2 - b2.Health))
+	check(before2 - b2.Health == 1000, "칼리스토 출혈 2% — " .. (before2 - b2.Health))
 	-- 출혈 + 화상이 같이 와도 총합 3%
 	BattleStatus.AddBleed(b2.Status, 5)
 	BattleStatus.AddBurn(b2.Status, 10)
