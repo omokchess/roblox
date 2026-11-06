@@ -142,6 +142,10 @@ export type CallistoState = {
 	Basics: number?,
 	-- 2026-11-06 개선안 2절: 알리오스 장판 6칸(예고 때 정함 — 턴 끝 피해는 이 칸 안에 서 있을 때만)
 	AliothCells: { { number } }?,
+	-- 2026-11-06 궁극기 보장: 이 페이즈에서 지나간 턴 수 · 궁극기(아스트로 세시·북두칠성)를 썼나 · [작은 곰 자리]를 얻은 다음 턴 아스트로 세시
+	PageTurns: number?,
+	UltUsed: boolean?,
+	UltNext: boolean?,
 }
 
 --[[
@@ -1873,6 +1877,7 @@ local function callistoNextPage(state: State, unit: Unit, c: CallistoState)
 	BattleStatus.SpendAll(unit.Status, ClassResources.BLINK)
 	c.Page = nextPage
 	c.Cycle, c.Slot, c.Opened, c.Cooldowns = 1, 1, false, {}
+	c.PageTurns, c.UltUsed, c.UltNext, c.Basics = 0, false, nil, 0
 	local health = math.max(1, math.floor(page.Health * c.HealthScale))
 	unit.MaxHealth, unit.Health = health, health
 	-- 1페이즈 것 정리: 작은 곰 자리 · 아군 고찰(심베라즈마가 3페이즈엔 없다)
@@ -2659,6 +2664,8 @@ local FIELD_ALLY, FIELD_SELF = 0.05, 0.10
 local GAZE_BONUS = 0.15
 -- 2페이즈: 칠성군 켜지는 체력 · 알코르 체력(2페이즈 체력의 비율 — 사양에 없어 정함) · 알리오스 장판 턴 · 칠성 상한
 local CHILSEONG_RATIO = 0.65
+-- 궁극기를 반드시 쓰는 페이즈 턴(1페이즈 4번째(첫 바퀴 끝) · 2페이즈 6번째)
+local ULT_FORCE_TURN_P1, ULT_FORCE_TURN_P2 = 4, 6
 local ALCOR_RATIO = 0.1
 local ALIOTH_TURNS = 5
 local SEVEN_MAX = 7
@@ -2854,11 +2861,13 @@ end
 	2026-11-06 개선안 3절 R2: 평타 2연속이면 다음 턴은 재사용 대기가 1 이하 남은 기술을 대기 해제하고 쓴다.
 	평타(수많은 성위 아래 파묻혀·공명적 성위)가 아니면 연속 수를 0 으로.
 ]]
+-- 쿨타임이 +2 늘어(2026-11-06) 평타 3연속이 다시 나와 R2 가 풀어 주는 남은 쿨을 1 → 2 이하로 넓혔다
+local R2_RELIEF = 2
 local function callistoBasics(c: CallistoState, id: string?)
 	if id == nil then
 		if (c.Basics or 0) >= 2 then
 			for key, left in c.Cooldowns do
-				if left <= 1 then
+				if left <= R2_RELIEF then
 					c.Cooldowns[key] = 0
 				end
 			end
@@ -2873,12 +2882,28 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 	if c.Page >= 2 then
 		callistoBasics(c, nil)
 	end
+	c.PageTurns = (c.PageTurns or 0) + 1
+	--[[
+		궁극기 보장(2026-11-06 사용자: "궁극기 쓰는 걸 본 적이 없다"). 아스트로 세시는 [작은 곰 자리](체력 50%)가 있어야, 북두칠성은 [성위 - 칠성] 7 이
+		있어야 나와서 빨리 잡으면 한 번도 안 나왔다. 1페이즈는 [작은 곰 자리]를 얻은 다음 턴(늦어도 4번째 턴), 2페이즈는 6번째 턴까지 못 썼으면 반드시 쓴다.
+		(3페이즈의 궁극기 구실은 첫 턴 뭇별 아래에 잠기리 — 이미 반드시 쓴다)
+	]]
+	if c.Page == 1 and not c.UltUsed and (c.UltNext or c.PageTurns >= ULT_FORCE_TURN_P1) then
+		c.UltNext, c.UltUsed = nil, true
+		BattleStatus.AddStack(unit.Status, ClassResources.URSA_MINOR, 1, 1)
+		return "CallistoAstro"
+	end
+	if c.Page == 2 and not c.UltUsed and not c.Dipper and c.PageTurns >= ULT_FORCE_TURN_P2 then
+		c.Dipper = true
+		pushLog(state, "메갈리 아르크토스 — 일곱 별이 다 차기 전에 북두칠성이 떨어진다")
+	end
 	if c.Page == 2 then
 		local cd = c.Cooldowns
 		local id
 		if c.Dipper then
 			-- 메갈리 아르크토스: 고정된 북두칠성 — 쓰면 칠성·별 초기화
 			id = "CallistoDipper"
+			c.UltUsed = true
 			c.Dipper, c.StarFrom = false, {}
 			c.DipperBonus = 0.1 * stackOf(unit, ClassResources.BLINK)
 			BattleStatus.SpendAll(unit.Status, ClassResources.BLINK)
@@ -2930,6 +2955,7 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 	local id
 	if c.Slot >= 4 then
 		id = "CallistoAstro"
+		c.UltUsed = true
 	elseif c.Slot == 1 then
 		id = if c.Cycle % 2 == 1 then "CallistoPhoto" else "CallistoSlash"
 	elseif c.Slot == 2 then
@@ -3107,6 +3133,11 @@ local function callistoZone(state: State, rng: () -> number, id: string, here: {
 				table.insert(cells, { x, y })
 			end
 		end
+	elseif id == "CallistoMerak" then
+		-- 2026-11-06 사용자 답(Q4): 예고 때 줄 고정(추적 아님) — 옮기면 피한다
+		for x = 1, width do
+			table.insert(cells, { x, here.Y })
+		end
 	elseif id == "CallistoDipper" then
 		for _, cell in DIPPER_CELLS do
 			table.insert(cells, { cell[1], cell[2] })
@@ -3167,7 +3198,7 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 	c.Lure = if id == "CallistoKenos" then nil else pickStars(state, rng)
 	c.StarUsed = nil
 	local cells = zone or allCells(state)
-	local track = if form == "TrackRow" then "Row" elseif form == "TrackColumn" then "Column" else nil
+	local track = if form == "TrackRow" and zone == nil then "Row" elseif form == "TrackColumn" then "Column" else nil
 	local plans = {}
 	for k = 1, count do
 		table.insert(plans, { SkillId = id, Cells = cells, Track = track, Strike = k, Seek = form == "Seek" or nil, Shelter = (form ~= "Seek" and zone == nil) or nil, Safe = safe, Target = ALLY_ID })
@@ -3357,6 +3388,7 @@ local function callistoEndTurn(state: State, c: CallistoState)
 	end
 	if c.Page == 1 and unit.Alive and stackOf(unit, ClassResources.URSA_MINOR) == 0 and unit.Health < unit.MaxHealth * URSA_RATIO then
 		BattleStatus.AddStack(unit.Status, ClassResources.URSA_MINOR, 1, 1)
+		c.UltNext = not c.UltUsed
 		pushLog(state, "아들을 위한 자리 — 칼리스토가 [작은 곰 자리]를 얻었다")
 	end
 	-- [알카이드]: 턴 끝 스택 × 3 피해(특수 화상 — 이 효과로는 죽지 않는다). 페이즈가 바뀌어도 남는다

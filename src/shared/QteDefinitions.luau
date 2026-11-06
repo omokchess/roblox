@@ -64,6 +64,8 @@ export type Challenge = {
 	BeatCount: number?,
 	BeatSize: number?,
 	BeatMistakes: { [number]: number }?,
+	-- 반대 방향 비트(화면에 보이는 화살표와 반대로 눌러야 맞다): ReverseBeats[비트] = true
+	ReverseBeats: { [number]: boolean }?,
 }
 
 --=== 상수 (원본 Qte.js와 동일) ===--
@@ -81,8 +83,11 @@ local COMMAND_REVEAL_MS = 900
 local COMMAND_GUARD_MISTAKES = 2
 local COMMAND_DODGE_MISTAKES = 1
 -- 3연타 QTE: 화살표 5개 × 비트, 제한 시간은 전체 6,000ms(3비트 기준 화살표당 400ms), 비트마다 실수 0 이면 회피 · 1 이면 막기 · 2 이상 실패
-local CHAIN_DURATION_MS = 6000
-local CHAIN_BEAT_SIZE = 5
+-- 2026-11-06 사용자 답("제한 시간을 늘리는 대신 입력을 훨씬 어렵게"): 합계 9,000ms(비트당 3,000) · 비트당 화살표 7 · 비트 2는 반대 방향 입력
+local CHAIN_DURATION_MS = 9000
+local CHAIN_BEAT_SIZE = 7
+local CHAIN_REVERSE_BEAT = 2
+local OPPOSITE: { [string]: Direction } = { Up = "Down", Down = "Up", Left = "Right", Right = "Left" }
 local CHAIN_DODGE_MISTAKES = 0
 local CHAIN_GUARD_MISTAKES = 1
 
@@ -125,6 +130,7 @@ QteDefinitions.CHAIN_BEAT_SIZE = CHAIN_BEAT_SIZE
 QteDefinitions.CHAIN_DODGE_MISTAKES = CHAIN_DODGE_MISTAKES
 QteDefinitions.CHAIN_GUARD_MISTAKES = CHAIN_GUARD_MISTAKES
 -- 화면이 만들어 둘 화살표 칸 수(일반 6 · 3연타 5 × 3)
+QteDefinitions.CHAIN_REVERSE_BEAT = CHAIN_REVERSE_BEAT
 QteDefinitions.COMMAND_MAX = CHAIN_BEAT_SIZE * 3
 QteDefinitions.PARRY_GROGGY_GAIN = PARRY_GROGGY_GAIN
 QteDefinitions.Multipliers = MULTIPLIERS
@@ -285,6 +291,7 @@ function QteDefinitions.VisualState(challenge: Challenge, elapsedMs: number): { 
 		beatCount = challenge.BeatCount,
 		beatSize = challenge.BeatSize,
 		beatMistakes = challenge.BeatMistakes,
+		reverseBeats = challenge.ReverseBeats,
 	}
 end
 
@@ -384,6 +391,7 @@ function QteDefinitions.CreateChain(rng: () -> number, now: number, id: string, 
 		BeatCount = beats,
 		BeatSize = CHAIN_BEAT_SIZE,
 		BeatMistakes = {},
+		ReverseBeats = if beats >= CHAIN_REVERSE_BEAT then { [CHAIN_REVERSE_BEAT] = true } else {},
 	}
 end
 
@@ -391,7 +399,11 @@ end
 function QteDefinitions.FeedDirection(challenge: Challenge, input: string): boolean
 	local expected = challenge.ExpectedDirections or {}
 	local index = (challenge.SequenceIndex or 0) + 1
-	local ok = expected[index] == input
+	local want = expected[index]
+	if want and challenge.BeatSize and (challenge.ReverseBeats or {})[math.ceil(index / challenge.BeatSize)] then
+		want = OPPOSITE[want]
+	end
+	local ok = want == input
 	if not ok then
 		challenge.Mistakes = (challenge.Mistakes or 0) + 1
 		if challenge.BeatSize then

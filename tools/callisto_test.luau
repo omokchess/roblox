@@ -76,6 +76,9 @@ do
 	local b = boss(s)
 	local t3 = playTurn(s)
 	check(#b.Plans == 3 and #t3 >= 1 and t3[1] == "CallistoSynthesis", "3턴 성위가 없어 신데시 톤 아스트론 3연타 — " .. table.concat(t3, ","))
+	-- 2026-11-06 궁극기 보장: 4번째 턴은 첫 바퀴 끝의 아스트로 세시(바퀴 순서는 그대로 이어진다)
+	playTurn(s)
+	check(b.Plan and b.Plan.SkillId == "CallistoAstro" and s.Callisto.UltUsed, "4번째 턴 아스트로 세시 보장")
 	local t4 = playTurn(s)
 	check(t4[1] == "CallistoSlash", "4턴(짝수 바퀴) 세시 파라티리시 — " .. tostring(t4[1]))
 	check(stack(ally, ClassResources.SEONGWI) == 2, "세시 파라티리시 성위 2 — " .. stack(ally, ClassResources.SEONGWI))
@@ -100,6 +103,7 @@ do
 	check(stack(ally, ClassResources.GOCHAL) == 1, "회피 불가 사진은 QTE 성공이어도 걸림")
 	playTurn(s, "Success")
 	playTurn(s, "Success") -- 찌르기 3연타 전부 회피
+	playTurn(s, "Success") -- 아스트로 세시(궁극기 보장 — 회피 불가라 맞는다)
 	playTurn(s, "Success") -- 베기 회피
 	check(stack(ally, ClassResources.SEONGWI) == 0, "회피한 베기는 성위를 안 검")
 	local last = s.Events[#s.Events]
@@ -428,9 +432,14 @@ do
 	-- 알코르가 있어 소환은 건너뛰게
 	GridBattle.EnemyPlan(s, rng)
 	if b.Plans and b.Plans[1].SkillId == "CallistoMerak" then
+		-- 2026-11-06 사용자 답(Q4): 예고 때 줄 고정 — 그 줄 밖으로 옮기면 피한다
+		local row = b.Plans[1].Cells[1][2]
+		check(#b.Plans[1].Cells == 6 and not b.Plans[1].Track, "메라크는 예고 때 줄 하나(6칸) 고정")
 		for x = 1, 6 do
-			GridBattle.MoveAlly(s, x, (x % 3) + 1)
-			check(#GridBattle.PlannedThreatList(s) == 1, "메라크는 서 있는 행을 노린다(어디 서도 닿음)")
+			for y = 1, 3 do
+				GridBattle.MoveAlly(s, x, y)
+				check(#GridBattle.PlannedThreatList(s) == (if y == row then 1 else 0), string.format("메라크는 고정된 줄(%d)만 맞는다 — (%d,%d)", row, x, y))
+			end
 		end
 	end
 	-- 심베라즈마: 3칸 넘게 내던진다
@@ -641,36 +650,46 @@ do
 		c.Aliot, c.Basics, c.Cooldowns = 0, 2, { CallistoAlioth = 1, CallistoMerak = 1, CallistoMegrez = 5, CallistoPhecda = 5 }
 		GridBattle.EnemyPlan(s, rng)
 		check(planOf(s).SkillId == "CallistoAlioth" and c.Basics == 0, "R2: 평타 2연속 뒤 쿨 1 남은 알리오스를 바로 — " .. planOf(s).SkillId)
-		c.Aliot, c.Basics, c.Cooldowns = 0, 2, { CallistoAlioth = 2, CallistoMerak = 2, CallistoMegrez = 5, CallistoPhecda = 5 }
+		c.Aliot, c.Basics, c.Cooldowns = 0, 2, { CallistoAlioth = 3, CallistoMerak = 3, CallistoMegrez = 5, CallistoPhecda = 5 }
 		GridBattle.EnemyPlan(s, rng)
-		check(planOf(s).SkillId == "CallistoBuried", "쿨 2 이상은 풀어 주지 않는다")
+		check(planOf(s).SkillId == "CallistoBuried", "쿨 3 이상은 풀어 주지 않는다")
 		check(BattleSkills.ById("CallistoMerak").BossCooldown == 6 and BattleSkills.ById("CallistoPhecda").BossCooldown == 11
-			and BattleSkills.ById("CallistoAlioth").BossCooldown == 7 and BattleSkills.ById("CallistoMegrez").BossCooldown == 3
-			and BattleSkills.ById("CallistoArtificial").BossCooldown == 4 and BattleSkills.ById("CallistoShower").BossCooldown == 3
-			and BattleSkills.ById("CallistoAlcor").BossCooldown == 6 and BattleSkills.ById("CallistoKenos").BossCooldown == 5, "쿨타임: 메라크 6 · 페크다 11 · 알리오스 7 · 쏟아지는 3(R3) · 나머지 그대로")
+			and BattleSkills.ById("CallistoAlioth").BossCooldown == 7 and BattleSkills.ById("CallistoMegrez").BossCooldown == 5
+			and BattleSkills.ById("CallistoArtificial").BossCooldown == 6 and BattleSkills.ById("CallistoShower").BossCooldown == 5
+			and BattleSkills.ById("CallistoAlcor").BossCooldown == 8 and BattleSkills.ById("CallistoKenos").BossCooldown == 7, "쿨타임: 메라크 6 · 페크다 11 · 알리오스 7(+3 그대로) · 나머지 +2")
 	end
 
 	-- 3비트 QTE: 5개 × 3 · 6,000ms · 비트당 실수 0 회피 / 1 막기 / 2 실패 · 비트별 서버 판정
 	do
 		local q = QteDefinitions.CreateChain(rng, 0, "t", 3)
-		check(#q.ExpectedDirections == 15 and q.DurationMs == 6000 and q.BeatCount == 3 and q.BeatSize == 5, "화살표 15개 · 6,000ms")
+		check(#q.ExpectedDirections == 21 and q.DurationMs == 9000 and q.BeatCount == 3 and q.BeatSize == 7 and q.ReverseBeats[2], "화살표 7개 × 3비트 · 9,000ms · 비트 2 반대")
+		local opp = { Up = "Down", Down = "Up", Left = "Right", Right = "Left" }
 		local function feed(n, wrongAt)
 			for i = 1, n do
-				local dir = q.ExpectedDirections[(q.SequenceIndex or 0) + 1]
-				QteDefinitions.FeedDirection(q, if wrongAt[i] then (if dir == "Up" then "Down" else "Up") else dir)
+				local idx = (q.SequenceIndex or 0) + 1
+				local dir = q.ExpectedDirections[idx]
+				-- 비트 2(8~14번째)는 화면 화살표의 반대를 눌러야 맞다
+				local right = if idx >= 8 and idx <= 14 then opp[dir] else dir
+				QteDefinitions.FeedDirection(q, if wrongAt[i] then opp[right] else right)
 			end
 		end
-		feed(15, {})
+		feed(21, {})
 		local g = QteDefinitions.JudgeChain(q)
 		check(g[1] == "Success" and g[2] == "Success" and g[3] == "Success" and QteDefinitions.Judge(q, 100) == "Success", "무실수 3비트 회피")
 		q = QteDefinitions.CreateChain(rng, 0, "t", 3)
-		feed(15, { [7] = true, [11] = true, [12] = true })
+		feed(21, { [9] = true, [15] = true, [16] = true })
 		g = QteDefinitions.JudgeChain(q)
 		check(g[1] == "Success" and g[2] == "Partial" and g[3] == "Fail" and QteDefinitions.Judge(q, 100) == "Fail", "비트별 등급 Success·Partial·Fail — " .. table.concat(g, ","))
 		q = QteDefinitions.CreateChain(rng, 0, "t", 3)
-		feed(10, {})
+		feed(16, {})
 		g = QteDefinitions.JudgeChain(q)
 		check(g[1] == "Success" and g[2] == "Success" and g[3] == "Fail", "시간 끝나 못 채운 비트는 실패")
+		-- 반대 비트에 화면 그대로 누르면 틀림
+		q = QteDefinitions.CreateChain(rng, 0, "t", 3)
+		for i = 1, 7 do
+			QteDefinitions.FeedDirection(q, q.ExpectedDirections[i])
+		end
+		check(QteDefinitions.FeedDirection(q, q.ExpectedDirections[8]) == false and q.BeatMistakes[2] == 1, "비트 2 에선 보이는 방향 그대로 누르면 실수")
 		-- 서버: 비트별 등급으로 ResolveDodge (3 → 회피 · 막기 · 실패)
 		local s = battle()
 		playTurn(s)
@@ -685,6 +704,29 @@ do
 			dmg[beat] = hp - ally.Health
 		end
 		check(dmg[1] == 0 and dmg[2] > 0 and dmg[3] > dmg[2], string.format("비트별 피해 0 < 막기 < 전액 (%d · %d · %d)", dmg[1], dmg[2], dmg[3]))
+	end
+	-- 궁극기 보장: 체력이 거의 안 깎여도(작은 곰 자리·칠성군 없음) 1P 4번째 턴 아스트로 세시 · 2P 6번째 턴 북두칠성
+	do
+		local s1 = battle()
+		local seen1
+		for turn = 1, 4 do
+			playTurn(s1)
+			if turn == 4 then
+				seen1 = boss(s1).Plan and boss(s1).Plan.SkillId
+			end
+		end
+		check(seen1 == "CallistoAstro", "1P 4번째 턴 아스트로 세시 — " .. tostring(seen1))
+		local s2 = toPage2()
+		local dipperTurn
+		for turn = 1, 8 do
+			GridBattle.Ally(s2).Health = GridBattle.Ally(s2).MaxHealth
+			playTurn(s2, "Success")
+			local p = boss(s2).Plan
+			if p and p.SkillId == "CallistoDipper" and not dipperTurn then
+				dipperTurn = turn
+			end
+		end
+		check(dipperTurn ~= nil and dipperTurn <= 6, "2P 6번째 턴까지 북두칠성 — " .. tostring(dipperTurn))
 	end
 	print("12 2026-11-06 개선안(케노스·범위 4종·R1~R3·쿨타임·3비트 QTE) OK")
 end

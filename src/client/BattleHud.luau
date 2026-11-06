@@ -48,6 +48,8 @@ local ACTION_W = 200
 local TIP_W, GLOSS_W = 440, 270
 local BOSS_W = 500
 local QTE_W, QTE_H = 580, 250
+-- 3연타 QTE 의 반대 방향 비트 색
+local REVERSE = Color3.fromRGB(190, 110, 255)
 -- 고리 QTE 에서 반지름 1 이 몇 px 인가
 local RING_R = 72
 
@@ -2676,19 +2678,19 @@ function BattleHud:QteOpen(challenge: any, role: string, title: string, word: st
 		local directions = challenge.ExpectedDirections or {}
 		-- 3연타 QTE(화살표 15개)는 키캡을 줄여 한 줄에 담는다
 		local chain = challenge.BeatSize ~= nil
-		local size = if chain then 32 else 68
-		self.dirRowLayout.Padding = UDim.new(0, if chain then 3 else 9)
+		local size = if chain then 24 else 68
+		self.dirRowLayout.Padding = UDim.new(0, if chain then 2 else 9)
 		if chain then
 			self.qteHint.Text = string.format(
 				'<font color="%s"><b>방향키</b></font> 또는 <font color="%s"><b>WASD</b></font> — %d개씩 %d비트, 비트마다 한 번도 틀리면 안 됨',
 				hex(BONE), hex(BONE), challenge.BeatSize, challenge.BeatCount or 1
-			)
+			) .. string.format('   <font color="%s"><b>비트 2 는 반대로!</b></font>', hex(REVERSE))
 		end
 		for i, cap in self.dirCaps do
 			cap.Cap.Visible = directions[i] ~= nil
 			cap.Cap.Text = DIRECTION_GLYPH[directions[i]] or ""
 			cap.Cap.Size = UDim2.fromOffset(size, size)
-			cap.Cap.TextSize = if chain then 20 else 40
+			cap.Cap.TextSize = if chain then 15 else 40
 		end
 	end
 	self:_paintAttack()
@@ -2745,7 +2747,17 @@ function BattleHud:QteTick(challenge: any, visual: { [string]: any }, elapsed: n
 				continue
 			end
 			local label, line = cap.Cap, cap.Stroke
-			if i < current then
+			local beatOf = if visual.beatSize then math.ceil(i / visual.beatSize) else 0
+			local reverse = visual.reverseBeats ~= nil and visual.reverseBeats[beatOf] == true
+			if reverse and i >= current then
+				-- 반대 비트: 보라 키캡 + 화살표 사이에 "반대" 표시(글자를 ⇄ 붙임)
+				label.BackgroundColor3 = if i == current then REVERSE else Color3.fromRGB(58, 34, 84)
+				label.TextColor3 = if i == current then INK else REVERSE
+				label.TextTransparency = 0
+				line.Color = REVERSE
+				line.Transparency = 0
+				line.Thickness = if i == current then 2 else 1
+			elseif i < current then
 				local ok = marks[i] ~= false
 				-- 넣은 것: 흐리게(맞음 초록 / 틀림 빨강)
 				label.BackgroundColor3 = if ok then Color3.fromRGB(18, 42, 36) else Color3.fromRGB(74, 20, 20)
@@ -2776,7 +2788,8 @@ function BattleHud:QteTick(challenge: any, visual: { [string]: any }, elapsed: n
 		if visual.beatSize then
 			local beat = math.min(visual.beatCount or 1, math.ceil(current / visual.beatSize))
 			local mine = (visual.beatMistakes or {})[beat] or 0
-			self.dirNote.Text = string.format(
+			local flip = visual.reverseBeats ~= nil and visual.reverseBeats[beat] == true
+			self.dirNote.Text = (if flip then string.format('<font color="%s"><b>반대 방향으로 누르세요!</b></font>   ', hex(REVERSE)) else "") .. string.format(
 				'비트 <b>%d / %d</b>   ·   이번 비트 틀림 <font color="%s"><b>%d</b></font>   ·   0번 %s, 1번 막기',
 				beat, visual.beatCount or 1, hex(if mine > QteDefinitions.CHAIN_DODGE_MISTAKES then RED else BONE), mine, self.qteRole.Text
 			)

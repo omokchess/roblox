@@ -2192,7 +2192,7 @@ function BattleClient:_startQte(role: QteDefinitions.Role)
 	self.qteWord = if classId == "Duelist" then "패리" else "회피"
 	local title = if role == "Skill"
 		then (chosen and chosen.Name or "공격")
-		else (self.pendingThreat and self.pendingThreat.SkillName or "적의 공격")
+		else (self.pendingThreat and self.pendingThreat.SkillName or "적의 공격") .. (if self.qte.BeatSize then " · ⇄ 비트 2 반대" else "")
 	local flag = if role == "Dodge" and self.pendingThreat and self.pendingThreat.DodgeOnly then "가드 불가"
 		elseif role == "Dodge" and self.pendingThreat and self.pendingThreat.GuardOnly then "회피 불가 · 막기만"
 		else nil

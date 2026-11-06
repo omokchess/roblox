@@ -512,7 +512,7 @@ local bossSkills: { Skill } = {
 		Range = "Ranged",
 		Shape = { Kind = "Square", Radius = 1 },
 		BossKind = "Attack",
-		BossCooldown = 4,
+		BossCooldown = 6,
 	},
 	{
 		Id = "CallistoShower",
@@ -524,7 +524,7 @@ local bossSkills: { Skill } = {
 		Strikes = 3,
 		ChainQte = true,
 		BossKind = "Attack",
-		BossCooldown = 3, -- 2026-11-06 R3: 2 → 3
+		BossCooldown = 5, -- 2026-11-06 R3: 2 → 3, 사용자 답 +2 → 5
 	},
 	{
 		Id = "CallistoKenos",
@@ -535,7 +535,7 @@ local bossSkills: { Skill } = {
 		Shape = { Kind = "All" },
 		Unavoidable = true,
 		BossKind = "Attack",
-		BossCooldown = 5,
+		BossCooldown = 7,
 	},
 	{
 		Id = "CallistoSubmerge",
@@ -576,7 +576,7 @@ local bossSkills: { Skill } = {
 		Range = "Melee",
 		Shape = { Kind = "Cross", Radius = 1 },
 		BossKind = "Attack",
-		BossCooldown = 3,
+		BossCooldown = 5,
 	},
 	{
 		Id = "CallistoAlcor",
@@ -586,7 +586,7 @@ local bossSkills: { Skill } = {
 		Range = "Ranged",
 		Shape = { Kind = "Single" },
 		BossKind = "Gimmick",
-		BossCooldown = 6,
+		BossCooldown = 8,
 	},
 	{
 		Id = "CallistoPhecda",
@@ -601,7 +601,7 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoMerak",
 		Name = "메라크",
-		Description = "- 대상이 선 행 전체를 침. 회피 불가.\n- 맞으면 [알카이드] 3 · [두베] 1.\n  - 대상에게 [뭇별]이 있으면 [두베] 4 · [알카이드] 3 추가.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
+		Description = "- 예고 때 대상이 선 행을 고정해 침(옮기면 피함). 회피·막기 QTE 없음, 보호막·무적·피해 감소는 적용.\n- 맞으면 [알카이드] 3 · [두베] 1.\n  - 대상에게 [뭇별]이 있으면 [두베] 4 · [알카이드] 3 추가.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
 		Damage = 30,
 		Range = "Melee",
 		Shape = { Kind = "Row" },
