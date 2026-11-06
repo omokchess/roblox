@@ -275,7 +275,7 @@ local definitions: { [string]: EnemyDefinition } = {
 					{ Id = "CallistoSubmerge", When = "3페이즈 첫 턴 바로 · 한 번만" },
 					{ Id = "CallistoArtificial", When = "재사용 대기가 끝나면 먼저(4턴)" },
 					{ Id = "CallistoShower", When = "그다음(3턴)" },
-					{ Id = "CallistoKenos", When = "그다음(5턴) · 빛 칸 6칸 밖은 피해" },
+					{ Id = "CallistoKenos", When = "체력 70%·30% 이하에서 1번씩 · 2턴 피니셔(쿨 없음)" },
 					{ Id = "CallistoResonance", When = "평타 · 모두 대기 중이면" },
 				},
 			},

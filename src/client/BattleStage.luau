@@ -507,7 +507,7 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 					local across = stepX * d[1] + stepY * d[2]
 					local along = if d[1] ~= 0 then stepY else stepX
 					local mid = t.Position + across * inset + Vector3.new(0, lift, 0)
-					laserEdge(mid, along * (inset + 0.08), edgeColor, e.Unavoid == true, folder)
+					laserEdge(mid, along * (inset + 0.08), edgeColor, e.Unavoid == true and not e.Thin, folder)
 				end
 			end
 			if comp ~= labelComp then
@@ -542,7 +542,9 @@ function BattleStage.ThreatMarks(tiles: { [string]: { { BasePart } } }, keys: { 
 				for _, spec in { { 0.55, e.Color, 0.15 }, { 0.16, Color3.new(1, 1, 1), 0 } } do
 					local beam = Instance.new("Beam")
 					beam.Attachment0, beam.Attachment1 = a0, a1
-					beam.Width0, beam.Width1 = spec[1] * 0.6, spec[1]
+					-- 기믹 충족(Thin): 예고선 굵기 절반(2026-11-06 칼리스토 추적 기믹)
+					local thin = if e.Thin then 0.5 else 1
+					beam.Width0, beam.Width1 = spec[1] * 0.6 * thin, spec[1] * thin
 					beam.Color = ColorSequence.new(spec[2])
 					beam.LightEmission = 1
 					beam.LightInfluence = 0

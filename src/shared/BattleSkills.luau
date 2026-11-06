@@ -142,6 +142,8 @@ export type Skill = {
 	Strikes: number?,
 	-- 연타 회피 QTE 를 하나로 합친다(칼리스토 신데시·쏟아지는 뭇별 — QteDefinitions CreateChain)
 	ChainQte: boolean?,
+	-- 칼리스토 추적 공격의 기믹(2026-11-06 사용자 답 Q3): 조건을 채우고 맞으면 피해 Reduce 만큼 감소(GridBattle callistoGimmickMet — Id 는 조건 이름)
+	Gimmick: { Id: string, Name: string, Reduce: number, Text: string }?,
 }
 
 -- 적 전용. 적은 직업이 없으므로 이 중에서 무작위로 고른다. 지금은 슬라임 공격 둘뿐이다.
@@ -423,8 +425,10 @@ local bossSkills: { Skill } = {
 	-- 1페이즈 관찰자 칼리스토
 	{
 		Id = "CallistoSlash",
+		GuardOnly = true, -- 2026-11-06 사용자 답: 회피 → 가드 QTE
+		Gimmick = { Id = "Struck", Name = "맞받아치기", Reduce = 0.6, Text = "이번 턴 칼리스토에게 스킬 적중" },
 		Name = "세시 파라티리시",
-		Description = "- 팔에서 나온 칼날로 벰.\n- 맞으면 [성위] 2 · [화상] 4.\n- 대상에게 [뭇별]이 있으면 [성위] 대신 [화상] 2를 더(화상 6).",
+		Description = "- 팔에서 나온 칼날로 벰.\n- 맞으면 [성위] 2 · [화상] 4.\n- 대상에게 [뭇별]이 있으면 [성위] 대신 [화상] 2를 더(화상 6).\n- 가드 QTE(회피 불가). 기믹 [맞받아치기]: 이번 턴 칼리스토에게 스킬을 적중시키면 피해 −60% · [성위] 없음.",
 		Damage = 15,
 		Range = "Melee",
 		Shape = { Kind = "Row" },
@@ -464,8 +468,9 @@ local bossSkills: { Skill } = {
 	},
 	{
 		Id = "CallistoSynthesis",
+		Gimmick = { Id = "Stand", Name = "발 묶기", Reduce = 0.5, Text = "이번 턴 이동하지 않음" },
 		Name = "신데시 톤 아스트론",
-		Description = "- 손을 칼날로 바꿔 3번 찌름(12 × 3).\n- 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 대상에게 [성위]가 있으면 피해 +30% · 찌를 때마다 [화상] 5.",
+		Description = "- 손을 칼날로 바꿔 3번 찌름(12 × 3).\n- 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 대상에게 [성위]가 있으면 피해 +30% · 찌를 때마다 [화상] 5.\n- 기믹 [발 묶기]: 이번 턴 이동하지 않으면 피해 −50%.",
 		Damage = 12,
 		Range = "Melee",
 		Shape = { Kind = "Row" },
@@ -506,8 +511,10 @@ local bossSkills: { Skill } = {
 	},
 	{
 		Id = "CallistoArtificial",
+		GuardOnly = true,
+		Gimmick = { Id = "Edge", Name = "로프 기대기", Reduce = 0.5, Text = "맞는 순간 열 1 또는 6에 서 있음" },
 		Name = "인위적 별자리",
-		Description = "- 맞으면 [성위] 4.",
+		Description = "- 맞으면 [성위] 4.\n- 가드 QTE(회피 불가). 기믹 [로프 기대기]: 맞는 순간 열 1 또는 6에 서 있으면 피해 −50%.",
 		Damage = 20,
 		Range = "Ranged",
 		Shape = { Kind = "Square", Radius = 1 },
@@ -529,13 +536,31 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoKenos",
 		Name = "케노스 아스테리스모스",
-		Description = "- 빈 별자리. 3페이즈 위치 기믹 — 빛 칸 6칸이 켜지고 나머지 12칸이 갈라져 별똥별이 떨어짐.\n- 빛 칸 안에 서 있으면 맞지 않음. 회피·막기 QTE 없음.\n- 맞으면 [성위] 4.",
+		Description = "- 피니셔(2턴). 3페이즈 칼리스토 체력 70%·30% 이하에서 1번씩(쿨타임 없음, 30%는 강화판).\n- 턴 A: 도발(피해 없음) 뒤 탑로프로 올라감. 턴 B 끝: 다이브(40, 강화 45 · [성위] 4) → 맞으면 파워밤 +20.\n- 빛 칸(6칸, 강화판 4칸) 안은 무피해. 양 끝 열(1·6)은 로프: 다이브 −75% · 파워밤 없음.\n- 기믹 [핀 폴]: 턴 A·B 연속으로 칼리스토를 스킬로 적중(스킬 QTE 성공)하면 다이브 취소 · 칼리스토 최대 체력 3% 손실 · 다음 턴 스턴.",
+		Damage = 0,
+		Range = "Ranged",
+		Shape = { Kind = "All" },
+		BossKind = "Gimmick",
+	},
+	{
+		Id = "CallistoKenosDive",
+		Name = "케노스 — 다이브",
+		Description = "- 케노스 아스테리스모스의 낙하. 40(강화 45) · 맞으면 [성위] 4. 회피·막기 불가.",
 		Damage = 40,
 		Range = "Ranged",
 		Shape = { Kind = "All" },
 		Unavoidable = true,
 		BossKind = "Attack",
-		BossCooldown = 7,
+	},
+	{
+		Id = "CallistoKenosBomb",
+		Name = "케노스 — 파워밤",
+		Description = "- 다이브에 맞은 대상에게만. +20. 회피·막기 불가.",
+		Damage = 20,
+		Range = "Melee",
+		Shape = { Kind = "All" },
+		Unavoidable = true,
+		BossKind = "Attack",
 	},
 	{
 		Id = "CallistoSubmerge",
@@ -570,8 +595,9 @@ local bossSkills: { Skill } = {
 	},
 	{
 		Id = "CallistoMegrez",
+		Gimmick = { Id = "TwinStruck", Name = "쌍둥이 겨누기", Reduce = 0.6, Text = "알코르(없으면 칼리스토)를 스킬로 적중" },
 		Name = "메그레즈",
-		Description = "- 대상에게 [알카이드]가 있을 때만 씀.\n- [알카이드] 1스택당 피해 +2%.\n- 맞으면 [두베] 3.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
+		Description = "- 대상에게 [알카이드]가 있을 때만 씀.\n- [알카이드] 1스택당 피해 +2%.\n- 맞으면 [두베] 3.\n- 기믹 [쌍둥이 겨누기]: 이번 턴 알코르(없으면 칼리스토)를 스킬로 적중시키면 피해 −60%.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
 		Damage = 20,
 		Range = "Melee",
 		Shape = { Kind = "Cross", Radius = 1 },

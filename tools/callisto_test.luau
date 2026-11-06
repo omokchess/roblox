@@ -105,9 +105,9 @@ do
 	playTurn(s, "Success") -- 찌르기 3연타 전부 회피
 	playTurn(s, "Success") -- 아스트로 세시(궁극기 보장 — 회피 불가라 맞는다)
 	playTurn(s, "Success") -- 베기 회피
-	check(stack(ally, ClassResources.SEONGWI) == 0, "회피한 베기는 성위를 안 검")
+	check(stack(ally, ClassResources.SEONGWI) == 2, "2026-11-06 베기는 가드 QTE(회피 불가) — 성공해도 막기라 성위 2")
 	local last = s.Events[#s.Events]
-	check(last.Kind == "EnemyAttack" and last.Hits[1][1].Damage == 0, "회피하면 피해 없음")
+	check(last.Kind == "EnemyAttack" and last.Hits[1][1].Damage > 0 and last.Hits[1][1].Grade == "Partial", "베기는 회피 성공이 막기로 바뀐다")
 	-- 성위 15 → 뭇별(직접)
 	local s2 = battle()
 	local a2 = GridBattle.Ally(s2)
@@ -170,7 +170,7 @@ do
 			check(used[1] ~= "CallistoSubmerge", "잠기리는 한 번만")
 		end
 	end
-	check(order[1] == "CallistoArtificial" and order[2] == "CallistoShower" and order[3] == "CallistoKenos" and order[4] == "CallistoResonance", "3페이즈 박자(잠기리→인위→쏟아지는→케노스→공명) — " .. table.concat(order, ","))
+	check(order[1] == "CallistoArtificial" and order[2] == "CallistoShower" and order[3] == "-" and order[4] == "CallistoKenosDive", "3페이즈 박자(잠기리→인위→쏟아지는→체력 70%에서 케노스 도발→다이브) — " .. table.concat(order, ","))
 	check(s.Outcome == "Victory" and not b.Alive, "장판 10턴이면 칼리스토 체력 1% 이하 → 시험 종료 — " .. s.Outcome .. " " .. b.Health)
 	print("5 페이즈·장판·시험 종료 OK — " .. table.concat(order, ","))
 end
@@ -545,42 +545,217 @@ do
 		return s
 	end
 
-	-- 케노스: 3페이즈 4번째 턴(잠기리 포함) · 빛 6칸 안 무피해(위협 아님) · 바깥은 회피해도 40 · 위치형
+	-- 케노스 피니셔(2026-11-06 밤): 체력 70% 도발 → 탑로프 → 다이브·파워밤 · 빛 칸 무피해 · 로프 · 핀 폴 · 30% 강화판
 	do
-		local s = toPage3()
-		local ally = GridBattle.Ally(s)
-		for _ = 1, 3 do
-			ally.Health = ally.MaxHealth
+		local function hitBoss(s, grade: string): boolean
+			local at = BattleGrid.CellOf(s.Grid, boss(s).Id)
+			local me = BattleGrid.CellOf(s.Grid, GridBattle.ALLY_ID)
+			if at and me then
+				BattleStatus.SpendAll(GridBattle.Ally(s).Status, ClassResources.BIND)
+				GridBattle.MoveAlly(s, 1, at.Y)
+			end
+			GridBattle.Ally(s).Stamina = 999
+			local ok = GridBattle.ResolveSkill(s, 1, grade :: any, rng)
+			return ok
+		end
+		local function castSkills(s): { string }
+			local ids = {}
+			for _, ev in s.Events do
+				if ev.Kind == "Cast" then
+					table.insert(ids, ev.SkillId)
+				end
+			end
+			return ids
+		end
+		local function startA(ratio: number)
+			local s = toPage3()
+			local b = boss(s)
+			b.Health = math.floor(b.MaxHealth * ratio)
+			GridBattle.Ally(s).Health = GridBattle.Ally(s).MaxHealth
 			GridBattle.EnemyPlan(s, rng)
-			if planOf(s).SkillId == "CallistoKenos" then
-				break
-			end
-			for _, t in GridBattle.PlannedThreatList(s) do
-				GridBattle.ResolveDodge(s, t.Unit.Id, "Success", t.Index)
-			end
+			return s
+		end
+		local function toB(s)
+			GridBattle.EndTurn(s)
+			GridBattle.EnemyPlan(s, rng)
+		end
+
+		-- 임계: 체력 70% 이하에서만 도발(턴 A) — 위협 없음 · 빛 6칸 · 로프 열 1·6
+		do
+			local s = toPage3()
+			boss(s).Health = math.floor(boss(s).MaxHealth * 0.8)
+			GridBattle.EnemyPlan(s, rng)
+			check(s.Callisto.Finisher == nil, "체력 80% 에선 피니셔 없음")
 			GridBattle.EndTurn(s)
 		end
-		local plan = planOf(s)
-		check(plan.SkillId == "CallistoKenos", "3페이즈 4번째 턴에 케노스 — " .. tostring(plan.SkillId))
-		check(#plan.Cells == 12 and #plan.Safe == 6 and not plan.Seek and not plan.Shelter and s.Callisto.Lure == nil, "위험 12칸 · 빛 6칸 · 추적·별 칸 없음")
-		for _, c in plan.Safe do
-			check(not has(plan.Cells, c[1], c[2]), "빛 칸은 위험 칸이 아니다")
-		end
-		local cols = {}
-		for _, c in plan.Safe do
-			cols[c[1]] = true
-		end
-		local lo = math.min(table.unpack((function() local t = {} for x in cols do table.insert(t, x) end return t end)()))
-		check(cols[lo] and cols[lo + 1] and not cols[lo + 2] and (lo == 1 or lo == 3 or lo == 5), "빛 칸은 앞/가운데/뒤 두 열")
-		local safe, danger = plan.Safe[1], plan.Cells[1]
+		local s = startA(0.65)
+		local f = s.Callisto.Finisher
+		check(f and f.Stage == 1 and #f.Safe == 6 and not f.Strong and #GridBattle.PlannedThreatList(s) == 0, "70% 이하 턴 A: 도발(피해 없음) · 빛 6칸")
+		check(table.find(castSkills(s), "CallistoKenos") ~= nil, "도발 Cast 사건")
+		toB(s)
+		check(table.find(castSkills(s), "CallistoKenosClimb") ~= nil and s.Callisto.Finisher.Stage == 2, "턴 A 끝 탑로프 Cast")
+		local plans = boss(s).Plans
+		check(#plans == 2 and plans[1].SkillId == "CallistoKenosDive" and plans[2].SkillId == "CallistoKenosBomb" and #plans[1].Cells == 12 and #plans[1].Safe == 6 and #plans[1].Rope == 6, "턴 B: 다이브·파워밤 · 위험 12칸 · 빛 6 · 로프 6")
+		local ally = GridBattle.Ally(s)
+		-- 빛 칸: 무피해(우선순위: 빛 칸 > 로프)
+		local safe = plans[1].Safe[1]
 		GridBattle.MoveAlly(s, safe[1], safe[2])
-		check(#GridBattle.PlannedThreatList(s) == 0, "빛 칸 안은 맞지 않는다")
-		GridBattle.MoveAlly(s, danger[1], danger[2])
-		check(#GridBattle.PlannedThreatList(s) == 1, "빛 칸 밖은 맞는다")
-		check(BattleSkills.ById("CallistoKenos").Unavoidable == true and BattleSkills.ById("CallistoKenos").Damage == 40, "회피 불가 · 피해 40")
-		local hp, sw = ally.Health, stack(ally, ClassResources.SEONGWI)
-		GridBattle.ResolveDodge(s, boss(s).Id, "Success", 1)
-		check(ally.Health < hp and stack(ally, ClassResources.SEONGWI) == sw + 4, "회피 성공을 눌러도 맞고 [성위] 4")
+		check(#GridBattle.PlannedThreatList(s) == 0, "빛 칸 안은 다이브도 파워밤도 없다")
+		-- 일반: 위험 칸(로프 아님) — 다이브 + 성위 4 → 파워밤
+		local normal
+		for _, c in plans[1].Cells do
+			if c[1] > 1 and c[1] < 6 then
+				normal = c
+			end
+		end
+		GridBattle.MoveAlly(s, normal[1], normal[2])
+		check(#GridBattle.PlannedThreatList(s) == 2, "위험 칸: 다이브 + 파워밤")
+		local sw = stack(ally, ClassResources.SEONGWI)
+		local hp = ally.Health
+		for _, t in GridBattle.PlannedThreatList(s) do
+			GridBattle.ResolveDodge(s, t.Unit.Id, "Success", t.Index) -- 회피 불가 — 성공해도 맞는다
+		end
+		check(ally.Health < hp and stack(ally, ClassResources.SEONGWI) == sw + 4, "일반: 다이브 + 파워밤, 성위 4")
+		GridBattle.EndTurn(s)
+		check(s.Callisto.Finisher == nil and s.Callisto.FinisherCount == 1, "피니셔 끝")
+
+		-- 로프(열 1·6): 다이브만(−75%) · 파워밤·성위 없음
+		local s2 = startA(0.65)
+		toB(s2)
+		local p2 = boss(s2).Plans[1]
+		local ropeCell
+		for _, c in p2.Cells do
+			if c[1] == 1 or c[1] == 6 then
+				ropeCell = c
+			end
+		end
+		local a2 = GridBattle.Ally(s2)
+		BattleStatus.SpendAll(a2.Status, ClassResources.BIND)
+		GridBattle.MoveAlly(s2, ropeCell[1], ropeCell[2])
+		local th = GridBattle.PlannedThreatList(s2)
+		check(#th == 1, "로프 위: 파워밤 없음 — " .. #th)
+		local sw2 = stack(a2, ClassResources.SEONGWI)
+		GridBattle.ResolveDodge(s2, th[1].Unit.Id, "Fail", th[1].Index)
+		check(stack(a2, ClassResources.SEONGWI) == sw2, "로프: 성위 없음")
+
+		-- 핀 폴: 턴 A·B 연속 스킬 QTE Success → 다이브 취소 · 3% 손실 · 다음 턴 스턴
+		local s3 = startA(0.65)
+		hitBoss(s3, "Success")
+		check(s3.Callisto.Finisher.Pin == 1, "턴 A 적중 → 핀 폴 1/2")
+		toB(s3)
+		check(not s3.Callisto.Finisher.Failed, "턴 A 에 적중했으니 실패 아님")
+		local pb = boss(s3)
+		local pbBefore = pb.Health
+		hitBoss(s3, "Success")
+		check(s3.Callisto.Finisher.Pinned and #GridBattle.PlannedThreatList(s3) == 0, "턴 B 적중 → 핀 폴 2/2, 다이브 취소(우선순위 1)")
+		GridBattle.EndTurn(s3)
+		check(table.find(castSkills(s3), "CallistoKenosFall") ~= nil and s3.Callisto.Stun == 1, "끌어내림 Cast · 다음 턴 스턴")
+		local healthAfter = pb.Health
+		GridBattle.EnemyPlan(s3, rng)
+		check(pb.Plans == nil and s3.Callisto.Stun == 0, "스턴 턴은 예고 없음")
+		-- 조건 미달: Partial 은 세지 않고, 턴 A 를 놓치면 핀 폴 불가
+		local s4 = startA(0.65)
+		hitBoss(s4, "Partial")
+		check(s4.Callisto.Finisher.Pin == 0, "스킬 QTE Success 만 센다")
+		toB(s4)
+		check(s4.Callisto.Finisher.Failed, "턴 A 에 못 맞히면 핀 폴 실패 표시")
+		hitBoss(s4, "Success")
+		check(not s4.Callisto.Finisher.Pinned, "턴 A 를 놓치면 턴 B 만으로는 안 된다")
+
+		-- 30% 두 번째는 강화판(빛 4칸) · 세 번째는 없다
+		GridBattle.EndTurn(s)
+		boss(s).Health = math.floor(boss(s).MaxHealth * 0.25)
+		GridBattle.EnemyPlan(s, rng)
+		check(s.Callisto.Finisher and s.Callisto.Finisher.Strong and #s.Callisto.Finisher.Safe == 4, "30% 이하 두 번째: 강화판 빛 4칸")
+		toB(s)
+		GridBattle.EndTurn(s)
+		check(s.Callisto.FinisherCount == 2, "두 번 끝")
+		boss(s).Health = math.floor(boss(s).MaxHealth * 0.1)
+		GridBattle.EnemyPlan(s, rng)
+		check(s.Callisto.Finisher == nil, "세 번째는 없다")
+	end
+
+	-- 추적 기믹 4종(2026-11-06 밤): 칩 상태(Met) · 피해 감소 사건 값 · 가드 QTE
+	do
+		local function lastGimmick(s): number?
+			for i = #s.Events, 1, -1 do
+				if s.Events[i].Kind == "EnemyAttack" then
+					return s.Events[i].Gimmick
+				end
+			end
+			return nil
+		end
+		local BattleSkills2 = BattleSkills
+		check(BattleSkills2.ById("CallistoSlash").GuardOnly and BattleSkills2.ById("CallistoArtificial").GuardOnly and not BattleSkills2.ById("CallistoSynthesis").GuardOnly and not BattleSkills2.ById("CallistoMegrez").GuardOnly, "파라티리시·인위적 별자리는 가드 QTE, 신데시·메그레즈는 회피 유지")
+		-- 신데시 발 묶기: 이동 안 함 −50%, 이동하면 없음
+		local function synth()
+			local s = battle()
+			playTurn(s)
+			playTurn(s)
+			GridBattle.Ally(s).Status.Stacks[ClassResources.SEONGWI] = 2
+			GridBattle.EnemyPlan(s, rng)
+			BattleStatus.SpendAll(GridBattle.Ally(s).Status, ClassResources.BIND)
+			return s
+		end
+		local s = synth()
+		check(planOf(s).SkillId == "CallistoSynthesis" and GridBattle.Snapshot(s).Callisto.Gimmick.Met == true, "발 묶기 칩: 이동 안 하면 충족")
+		GridBattle.ResolveDodge(s, boss(s).Id, "Fail", 1)
+		check(math.abs((lastGimmick(s) or 0) - 0.5) < 1e-6, "발 묶기 −50%")
+		local s2 = synth()
+		local me = BattleGrid.CellOf(s2.Grid, GridBattle.ALLY_ID)
+		GridBattle.MoveAlly(s2, if me.X == 6 then 5 else me.X + 1, me.Y)
+		check(GridBattle.Snapshot(s2).Callisto.Gimmick.Met == false, "이동하면 칩이 회색(미충족)")
+		GridBattle.ResolveDodge(s2, boss(s2).Id, "Fail", 1)
+		check(lastGimmick(s2) == nil, "이동했으면 기믹 감소 없음")
+		-- 받는 피해 하한 15%: 가드 −90% 위에 −60% 가 겹쳐도 원래의 15% 밑이 아니다
+		local s3 = synth()
+		BattleStatus.AddModifier(GridBattle.Ally(s3).Status, "DamageTaken", -0.9, 5, "시험")
+		GridBattle.ResolveDodge(s3, boss(s3).Id, "Fail", 1)
+		local def3 = math.max(0, 1 + BattleStatus.TakenRatio(GridBattle.Ally(s3).Status, "Physical"))
+		check(def3 < 0.5 and (1 - (lastGimmick(s3) or 0)) * def3 >= 0.15 - 1e-6, string.format("가드류가 겹쳐도 받는 피해는 원래의 15%% 이상(def %.2f · 기믹 −%.2f)", def3, lastGimmick(s3) or 0))
+		-- 파라티리시 맞받아치기: 칼리스토 적중 → −60% · 성위 없음
+		local s4 = battle()
+		playTurn(s4)
+		playTurn(s4)
+		playTurn(s4)
+		playTurn(s4) -- 3턴 신데시, 4턴 아스트로(보장), 다음이 파라티리시…
+		GridBattle.Ally(s4).Status.Stacks[ClassResources.SEONGWI] = 0
+		GridBattle.EnemyPlan(s4, rng)
+		if planOf(s4).SkillId == "CallistoSlash" then
+			BattleStatus.SpendAll(GridBattle.Ally(s4).Status, ClassResources.BIND)
+			check(GridBattle.Snapshot(s4).Callisto.Gimmick.Met == false, "맞받아치기 칩: 적중 전 회색")
+			local at = BattleGrid.CellOf(s4.Grid, boss(s4).Id)
+			GridBattle.MoveAlly(s4, 1, at.Y)
+			GridBattle.Ally(s4).Stamina = 999
+			GridBattle.ResolveSkill(s4, 1, "Success", rng)
+			check(s4.Callisto.Struck and GridBattle.Snapshot(s4).Callisto.Gimmick.Met, "칼리스토를 스킬로 적중하면 충족")
+			GridBattle.ResolveDodge(s4, boss(s4).Id, "Success", 1)
+			check(math.abs((lastGimmick(s4) or 0) - 0.6) < 1e-6 and stack(GridBattle.Ally(s4), ClassResources.SEONGWI) == 0, "맞받아치기 −60% · 성위 없음")
+		end
+		-- 인위적 별자리 로프 기대기(3페이즈): 열 1 또는 6 −50%
+		local s5 = toPage3()
+		GridBattle.EnemyPlan(s5, rng)
+		check(planOf(s5).SkillId == "CallistoArtificial", "3페이즈 인위적 별자리")
+		BattleStatus.SpendAll(GridBattle.Ally(s5).Status, ClassResources.BIND)
+		GridBattle.MoveAlly(s5, 1, 2)
+		check(GridBattle.Snapshot(s5).Callisto.Gimmick.Met == true, "로프 기대기 칩: 열 1 충족")
+		GridBattle.ResolveDodge(s5, boss(s5).Id, "Fail", 1)
+		check(math.abs((lastGimmick(s5) or 0) - 0.5) < 1e-6, "로프 기대기 −50%")
+		-- 메그레즈 쌍둥이 겨누기: 알코르가 살아 있으면 알코르를 맞춰야 한다
+		local s6 = toPage2()
+		playTurn(s6)
+		local c6 = s6.Callisto
+		c6.Cooldowns = { CallistoAlioth = 9, CallistoPhecda = 9, CallistoMerak = 9 }
+		c6.Aliot = 3
+		BattleStatus.AddStack(GridBattle.Ally(s6).Status, ClassResources.ALKAID, 1, 15)
+		GridBattle.EnemyPlan(s6, rng)
+		check(planOf(s6).SkillId == "CallistoMegrez", "메그레즈 예고")
+		c6.Struck = true
+		check(GridBattle.Snapshot(s6).Callisto.Gimmick.Met == false, "알코르가 있으면 칼리스토를 맞혀도 미충족")
+		c6.StruckAlcor = true
+		check(GridBattle.Snapshot(s6).Callisto.Gimmick.Met == true, "알코르를 맞히면 충족")
+		GridBattle.ResolveDodge(s6, boss(s6).Id, "Fail", 1)
+		check(math.abs((lastGimmick(s6) or 0) - 0.6) < 1e-6, "쌍둥이 겨누기 −60%")
 	end
 
 	-- 범위 줄인 4종: 렌즈 9 · 아스트로 세시 4~9 · 알리오스 6 · 북두칠성 7
@@ -656,7 +831,7 @@ do
 		check(BattleSkills.ById("CallistoMerak").BossCooldown == 6 and BattleSkills.ById("CallistoPhecda").BossCooldown == 11
 			and BattleSkills.ById("CallistoAlioth").BossCooldown == 7 and BattleSkills.ById("CallistoMegrez").BossCooldown == 5
 			and BattleSkills.ById("CallistoArtificial").BossCooldown == 6 and BattleSkills.ById("CallistoShower").BossCooldown == 5
-			and BattleSkills.ById("CallistoAlcor").BossCooldown == 8 and BattleSkills.ById("CallistoKenos").BossCooldown == 7, "쿨타임: 메라크 6 · 페크다 11 · 알리오스 7(+3 그대로) · 나머지 +2")
+			and BattleSkills.ById("CallistoAlcor").BossCooldown == 8, "쿨타임: 메라크 6 · 페크다 11 · 알리오스 7(+3 그대로) · 나머지 +2")
 	end
 
 	-- 3비트 QTE: 5개 × 3 · 6,000ms · 비트당 실수 0 회피 / 1 막기 / 2 실패 · 비트별 서버 판정

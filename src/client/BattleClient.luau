@@ -609,6 +609,7 @@ function BattleClient:_onGridState(snapshot: any)
 	self:_bossAlerts(snapshot)
 	self:_callistoAlerts(snapshot)
 	self:_callistoField(snapshot)
+	self:_callistoGimmickUi(snapshot)
 	self:_refreshSkillBar(snapshot)
 	self:_refreshStance(snapshot)
 	self:_refreshStatusLine(snapshot)
@@ -830,6 +831,77 @@ end
 --[[
 	장판(뭇별 아래에 잠기리)이 남아 있는 동안 양 진영 칸 위에 밤하늘 막 + 별 점. 장판이 끝나면 걷는다(전투가 끝나면 folder 와 함께 사라진다).
 ]]
+--[[
+	칼리스토 추적 기믹 칩 · 케노스 피니셔(2026-11-06 밤): 기믹 칩(조건 충족이 바뀔 때마다 서버 스냅샷으로 갱신) · 핀 폴 게이지 ·
+	FINISHER / PIN! 컷인(스냅샷의 시작 수·핀 수가 오를 때 한 번씩) · 상공 대기 / 스턴 루프(_callistoHold).
+]]
+function BattleClient:_callistoGimmickUi(snapshot: any)
+	local view = snapshot.Callisto
+	self.hud:SetGimmick(view and view.Gimmick)
+	self.hud:SetPin(view and view.Finisher)
+	if not view then
+		self.finSeq, self.pinSeq = nil, nil
+		return
+	end
+	if self.finSeq == nil then
+		self.finSeq, self.pinSeq = view.FinisherSeq, view.PinnedSeq
+	end
+	if view.FinisherSeq > self.finSeq then
+		self.hud:Cutin("Finisher", "FINISHER", "빈 별자리 · KENOS ASTERISMOS")
+	end
+	if view.PinnedSeq > self.pinSeq then
+		self.hud:Cutin("Pin", "PIN!", "핀 성공 · PIN FALL")
+	end
+	self.finSeq, self.pinSeq = view.FinisherSeq, view.PinnedSeq
+	if not view.Finisher then
+		self.perchDone = false
+	end
+end
+
+-- 상공 대기(턴 B) · 추락 스턴 동안 칼리스토의 기본 자세를 그 루프 모션으로(Fx 는 루프 첫 진입에서 한 번만 — CombatDirector:Hold). 연출 중엔 미룬다
+function BattleClient:_callistoHold()
+	local view = self.snapshot and self.snapshot.Callisto
+	local director = self.director
+	if not view or not director or not director:Has(view.UnitId) then
+		return
+	end
+	local want = nil
+	if view.Stunned then
+		want = "CallistoKenosStun"
+	elseif view.Finisher and view.Finisher.Stage == 2 and not self.perchDone then
+		want = "CallistoKenosPerch"
+	end
+	if want ~= nil and (director:IsBusy() or self.pendingThreat or self.threatWaiting) then
+		return
+	end
+	director:Hold(view.UnitId, want)
+end
+
+-- Fx ctx 로 넘길 칸 타일(빛 칸 · 로프 열 1·6 · 예고 칸) — 칸 목록 {x, y} 를 아군 칸 BasePart 목록으로
+function BattleClient:_fxTiles(info: any?)
+	local director = self.director
+	if not director then
+		return
+	end
+	local function tilesOf(cells: { { number } }?): { BasePart }?
+		if not cells then
+			return nil
+		end
+		local list = {}
+		for _, c in cells do
+			local tile = self.tiles.Ally[c[2]] and self.tiles.Ally[c[2]][c[1]]
+			if tile then
+				table.insert(list, tile)
+			end
+		end
+		return list
+	end
+	director.ThreatTiles = tilesOf(info and info.Cells)
+	director.SafeTiles = tilesOf(info and info.Safe)
+	director.RopeTiles = tilesOf(info and info.Rope)
+	director.Strong = info ~= nil and info.Strong == true
+end
+
 function BattleClient:_callistoField(snapshot: any)
 	local view = snapshot.Callisto
 	self:_callistoSheet("callistoField", view ~= nil and (view.Field or 0) > 0, { "Ally", "Enemy" }, Color3.fromRGB(40, 54, 140), true)
@@ -1009,6 +1081,7 @@ function BattleClient:_consumeEvents(snapshot: any)
 				table.insert(merged.Hits, ev.Hits[1])
 				merged.Reflect = (merged.Reflect or 0) + (ev.Reflect or 0)
 				merged.ReflectKilled = merged.ReflectKilled or ev.ReflectKilled
+				merged.Gimmick = merged.Gimmick or ev.Gimmick
 				self.chainLeft -= 1
 				if self.chainLeft <= 0 then
 					self.chainResult = nil
@@ -1020,7 +1093,12 @@ function BattleClient:_consumeEvents(snapshot: any)
 				self.pendingAttackPlay = nil
 			end
 		elseif ev.Kind == "Cast" and self.director and self.director:Has(ev.Actor) then
-			-- 공격이 아닌 보스 행동(칼리스토 알코르 소환): 모션만
+			-- 공격이 아닌 보스 행동(칼리스토 알코르 소환 · 케노스 도발/탑로프/다이브/끌어내림): 모션만
+			self:_fxTiles({ Safe = ev.Safe, Rope = ev.Rope, Strong = ev.Strong })
+			if ev.SkillId == "CallistoKenosDive" or ev.SkillId == "CallistoKenosFall" then
+				self.perchDone = true
+				self.director:Hold(ev.Actor, nil)
+			end
 			self.director:PlaySkill(ev.Actor, ev.SkillId, { {} })
 		end
 	end
@@ -1619,6 +1697,16 @@ function BattleClient:_paintTiles()
 	end
 	-- 케노스 아스테리스모스 빛 칸(안전)
 	local lightAt: { [string]: boolean } = {}
+	local ropeAt: { [string]: boolean } = {}
+	local fin = snapshot.Callisto and snapshot.Callisto.Finisher
+	for _, c in (fin and fin.Safe) or {} do
+		lightAt[c[1] .. "," .. c[2]] = true
+	end
+	if fin and fin.Stage == 2 then
+		for _, c in fin.Rope or {} do
+			ropeAt[c[1] .. "," .. c[2]] = true
+		end
+	end
 	for _, enemyId in snapshot.Planned or {} do
 		local unit = snapshot.Units[enemyId]
 		planSeen[enemyId] = (planSeen[enemyId] or 0) + 1
@@ -1663,6 +1751,7 @@ function BattleClient:_paintTiles()
 						Color = if callisto then CALLISTO_RANGE else partColor[unit.Part] or Color3.fromRGB(255, 150, 40),
 						Label = label,
 						Unavoid = planSkill ~= nil and planSkill.Unavoidable == true,
+						Thin = callisto and snapshot.Callisto ~= nil and snapshot.Callisto.Gimmick ~= nil and snapshot.Callisto.Gimmick.SkillId == plan.SkillId and snapshot.Callisto.Gimmick.Met == true,
 						Source = enemyId,
 					})
 				end
@@ -1774,7 +1863,9 @@ function BattleClient:_paintTiles()
 			-- 검수 칸(검수됨!·검수 준비중)은 칸 글자 대신 덩어리마다 글자 하나 + 칸 위 효과(아래 GroupMarks, 2026-10-02 요청)
 			-- 칼리스토 별자리 칸(★): 파티면 추적 공격이 비껴가고, 솔로면 올라설 때 회복+[별빛 가호] · 턴을 마치면 성위
 			local callistoTag = nil
-			if lightAt[cellKey] then
+			if ropeAt[cellKey] and not lightAt[cellKey] then
+				callistoTag = "로프\n다이브 −75%"
+			elseif lightAt[cellKey] then
 				callistoTag = "☆ 빛 칸\n안전"
 			elseif lureAt[cellKey] then
 				local cs = snapshot.Callisto
@@ -1791,7 +1882,8 @@ function BattleClient:_paintTiles()
 					elseif mod == "Debuff" then "▼ 버그"
 					elseif mod == "Heal" then "✚ 회복"
 					else nil,
-				if lightAt[cellKey] then Color3.fromRGB(235, 245, 255)
+				if ropeAt[cellKey] and not lightAt[cellKey] then Color3.fromRGB(236, 186, 78) -- 로프 칸(열 1·6): 금색
+					elseif lightAt[cellKey] then Color3.fromRGB(235, 245, 255)
 					elseif lureAt[cellKey] then CALLISTO_LURE
 					elseif callistoTag then CALLISTO_RANGE
 					elseif gone[cellKey] then Color3.fromRGB(235, 235, 235)
@@ -1809,6 +1901,8 @@ function BattleClient:_paintTiles()
 				BattleStage.Paint(ally, TILE_ME, true)
 			elseif deleting[cellKey] and gimmick then
 				BattleStage.Paint(ally, TILE_DELETE, true)
+			elseif ropeAt[cellKey] and not lightAt[cellKey] then
+				BattleStage.Paint(ally, Color3.fromRGB(236, 186, 78), true)
 			elseif lightAt[cellKey] then
 				BattleStage.Paint(ally, Color3.fromRGB(235, 245, 255), true)
 			elseif lureAt[cellKey] then
@@ -2089,6 +2183,7 @@ function BattleClient:_bindInput()
 			self:_tickQte()
 		end
 		self:_pumpThreat()
+		self:_callistoHold()
 	end)
 
 	--[[
@@ -2311,24 +2406,13 @@ function BattleClient:_submitGrade(role: QteDefinitions.Role, grade: string, gra
 			self.chainResult = { Hits = {}, Reflect = 0 }
 		end
 		if self.director and threat then
-			-- 예고 칸(범위를 줄인 칼리스토 기술 Fx)·빛 칸(케노스 Fx)의 타일을 Fx ctx 로 넘긴다
+			-- 예고 칸(범위를 줄인 칼리스토 기술 Fx)·빛 칸·로프(케노스 Fx)의 타일을 Fx ctx 로 넘긴다
 			local plan = self.snapshot and self.snapshot.Units[threat.Id] and self.snapshot.Units[threat.Id].Plans
-			plan = plan and plan[threat.PlanIndex or 1]
-			local function tilesOf(cells: { { number } }?): { BasePart }?
-				if not cells then
-					return nil
-				end
-				local list = {}
-				for _, c in cells do
-					local tile = self.tiles.Ally[c[2]] and self.tiles.Ally[c[2]][c[1]]
-					if tile then
-						table.insert(list, tile)
-					end
-				end
-				return list
+			self:_fxTiles(plan and plan[threat.PlanIndex or 1])
+			-- 다이브·파워밤을 쏘면 상공 대기 자세는 끝(이 피니셔가 끝날 때까지 다시 올리지 않는다)
+			if threat.SkillId == "CallistoKenosDive" or threat.SkillId == "CallistoKenosBomb" then
+				self.perchDone = true
 			end
-			self.director.ThreatTiles = tilesOf(plan and plan.Cells)
-			self.director.SafeTiles = tilesOf(plan and plan.Safe)
 			self.pendingAttackPlay =
 				self.director:PlayEnemyAttack(threat.Id, threat.SkillId or "SlimeTackle", "player", grade)
 		end

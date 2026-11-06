@@ -146,6 +146,15 @@ export type CallistoState = {
 	PageTurns: number?,
 	UltUsed: boolean?,
 	UltNext: boolean?,
+	-- 2026-11-06 밤: 추적 기믹 조건(이번 턴 칼리스토 / 알코르를 스킬로 적중) · 케노스 피니셔(2턴) 진행 {Stage 1 = 턴 A · 2 = 턴 B, Safe, Strong, Pin, Pinned, Failed, DiveDone} ·
+	-- 시작한 수 · 끝낸 수 · 추락으로 쉬는 턴
+	Struck: boolean?,
+	StruckAlcor: boolean?,
+	Finisher: { Stage: number, Safe: { { number } }, Strong: boolean, Pin: number, Pinned: boolean, Failed: boolean, DiveDone: boolean? }?,
+	FinisherStarts: number?,
+	FinisherCount: number?,
+	Stun: number?,
+	PinnedSeq: number?,
 }
 
 --[[
@@ -2182,6 +2191,39 @@ end
 	rng는 연금술사 `섞기`처럼 결과가 갈리는 효과에만 쓴다. 넘기지 않으면 0.5로
 	고정돼 결정적으로 동작한다 — 기존 테스트가 그대로 통과하도록 두려는 것이다.
 ]]
+--[[
+	아군 스킬이 맞힌 유닛을 칼리스토 규칙에 알린다(2026-11-06 밤): 이번 턴 칼리스토/알코르 적중(추적 기믹 조건) · 핀 폴 집계
+	(피니셔 턴 A·B 연속으로 칼리스토에게 스킬 QTE Success → 다이브 취소).
+]]
+local function callistoSkillHit(state: State, hits: { Unit }, grade: string, free: boolean)
+	local c = state.Callisto
+	if not c then
+		return
+	end
+	for _, u in hits do
+		if u.Id == c.UnitId then
+			c.Struck = true
+			local f = c.Finisher
+			if f and not free and grade == "Success" and not f.Failed and not f.Pinned then
+				if f.Stage == 1 and f.Pin == 0 then
+					f.Pin = 1
+					pushLog(state, "핀 폴 1/2")
+				elseif f.Stage == 2 and f.Pin == 1 then
+					f.Pin = 2
+					f.Pinned = true
+					c.PinnedSeq = (c.PinnedSeq or 0) + 1
+					for _, plan in u.Plans or {} do
+						plan.Canceled = true
+					end
+					pushLog(state, "핀 폴 2/2 — 다이브를 끌어내렸다!")
+				end
+			end
+		elseif u.Id == c.AlcorId then
+			c.StruckAlcor = true
+		end
+	end
+end
+
 function GridBattle.ResolveSkill(
 	state: State,
 	skillIndex: any,
@@ -2332,6 +2374,8 @@ function GridBattle.ResolveSkill(
 			end
 		end
 	end
+
+	callistoSkillHit(state, hitUnits, grade, free ~= nil)
 
 	local context: BattleSkillEffects.Context = {
 		Ally = ally,
@@ -2940,8 +2984,6 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 			id = "CallistoArtificial"
 		elseif (c.Cooldowns.CallistoShower or 0) <= 0 then
 			id = "CallistoShower"
-		elseif (c.Cooldowns.CallistoKenos or 0) <= 0 then
-			id = "CallistoKenos" -- 2026-11-06 개선안 1절: 회피 불가 위치 기믹
 		else
 			id = "CallistoResonance"
 		end
@@ -3110,7 +3152,7 @@ end
 	  케노스 빛 칸 6칸(앞 열1~2 · 가운데 3~4 · 뒤 5~6 중 무작위)을 뺀 12칸이 위험 칸
 ]]
 local DIPPER_CELLS = { { 6, 1 }, { 3, 2 }, { 4, 2 }, { 5, 2 }, { 1, 3 }, { 2, 3 }, { 3, 3 } }
-local function callistoZone(state: State, rng: () -> number, id: string, here: { X: number, Y: number }): ({ { number } }?, { { number } }?)
+local function callistoZone(state: State, _rng: () -> number, id: string, here: { X: number, Y: number }): ({ { number } }?, { { number } }?)
 	local width, height = state.Grid.Width, state.Grid.Height
 	local cells = {}
 	if id == "CallistoArktos" then
@@ -3142,20 +3184,107 @@ local function callistoZone(state: State, rng: () -> number, id: string, here: {
 		for _, cell in DIPPER_CELLS do
 			table.insert(cells, { cell[1], cell[2] })
 		end
-	elseif id == "CallistoKenos" then
-		local band = math.max(1, width // 3)
-		local first = (math.floor(rng() * 3)) * band + 1
-		local safe = {}
-		for x = 1, width do
-			for y = 1, height do
-				table.insert(if x >= first and x < first + band then safe else cells, { x, y })
-			end
-		end
-		return cells, safe
 	else
 		return nil, nil
 	end
 	return cells, nil
+end
+
+--[[
+	케노스 아스테리스모스 피니셔(2026-11-06 밤 기획 B절). 체력 70%·30% 이하에서 1번씩(쿨 없음, 30% 는 강화판) 두 턴:
+	  턴 A 시작 도발(Cast — 피해 없음) → 끝 탑로프(Cast) → 턴 B 예고 다이브·파워밤 두 개 → 끝 다이브(핀 폴이면 끌어내림).
+	판정 우선순위 핀 폴(취소) → 빛 칸(무피해) → 로프(열 1·6: 다이브 −75% · 파워밤·성위 없음) → 일반(다이브 40/45 + 성위 4 → 파워밤 +20)
+]]
+local FINISHER_RATIO_1, FINISHER_RATIO_2 = 0.7, 0.3
+local FINISHER_PIN_LOSS = 0.03
+local FINISHER_ROPE_CUT = 0.75
+local FINISHER_DIVE, FINISHER_DIVE_STRONG = 40, 45
+local GIMMICK_MIN_TAKEN = 0.15 -- 기믹·가드·가호가 겹쳐도 받는 피해는 원래의 15% 밑으로 안 내려간다
+
+-- 빛 칸: 6칸(앞/가운데/뒤 두 열 중 하나) 또는 강화판 4칸(2열 × 2행 무작위)
+local function finisherSafe(state: State, rng: () -> number, strong: boolean): { { number } }
+	local width, height = state.Grid.Width, state.Grid.Height
+	local safe = {}
+	if strong then
+		local x0 = math.floor(rng() * (width - 1)) + 1
+		local y0 = math.floor(rng() * (height - 1)) + 1
+		for x = x0, x0 + 1 do
+			for y = y0, y0 + 1 do
+				table.insert(safe, { x, y })
+			end
+		end
+	else
+		local band = math.max(1, width // 3)
+		local first = math.floor(rng() * 3) * band + 1
+		for x = first, first + band - 1 do
+			for y = 1, height do
+				table.insert(safe, { x, y })
+			end
+		end
+	end
+	return safe
+end
+
+-- 로프 칸(양 끝 열)
+local function ropeCells(state: State): { { number } }
+	local rope = {}
+	for _, x in { 1, state.Grid.Width } do
+		for y = 1, state.Grid.Height do
+			table.insert(rope, { x, y })
+		end
+	end
+	return rope
+end
+
+local function allyOnRope(state: State): boolean
+	local at = BattleGrid.CellOf(state.Grid, ALLY_ID)
+	return at ~= nil and (at.X == 1 or at.X == state.Grid.Width)
+end
+
+--[[
+	피니셔 한 턴의 예고(callistoPlan 이 3페이즈에서 먼저 부른다). 돌려주는 값 = 이번 턴 예고를 이걸로 끝냈나.
+	  추락 스턴 중이면 쉰다 · 진행 중 턴 B 면 다이브·파워밤 · 조건이 차면 턴 A 도발(Cast)
+]]
+local function callistoFinisherPlan(state: State, rng: () -> number, unit: Unit, c: CallistoState, planned: { Unit }): boolean
+	if (c.Stun or 0) > 0 then
+		c.Stun -= 1
+		pushLog(state, unit.Name .. " — 추락한 충격으로 이번 턴 움직이지 못한다")
+		return true
+	end
+	local f = c.Finisher
+	if not f then
+		local count = c.FinisherCount or 0
+		if not c.Opened or count >= 2 or unit.Health > unit.MaxHealth * (if count == 0 then FINISHER_RATIO_1 else FINISHER_RATIO_2) then
+			return false
+		end
+		f = { Stage = 1, Safe = {}, Strong = count == 1, Pin = 0, Pinned = false, Failed = false }
+		f.Safe = finisherSafe(state, rng, f.Strong)
+		c.Finisher = f
+		c.FinisherStarts = (c.FinisherStarts or 0) + 1
+		c.Lure = nil
+		pushLog(state, string.format("%s — 케노스 아스테리스모스%s! (도발 → 탑로프 → 다이브) · 빛 칸 %d칸", unit.Name, if f.Strong then " 강화" else "", #f.Safe))
+		pushEvent(state, { Kind = "Cast", Actor = unit.Id, SkillId = "CallistoKenos", Safe = f.Safe, Strong = f.Strong })
+		return true
+	end
+	-- 턴 B: 위험 칸 = 빛 칸을 뺀 나머지
+	local danger = {}
+	for _, cell in allCells(state) do
+		if not hasCell(f.Safe, cell[1], cell[2]) then
+			table.insert(danger, cell)
+		end
+	end
+	local rope = ropeCells(state)
+	c.Lure = nil
+	local plans = {}
+	for k, id in { "CallistoKenosDive", "CallistoKenosBomb" } do
+		table.insert(plans, { SkillId = id, Cells = danger, Safe = f.Safe, Rope = rope, Strong = f.Strong, Strike = k, Target = ALLY_ID })
+		table.insert(state.Planned, unit.Id)
+	end
+	unit.Plans = plans
+	unit.Plan = plans[1]
+	table.insert(planned, unit)
+	pushLog(state, string.format("%s — 상공에서 다이브 예고 (빛 칸 %d칸 · 로프 열 1·%d)", unit.Name, #f.Safe, state.Grid.Width))
+	return true
 end
 
 --[[
@@ -3167,6 +3296,9 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 	local here = BattleGrid.CellOf(state.Grid, ALLY_ID)
 	unit.Plans, unit.Plan = nil, nil
 	if not ally or not ally.Alive or not here then
+		return
+	end
+	if c.Page >= 3 and callistoFinisherPlan(state, rng, unit, c, planned) then
 		return
 	end
 	local id = callistoPick(state, c, unit, ally)
@@ -3213,9 +3345,27 @@ end
 --[[
 	칼리스토 공격 한 번의 위력(회피·막기·치명·받는 피해 보정 전). fixed 가 있으면 그 값을 고정 피해로 그대로(장판).
 ]]
+-- 추적 공격 기믹(BattleSkills Gimmick)의 조건을 지금 채웠나
+local function callistoGimmickMet(state: State, c: CallistoState, gimmick: { Id: string }): boolean
+	local id = gimmick.Id
+	if id == "Struck" then
+		return c.Struck == true
+	elseif id == "Stand" then
+		return not state.Moved
+	elseif id == "TwinStruck" then
+		return if alcorAlive(state, c) then c.StruckAlcor == true else c.Struck == true
+	elseif id == "Edge" then
+		return allyOnRope(state)
+	end
+	return false
+end
+
 local function callistoBase(c: CallistoState, ally: Unit, skill: BattleSkills.Skill): (number, number?)
 	if skill.Id == "CallistoSubmerge" then
 		return 0, ally.MaxHealth * FIELD_ALLY
+	end
+	if skill.Id == "CallistoKenosDive" then
+		return (if c.Finisher and c.Finisher.Strong then FINISHER_DIVE_STRONG else FINISHER_DIVE) * c.PowerScale, nil
 	end
 	local mutbyeol = stackOf(ally, ClassResources.MUTBYEOL) > 0
 	local base = skill.Damage
@@ -3267,7 +3417,10 @@ local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: U
 		if mutbyeol then
 			BattleStatus.AddBurn(ally.Status, 6)
 		else
-			addSeongwi(state, ally, 2)
+			-- 맞받아치기 기믹을 채웠으면 [성위] 안 걸림(2026-11-06 사용자 답)
+			if not (skill.Gimmick and callistoGimmickMet(state, c, skill.Gimmick)) then
+				addSeongwi(state, ally, 2)
+			end
 			BattleStatus.AddBurn(ally.Status, 4)
 		end
 	elseif id == "CallistoPhoto" then
@@ -3314,8 +3467,12 @@ local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: U
 		if seongwi > 0 then
 			timedDebuff(ally, ClassResources.BLADE_SCAR, "칼춤 상처", CALLISTO_DEBUFF_TURNS, { { "DamageTaken", 0.15 } })
 		end
-	elseif id == "CallistoArtificial" or id == "CallistoKenos" then -- 케노스도 [성위] 4
+	elseif id == "CallistoArtificial" then
 		addSeongwi(state, ally, 4)
+	elseif id == "CallistoKenosDive" then
+		if not allyOnRope(state) then
+			addSeongwi(state, ally, 4)
+		end
 	elseif id == "CallistoShower" then
 		addSeongwi(state, ally, 1)
 	elseif id == "CallistoSubmerge" then
@@ -3356,6 +3513,30 @@ local function callistoEndTurn(state: State, c: CallistoState)
 	local ally = state.Units[ALLY_ID]
 	if not unit or not ally then
 		return
+	end
+	-- 기믹 조건(이번 턴 적중)은 턴이 끝나면 비운다
+	c.Struck, c.StruckAlcor = nil, nil
+	-- 케노스 피니셔: 턴 A 끝 탑로프 · 턴 B 끝 끌어내림(핀 폴) 또는 다이브 마무리
+	local f = c.Finisher
+	if f then
+		if f.Stage == 1 then
+			f.Stage = 2
+			if f.Pin < 1 then
+				f.Failed = true
+			end
+			pushEvent(state, { Kind = "Cast", Actor = unit.Id, SkillId = "CallistoKenosClimb", Safe = f.Safe, Rope = ropeCells(state), Strong = f.Strong })
+		else
+			if f.Pinned then
+				local lost = damageUnit(state, unit, unit.MaxHealth * FINISHER_PIN_LOSS, "True", true)
+				c.Stun = 1
+				pushLog(state, string.format("핀 폴 — 칼리스토가 추락해 %d 잃고 다음 턴 스턴", lost))
+				pushEvent(state, { Kind = "Cast", Actor = unit.Id, SkillId = "CallistoKenosFall" })
+			elseif not f.DiveDone then
+				pushEvent(state, { Kind = "Cast", Actor = unit.Id, SkillId = "CallistoKenosDive", Safe = f.Safe, Rope = ropeCells(state), Strong = f.Strong })
+			end
+			c.Finisher = nil
+			c.FinisherCount = (c.FinisherCount or 0) + 1
+		end
 	end
 	if ally.Alive and stackOf(ally, ClassResources.GOCHAL) > 0 then
 		BattleStatus.AddBurn(ally.Status, 1)
@@ -3569,6 +3750,10 @@ function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?
 			and hasCell(state.Callisto.Lure, here.X, here.Y) then
 			return false
 		end
+		-- 파워밤은 다이브에 맞은 대상에게만(로프 위면 다이브가 막혀 파워밤 없음)
+		if plan.SkillId == "CallistoKenosBomb" and (here.X == 1 or here.X == state.Grid.Width) then
+			return false
+		end
 		for _, c in plan.Cells do
 			if c[1] == here.X and c[2] == here.Y then
 				return true
@@ -3684,6 +3869,27 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	end
 	local parried = parryOnly and grade == "Success"
 	local multiplier = (if parried then PARRY_KEEP else QteDefinitions.Multiplier("Dodge", grade)) * math.max(0, before.Mult)
+	-- 칼리스토 추적 기믹(2026-11-06 사용자 답 Q3) · 피니셔 로프: 가드·별빛 가호와 곱하되 받는 피해는 원래의 GIMMICK_MIN_TAKEN 밑으로 안 내려간다
+	local gimmickCut: number? = nil
+	local foeCallisto = callistoOf(state, enemy)
+	if foeCallisto and multiplier > 0 then
+		if skill.Gimmick and callistoGimmickMet(state, foeCallisto, skill.Gimmick) then
+			local def = math.max(0, 1 + BattleStatus.TakenRatio(ally.Status, "Physical", ally.Resist and ally.Resist.Physical))
+			local keep = math.max(1 - skill.Gimmick.Reduce, math.min(1, GIMMICK_MIN_TAKEN / math.max(multiplier * def, 0.0001)))
+			multiplier *= keep
+			gimmickCut = 1 - keep
+			pushLog(state, string.format("기믹 [%s] — 피해 −%d%%", skill.Gimmick.Name, math.floor(gimmickCut * 100 + 0.5)))
+		end
+		if skill.Id == "CallistoKenosDive" then
+			if foeCallisto.Finisher then
+				foeCallisto.Finisher.DiveDone = true
+			end
+			if allyOnRope(state) then
+				multiplier *= 1 - FINISHER_ROPE_CUT
+				pushLog(state, "로프 브레이크 — 다이브 −75%")
+			end
+		end
+	end
 	if grade ~= "Success" and multiplier > 0 and before.Crit > 0 and nextRandom(state) < before.Crit then
 		multiplier *= math.max(1, before.CritMult)
 		pushLog(state, enemy.Name .. " 치명타")
@@ -3799,6 +4005,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		Target = ally.Id,
 		Grade = grade,
 		Hits = { { { Id = ally.Id, Damage = taken, Grade = grade, Killed = not ally.Alive } } },
+		Gimmick = gimmickCut,
 		Reflect = reflected + parryBack,
 		ReflectKilled = not enemy.Alive,
 	})
@@ -4206,6 +4413,31 @@ function GridBattle.Snapshot(state: State): any
 			Seven = if unit then stackOf(unit, ClassResources.SEVEN) else 0,
 			Blink = if unit then stackOf(unit, ClassResources.BLINK) else 0,
 			Aliot = callisto.Aliot,
+			-- 케노스 피니셔(진행 중이면): 클라가 핀 폴 게이지·컷인·로프/빛 칸을 그린다. Seq = 시작한 수(컷인을 한 번만)
+			Finisher = if callisto.Finisher
+				then {
+					Stage = callisto.Finisher.Stage,
+					Safe = table.clone(callisto.Finisher.Safe),
+					Strong = callisto.Finisher.Strong,
+					Pin = callisto.Finisher.Pin,
+					Pinned = callisto.Finisher.Pinned,
+					Failed = callisto.Finisher.Failed,
+					Rope = ropeCells(state),
+				}
+				else nil,
+			FinisherSeq = callisto.FinisherStarts or 0,
+			PinnedSeq = callisto.PinnedSeq or 0,
+			Stunned = (callisto.Stun or 0) > 0,
+			-- 이번 턴 예고에 붙은 추적 기믹(칩): 조건을 지금 채웠나
+			Gimmick = (function()
+				local plan = unit and unit.Alive and unit.Plans and unit.Plans[1]
+				local skill = plan and not plan.Canceled and BattleSkills.ById(plan.SkillId)
+				local g = skill and skill.Gimmick
+				if not g then
+					return nil
+				end
+				return { SkillId = skill.Id, Name = g.Name, Reduce = g.Reduce, Text = g.Text, Met = callistoGimmickMet(state, callisto, g) }
+			end)(),
 			AliothCells = if callisto.AliothCells then table.clone(callisto.AliothCells) else nil,
 			AlcorId = if alcorAlive(state, callisto) then callisto.AlcorId else nil,
 			Dipper = callisto.Dipper,

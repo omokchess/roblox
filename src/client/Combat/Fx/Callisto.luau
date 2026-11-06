@@ -755,11 +755,14 @@ function Fx.DipperCrash(ctx: any)
 	end)
 end
 
---=== 3페이즈 케노스 아스테리스모스(빈 별자리, 2026-11-06) ===--
--- 빛 칸 6칸 밖은 전부 맞는 회피 불가 위치형. 칸 표시(빛/붉은 칸)는 전투 화면이 그리고, 이 이펙트는 시전·낙하 연출이다.
--- 빛 칸 = ctx.SafeTiles(BasePart 목록 — 프로그래밍이 예고 안전 칸으로 넘김), 없으면 앞 두 열 6칸.
+--=== 3페이즈 케노스 아스테리스모스 — WWE 피니셔(2026-11-06 밤, 설계서 B절) ===--
+-- 도발(Call · Snuff · Murmur) → 탑로프(Step · Cast · Ropes) → 상공 대기(Orbit) → 다이브(DiveShot · Tail · Landing) → 파워밤(Grab · Lift · Slam) / 끌어내림(Sever · Crash · Orbit 스턴).
+-- 칸 정보: ctx.SafeTiles = 빛 칸(BasePart 목록 — 없으면 앞 두 열 6칸) · ctx.RopeTiles = 열 1·6 칸(없으면 AllyTiles 에서 어림) · ctx.Strong = 강화판(30% — 충격이 1.25배).
+-- 컷인(FINISHER · PIN!) · 핀 게이지 · 로프 칸 표시는 HUD 가 그린다. 여기는 월드 연출만.
+-- 파워밤: 대상 모델을 들어 올리지 않는다(캐릭터는 다른 시스템이 움직여 위험) — 왼손의 별빛 덩어리를 대상 삼아 들어 올렸다 내리찍는다.
 
 local CRACK = c(176, 48, 64) -- 붉은 금 균열
+local ROPE = c(170, 215, 255) -- 청백 로프
 
 -- 빛 칸 · 붉은 칸 가운데들
 local function kenosSplit(ctx: any): ({ Vector3 }, { Vector3 })
@@ -777,17 +780,83 @@ local function kenosSplit(ctx: any): ({ Vector3 }, { Vector3 })
 	return safe, dark
 end
 
--- 시전 — 빛 칸에 가는 빛기둥이 서고(정적 동안 낮게 맥동) 붉은 칸엔 금 간 균열이 퍼진다
+-- 머리 자리(별 도는 곳) · 하늘 위 아무 곳(별 술렁)
+local function headAt(ctx: any): Vector3
+	local head = ctx.Actor and ctx.Actor.Model and ctx.Actor.Model:FindFirstChild("Head") :: BasePart?
+	return if head then head.Position else ctx.Root.Position + Vector3.new(0, 3, 0)
+end
+
+local function skyPoint(ctx: any): Vector3
+	local a, r = math.random() * math.pi * 2, 6 + math.random() * 24
+	return Vector3.new(ctx.Root.Position.X + math.cos(a) * r, ctx.Ground + 14 + math.random() * 16, ctx.Root.Position.Z + math.sin(a) * r)
+end
+
+local function targetPoint(ctx: any): Vector3
+	return if typeof(ctx.Target) == "Vector3" then ctx.Target else ctx.Root.Position + ctx.Forward * 4
+end
+
+-- 도발 1: 오른팔 + 망치가 하늘을 가리키자 하늘 구의 별들이 하나둘 밝아진다
+function Fx.KenosCall(ctx: any)
+	local at = ctx.Tip("W") or ctx.Hand("R")
+	ctx.Vfx.Pack("Loose/Sparkles_Beam", CFrame.new(at), { Color = STAR_CORE, Size = 0.7 })
+	for i = 1, 12 do
+		task.delay(0.05 * i, function()
+			star(ctx, skyPoint(ctx), 2.6, 0.9, if i % 3 == 0 then STAR_CORE else STAR)
+		end)
+	end
+end
+
+-- 도발 2: 주먹을 쥐면 별 하나가 꺼진다(밝게 번쩍 → 어두운 푸른 고리와 가루만 남음)
+function Fx.KenosSnuff(ctx: any)
+	local Vfx = ctx.Vfx
+	local fist = ctx.Hand("L")
+	Vfx.Pack("Anime/Punch-03", CFrame.new(fist), { Color = STAR_CORE, Size = 0.4 })
+	local p = fist + ctx.Forward * 4 + Vector3.new(0, 10, 0)
+	star(ctx, p, 4, 0.3, FLASH)
+	task.delay(0.3, function()
+		Vfx.Ring(CFrame.lookAt(p, p + Vector3.yAxis), { R0 = 0.5, R1 = 4, Color = DEEP, Life = 0.6, Width = 0.12, Facing = true })
+		Vfx.Burst(p, { Count = 10, Colors = { DEEP, c(30, 40, 90) }, Size = 0.3, Speed = 8, Life = 0.7, Gravity = 6, Material = Enum.Material.Neon })
+	end)
+end
+
+-- 도발 3: 나머지 별들이 술렁인다(빠른 깜빡임이 하늘 가득 + 둥근 파문)
+function Fx.KenosMurmur(ctx: any)
+	local Vfx = ctx.Vfx
+	for _ = 1, 30 do
+		task.delay(math.random() * 0.6, function()
+			star(ctx, skyPoint(ctx), 1.4 + math.random() * 1.4, 0.14, if math.random() < 0.3 then FLASH else STAR)
+		end)
+	end
+	local mid = Vector3.new(ctx.Root.Position.X, ctx.Ground + 20, ctx.Root.Position.Z)
+	for i = 0, 2 do
+		task.delay(0.15 * i, function()
+			Vfx.Ring(CFrame.new(mid), { R0 = 2, R1 = 34, Color = STAR, Life = 0.8, Width = 0.25, Height = 0.05 })
+		end)
+	end
+end
+
+-- 탑로프: 별빛 발판이 발밑에 하나 켜진다(ev.h = 발판 높이, ev.s = 단계 — 단계마다 조금씩 크게)
+function Fx.KenosStep(ctx: any, ev: any)
+	local Vfx = ctx.Vfx
+	local k = 0.8 + 0.2 * ((ev and ev.s) or 1)
+	local at = Vector3.new(ctx.Root.Position.X, ctx.Ground + ((ev and ev.h) or 2), ctx.Root.Position.Z)
+	Vfx.Flash(at, { Color = STAR_CORE, Size = 4 * k, Life = 0.6, Brightness = 4 })
+	Vfx.Ring(CFrame.new(at), { R0 = 0.4, R1 = 3.2 * k, Color = STAR, Life = 0.45, Width = 0.18, Height = 0.05 })
+	Vfx.Pack("Loose/Flare", CFrame.new(at), { Color = STAR_CORE, Size = 0.45 * k })
+	Vfx.Sparks(at, { Color = STAR_CORE, Count = 8, Speed = 10 })
+end
+
+-- 빛 칸에 가는 빛기둥(대기 동안 낮게 맥동) · 붉은 칸에 금 간 균열 — 턴 B 위험 표시를 월드에도 건다
 function Fx.KenosCast(ctx: any)
 	local Vfx = ctx.Vfx
 	local safe, dark = kenosSplit(ctx)
 	for i, p in safe do
 		task.delay(0.05 * i, function()
-			Vfx.Pillar(p, { Color = STAR_CORE, Life = 1.3, Height = 14, Width = 0.5 })
+			Vfx.Pillar(p, { Color = STAR_CORE, Life = 6, Height = 14, Width = 0.5 })
 			Vfx.Flash(p + Vector3.new(0, 0.5, 0), { Color = STAR, Size = 3, Life = 1.0, Brightness = 2 })
 		end)
-		for k = 1, 2 do
-			task.delay(0.5 + 0.35 * k, function()
+		for k = 1, 4 do
+			task.delay(0.6 * k, function()
 				Vfx.Flash(p + Vector3.new(0, 0.5, 0), { Color = STAR_CORE, Size = 3.4, Life = 0.3, Brightness = 3 })
 			end)
 		end
@@ -801,75 +870,195 @@ function Fx.KenosCast(ctx: any)
 	end
 end
 
--- 하늘에 빈 별자리(작은곰자리 — 빛 칸 위 별 여섯 + 북극성)가 손이 긋는 대로 하나씩 켜지고 선으로 이어진다
-function Fx.KenosLine(ctx: any)
-	local Vfx = ctx.Vfx
-	local safe = kenosSplit(ctx)
-	if #safe == 0 then
-		return
-	end
-	local f = ctx.Forward
-	table.sort(safe, function(a, b)
-		return a:Dot(f) < b:Dot(f)
-	end)
-	local points = {}
-	for i, p in safe do
-		points[i] = p + Vector3.new(0, 11 + (i % 2) * 1.5, 0)
-	end
-	table.insert(points, center(safe) + Vector3.new(0, 16, 0)) -- 북극성
-	for i, p in points do
-		task.delay(0.06 * (i - 1), function()
-			star(ctx, p, 2.4, 1.1, STAR_CORE)
-			Vfx.Pack("Loose/Flare", CFrame.new(p), { Color = STAR_CORE, Size = 0.4 })
-			if i > 1 then
-				Vfx.Beam(points[i - 1], p, { Color = STAR, Width = 0.16, Life = 1.0 })
+-- 로프: 판 양 끝 열(1 · 6) 바깥에 청백 줄 3개와 기둥(링의 로프) — 다이브 때까지 서 있는다
+local function ropeLines(ctx: any): { { Vector3 } }
+	local positions = {}
+	if ctx.RopeTiles and #ctx.RopeTiles > 0 then
+		for _, tile in ctx.RopeTiles do
+			table.insert(positions, tile.Position)
+		end
+	else
+		local w = gridOf(ctx)
+		for i, tile in ctx.AllyTiles or {} do
+			local col = if w then (i - 1) % w + 1 else 0
+			if w and (col == 1 or col == w) then
+				table.insert(positions, tile.Position)
 			end
+		end
+	end
+	if #positions == 0 then
+		return {}
+	end
+	local mid = center(allyCells(ctx))
+	local f = ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	local groups = { [1] = {}, [-1] = {} }
+	for _, p in positions do
+		table.insert(groups[if (p - mid):Dot(f) >= 0 then 1 else -1], p)
+	end
+	local out = {}
+	for sign, list in groups do
+		if #list > 0 then
+			local g = center(list) + f * (sign * 4)
+			local lo, hi = math.huge, -math.huge
+			for _, p in list do
+				local v = (p - g):Dot(r)
+				lo, hi = math.min(lo, v), math.max(hi, v)
+			end
+			table.insert(out, { g + r * (lo - 3), g + r * (hi + 3) })
+		end
+	end
+	return out
+end
+
+function Fx.KenosRopes(ctx: any)
+	local Vfx = ctx.Vfx
+	for _, line in ropeLines(ctx) do
+		for h = 1, 3 do
+			local lift = Vector3.new(0, ctx.Ground + 0.2 + 1.4 * h, 0)
+			Vfx.Beam(Vector3.new(line[1].X, 0, line[1].Z) + lift, Vector3.new(line[2].X, 0, line[2].Z) + lift, { Color = ROPE, Width = 0.22, Life = 7 })
+		end
+		for _, e in line do
+			Vfx.Pillar(Vector3.new(e.X, ctx.Ground, e.Z), { Color = ROPE, Life = 7, Height = 5, Width = 0.4 })
+			Vfx.Flash(Vector3.new(e.X, ctx.Ground + 4.4, e.Z), { Color = STAR_CORE, Size = 2.4, Life = 0.8, Brightness = 4 })
+		end
+	end
+end
+
+-- 로프가 충격을 받아 번쩍인다(다이브 착지 때 — 대비선만 켜고 끈다)
+local function ropeFlash(ctx: any)
+	for _, line in ropeLines(ctx) do
+		for t = 0, 1, 0.25 do
+			local p = line[1]:Lerp(line[2], t)
+			ctx.Vfx.Flash(Vector3.new(p.X, ctx.Ground + 3, p.Z), { Color = FLASH, Size = 4, Life = 0.25, Brightness = 6 })
+		end
+	end
+end
+
+-- 상공 대기 · 스턴: 머리 위로 별이 돈다(ev.c = 별 수, ev.stun = 스턴 — 느리고 낮은 원). 모션이 도는 동안(상한 6초) 계속 그린다
+function Fx.KenosOrbit(ctx: any, ev: any)
+	local Vfx = ctx.Vfx
+	local count = (ev and ev.c) or 7
+	local stun = ev and ev.stun
+	local model = ctx.Actor and ctx.Actor.Model
+	task.spawn(function()
+		local t0 = os.clock()
+		while os.clock() - t0 < 6 and model and model.Parent do
+			local t = os.clock() - t0
+			local head = headAt(ctx)
+			for i = 1, count do
+				local a = t * (if stun then 3 else 1.6) + i * math.pi * 2 / count
+				local r = if stun then 1.7 else 2.6
+				local at = head + Vector3.new(math.cos(a) * r, (if stun then 1.9 else 2.8) + 0.25 * math.sin(a * 2), math.sin(a) * r)
+				Vfx.Flash(at, { Color = if i == 1 then STAR_CORE else STAR, Size = if stun then 1.1 else 1.3, Life = 0.2, Brightness = 4 })
+			end
+			task.wait(0.16)
+		end
+	end)
+end
+
+-- 다이브 조준 컷: 0.4초 — 아군 뒤에서 상공의 칼리스토를 올려다본다
+function Fx.KenosDiveShot(ctx: any, ev: any)
+	local mid = center(allyCells(ctx))
+	ctx.Shot((ev and ev.d) or 0.4, function(alpha: number)
+		local f = ctx.Forward
+		local eye = mid + f * (14 - 3 * alpha) + Vector3.new(0, 5, 0)
+		return CFrame.lookAt(eye, ctx.Root.Position + Vector3.new(0, 8.5 - 2 * alpha, 0))
+	end)
+end
+
+-- 다이브 낙하: 별 꼬리 세 줄이 칼리스토가 떠 있던 자리에서 대상 쪽으로 곧장 꽂힌다
+function Fx.KenosTail(ctx: any)
+	local r = ctx.Forward:Cross(Vector3.yAxis)
+	local from = ctx.Root.Position + Vector3.new(0, 7.5, 0)
+	local to = targetPoint(ctx)
+	for i = -1, 1 do
+		ctx.Vfx.Projectile(from + r * (i * 1.4), to + r * (i * 1.1), { Time = 0.5, Color = STAR_CORE, TrailColor = STAR })
+	end
+	ctx.Vfx.Pack("Anime/Wind-02", CFrame.new(from), { Color = STAR, Size = 0.6 })
+end
+
+-- 다이브 착지: 충격 링과 균열이 붉은 칸에 번지고(착지점에서 가까운 칸부터), 빛 칸엔 기둥만 선다. 로프가 번쩍인다
+function Fx.KenosLanding(ctx: any)
+	local Vfx = ctx.Vfx
+	local k = if ctx.Strong then 1.25 else 1
+	local safe, dark = kenosSplit(ctx)
+	local hit = targetPoint(ctx)
+	smash(ctx, hit, 1.5 * k)
+	Vfx.Ring(CFrame.new(Vector3.new(hit.X, ctx.Ground + 0.2, hit.Z)), { R0 = 1, R1 = 14 * k, Color = STAR_CORE, Life = 0.6, Width = 0.4, Height = 0.07 })
+	table.sort(dark, function(a, b)
+		return (a - hit).Magnitude < (b - hit).Magnitude
+	end)
+	for i, p in dark do
+		task.delay(0.025 * i, function()
+			local ground = Vector3.new(p.X, ctx.Ground + 0.15, p.Z)
+			Vfx.Ring(CFrame.new(ground), { R0 = 0.6, R1 = 4.5 * k, Color = CRACK, Life = 0.4, Width = 0.28, Height = 0.07 })
+			Vfx.Flash(p + Vector3.new(0, 0.5, 0), { Color = STAR_CORE, Size = 4 * k, Life = 0.2, Brightness = 4 })
+			Vfx.Burst(ground + Vector3.new(0, 0.3, 0), { Count = 5, Colors = { CRACK, STAR_CORE }, Size = 0.35, Speed = 14, Life = 0.5, Gravity = 36, Material = Enum.Material.Neon })
+			Vfx.Pack("Anime/Crack-01", CFrame.new(ground), { Color = CRACK, Size = 1.4 * k })
+		end)
+	end
+	for _, p in safe do
+		Vfx.Pillar(p, { Color = STAR_CORE, Life = 0.45, Height = 14, Width = 0.8 })
+	end
+	ropeFlash(ctx)
+end
+
+-- 파워밤 1: 움켜쥔 손에 별빛 덩어리(대상을 대신한다)가 잡혀, 내리찍을 때까지 손을 따라다닌다
+function Fx.KenosGrab(ctx: any)
+	local Vfx = ctx.Vfx
+	local ball = Vfx.Part(Vector3.new(0.3, 0.3, 0.3), CFrame.new(ctx.Hand("L")), STAR_CORE)
+	ball.Shape = Enum.PartType.Ball
+	Vfx.Timed(0.78, function(alpha)
+		local s = 1.1 + 0.25 * math.sin(alpha * 40)
+		ball.Size = Vector3.new(s, s, s)
+		ball.CFrame = CFrame.new(ctx.Hand("L") + Vector3.new(0, 1.2, 0))
+		ball.Transparency = 0.3
+	end, function()
+		ball:Destroy()
+	end)
+	Vfx.Pack("Anime/Punch-03", CFrame.new(ctx.Hand("L")), { Color = STAR_CORE, Size = 0.5 })
+	Vfx.Sparks(ctx.Hand("L"), { Color = STAR, Count = 8, Speed = 12 })
+end
+
+-- 파워밤 2: 들어 올리는 동안 별가루가 올라가고, 버티는 동안 떨리며 빛이 모인다
+function Fx.KenosLift(ctx: any)
+	local at = ctx.Hand("L") + Vector3.new(0, 2, 0)
+	ctx.Vfx.Pack("Anime/Charge-01", CFrame.new(at), { Color = STAR, Size = 0.5 })
+	for i = 0, 3 do
+		task.delay(0.1 * i, function()
+			ctx.Vfx.Flash(ctx.Hand("L") + Vector3.new(0, 2 + 0.2 * i, 0), { Color = STAR_CORE, Size = 3 + i * 0.5, Life = 0.2, Brightness = 5 })
 		end)
 	end
 end
 
--- 낙하 — 붉은 칸 열둘에 별똥별이 일제히 떨어지고 충격 고리가 번진다. 빛 칸엔 별이 비껴 떨어지고 기둥만 선다
-function Fx.KenosFall(ctx: any)
+-- 파워밤 3: 내리찍은 자리에 큰 균열 + 별 파편 폭발(슬로 느낌 — 파편이 천천히 흩어짐)
+function Fx.KenosSlam(ctx: any)
 	local Vfx = ctx.Vfx
-	local safe, dark = kenosSplit(ctx)
-	local all = {}
-	for _, p in safe do
-		table.insert(all, p)
-	end
-	for _, p in dark do
-		table.insert(all, p)
-	end
-	local mid = center(all)
-	for i, p in dark do
-		task.delay(0.015 * i, function()
-			local from = p + Vector3.new(math.random(-30, 30) / 10, 24, math.random(-30, 30) / 10)
-			Vfx.Projectile(from, p + Vector3.new(0, 0.4, 0), { Time = 0.12, Color = STAR_CORE, TrailColor = CRACK })
-			task.delay(0.12, function()
-				local ground = Vector3.new(p.X, ctx.Ground + 0.15, p.Z)
-				Vfx.Flash(p + Vector3.new(0, 0.5, 0), { Color = STAR_CORE, Size = 4.5, Life = 0.22, Brightness = 5 })
-				Vfx.Ring(CFrame.new(ground), { R0 = 0.6, R1 = 4.5, Color = CRACK, Life = 0.4, Width = 0.28, Height = 0.07 })
-				Vfx.Burst(ground + Vector3.new(0, 0.3, 0), { Count = 6, Colors = { CRACK, STAR_CORE, GOLDEN_STAR }, Size = 0.35, Speed = 16, Life = 0.5, Gravity = 36, Material = Enum.Material.Neon })
-				Vfx.Pack("vfx pack/Explosion", CFrame.new(p + Vector3.new(0, 0.6, 0)), { Color = CRACK, Size = 0.25, Count = 0.3 })
-			end)
-		end)
-	end
-	local away = if #dark > 0 then center(dark) else mid
-	for i, p in safe do
-		task.delay(0.02 * i + 0.03, function()
-			local side = Vector3.new(p.X - away.X, 0, p.Z - away.Z)
-			side = if side.Magnitude > 1e-3 then side.Unit else ctx.Forward
-			local land = p + side * 3.2
-			Vfx.Projectile(land + Vector3.new(0, 20, 0), land + Vector3.new(0, 0.3, 0), { Time = 0.12, Color = STAR_CORE, TrailColor = STAR })
-			Vfx.Pillar(p, { Color = STAR_CORE, Life = 0.45, Height = 14, Width = 0.8 })
-			task.delay(0.12, function()
-				Vfx.Sparks(land, { Color = STAR_CORE, Count = 5, Speed = 12 })
-			end)
-		end)
-	end
-	task.delay(0.1, function()
-		Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = 26, Color = CRACK, Life = 0.7, Width = 0.45, Height = 0.08 })
-		Vfx.Pack("Loose/Shockwave", CFrame.new(mid + Vector3.new(0, 0.6, 0)), { Color = CRACK, Size = 0.8 })
-	end)
+	local at = targetPoint(ctx)
+	smash(ctx, at, 2)
+	local ground = Vector3.new(at.X, ctx.Ground + 0.3, at.Z)
+	Vfx.Burst(ground, { Count = 30, Colors = { STAR, STAR_CORE, GOLDEN_STAR, CRACK }, Size = 0.45, Speed = 22, Life = 1.0, Gravity = 18, Material = Enum.Material.Neon })
+	Vfx.Ring(CFrame.new(ground), { R0 = 1, R1 = 12, Color = STAR_CORE, Life = 0.6, Width = 0.4, Height = 0.07 })
+	Vfx.Pack("Loose/Shockwave", CFrame.new(ground + Vector3.new(0, 0.5, 0)), { Color = STAR_CORE, Size = 0.9 })
+end
+
+-- 끌어내림 1: 다이브 도중 한쪽 별빛이 끊긴다(몸 둘레 별 조각이 사방으로 튄다)
+function Fx.KenosSever(ctx: any)
+	local at = ctx.Root.Position + Vector3.new(0, 6.5, 0)
+	ctx.Vfx.Flash(at, { Color = FLASH, Size = 7, Life = 0.25, Brightness = 8 })
+	ctx.Vfx.Burst(at, { Count = 18, Colors = { STAR, STAR_CORE, DEEP }, Size = 0.35, Speed = 18, Life = 0.9, Gravity = 22, Material = Enum.Material.Neon })
+	ctx.Vfx.Pack("Loose/Flash-3", CFrame.new(at), { Color = STAR_CORE, Size = 0.7 })
+end
+
+-- 끌어내림 2: 바닥에 쿵 — 충격 링 · 먼지 · 균열
+function Fx.KenosCrash(ctx: any)
+	local Vfx = ctx.Vfx
+	local ground = Vector3.new(ctx.Root.Position.X, ctx.Ground + 0.2, ctx.Root.Position.Z)
+	Vfx.Ring(CFrame.new(ground), { R0 = 1, R1 = 12, Color = STAR_CORE, Life = 0.6, Width = 0.4, Height = 0.07 })
+	Vfx.Dust(ground, { Color = c(190, 196, 214), Count = 14, Size = 1.6, Speed = 14 })
+	Vfx.Pack("Anime/Crack-01", CFrame.new(ground), { Color = STAR, Size = 1.8 })
+	Vfx.Pack("Loose/Shockwave", CFrame.new(ground + Vector3.new(0, 0.5, 0)), { Color = STAR_CORE, Size = 0.7 })
 end
 
 return Fx

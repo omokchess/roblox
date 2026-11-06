@@ -251,6 +251,7 @@ function BattleHud.new(gui: ScreenGui, callbacks: Callbacks)
 	self:_buildDock()
 	self:_buildTip()
 	self:_buildQte()
+	self:_buildCallistoExtras()
 	self:_buildTop()
 	self:_buildBossInfo()
 
@@ -2361,6 +2362,217 @@ local function setBand(frame: Frame, line: UIStroke, r1: number, r2: number)
 	r1 = math.max(r1, 0)
 	frame.Size = UDim2.fromOffset(r1 * 2, r1 * 2)
 	line.Thickness = math.max(r2 - r1, 1)
+end
+
+--[[
+	칼리스토 추가 표시(2026-11-06 밤): 기믹 칩(추적 공격 4종) · 핀 폴 게이지 · 컷인(FINISHER · PIN!).
+	칩의 Icon 은 아트팀 아이콘(칼·발·쌍둥이 별·로프)이 들어올 자리 — 지금은 비어 있다(Image 만 채우면 됨).
+]]
+function BattleHud:_buildCallistoExtras()
+	local gimmickFrame = make("Frame", {
+		Name = "GimmickChip",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0.17),
+		Size = UDim2.fromOffset(420, 32),
+		BackgroundColor3 = INK,
+		BackgroundTransparency = 0.2,
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = 18,
+	}, self.gui)
+	self.gimmickStroke = stroke(gimmickFrame, MUTED, 0.2, 2)
+	self.gimmickIcon = make("ImageLabel", { Name = "Icon", Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1, Image = "", ZIndex = 19 }, gimmickFrame)
+	self.gimmickText = make("TextLabel", {
+		Position = UDim2.fromOffset(34, 0),
+		Size = UDim2.new(1, -40, 1, 0),
+		BackgroundTransparency = 1,
+		Text = "",
+		TextColor3 = MUTED,
+		Font = Enum.Font.GothamBold,
+		TextSize = 15,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 19,
+	}, gimmickFrame)
+	self.gimmickChip = gimmickFrame
+	self.pinLabel = make("TextLabel", {
+		Name = "PinGauge",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0.12),
+		Size = UDim2.fromOffset(300, 30),
+		BackgroundColor3 = INK,
+		BackgroundTransparency = 0.25,
+		BorderSizePixel = 0,
+		Text = "",
+		TextColor3 = BONE,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 18,
+		Visible = false,
+		ZIndex = 18,
+	}, self.gui)
+	-- 컷인(art/ui/컷인_사양.md): 이미지 없이 TextLabel. FINISHER · PIN! 같은 양식
+	local band = make("Frame", {
+		Name = "Cutin",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, -0.264),
+		Size = UDim2.fromScale(1, 0.264),
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 0.1,
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = 40,
+	}, self.gui)
+	for _, top in { true, false } do
+		make("Frame", {
+			AnchorPoint = Vector2.new(0, if top then 0 else 1),
+			Position = UDim2.fromScale(0, if top then 0 else 1),
+			Size = UDim2.new(1, 0, 0, 3),
+			BackgroundColor3 = Color3.fromRGB(201, 162, 74),
+			BorderSizePixel = 0,
+			ZIndex = 41,
+		}, band)
+	end
+	local function bigLabel(name: string): TextLabel
+		return make("TextLabel", {
+			Name = name,
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.fromScale(0.5, 0.2),
+			Size = UDim2.fromScale(1, 0.62),
+			BackgroundTransparency = 1,
+			Text = "",
+			TextColor3 = Color3.new(1, 1, 1),
+			Font = Enum.Font.Bodoni,
+			TextSize = 100,
+			ZIndex = 41,
+		}, band)
+	end
+	local shadow = bigLabel("Shadow")
+	shadow.Position = UDim2.new(0.5, 0, 0.2, 4)
+	shadow.TextColor3 = Color3.new(0, 0, 0)
+	shadow.TextTransparency = 0.4
+	shadow.ZIndex = 41
+	local big = bigLabel("Big")
+	big.ZIndex = 42
+	self.cutinGradient = make("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(169, 180, 200)) }, big)
+	self.cutinStroke = make("UIStroke", { Color = Color3.fromRGB(224, 184, 76), Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, LineJoin = Enum.LineJoinMode.Round }, big)
+	self.cutinBigScale = make("UIScale", {}, big)
+	self.cutinShadowScale = make("UIScale", {}, shadow)
+	local sub = make("TextLabel", {
+		Name = "Sub",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 0.74),
+		Size = UDim2.fromScale(1, 0.22),
+		BackgroundTransparency = 1,
+		Text = "",
+		TextColor3 = Color3.fromRGB(215, 222, 234),
+		Font = Enum.Font.GothamMedium,
+		TextSize = 34,
+		ZIndex = 42,
+	}, band)
+	make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, sub)
+	self.cutinSubScale = make("UIScale", {}, sub)
+	self.cutinBig, self.cutinShadow, self.cutinSub = big, shadow, sub
+	self.cutinBand = band
+end
+
+-- 기믹 칩: info = { Name, Reduce, Text, Met } 또는 nil(숨김). 미충족 회색 → 충족 금색 + 체크
+function BattleHud:SetGimmick(info: any?)
+	local frame = self.gimmickChip
+	if not frame then
+		return
+	end
+	frame.Visible = info ~= nil
+	if not info then
+		self.gimmickMet = nil
+		return
+	end
+	local color = if info.Met then GOLD else MUTED
+	self.gimmickText.Text = string.format("%s기믹 · %s −%d%% — %s", if info.Met then "✓ " else "", info.Name, math.floor(info.Reduce * 100 + 0.5), info.Text)
+	self.gimmickText.TextColor3 = color
+	self.gimmickStroke.Color = color
+	self.gimmickMet = info.Met
+end
+
+-- 핀 폴 게이지: finisher = { Pin, Failed } 또는 nil
+function BattleHud:SetPin(finisher: any?)
+	local label = self.pinLabel
+	if not label then
+		return
+	end
+	label.Visible = finisher ~= nil
+	if finisher then
+		label.Text = string.format("핀 폴 %d/2%s", finisher.Pin or 0, if finisher.Failed then "  (실패)" else "")
+		label.TextColor3 = if finisher.Failed then MUTED else GOLD
+	end
+end
+
+--[[
+	컷인(art/ui/컷인_사양.md): kind "Finisher"(은백 글자 · 금 테두리) / "Pin"(금 글자 · 갈색 테두리 · 통째로 튀어오름).
+	띠 0.35초 Quint Out 내려옴 → 0.3초 뒤 부제가 0.045초 간격 한 글자씩 → 유지 → 0.3초 퇴장(합쳐 1.8초쯤).
+]]
+function BattleHud:Cutin(kind: string, big: string, sub: string)
+	local band = self.cutinBand
+	if not band then
+		return
+	end
+	self.cutinSeq = (self.cutinSeq or 0) + 1
+	local seq = self.cutinSeq
+	local pin = kind == "Pin"
+	local screen = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 720
+	local scale = screen / 720
+	local hair = utf8.char(0x200A)
+	local spaced = {}
+	for _, code in utf8.codes(sub) do
+		table.insert(spaced, utf8.char(code) .. hair .. hair)
+	end
+	self.cutinBig.Text, self.cutinShadow.Text = big, big
+	self.cutinSub.Text = table.concat(spaced)
+	self.cutinSub.MaxVisibleGraphemes = 0
+	self.cutinGradient.Color = if pin
+		then ColorSequence.new(Color3.fromRGB(255, 243, 176), Color3.fromRGB(224, 169, 44))
+		else ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(169, 180, 200))
+	self.cutinStroke.Color = if pin then Color3.fromRGB(106, 70, 8) else Color3.fromRGB(224, 184, 76)
+	self.cutinSub.TextColor3 = if pin then Color3.fromRGB(244, 227, 168) else Color3.fromRGB(215, 222, 234)
+	for _, ui in { self.cutinBigScale, self.cutinShadowScale, self.cutinSubScale } do
+		ui.Scale = scale
+	end
+	band.Visible = true
+	band.Position = UDim2.fromScale(0.5, -0.264)
+	TweenService:Create(band, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.5, 0.14) }):Play()
+	if pin then
+		-- PIN! 은 짧아서 한 글자씩 대신 통째로 튀어오른다(0.25초 Back Out)
+		for _, ui in { self.cutinBigScale, self.cutinShadowScale } do
+			ui.Scale = scale * 0.5
+			TweenService:Create(ui, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = scale }):Play()
+		end
+	end
+	task.spawn(function()
+		task.wait(0.3)
+		if self.cutinSeq ~= seq then
+			return
+		end
+		local chars = #spaced
+		if pin then
+			self.cutinSub.MaxVisibleGraphemes = -1
+		else
+			for i = 1, chars do
+				if self.cutinSeq ~= seq then
+					return
+				end
+				self.cutinSub.MaxVisibleGraphemes = i * 3
+				task.wait(0.045)
+			end
+			self.cutinSub.MaxVisibleGraphemes = -1
+		end
+		task.wait(0.55)
+		if self.cutinSeq ~= seq then
+			return
+		end
+		TweenService:Create(band, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.In), { Position = UDim2.fromScale(0.5, -0.264) }):Play()
+		task.wait(0.32)
+		if self.cutinSeq == seq then
+			band.Visible = false
+		end
+	end)
 end
 
 function BattleHud:_buildQte()

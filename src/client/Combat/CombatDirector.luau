@@ -133,6 +133,8 @@ function CombatDirector.new(opts: { Quiet: boolean? }?)
 	-- 2026-11-06 칼리스토 개선안: 지금 재생하는 적 공격의 예고 칸(plan.Cells)·케노스 빛 칸(plan.Safe)의 타일. BattleClient 가 공격 직전에 정한다
 	self.ThreatTiles = nil :: { BasePart }?
 	self.SafeTiles = nil :: { BasePart }?
+	self.RopeTiles = nil :: { BasePart }?
+	self.Strong = false
 	-- 피해 숫자를 띄울 때마다 부른다(id, 피해). BattleClient 가 체력바를 그 순간 깎는다
 	self.OnDamage = nil :: ((string, number) -> ())?
 	-- 보스 위성 셋이 함께 도는 바퀴의 각(라디안, _bossHomes)
@@ -577,6 +579,8 @@ function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 	ctx.AllyTiles = self.AllyTiles
 	ctx.ThreatTiles = self.ThreatTiles
 	ctx.SafeTiles = self.SafeTiles
+	ctx.RopeTiles = self.RopeTiles
+	ctx.Strong = self.Strong
 	-- 관전 화면(남의 전투) — 화면 색·소리·카메라 같은 내 화면 효과는 하지 않는다
 	ctx.Quiet = self.Quiet
 	-- 컷신 카메라: fn(진행도 0~1, 지난 초) → 카메라 CFrame. fn 없이 부르면 전투 카메라로 돌려준다(모션이 끝나도 돌려준다)
@@ -867,6 +871,10 @@ function CombatDirector:_showNumbers(play: any)
 				local hit = self.Actors[h.Id]
 				local enemy = hit ~= nil and (hit.Kind ~= "Humanoid" or hit.Foe == true)
 				local label = tostring(dmg)
+				-- 칼리스토 추적 기믹을 채우고 맞았으면 숫자 옆에 감소율(2026-11-06)
+				if i == 1 and result.Gimmick and dmg > 0 then
+					label = string.format("%d  기믹 −%d%%", dmg, math.floor(result.Gimmick * 100 + 0.5))
+				end
 				local color = if enemy then Color3.fromRGB(255, 244, 214) else Color3.fromRGB(255, 90, 80)
 				if h.Grade and GRADE_TEXT[h.Grade] and dmg <= 0 then
 					label = GRADE_TEXT[h.Grade]
@@ -894,6 +902,29 @@ function CombatDirector:PlaySkill(id: string, skillId: string, targetsByHit: { {
 		return nil
 	end
 	return self:_play(a, self:_skillMotion(a, skillId), targetsByHit, { OnDone = self:_moodFor(a, skillId, onDone), Stage = stage })
+end
+
+--[[
+	기본 자세를 루프 모션으로 바꿔 끼운다(칼리스토 케노스 상공 대기 · 추락 스턴, 2026-11-06). skillId nil 이면 평소 자세로.
+	그 모션의 Fx 사건(KenosOrbit)은 루프 첫 진입에서 한 번만 쏜다 — Fx 가 스스로 반복한다(기본 자세는 사건을 안 쏘므로 여기서 직접).
+]]
+function CombatDirector:Hold(id: string, skillId: string?)
+	local a = self.Actors[id]
+	if not a or a.HoldId == skillId then
+		return
+	end
+	a.HoldId = skillId
+	if not skillId then
+		a.Animator:SetBase(a.Idle)
+		return
+	end
+	local motion = self:_skillMotion(a, skillId)
+	a.Animator:SetBase(motion)
+	for _, ev in motion.Events or {} do
+		if ev.k == "Fx" then
+			self:_fx(a, ev.n, self:_ctx(a, {}, 1), ev, nil)
+		end
+	end
 end
 
 -- 칼리스토 칼 팔 기술(날이 소매에서 나와 있는 동안 — 카메라 기술·컷신은 날을 넣은 채. 컷신은 제 사건 BladeOut/BladeIn 으로 다룬다)
@@ -963,6 +994,7 @@ function CombatDirector:PlayEnemyAttack(enemyId: string, skillId: string, target
 		return nil
 	end
 	a.Animator:SetBase(a.Idle)
+	a.HoldId = nil
 	local reaction = if grade == "Success" then "Dodge" elseif grade == "Partial" then "Guard" else "Hit"
 	local play
 	play = self:_play(a, self:_skillMotion(a, skillId), { { targetId } }, {
