@@ -18,6 +18,8 @@
 	쓴 ParticleEmitter 속성(전부 create.roblox.com/docs/reference/engine/classes/ParticleEmitter 확인):
 	  Enabled · LockedToPart · LightInfluence · LightEmission · Texture · Rate · Color · Size · Transparency · Lifetime · Speed · SpreadAngle
 	  · Rotation · RotSpeed · Shape · ShapeStyle · EmissionDirection(Enum.NormalId) · Orientation(Enum.ParticleOrientation) · Squash(NumberSequence)
+	2026-11-06 추가 속성(문서 확인): FlipbookLayout(Enum.ParticleFlipbookLayout Grid4x4) · FlipbookMode(Enum.ParticleFlipbookMode OneShot) — 연기·번쩍 플립북.
+	  소용돌이 텍스처(Loose/Swirling·Twirl·BlackSwirl)는 플립북이 아니라 RotSpeed 로 돌린다. 판 중심 아래는 BulgeDarkVortex(검은 소용돌이, 발광 0)로 눌러 둔다.
 	쓴 Beam 속성(Beam 문서 확인): Enabled · Attachment0/1 · CurveSize0/1(0=Attachment0 의 +X, 1=Attachment1 의 -X 쪽 제어점) · Segments · Width0/1 · FaceCamera · LightEmission · LightInfluence · Texture · TextureMode(Wrap) · TextureLength · TextureSpeed · Color · Transparency
 	쓴 Enum 항목(문서 확인): ParticleEmitterShape Box/Sphere · ParticleEmitterShapeStyle Volume · ParticleOrientation FacingCamera/VelocityParallel · NormalId Front.
 	미확인(스튜디오에서 볼 것): Squash 부호(+가 늘이는지)·VelocityParallel 에서 어느 축이 길어지는지 — 문서에 설명 없음 → 아래 METEOR_SQUASH 한 곳만 고치면 된다.
@@ -27,7 +29,7 @@ local GalaxyParticles = {}
 
 local K, R0 = 0.21, 14 -- 로그 나선 r = 14·e^(0.21t) (build_callisto_space.py 와 같다), 팔 사이 90°
 local ARMS = 4
-local SEGMENTS = 8 -- 팔 하나를 이어 붙인 Part 수(곧은 상자로 곡선을 근사 — 겹쳐 놓는다). 이미터 한도 60 때문에 이 이상은 못 늘린다 — 끊김은 빛 띠 Beam 이 메운다
+local SEGMENTS = 8 -- 팔 하나를 이어 붙인 Part 수(곧은 상자로 곡선을 근사 — 겹쳐 놓는다). 이미터 한도 70 때문에 이 이상은 못 늘린다 — 끊김은 빛 띠 Beam 이 메운다
 local METEOR_SQUASH = 0.8 -- 유성 입자를 길게 늘이는 Squash 값(부호 스튜디오 확인)
 
 type Spec = { [string]: any }
@@ -35,7 +37,13 @@ type Spec = { [string]: any }
 -- FX 팩(VfxLibrary) 텍스처: Loose/Sparkles(별 반짝임)·Waterfall-01 Clouds(부드러운 구름)
 local SPARKLE = "rbxassetid://1084970835"
 local SMOKE = "rbxassetid://275871881"
-local TEX: { [string]: string } = { Sparkle = SPARKLE, Smoke = SMOKE, None = "" }
+-- 플립북(tools/combat/out/vfx_textures.tsv 의 flip=Grid4x4): Anime/Smoke-01 연기 · Anime/Wind-02 Smoke2 · Loose/Flash-3 번쩍
+-- 소용돌이(플립북 아님): Loose/Swirling · Loose/Twirl · Loose/BlackSwirl(어두운 소용돌이) · Anime/Portal-01 Portal
+local TEX: { [string]: string } = {
+	Sparkle = SPARKLE, Smoke = SMOKE, None = "",
+	SmokeFlip = "rbxassetid://16669188960", SmokeFlip2 = "rbxassetid://12144047227", FlashFlip = "rbxassetid://11372587580",
+	Swirl = "rbxassetid://14426307916", Twirl = "rbxassetid://14426232568", BlackSwirl = "rbxassetid://14477910720", Portal = "rbxassetid://1084982817",
+}
 
 local GOLD = { 255, 207, 138 }
 local PALEGOLD = { 255, 238, 200 }
@@ -96,7 +104,7 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 			add({
 				Name = ("ArmStars_%d_%d"):format(arm, k), Layer = "ArmStars", Arm = arm,
 				Pos = { x, 0, z }, Look = { dx, dz }, Size = { width, 2 + (1 - r / 135) * 3, len },
-				Shape = "Box", Dir = "Front", Rate = 2.5 + 0.04 * len, Life = { 5, 7 }, Speed = { 3, 6 }, Spread = 4,
+				Shape = "Box", Dir = "Front", Rate = 2.2 + 0.035 * len, Life = { 5, 7 }, Speed = { 3, 6 }, Spread = 4,
 				Tex = "Sparkle", Glow = 1, RotSpeed = { -40, 40 },
 				Color = if r < 45 then grad(GOLD, WHITE) else grad(WHITE, BLUE), Scale = bell(3, 1.4), Alpha = fadeAlpha(0.1),
 			})
@@ -110,7 +118,7 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 				Name = ("Nebula_%d_%d"):format(arm, i), Layer = "Nebula", Arm = arm,
 				Pos = { x + rx * off, 0, z + rz * off }, Look = { dx, dz }, Size = { 12 + r * 0.2, 5, 22 + r * 0.35 },
 				Shape = "Box", Dir = "Front", Rate = 1.4, Life = { 10, 13 }, Speed = { 0.5, 1.5 }, Spread = 20,
-				Tex = "Smoke", Glow = 0.35, RotSpeed = { -6, 6 },
+				Tex = "SmokeFlip", Flip = "Grid4x4", Glow = 0.3, RotSpeed = { -6, 6 }, -- 연기 플립북: 수명 내내 천천히 피어오른다
 				Color = grad(NEBULA[arm + 1], BLUE), Scale = { { 0, 28 + r * 0.15, 6 }, { 1, 40 + r * 0.2, 8 } }, Alpha = { { 0, 1 }, { 0.3, 0.9 }, { 0.7, 0.92 }, { 1, 1 } },
 			})
 		end
@@ -122,10 +130,21 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 				Name = ("Dust_%d_%d"):format(arm, i), Layer = "Dust", Arm = arm,
 				Pos = { x - rx * off, 0, z - rz * off }, Look = { dx, dz }, Size = { 8 + r * 0.12, 4, 18 + r * 0.3 },
 				Shape = "Box", Dir = "Front", Rate = 1.1, Life = { 10, 12 }, Speed = { 0.5, 1.5 }, Spread = 15,
-				Tex = "Smoke", Glow = 0, RotSpeed = { -5, 5 },
+				Tex = "SmokeFlip2", Flip = "Grid4x4", Glow = 0, RotSpeed = { -5, 5 },
 				Color = grad(DUST, { 90, 62, 48 }), Scale = { { 0, 18 + r * 0.1, 4 }, { 1, 28 + r * 0.14, 6 } }, Alpha = { { 0, 1 }, { 0.3, 0.8 }, { 0.7, 0.86 }, { 1, 1 } },
 			})
 		end
+	end
+
+	-- 팔마다 반짝이는 플립북 별(번쩍 4x4 — 한 번 반짝이고 진다): 팔 중간 구간 박스 하나
+	for arm = 0, ARMS - 1 do
+		local x, z, dx, dz = pt(arm, (T0 + T1) / 2)
+		add({
+			Name = "ArmTwinkle_" .. arm, Layer = "ArmStars", Arm = arm, Pos = { x, 0, z }, Look = { dx, dz },
+			Size = { 14, 3, (T1 - T0) * 20 }, Shape = "Box", Dir = "Front", Rate = 0.9, Life = { 1.6, 2.2 }, Speed = { 0, 0 }, Spread = 0,
+			Tex = "FlashFlip", Flip = "Grid4x4", Glow = 0.7, RotSpeed = { -20, 20 },
+			Color = grad(WHITE, BLUE), Scale = { { 0, 6, 2 }, { 1, 9, 3 } }, Alpha = { { 0, 0.35 }, { 0.5, 0.5 }, { 1, 1 } },
+		})
 	end
 
 	-- ④ 팽대부(중심): 금백색 알갱이 · 큰 글로우 · 중간 글로우 · 가운데 반짝
@@ -142,6 +161,17 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 	bulge("BulgeFlare", 4, { Rate = 1.2, Life = { 2.2, 3 }, Speed = { 0, 0 }, Tex = "Sparkle", Glow = 1, RotSpeed = { 20, 60 },
 		Color = grad(WHITE, GOLD), Scale = { { 0, 0, 0 }, { 0.5, 16, 4 }, { 1, 0, 0 } }, Alpha = { { 0, 0.2 }, { 1, 0.2 } } })
 
+	-- 팽대부 소용돌이(밝기 절제): 금보라 소용돌이 + 옅은 트월 + 판 중심 아래를 눌러 어둡게 하는 검은 소용돌이(캐릭터가 묻히지 않게 대비)
+	bulge("BulgeSwirl", 6, { Rate = 0.7, Life = { 8, 10 }, Speed = { 0, 0 }, Tex = "Swirl", Glow = 0.25, RotSpeed = { 14, 22 },
+		Color = grad({ 200, 150, 255 }, GOLD), Scale = { { 0, 30, 4 }, { 1, 46, 6 } }, Alpha = { { 0, 1 }, { 0.3, 0.74 }, { 0.7, 0.8 }, { 1, 1 } } })
+	bulge("BulgeTwirl", 4, { Rate = 0.8, Life = { 5, 6 }, Speed = { 0, 0 }, Tex = "Twirl", Glow = 0.4, RotSpeed = { -30, -18 },
+		Color = grad(PALEGOLD, { 190, 140, 255 }), Scale = { { 0, 22, 3 }, { 1, 6, 2 } }, Alpha = { { 0, 1 }, { 0.3, 0.7 }, { 0.8, 0.78 }, { 1, 1 } } })
+	add({
+		Name = "BulgeDarkVortex", Layer = "Bulge", Pos = { 0, -3, 0 }, Size = { 8, 2, 8 }, Shape = "Sphere", Rate = 0.5, Life = { 9, 11 }, Speed = { 0, 0 },
+		Tex = "BlackSwirl", Glow = 0, RotSpeed = { -10, -6 },
+		Color = grad({ 20, 12, 36 }, { 36, 24, 60 }), Scale = { { 0, 40, 6 }, { 1, 60, 8 } }, Alpha = { { 0, 1 }, { 0.3, 0.45 }, { 0.7, 0.55 }, { 1, 1 } },
+	})
+
 	-- ⑤ 원반 전체의 잔별(납작한 타원체 안에 흩뿌림 — 가운데가 더 촘촘) · 안개 · 가끔 크게 반짝이는 별
 	local disc = { radius * 2, 6, radius * 2 }
 	local function discLayer(name: string, s: Spec)
@@ -156,9 +186,11 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 	discLayer("DiscHaze", { Rate = 2.4, Life = { 12, 15 }, Tex = "Smoke", Glow = 0.3, RotSpeed = { -4, 4 },
 		Color = grad({ 120, 90, 220 }, { 90, 140, 230 }), Scale = { { 0, 45, 8 }, { 1, 70, 10 } }, Alpha = { { 0, 1 }, { 0.3, 0.93 }, { 0.7, 0.95 }, { 1, 1 } } })
 	discLayer("DiscFlare", { Rate = 1.5, Life = { 1.8, 2.6 }, Tex = "Sparkle", Glow = 1, RotSpeed = { 20, 60 },
-		Color = grad(WHITE, GOLD), Scale = { { 0, 0, 0 }, { 0.5, 14, 4 }, { 1, 0, 0 } }, Alpha = { { 0, 0 }, { 1, 0 } } })
+		Color = grad(WHITE, GOLD), Scale = { { 0, 0, 0 }, { 0.5, 12, 4 }, { 1, 0, 0 } }, Alpha = { { 0, 0.15 }, { 1, 0.15 } } })
+	discLayer("DiscFlashFlip", { Rate = 0.9, Life = { 1.4, 2 }, Tex = "FlashFlip", Flip = "Grid4x4", Glow = 0.6, RotSpeed = { -30, 30 },
+		Color = grad(WHITE, BLUE), Scale = { { 0, 9, 3 }, { 1, 13, 4 } }, Alpha = { { 0, 0.4 }, { 0.5, 0.5 }, { 1, 1 } } })
 	discLayer("DiscFlareBig", { Rate = 0.35, Life = { 3, 4 }, Tex = "Sparkle", Glow = 1, RotSpeed = { 10, 30 },
-		Color = grad(WHITE, BLUE), Scale = { { 0, 0, 0 }, { 0.5, 24, 5 }, { 1, 0, 0 } }, Alpha = { { 0, 0 }, { 1, 0 } } })
+		Color = grad(WHITE, BLUE), Scale = { { 0, 0, 0 }, { 0.5, 18, 5 }, { 1, 0, 0 } }, Alpha = { { 0, 0.2 }, { 1, 0.2 } } })
 
 	-- ⑥ 유성(길게 늘인 입자가 은하 위를 가로지른다): 원반 가장자리 양쪽 막대에서 서로 반대로
 	for i, side in { 1, -1 } do
@@ -275,6 +307,10 @@ function GalaxyParticles.Build(g: Model, cf: CFrame, radius: number): { Particle
 		e.LightInfluence = 0
 		e.LightEmission = s.Glow
 		e.Texture = TEX[s.Tex]
+		if s.Flip then
+			e.FlipbookLayout = (Enum.ParticleFlipbookLayout :: any)[s.Flip]
+			e.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
+		end
 		e.Rate = s.Rate
 		e.Lifetime = NumberRange.new(s.Life[1], s.Life[2])
 		e.Speed = NumberRange.new(s.Speed[1], s.Speed[2])

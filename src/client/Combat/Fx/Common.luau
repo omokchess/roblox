@@ -62,11 +62,30 @@ function Common.ScaledVfx(Vfx: any, k: number): any
 	})
 end
 
+--[[
+	2026-11-06 팩 묶음·플립북(ctx.Vfx.Pack / ctx.Vfx.Flipbook) — 크기는 Size 키로 줘서 ScaledVfx 가 같이 키운다.
+	쓴 팩: Anime/Slash-Impact-01 · Anime/Blood-Punch-01 · Anime/Shield-01 · Anime/Crack-01 · Loose/Sparkles
+	쓴 플립북(Grid4x4): Loose/Flash-3 rbxassetid://11372587580(번쩍) · Anime/Blood-Punch-01 Blood1 16668936898(피) ·
+	  Anime/Smoke-01 16669188960(먼지) · Anime/Wind-02 Smoke2 12144047227(흙먼지)
+]]
+local FLASH = "rbxassetid://11372587580"
+local BLOOD_FLIP = "rbxassetid://16668936898"
+local DUST_FLIP = "rbxassetid://16669188960"
+local DIRT_FLIP = "rbxassetid://12144047227"
+
+local function fade(a: number, b: number): NumberSequence
+	return NumberSequence.new({ NumberSequenceKeypoint.new(0, a), NumberSequenceKeypoint.new(0.5, (a + b) / 2), NumberSequenceKeypoint.new(1, b) })
+end
+
 Common.BLOOD = { c(170, 16, 24), c(120, 8, 16), c(210, 40, 40) }
 
 -- 피 튀김(dir 쪽 원뿔)
 function Common.Blood(Vfx: any, at: Vector3, dir: Vector3?, count: number?, speed: number?)
 	Vfx.Burst(at, { Count = count or 10, Colors = Common.BLOOD, Size = 0.28, Speed = speed or 18, Dir = dir, Spread = 55, Gravity = 70, Life = 0.7, Material = Enum.Material.SmoothPlastic })
+	-- 팩 피 튀김 + 피 안개 플립북(번지는 붉은 막)
+	local n = math.clamp((count or 10) / 10, 0.4, 3)
+	Vfx.Pack("Anime/Blood-Punch-01", CFrame.new(at), { Size = 0.6 * n, Count = 0.5 })
+	Vfx.Flipbook(at, { Texture = BLOOD_FLIP, Layout = "Grid4x4", Size = 3.2 * n, Life = 0.5, Color = c(170, 16, 24), Rotation = 180, Transparency = fade(0.15, 1) })
 end
 
 -- 기본 타격: 번쩍 + 조각 + 불꽃
@@ -75,6 +94,9 @@ function Common.Impact(Vfx: any, at: Vector3, color: Color3?, size: number?)
 	Vfx.Flash(at, { Color = color or Color3.new(1, 1, 1), Size = 7 * s, Life = 0.22 })
 	Vfx.Burst(at, { Count = math.floor(8 * s), Color = color or c(255, 244, 220), Size = 0.3 * s, Speed = 20 * s, Life = 0.45 })
 	Vfx.Sparks(at, { Color = color, Count = math.floor(14 * s) })
+	-- 팩 베기 충격 + 번쩍 플립북(가운데 흰빛이 한 번 터진다)
+	Vfx.Pack("Anime/Slash-Impact-01", CFrame.new(at), { Size = 0.7 * s, Tint = color, Count = 0.5 })
+	Vfx.Flipbook(at, { Texture = FLASH, Layout = "Grid4x4", Size = 5 * s, Life = 0.3, Color = color or Color3.new(1, 1, 1), LightEmission = 0.8, Rotation = 180, Transparency = fade(0.2, 1) })
 end
 
 -- 땅 먼지 + 바닥 고리
@@ -82,12 +104,18 @@ function Common.Land(Vfx: any, ground: Vector3, size: number?, color: Color3?)
 	local s = size or 1
 	Vfx.Dust(ground + Vector3.new(0, 0.3, 0), { Count = math.floor(10 * s), Size = 1.2 * s, Speed = 10 * s, Color = color })
 	Vfx.Ring(CFrame.new(ground + Vector3.new(0, 0.15, 0)), { R0 = 0.6, R1 = 4 * s, Color = color or c(230, 225, 210), Life = 0.35, Width = 0.25, Height = 0.08 })
+	-- 먼지 연기 플립북(퍼져 오르며 흩어진다)
+	Vfx.Flipbook(ground + Vector3.new(0, 0.6 * s, 0), {
+		Texture = DUST_FLIP, Layout = "Grid4x4", Count = math.max(2, math.floor(3 * s)), Size = 3.4 * s, Life = 0.7, Speed = 5 * s, Spread = 80,
+		Color = color or c(215, 208, 192), Rotation = 180, Transparency = fade(0.45, 1), Accel = Vector3.new(0, 1.5, 0),
+	})
 end
 
 -- 명상: 발밑 고리 + 떠오르는 빛가루
 function Common.Meditate(Vfx: any, ground: Vector3, color: Color3)
 	Vfx.Ring(CFrame.new(ground + Vector3.new(0, 0.12, 0)), { R0 = 3.5, R1 = 1.2, Color = color, Life = 1.1, Width = 0.18, Height = 0.06 })
 	Vfx.Sparks(ground + Vector3.new(0, 0.5, 0), { Color = color, Count = 16, MinSpeed = 2, Speed = 5, Accel = Vector3.new(0, 6, 0), Lifetime = 1.2, Size = 0.35 })
+	Vfx.Pack("Loose/Sparkles", CFrame.new(ground + Vector3.new(0, 0.8, 0)), { Size = 1.2, Tint = color })
 end
 
 -- 가드: 발밑 고리 + 앞쪽 세로 고리
@@ -95,6 +123,10 @@ function Common.GuardRing(Vfx: any, ctx: any, color: Color3)
 	Vfx.Ring(CFrame.new(Vector3.new(ctx.Root.Position.X, ctx.Ground + 0.15, ctx.Root.Position.Z)), { R0 = 1, R1 = 3.4, Color = color, Life = 0.5, Width = 0.3, Height = 0.1 })
 	local front = ctx.Root.Position + ctx.Forward * 1.6
 	Vfx.Ring(CFrame.lookAt(front, front + ctx.Forward), { R0 = 0.4, R1 = 2.4, Color = color, Life = 0.4, Width = 0.2, Facing = true })
+	-- 막기 불꽃: 앞쪽 방패 팩 + 번쩍 플립북
+	local mid = front + Vector3.new(0, 1.2, 0)
+	Vfx.Pack("Anime/Shield-01", CFrame.lookAt(mid, mid + ctx.Forward), { Size = 0.7, Tint = color })
+	Vfx.Flipbook(mid, { Texture = FLASH, Layout = "Grid4x4", Size = 4, Life = 0.3, Color = color, LightEmission = 0.8, Rotation = 180, Transparency = fade(0.25, 1) })
 end
 
 --[[
@@ -157,6 +189,10 @@ end
 -- 돌 조각 튀기
 function Common.Rubble(Vfx: any, at: Vector3, count: number?, color: Color3?)
 	Vfx.Burst(at, { Count = count or 10, Colors = { color or Color3.fromRGB(150, 140, 125), Color3.fromRGB(110, 102, 92), Color3.fromRGB(180, 172, 158) }, Size = 0.55, Speed = 20, Gravity = 70, Life = 0.9, Material = Enum.Material.Slate })
+	Vfx.Flipbook(at, {
+		Texture = DIRT_FLIP, Layout = "Grid4x4", Count = 3, Size = 3.5, Life = 0.8, Speed = 6, Spread = 70, Color = color or Color3.fromRGB(150, 140, 125),
+		Rotation = 180, Transparency = fade(0.4, 1), Accel = Vector3.new(0, 1, 0),
+	})
 end
 
 function Common.Head(ctx: any): Vector3
@@ -283,17 +319,17 @@ function Common.Ghost(ctx: any, pose: any, cf: CFrame, opts: { [string]: any }?)
 		end
 	end
 	rig:Apply(pose)
-	local function fade(k: number)
+	local function fadeAll(k: number)
 		for _, p in parts do
 			p.Part.Transparency = p.Base + (1 - p.Base) * k
 		end
 	end
-	fade(1)
+	fadeAll(1)
 	model.Parent = CombatVfx.Folder()
 	local ghost = { Model = model, Gone = false }
 	CombatVfx.Timed(o.FadeIn or 0.08, function(a)
 		if not ghost.Gone then
-			fade(1 - a)
+			fadeAll(1 - a)
 		end
 	end)
 	function ghost.Vanish(d: number?)
@@ -302,7 +338,7 @@ function Common.Ghost(ctx: any, pose: any, cf: CFrame, opts: { [string]: any }?)
 		end
 		ghost.Gone = true
 		CombatVfx.Timed(d or 0.25, function(a)
-			fade(a)
+			fadeAll(a)
 		end, function()
 			model:Destroy()
 		end)

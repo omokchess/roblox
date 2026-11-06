@@ -643,8 +643,17 @@ end
 	마켓 VFX 팩(2026-11-01 사용자: "자체 제작 이펙트만으론 한계가 있으니 마켓플레이스 것도"): ReplicatedStorage.VfxLibrary
 	(tools/Vfx_Import.luau 가 스크립트를 걷어 내고 옮겨 둔다) 아래 이펙트 하나(파티클·빔·트레일을 품은 Attachment / Part / Model)를
 	cf 에 복제해 터뜨리고 치운다. 파티클 속성 EmitCount(한 번에 낼 수)·EmitDelay(늦춤 초)를 따르고(팩들의 흔한 관례), 없으면 Rate 의 1/4.
-	  Vfx.Pack("팩/이펙트", cf, { Size = 크기 배율, Color = 다시 칠할 색?, Count = 입자 수 배율 })
-	없는 이름이면 false — 부르는 쪽이 블록 이펙트로 대신한다(블록은 형태, 팩은 질감: 겹쳐 쓰는 것이 기본).
+
+	최종 서명(2026-11-06):
+	  CombatVfx.Pack(name: string, cf: CFrame, opts: {
+	    Size: number?   -- 크기 배율(Scale 과 같은 뜻, 둘 다 주면 곱한다)
+	    Scale: number?  -- 크기 배율: 파티클 Size · Speed · Acceleration 비례
+	    Color: Color3?  -- 밝은 층을 이 색으로 통째로 다시 칠함(옛 동작)
+	    Tint: Color3?   -- 밝은 층에 이 색을 60% 섞음(원래 명암·색조는 남음)
+	    Count: number?  -- 입자 수 배율
+	    Time: number?   -- Lifetime · EmitDelay 배율(느리게 > 1)
+	    Attach: BasePart? -- 주면 cf 를 이 부품 기준 상대 위치로 잡아 따라간다
+	  }?) -> boolean   -- 없는 이름이면 false(부르는 쪽이 블록 이펙트로 대신)
 ]]
 function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boolean
 	local source: Instance? = ReplicatedStorage:FindFirstChild("VfxLibrary")
@@ -655,7 +664,9 @@ function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boo
 		return false
 	end
 	local o = opts or {}
-	local k = o.Size or 1
+	local k = (o.Size or 1) * (o.Scale or 1)
+	local timeK = o.Time or 1
+	local attach: BasePart? = o.Attach
 	local holder = part(Vector3.new(0.2, 0.2, 0.2), cf, Color3.new(1, 1, 1))
 	holder.Transparency = 1
 	local copy = source:Clone()
@@ -670,9 +681,21 @@ function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boo
 	end
 	copy.Parent = holder
 	local life = 0.5
-	local function tint(seq: ColorSequence): boolean
+	local function recolor(seq: ColorSequence): ColorSequence
 		local first = seq.Keypoints[1].Value
-		return o.Color ~= nil and first.R + first.G + first.B > 0.15 -- 검은 그림자 층은 다시 칠하지 않는다
+		if first.R + first.G + first.B <= 0.15 then
+			return seq -- 검은 그림자 층은 다시 칠하지 않는다
+		end
+		if o.Color then
+			return ColorSequence.new(o.Color)
+		elseif o.Tint then
+			local keys = {}
+			for _, key in seq.Keypoints do
+				table.insert(keys, ColorSequenceKeypoint.new(key.Time, key.Value:Lerp(o.Tint, 0.6)))
+			end
+			return ColorSequence.new(keys)
+		end
+		return seq
 	end
 	for _, d in copy:GetDescendants() do
 		if d:IsA("BasePart") then
@@ -686,14 +709,16 @@ function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boo
 				end
 				d.Size = NumberSequence.new(keys)
 				d.Speed = NumberRange.new(d.Speed.Min * k, d.Speed.Max * k)
+				d.Acceleration = d.Acceleration * k
 			end
-			if tint(d.Color) then
-				d.Color = ColorSequence.new(o.Color)
+			if timeK ~= 1 then
+				d.Lifetime = NumberRange.new(d.Lifetime.Min * timeK, d.Lifetime.Max * timeK)
 			end
+			d.Color = recolor(d.Color)
 			local count = d:GetAttribute("EmitCount")
 			count = math.max(1, math.floor((if type(count) == "number" then count else d.Rate / 4) * (o.Count or 1)))
 			local delay = d:GetAttribute("EmitDelay")
-			delay = if type(delay) == "number" then delay else 0
+			delay = (if type(delay) == "number" then delay else 0) * timeK
 			d.Enabled = false
 			life = math.max(life, delay + d.Lifetime.Max)
 			task.delay(delay, function()
@@ -701,12 +726,138 @@ function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boo
 					d:Emit(count)
 				end
 			end)
-		elseif (d:IsA("Beam") or d:IsA("Trail")) and tint(d.Color) then
-			d.Color = ColorSequence.new(o.Color)
+		elseif d:IsA("Beam") or d:IsA("Trail") then
+			d.Color = recolor(d.Color)
 		end
 	end
-	Debris:AddItem(holder, life + 0.3)
+	if attach then
+		-- 부품을 따라간다(Step 이 흐르는 동안 — 히트스톱에도 같이 멈춘다)
+		local rel = attach.CFrame:ToObjectSpace(cf)
+		add(life + 0.3, function()
+			if attach.Parent then
+				local at = attach.CFrame * rel
+				holder.CFrame = at
+				if copy:IsA("BasePart") then
+					copy.CFrame = at
+				elseif copy:IsA("Model") then
+					copy:PivotTo(at)
+				end
+			end
+		end, function()
+			holder:Destroy()
+		end)
+	else
+		Debris:AddItem(holder, life + 0.3)
+	end
 	return true
+end
+
+--[[
+	플립북 파티클 한 방(또는 한 줄기). 팩 텍스처(tools/combat/out/vfx_textures.tsv 의 flip= 인 것)를 쓴다.
+	최종 서명(2026-11-06):
+	  CombatVfx.Flipbook(at: Vector3 | CFrame | BasePart, opts: {
+	    Texture: string, Layout: "Grid2x2" | "Grid4x4" | "Grid8x8",
+	    Mode: "OneShot" | "Loop" | "PingPong" | "Random"?   -- 기본 OneShot
+	    Framerate: number?   -- 초당 칸(기본 30). OneShot 은 입자 수명에 걸쳐 한 번 재생
+	    Size: number | NumberSequence?, Color: Color3 | ColorSequence?, Transparency: number | NumberSequence?,
+	    LightEmission: number?, Count: number? (기본 1), Life: number? (초, 기본 = 칸수/Framerate),
+	    Speed: number?, Spread: number? (도), Rotation: number? (± 도), Accel: Vector3?,
+	    Orientation: "FacingCamera" | "VelocityParallel"?, ZOffset: number?,
+	    Rate: number? (주면 Count 대신 지속 방출), Duration: number? (Rate 일 때 방출 시간, 기본 1),
+	    Attach: boolean? (at 이 BasePart 일 때 붙어서 따라감)
+	  }) -> ParticleEmitter
+	방향: cf 의 위쪽(Top)으로 낸다. Vector3 면 월드 위쪽.
+]]
+local FLIP_LAYOUT = {
+	Grid2x2 = Enum.ParticleFlipbookLayout.Grid2x2,
+	Grid4x4 = Enum.ParticleFlipbookLayout.Grid4x4,
+	Grid8x8 = Enum.ParticleFlipbookLayout.Grid8x8,
+}
+local FLIP_FRAMES = { Grid2x2 = 4, Grid4x4 = 16, Grid8x8 = 64 }
+local FLIP_MODE = {
+	OneShot = Enum.ParticleFlipbookMode.OneShot,
+	Loop = Enum.ParticleFlipbookMode.Loop,
+	PingPong = Enum.ParticleFlipbookMode.PingPong,
+	Random = Enum.ParticleFlipbookMode.Random,
+}
+local FLIP_ORIENT = {
+	FacingCamera = Enum.ParticleOrientation.FacingCamera,
+	VelocityParallel = Enum.ParticleOrientation.VelocityParallel,
+}
+local FLIP_FADE = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0.1),
+	NumberSequenceKeypoint.new(0.6, 0.3),
+	NumberSequenceKeypoint.new(1, 1),
+})
+
+local function toSeq(v: any, default: NumberSequence): NumberSequence
+	if v == nil then
+		return default
+	elseif type(v) == "number" then
+		return NumberSequence.new(v)
+	end
+	return v
+end
+
+function CombatVfx.Flipbook(at: Vector3 | CFrame | BasePart, opts: { [string]: any }): ParticleEmitter
+	local layoutName: string = opts.Layout or "Grid4x4"
+	local modeName: string = opts.Mode or "OneShot"
+	local fps: number = opts.Framerate or 30
+	local life: number = opts.Life or (FLIP_FRAMES[layoutName] / math.max(1, fps))
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = opts.Texture
+	e.FlipbookLayout = FLIP_LAYOUT[layoutName]
+	e.FlipbookMode = FLIP_MODE[modeName]
+	e.FlipbookFramerate = NumberRange.new(fps, fps)
+	e.FlipbookStartRandom = modeName ~= "OneShot"
+	e.Lifetime = NumberRange.new(life * 0.9, life)
+	e.Size = toSeq(opts.Size, NumberSequence.new(4))
+	e.Transparency = toSeq(opts.Transparency, FLIP_FADE)
+	local c = opts.Color
+	if typeof(c) == "Color3" then
+		e.Color = ColorSequence.new(c)
+	elseif c then
+		e.Color = c
+	end
+	e.LightEmission = opts.LightEmission or 0
+	e.LightInfluence = 0
+	local speed = opts.Speed or 0
+	e.Speed = NumberRange.new(speed * 0.8, speed)
+	local sp = opts.Spread or 0
+	e.SpreadAngle = Vector2.new(sp, sp)
+	local rot = opts.Rotation or 0
+	e.Rotation = NumberRange.new(-rot, rot)
+	e.Acceleration = opts.Accel or Vector3.zero
+	e.Orientation = FLIP_ORIENT[opts.Orientation or "FacingCamera"]
+	e.ZOffset = opts.ZOffset or 0
+	e.Enabled = false
+
+	local holder: Instance
+	if typeof(at) == "Instance" and opts.Attach == true then
+		local a = Instance.new("Attachment")
+		a.Parent = at
+		holder = a
+	else
+		local cf = if typeof(at) == "Vector3" then CFrame.new(at) elseif typeof(at) == "CFrame" then at else (at :: BasePart).CFrame
+		local h = part(Vector3.new(0.2, 0.2, 0.2), cf, Color3.new(1, 1, 1))
+		h.Transparency = 1
+		holder = h
+	end
+	e.Parent = holder
+	if opts.Rate then
+		e.Rate = opts.Rate
+		e.Enabled = true
+		local dur = opts.Duration or 1
+		task.delay(dur, function()
+			e.Enabled = false
+		end)
+		Debris:AddItem(holder, dur + life + 0.3)
+	else
+		e.Rate = 0
+		e:Emit(opts.Count or 1)
+		Debris:AddItem(holder, life + 0.3)
+	end
+	return e
 end
 
 -- 이 모듈 밖에서 부품이 필요할 때(무기 복제 날리기 등)

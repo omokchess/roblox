@@ -13,7 +13,7 @@ for _, s in plan do
 	byLayer[s.Layer] = (byLayer[s.Layer] or 0) + n
 	emittersBy[s.Layer] = (emittersBy[s.Layer] or 0) + 1
 end
-print(("이미터 %d (한도 60) · 살아 있는 입자 약 %d (한도 2000)"):format(#plan, live))
+print(("이미터 %d (한도 70) · 살아 있는 입자 약 %d (한도 2000)"):format(#plan, live))
 for layer, n in byLayer do
 	print(("  %-9s 이미터 %2d · 입자 %4d"):format(layer, emittersBy[layer], n))
 end

@@ -31,3 +31,19 @@ if missing:
     print("빠진 이펙트:", *missing, sep="\n  ")
     sys.exit(1)
 print("모든 이펙트 이름이 맞다")
+
+# Pack("팩/이펙트") 이름이 VFX 팩 목록(vfx_textures.tsv 경로)에 있는지 대조 — 없으면 게임에서 조용히 false 가 된다 (2026-11-06)
+TSV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out", "vfx_textures.tsv")
+paths = [l.split("\t")[1] for l in open(TSV, encoding="utf-8") if "\t" in l]
+bad = set()
+SRC = os.path.join(ROOT, "src")
+for dp, _, files in os.walk(SRC):
+    for f in files:
+        if f.endswith(".luau"):
+            for n in re.findall(r'\bPack\("([^"]+)"', open(os.path.join(dp, f), encoding="utf-8").read()):
+                if not any(p == n or p.startswith(n + "/") for p in paths):
+                    bad.add(f"{f}: {n}")
+if bad:
+    print("팩에 없는 Pack 이름:", *sorted(bad), sep="\n  ")
+    sys.exit(1)
+print("모든 Pack 이름이 팩 목록에 있다")
