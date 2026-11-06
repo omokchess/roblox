@@ -2453,7 +2453,7 @@ function BattleHud:_buildCallistoExtras()
 	local big = bigLabel("Big")
 	big.ZIndex = 42
 	self.cutinGradient = make("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(169, 180, 200)) }, big)
-	self.cutinStroke = make("UIStroke", { Color = Color3.fromRGB(224, 184, 76), Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, LineJoin = Enum.LineJoinMode.Round }, big)
+	self.cutinStroke = make("UIStroke", { Color = Color3.fromRGB(224, 184, 76), Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, LineJoinMode = Enum.LineJoinMode.Round }, big)
 	self.cutinBigScale = make("UIScale", {}, big)
 	self.cutinShadowScale = make("UIScale", {}, shadow)
 	local sub = make("TextLabel", {
