@@ -9,8 +9,10 @@
 	(카메라 밑 물체는 그 사람 화면에만 그려진다 — 전투 칸 위에 선 사람만 부른다). 빛·하늘은 RegionAtmosphere 의 "우주" 분위기로 덮는다.
 	2026-11-01 사용자: "2페 돌입하면 날이 어두워지게, 우주 사진도 배경에 깔아 주고" —
 	  · 이 사람 화면만 밤으로(Lighting.ClockTime → 자정, 걷으면 되돌림)
-	  · 우주 사진(CallistoAssets 속성 SpaceLayerImage) 판을 카메라 앞 BACKDROP 거리에 화면을 덮게 둔다(카메라를 보는 판 — 스카이박스·하늘 구 아님).
-	    그보다 가까운 것(전투 판·블렌더 별·행성)은 앞에, 먼 지형·하늘은 뒤로 가려진다. 우주가 도는 만큼 옆으로 흐른다.
+	  · 우주 사진(CallistoAssets 속성 SpaceLayerImage)은 필드 가운데에 월드 고정된 큰 하늘 구(CallistoAssets.SkySphere — models/build_callisto_skysphere.py,
+	    안쪽이 앞면)에 입힌다. 2026-11-02 사용자: "2페 돌입 때 우주가 카메라 따라가는거 수정해야 함. 스카이스피어 쓰면 될듯"(예전 화면 붙은 판은 카메라를 따라다녔다).
+	    그보다 가까운 것(전투 판·블렌더 별·행성)은 앞에, 먼 지형·하늘은 구 뒤로 가려진다. 우주가 도는 만큼 구도 천천히 돈다.
+	    빛을 안 받고 밝게 — Neon 재질 + MeshPart.TextureID (템플릿에 SurfaceAppearance 가 있으면 그쪽 발광 마스크 길 — tools/Callisto_SkySphere.luau). SkySphere 가 없으면(시험 환경) 구는 안 그린다.
 	  SetCenter(pos)          전투 필드 가운데(전투 화면이 스냅숏마다 알려 준다)
 	  Show(fade?)             우주를 띄운다(이미 떠 있으면 아무 일 없음). fade = 초(서서히)
 	  Spin(rate, ramp)        도는 빠르기(라디안/초)를 ramp 초에 걸쳐 그쪽으로
@@ -20,7 +22,6 @@
 ]]
 
 local Lighting = game:GetService("Lighting")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -41,15 +42,14 @@ type State = {
 	Ramp: number,
 	Conn: RBXScriptConnection,
 	Clock: number,
-	Board: BillboardGui,
 }
 
 local center = Vector3.zero
 local state: State? = nil
 local GALAXY_DROP = 26
-local BACKDROP = 460 -- 우주 사진 판까지 거리(블렌더 별 반지름 140~360 보다 멀리)
-local BACKDROP_TILE = 760
-local BACKDROP_BIND = "CallistoBackdrop"
+local SKY_RADIUS = 480 -- 하늘 구 반지름(블렌더 별 반지름 140~360 + 카메라가 필드 가운데에서 떨어진 ~75 보다 크게, 지름은 MeshPart 한도 2048 안)
+local SKY_SPIN = 0.5 -- 구는 별(s.Angle)보다 절반 속도로 돈다(먼 배경)
+local SKY_COLOR = Color3.new(1, 1, 1) -- 그림에 곱하는 색(밝기 조절 칸 — 블룸이 번지면 어둡게)
 
 function CallistoSpace.SetCenter(pos: Vector3)
 	center = pos
@@ -108,35 +108,25 @@ function CallistoSpace.Show(fadeTime: number?)
 		galaxy = g
 	end
 	RegionAtmosphere.SetOverride("우주")
-	-- 우주 사진 판: 보이지 않는 닻을 매 프레임 카메라 앞 BACKDROP 에 두고, 그 닻의 판을 화면보다 조금 크게
-	local anchor = Instance.new("Part")
-	anchor.Name = "BackdropAnchor"
-	anchor.Size = Vector3.new(1, 1, 1)
-	anchor.Transparency = 1
-	anchor.Anchored, anchor.CanCollide, anchor.CanQuery, anchor.CanTouch = true, false, false, false
-	anchor.Parent = folder
-	local board = Instance.new("BillboardGui")
-	board.Name = "Backdrop"
-	board.Adornee = anchor
-	board.AlwaysOnTop = false
-	board.LightInfluence = 0
-	board.ClipsDescendants = true
-	board.MaxDistance = math.huge
-	-- 판은 PlayerGui 에(닻은 카메라 밑) — 카메라 밑 BillboardGui 는 그려지지 않을 수 있다
-	board.Parent = Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui") or folder
-	local photo = Instance.new("ImageLabel")
-	photo.BackgroundColor3 = Color3.fromRGB(4, 4, 14)
-	photo.BorderSizePixel = 0
-	local kitImage = kit and kit:GetAttribute("SpaceLayerImage")
-	photo.Image = if type(kitImage) == "string" then kitImage else ""
-	photo.ScaleType = Enum.ScaleType.Tile
-	photo.TileSize = UDim2.fromOffset(BACKDROP_TILE, BACKDROP_TILE)
-	photo.Size = UDim2.new(1, BACKDROP_TILE, 1, BACKDROP_TILE)
-	photo.ImageTransparency = 1
-	photo.BackgroundTransparency = 1
-	photo.Parent = board
-	local fadeIn = TweenInfo.new(math.max(fadeTime or 0, 0.05), Enum.EasingStyle.Sine)
-	TweenService:Create(photo, fadeIn, { ImageTransparency = 0.05, BackgroundTransparency = 0 }):Play()
+	-- 하늘 구: 필드 가운데에 월드 고정, 그림은 속성 SpaceLayerImage
+	local skySource = kit and kit:FindFirstChild("SkySphere")
+	local image = kit and kit:GetAttribute("SpaceLayerImage")
+	local sky: MeshPart? = nil
+	if skySource and skySource:IsA("MeshPart") and type(image) == "string" and image ~= "" then
+		local m = skySource:Clone()
+		m.Size = Vector3.one * (SKY_RADIUS * 2)
+		if not m:FindFirstChildOfClass("SurfaceAppearance") then
+			m.TextureID = image
+			m.Material = Enum.Material.Neon
+		end
+		m.Color = SKY_COLOR
+		m.Anchored, m.CanCollide, m.CanQuery, m.CanTouch, m.CastShadow = true, false, false, false, false
+		m.CFrame = CFrame.new(center)
+		m.Transparency = 1
+		m.Parent = folder
+		TweenService:Create(m, TweenInfo.new(math.max(fadeTime or 0, 0.05), Enum.EasingStyle.Sine), { Transparency = 0 }):Play()
+		sky = m
+	end
 	-- 날이 저문다: 오후면 해 질 녘을 지나 자정(24)으로, 오전이면 거꾸로 0 시로
 	local clock = Lighting.ClockTime
 	TweenService:Create(Lighting, TweenInfo.new(math.max(fadeTime or 0, 1.5), Enum.EasingStyle.Sine), { ClockTime = if clock >= 12 then 24 else 0 }):Play()
@@ -152,18 +142,7 @@ function CallistoSpace.Show(fadeTime: number?)
 		Ramp = 1,
 		Conn = nil :: any,
 		Clock = clock,
-		Board = board,
 	}
-	RunService:BindToRenderStep(BACKDROP_BIND, Enum.RenderPriority.Camera.Value + 1, function()
-		local cam = workspace.CurrentCamera
-		if not cam or not anchor.Parent then
-			return
-		end
-		anchor.CFrame = cam.CFrame * CFrame.new(0, 0, -BACKDROP)
-		board.Size = UDim2.fromOffset(cam.ViewportSize.X * 1.15, cam.ViewportSize.Y * 1.15)
-		local scroll = s.Angle * 320 + os.clock() * 4
-		photo.Position = UDim2.fromOffset(-(scroll % BACKDROP_TILE), -((os.clock() * 2) % BACKDROP_TILE))
-	end)
 	s.Conn = RunService.Heartbeat:Connect(function(dt: number)
 		if not folder.Parent then
 			return
@@ -171,6 +150,9 @@ function CallistoSpace.Show(fadeTime: number?)
 		s.SpinNow += (s.SpinTarget - s.SpinNow) * math.min(1, dt / math.max(s.Ramp, 0.05))
 		s.Angle += s.SpinNow * dt
 		space:PivotTo(CFrame.new(center) * CFrame.Angles(0, s.Angle, 0))
+		if sky then
+			sky.CFrame = CFrame.new(center) * CFrame.Angles(0, s.Angle * SKY_SPIN + os.clock() * 0.004, 0)
+		end
 		if galaxy and s.GalaxyOn then
 			s.GalaxyAngle += (0.06 + s.SpinNow * 0.25) * dt
 			local pivot = galaxy:GetPivot()
@@ -218,8 +200,6 @@ function CallistoSpace.Hide()
 	end
 	state = nil
 	s.Conn:Disconnect()
-	RunService:UnbindFromRenderStep(BACKDROP_BIND)
-	s.Board:Destroy()
 	s.Folder:Destroy()
 	RegionAtmosphere.SetOverride(nil)
 	Lighting.ClockTime %= 24

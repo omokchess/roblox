@@ -705,6 +705,77 @@ function BattleClient:_callistoLook(id: string)
 		end
 		CallistoSpace.Galaxy(page >= 3, 2)
 	end
+	self:_callistoPlatform(id)
+end
+
+--[[
+	2026-11-06 사용자: "2페이즈에 진입했을 때 전장이 하늘전장이라면, 칼리스토가 밟고 있는 발판을 투명하게 처리한다."
+	하늘 전장(arena.Kind == "Sky")이고 보이는 페이즈가 2 이상이면 이 사람 화면에서만(LocalTransparencyModifier) 전장 바닥 판(서버가 지은 SkyArenas/ArenaNN —
+	한 장이라 통째로)과 칼리스토가 선 칸을 투명하게 — 우주에 떠 있는 느낌. 지상 전장·1페이즈면 그대로. id = nil 이면 전부 되돌린다(전투가 끝날 때).
+	아군·다른 적 칸은 그대로(범위 표시가 거기 칠해진다).
+]]
+function BattleClient:_callistoPlatform(id: string?)
+	local arena = self.arena
+	local hidden: { [BasePart]: boolean } = {}
+	if id and (self.callistoShown or 1) >= 2 and arena and arena.Kind == "Sky" then
+		local floors = workspace:FindFirstChild("SkyArenas")
+		local floor = floors and arena.Slot and floors:FindFirstChild(string.format("Arena%02d", arena.Slot))
+		if floor and floor:IsA("BasePart") then
+			hidden[floor] = true
+		end
+		local unit = self.snapshot and self.snapshot.Units and self.snapshot.Units[id]
+		local cells = if unit then (unit.Cells or (if unit.X then { { unit.X, unit.Y } } else {})) else {}
+		for _, c in cells do
+			local row = self.tiles and self.tiles.Enemy[c[2]]
+			local tile = row and row[c[1]]
+			if tile then
+				hidden[tile] = true
+			end
+		end
+	end
+	local before: { [BasePart]: boolean } = self.platformHidden or {}
+	for part in before do
+		if not hidden[part] and part.Parent then
+			part.LocalTransparencyModifier = 0
+		end
+	end
+	for part in hidden do
+		part.LocalTransparencyModifier = 1
+	end
+	self.platformHidden = hidden
+	self:_syncTiles()
+end
+
+--[[
+	2026-11-06 사용자: "배치와 스킬 지정을 마치면 타일을 숨기고, 턴이 시작될 때 다시 표시한다."
+	칸(윤곽·글자)이 보이는지 한 곳에서 정한다 — 내 연출이 도는 동안(tilesHidden) · 보스 디버그의 적 쪽 칸(늘 숨김) · 칼리스토가 선 칸(하늘 전장 2페이즈).
+	칸 말고 따로 깔린 표시(위협 레이저·검수 칸 묶음·몸 윤곽)는 건드리지 않는다 — 적 공격 예고는 연출 중에도 보여야 피할 곳을 안다.
+]]
+function BattleClient:_syncTiles()
+	local tiles = self.tiles
+	if not tiles then
+		return
+	end
+	local snapshot = self.snapshot
+	local all = self.tilesHidden == true
+	local keep: { [BasePart]: boolean } = self.platformHidden or {}
+	for side, rows in tiles :: any do
+		local sideOff = side == "Enemy" and snapshot ~= nil and snapshot.Boss ~= nil
+		for _, row in rows do
+			for _, part in row do
+				local off = all or sideOff or keep[part] == true
+				part.LocalTransparencyModifier = if off then 1 else 0
+				local box = part:FindFirstChild("Mark") :: SelectionBox?
+				if box then
+					box.Visible = not off
+				end
+				local tag = part:FindFirstChild("Tag") :: BillboardGui?
+				if tag then
+					tag.Enabled = not off
+				end
+			end
+		end
+	end
 end
 
 function BattleClient:_callistoAlerts(snapshot: any)
@@ -1066,6 +1137,7 @@ function BattleClient:_teardownBattle()
 	end
 	self.active = false
 	self.arenaOrigin = nil
+	self.tilesHidden = nil
 	self.bossCamStart = nil
 	self.bossCamBase = nil
 	self.bossCamFollow = nil
@@ -1082,6 +1154,7 @@ function BattleClient:_teardownBattle()
 	self.callistoShown = nil
 	self.callistoCutscene = nil
 	CallistoSpace.Hide()
+	self:_callistoPlatform(nil)
 	self:_setBattlePose(false)
 	if self.folder then
 		self.folder:Destroy()
@@ -1357,9 +1430,11 @@ end
 	  Eye 카메라 자리 · Aim 화면 한가운데가 보는 바닥(카메라는 줄 가운데선 오른쪽에서 왼쪽으로 22° 돌아 있다 — 스크린샷대로)
 ]]
 local CALLISTO_CAM = { Eye = Vector3.new(-61, 31, 19), Aim = Vector3.new(7, 0, -8) }
+local function callistoPlane(layout: BattleArena.Layout): CFrame
+	return layout.Origin + Vector3.new(0, (layout.FlatY or layout.Origin.Y) - layout.Origin.Y, 0)
+end
 local function callistoCamera(layout: BattleArena.Layout): CFrame
-	local plane = layout.Origin + Vector3.new(0, (layout.FlatY or layout.Origin.Y) - layout.Origin.Y, 0)
-	return plane * CFrame.lookAt(CALLISTO_CAM.Eye, CALLISTO_CAM.Aim)
+	return callistoPlane(layout) * CFrame.lookAt(CALLISTO_CAM.Eye, CALLISTO_CAM.Aim)
 end
 
 function BattleClient:_lockCamera()
@@ -1385,7 +1460,7 @@ function BattleClient:_lockCamera()
 		self.director:SetCamera(camera.CFrame)
 	end
 	-- 디버그전: 같은 구도에서 천천히 살짝 흔들린다(RenderStepped 가 매 프레임 _bossCamera 로 옮긴다)
-	self.bossCamBase = if self.snapshot and self.snapshot.Boss then camera.CFrame else nil
+	self.bossCamBase = if self.snapshot and (self.snapshot.Boss or self.snapshot.Callisto) then camera.CFrame else nil
 	self.bossCamStart = if self.bossCamBase then os.clock() else nil
 	self:_scanOccluders()
 end
@@ -1413,6 +1488,31 @@ function BattleClient:_bossCamera(t: number, dt: number?): CFrame
 	local offset = Vector3.new(math.sin(t * 0.31) * 0.4, math.sin(t * 0.23 + 1.3) * 0.25, math.cos(t * 0.27) * 0.3)
 	local tilt = CFrame.Angles(math.rad(math.sin(t * 0.19) * 0.4), math.rad(math.cos(t * 0.17) * 0.5), math.rad(math.sin(t * 0.21 + 0.6) * 0.4))
 	return (cam + cam:VectorToWorldSpace(offset)) * tilt
+end
+
+--[[
+	칼리스토전 카메라 떠다님(2026-11-02 사용자: "카메라 천천히 움직이는거 넣어야 함"): 같은 구도(bossCamBase)를 중심으로 숨 쉬듯 느리게. 플레이어를 따라가지 않는다.
+	  Arc    바라보는 바닥(Aim)을 축으로 좌우 호 ±3.2°(주기 약 70초 — 카메라 옆걸음 ±4스터드)
+	  Drift  카메라 몸 기준 위치 떠다님(오른쪽 ±1.6 · 위 ±1.0 · 앞뒤 ±1.8 스터드, 주기 24·33·42초)
+	  Tilt   각도 떠다님(위아래 ±0.6° · 좌우 ±0.7° · 기울기 ±0.35°)
+	처음 3초에 걸쳐 서서히 켠다(구도가 툭 움직이지 않게). 컷신 카메라(Fx/Callisto)·화면 흔들림은 director:SetCamera 기준 위에서 돌아오므로 그대로 이어진다.
+]]
+local CALLISTO_DRIFT = { Arc = 3.2, ArcW = 0.09, Drift = Vector3.new(1.6, 1.0, 1.8), Tilt = Vector3.new(0.6, 0.7, 0.35), RampSec = 3 }
+function BattleClient:_callistoDrift(t: number): CFrame
+	local base = self.bossCamBase :: CFrame
+	local d = CALLISTO_DRIFT
+	local k = math.clamp(t / d.RampSec, 0, 1)
+	k = k * k * (3 - 2 * k)
+	local plane = callistoPlane(self.layout :: any)
+	local pivot = plane:PointToWorldSpace(CALLISTO_CAM.Aim)
+	local arc = CFrame.new(pivot) * CFrame.fromAxisAngle(plane.UpVector, math.rad(math.sin(t * d.ArcW) * d.Arc * k)) * CFrame.new(-pivot)
+	local offset = Vector3.new(math.sin(t * 0.26 + 0.4) * d.Drift.X, math.sin(t * 0.19 + 2.1) * d.Drift.Y, math.sin(t * 0.15 + 4.0) * d.Drift.Z) * k
+	local tilt = CFrame.Angles(
+		math.rad(math.sin(t * 0.17 + 1.0) * d.Tilt.X * k),
+		math.rad(math.sin(t * 0.13 + 1.1) * d.Tilt.Y * k),
+		math.rad(math.sin(t * 0.11 + 2.2) * d.Tilt.Z * k)
+	)
+	return arc * base * CFrame.new(offset) * tilt
 end
 
 --=== 타일 색칠 ===--
@@ -1635,6 +1735,7 @@ function BattleClient:_paintTiles()
 	-- 2026-10-03 사용자: 보스 디버그 쪽 칸은 아예 없앤다(보이는 것만 — 규칙·칸 차지는 그대로)
 	local bossFight = snapshot.Boss ~= nil
 	BattleStage.SetSideVisible(self.tiles, "Enemy", not bossFight)
+	self:_syncTiles()
 	local modAt: { [string]: string } = {}
 	for _, m in (snapshot.Boss and snapshot.Boss.Mods) or {} do
 		modAt[m.X .. "," .. m.Y] = m.Kind
@@ -1932,9 +2033,23 @@ function BattleClient:_bindInput()
 				self.director:HoldAt("player", self:_home("Ally", hover.X, hover.Y).Position + Vector3.new(0, 2.2, 0))
 			end
 		end
+		-- 내 스킬·적 연출이 도는 동안 칸을 숨긴다 — 위협(예고)·회피·QTE·끌기 중이거나 연출이 끝난 계획 단계면 보인다
+		local resolving = self.director ~= nil
+			and self.director:IsBusy()
+			and not self.qte
+			and not self.dragging
+			and not self.threatWaiting
+			and not self.pendingThreat
+			and #((self.snapshot and self.snapshot.Threats) or {}) == 0
+		if resolving ~= (self.tilesHidden == true) then
+			self.tilesHidden = resolving
+			self:_syncTiles()
+		end
 		if self.bossCamStart and self.bossCamBase then
 			local now = os.clock()
-			local cf = self:_bossCamera(now - self.bossCamStart, now - (self.bossCamLast or now))
+			local cf = if self.snapshot and self.snapshot.Callisto
+				then self:_callistoDrift(now - self.bossCamStart)
+				else self:_bossCamera(now - self.bossCamStart, now - (self.bossCamLast or now))
 			self.bossCamLast = now
 			if now - (self.occludeScan or 0) > 1 then
 				self.occludeScan = now
@@ -2018,6 +2133,19 @@ function BattleClient:_startQte(role: QteDefinitions.Role)
 	if auto and auto ~= "Off" then
 		self:_submitGrade(role, auto)
 		return
+	end
+	--[[
+		2026-11-06 사용자: "명상, 도발, 가드처럼 피해를 주지 않는 스킬은 QTE를 표시하지 않는다."
+		판정 기준 = 스킬 정의 Damage <= 0. 등급은 피해 배율(QteDefinitions.Multiplier "Skill")에만 쓰이고 Partial 이 배율 1 이라
+		피해 없는 스킬은 기본 등급 Partial 을 그대로 보낸다(서버는 QTE 를 만들지 않고 등급만 받는다 — 바꿀 곳 없음).
+	]]
+	if role == "Skill" then
+		local chosen = (self.allySkills or {})[self.selectedSkill]
+		local def = chosen and BattleSkills.ById(chosen.Id)
+		if def and def.Damage <= 0 then
+			self:_submitGrade(role, "Partial")
+			return
+		end
 	end
 	local rng = Random.new(os.clock() * 1000)
 	self.qte = QteDefinitions.Create(role, function()
