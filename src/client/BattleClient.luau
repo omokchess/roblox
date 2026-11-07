@@ -857,24 +857,16 @@ end
 ]]
 --[[
 	칼리스토 추적 기믹 칩 · 케노스 피니셔(2026-11-06 밤): 기믹 칩(조건 충족이 바뀔 때마다 서버 스냅샷으로 갱신) · 핀 폴 게이지 ·
-	FINISHER / PIN! 컷인(스냅샷의 시작 수·핀 수가 오를 때 한 번씩) · 상공 대기 / 스턴 루프(_callistoHold).
+	상공 대기 / 스턴 루프(_callistoHold).
 ]]
 function BattleClient:_callistoGimmickUi(snapshot: any)
 	local view = snapshot.Callisto
 	self.hud:SetGimmick(view and view.Gimmick)
 	self.hud:SetPin(view and view.Finisher)
 	if not view then
-		self.finSeq, self.pinSeq = nil, nil
 		return
 	end
-	if self.finSeq == nil then
-		self.finSeq, self.pinSeq = view.FinisherSeq, view.PinnedSeq
-	end
-	-- FINISHER 컷인은 뺐다(2026-11-07 사용자: "피니셔 안내가 이펙트를 다 가려버려. 그냥 피니셔 안내를 없애버리자.")
-	if view.PinnedSeq > self.pinSeq then
-		self.hud:Cutin("Pin", "PIN!", "핀 성공 · PIN FALL")
-	end
-	self.finSeq, self.pinSeq = view.FinisherSeq, view.PinnedSeq
+	-- FINISHER · PIN! 컷인은 뺐다(2026-11-07 사용자: "피니셔 안내가 이펙트를 다 가려버려. 그냥 피니셔 안내를 없애버리자." · PIN! 도 "그것도 가려줘")
 	if not view.Finisher then
 		self.perchDone = false
 	end
