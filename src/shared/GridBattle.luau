@@ -2774,7 +2774,7 @@ local CALLISTO_FORM: { [string]: string } = {
 	CallistoSlash = "Seek",
 	CallistoPhoto = "Seek",
 	CallistoTrohia = "Seek",
-	CallistoSymberasma = "All",
+	CallistoSymberasma = "Seek", -- 2026-11-07 십자 유도기(고찰 붙잡힌 대상을 쫓음)
 	CallistoSynthesis = "Seek",
 	CallistoArktos = "All",
 	CallistoAstro = "All",
@@ -2791,6 +2791,40 @@ local CALLISTO_FORM: { [string]: string } = {
 	CallistoKenos = "All",
 }
 GridBattle.CALLISTO_FORM = CALLISTO_FORM
+--[[
+	2026-11-07 사용자: "전체 범위를 가진 스킬들중 전체기가 아니어도 될 것 같은걸 각각 십자, X자 범위로 해서 유도기로 만들어줘".
+	Seek 유도기 가운데 모양이 있는 것: 쫓는 대상 칸을 중심으로 십자(+) 또는 X자(×) 5칸(판 밖은 잘림). 대상이 움직이면 모양도 따라가고
+	맞는 건 그 모양 안에 선 아군 모두. 전체로 남은 것: 잠기리·알리오스·북두칠성·케노스(+ 고정 칸 렌즈 9칸·아스트로 세시 3×3).
+]]
+local CALLISTO_SHAPE: { [string]: string } = {
+	CallistoSlash = "X",
+	CallistoPhoto = "Cross",
+	CallistoTrohia = "X",
+	CallistoSymberasma = "Cross",
+	CallistoSynthesis = "Cross",
+	CallistoResonance = "X",
+	CallistoArtificial = "X",
+	CallistoShower = "X",
+	CallistoBuried = "Cross",
+	CallistoMegrez = "Cross",
+	CallistoPhecda = "Cross",
+	CallistoMerak = "X",
+}
+GridBattle.CALLISTO_SHAPE = CALLISTO_SHAPE
+
+-- (cx, cy) 중심 십자/X 5칸(판 밖 잘림)
+local function shapeCells(kind: string, cx: number, cy: number, width: number, height: number): { { number } }
+	local offsets = if kind == "Cross" then { { 0, 0 }, { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } else { { 0, 0 }, { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } }
+	local cells = {}
+	for _, o in offsets do
+		local x, y = cx + o[1], cy + o[2]
+		if x >= 1 and x <= width and y >= 1 and y <= height then
+			table.insert(cells, { x, y })
+		end
+	end
+	return cells
+end
+GridBattle.ShapeCells = shapeCells
 -- 별자리 칸에서 턴을 마치면 얻는 [성위]
 local LURE_SEONGWI = 2
 GridBattle.LURE_SEONGWI = LURE_SEONGWI
@@ -3372,11 +3406,12 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 	-- 케노스는 빛 칸이 별 칸 구실을 한다(별 칸·솔로 회복·가호 없음)
 	c.Lure = if id == "CallistoKenos" then nil else pickStars(state, rng)
 	c.StarUsed = nil
-	local cells = zone or allCells(state)
+	local shape = CALLISTO_SHAPE[id]
+	local cells = if shape then shapeCells(shape, here.X, here.Y, state.Grid.Width, state.Grid.Height) else zone or allCells(state)
 	local track = if form == "TrackRow" and zone == nil then "Row" elseif form == "TrackColumn" then "Column" else nil
 	local plans = {}
 	for k = 1, count do
-		table.insert(plans, { SkillId = id, Cells = cells, Track = track, Strike = k, Seek = form == "Seek" or nil, Shelter = (form ~= "Seek" and zone == nil) or nil, Safe = safe, Target = ALLY_ID })
+		table.insert(plans, { SkillId = id, Cells = cells, Track = track, Strike = k, Seek = form == "Seek" or nil, Shape = shape, Shelter = (form ~= "Seek" and zone == nil) or nil, Safe = safe, Target = ALLY_ID })
 		table.insert(state.Planned, unit.Id)
 	end
 	unit.Plans = plans
@@ -3786,7 +3821,13 @@ function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?
 		end
 		-- 칼리스토 추적: 어디 서 있든 찾아간 아군이면 맞는다
 		if plan.Seek then
-			return callistoSeek(state, plan) == state.AllyId
+			local seekId = callistoSeek(state, plan)
+			-- 십자/X 유도기: 쫓는 대상 칸이 중심, 그 모양 안에 선 아군이면 맞는다
+			local center = if plan.Shape then BattleGrid.CellOf(state.Grid, seekId) else nil
+			if center then
+				return hasCell(shapeCells(plan.Shape, center.X, center.Y, state.Grid.Width, state.Grid.Height), here.X, here.Y)
+			end
+			return seekId == state.AllyId
 		end
 		-- 판 전체·행열(질문 3-A · 4): 파티면 별 칸 위 사람은 빠진다(솔로는 별 위에서도 맞고 회복·가호를 받는다)
 		if plan.Shelter and #GridBattle.Allies(state) > 1 and state.Callisto and state.Callisto.Lure

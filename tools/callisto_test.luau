@@ -360,7 +360,8 @@ do
 		local stars = s.Callisto.Lure
 		local plans = b.Plans or {}
 		-- 추적 공격만(판 전체 공격은 성위를 쓰는 스킬이 섞여 성위 셈이 흔들린다 — 11절에서 따로)
-		if stars and #plans > 0 and here and plans[1].Seek then
+		-- 심베라즈마(2026-11-07 십자 유도기)는 맞으면 내던져 별 칸을 벗어나니 이 성위 셈에서 뺀다
+		if stars and #plans > 0 and here and plans[1].Seek and plans[1].SkillId ~= "CallistoSymberasma" then
 			seekSeen += 1
 			check(#stars == 3 or #stars == 4, "별자리 칸 3~4개 — " .. #stars)
 			for _, st in stars do
@@ -449,7 +450,7 @@ do
 	GridBattle.EnemyPlan(s, rng)
 	if b.Plans and b.Plans[1].SkillId == "CallistoMerak" then
 		-- 2026-11-07 사용자: 메라크는 유도기 — 대상 하나를 쫓는다(어디 서도 맞고 파티면 별 밖 다른 아군을 찾아감), 회피 QTE 가능
-		check(b.Plans[1].Seek == true and not b.Plans[1].Track and #b.Plans[1].Cells == 18, "메라크는 유도기(Seek) — 줄 고정 아님")
+		check(b.Plans[1].Seek == true and not b.Plans[1].Track and b.Plans[1].Shape == "X" and #b.Plans[1].Cells <= 5, "메라크는 X자 유도기(Seek) — 줄 고정 아님")
 		check(not loadShared("BattleSkills").ById("CallistoMerak").Unavoidable, "메라크는 회피 QTE 가능")
 		for x = 1, 6 do
 			for y = 1, 3 do
@@ -485,7 +486,13 @@ do
 	check(s.Callisto.Lure ~= nil and #s.Callisto.Lure >= 3, "어떤 공격이든 별 칸이 깔린다(질문 3-A)")
 	-- 판 전체·행열 꼴(Shelter): 파티면 별 위 사람은 빠지고, 혼자면 맞는다
 	for _, plan in b.Plans or {} do
-		plan.Seek, plan.Shelter = nil, true
+		plan.Seek, plan.Shelter, plan.Shape = nil, true, nil
+		plan.Cells = {}
+		for x = 1, 6 do
+			for y = 1, 3 do
+				table.insert(plan.Cells, { x, y })
+			end
+		end
 	end
 	local st = s.Callisto.Lure[1]
 	GridBattle.MoveAlly(s, st[1], st[2])
@@ -967,6 +974,87 @@ do
 	-- 2026-11-07 사용자: 알리오스 전체 광역 · 다른 스킬 둘(페크다·메라크)은 유도기
 	check(GridBattle.CALLISTO_FORM.CallistoAlioth == "All" and GridBattle.CALLISTO_FORM.CallistoPhecda == "Seek" and GridBattle.CALLISTO_FORM.CallistoMerak == "Seek" and GridBattle.CALLISTO_FORM.CallistoMegrez == "Seek", "알리오스 All · 페크다·메라크·메그레즈 Seek")
 	print("13 3페이즈 2페이즈 기술 섞기 OK — " .. all)
+end
+
+--=== 14. 2026-11-07 사용자: "전체기가 아니어도 될 것 같은걸 각각 십자, X자 범위로 해서 유도기로" ===--
+do
+	local BattleSkills = loadShared("BattleSkills")
+	local shapes = GridBattle.CALLISTO_SHAPE
+	local crosses, xs = 0, 0
+	for id, kind in shapes do
+		check(GridBattle.CALLISTO_FORM[id] == "Seek", id .. " 은 유도기(Seek)")
+		check(BattleSkills.ById(id).Shape ~= nil and BattleSkills.ById(id).Shape.Kind ~= "All", id .. " 범위 표시가 판 전체가 아니다")
+		if kind == "Cross" then crosses += 1 else xs += 1 end
+	end
+	check(crosses >= 5 and xs >= 5, string.format("십자 %d · X자 %d 고르게", crosses, xs))
+	for _, id in { "CallistoSubmerge", "CallistoAlioth", "CallistoDipper", "CallistoKenos" } do
+		check(shapes[id] == nil and GridBattle.CALLISTO_FORM[id] == if id == "CallistoAlioth" or id == "CallistoDipper" or id == "CallistoSubmerge" or id == "CallistoKenos" then "All" else nil, id .. " 은 전체로 남는다")
+	end
+	-- 칸 수: 가운데 5 · 모서리 3 · 가장자리 4, X 는 대각만
+	check(#GridBattle.ShapeCells("Cross", 3, 2, 6, 3) == 5 and #GridBattle.ShapeCells("X", 3, 2, 6, 3) == 5, "가운데 5칸")
+	check(#GridBattle.ShapeCells("Cross", 1, 1, 6, 3) == 3 and #GridBattle.ShapeCells("X", 1, 1, 6, 3) == 2, "모서리에서 잘림 — 십자 3 · X 2(중심+대각 1)")
+	local function has(list, x, y)
+		for _, c in list do
+			if c[1] == x and c[2] == y then return true end
+		end
+		return false
+	end
+	check(has(GridBattle.ShapeCells("Cross", 3, 2, 6, 3), 3, 1) and not has(GridBattle.ShapeCells("Cross", 3, 2, 6, 3), 2, 1), "십자는 상하좌우")
+	check(has(GridBattle.ShapeCells("X", 3, 2, 6, 3), 2, 1) and not has(GridBattle.ShapeCells("X", 3, 2, 6, 3), 3, 1), "X자는 대각")
+	-- 대상 따라가기: 예고한 뒤 어디로 옮겨도 대상이 중심이라 맞는다(솔로)
+	for _, kind in { "Cross", "X" } do
+		local s = battle()
+		local b = boss(s)
+		b.Plans = { { SkillId = "CallistoBuried", Cells = {}, Seek = true, Shape = kind } }
+		b.Plan = b.Plans[1]
+		s.Planned = { b.Id }
+		for x = 1, 6 do
+			for y = 1, 3 do
+				GridBattle.MoveAlly(s, x, y)
+				check(#GridBattle.PlannedThreatList(s) == 1, string.format("%s 유도기는 옮겨도 쫓아온다 — (%d,%d)", kind, x, y))
+			end
+		end
+	end
+	-- 파티: 모양 안에 선 다른 아군도 맞고, 밖이면 안 맞는다(대상 = 쫓는 아군 칸이 중심)
+	do
+		local s = battle()
+		local b = boss(s)
+		local friend = table.clone(GridBattle.Ally(s))
+		friend.Id = "player2"
+		s.Units.player2 = friend
+		BattleGrid.Place(s.Grid, "player2", "Ally", 6, 3)
+		BattleStatus.SpendAll(GridBattle.Ally(s).Status, ClassResources.BIND)
+		GridBattle.MoveAlly(s, 3, 2)
+		b.Plans = { { SkillId = "CallistoBuried", Cells = {}, Seek = true, Shape = "Cross", Target = GridBattle.ALLY_ID } }
+		b.Plan = b.Plans[1]
+		s.Planned = { b.Id }
+		s.AllyId = "player2"
+		check(#GridBattle.PlannedThreatList(s) == 0, "십자 밖(6,3)의 다른 아군은 안 맞는다")
+		BattleGrid.Move(s.Grid, "player2", 3, 3)
+		check(#GridBattle.PlannedThreatList(s) == 1, "십자 안(3,3)의 다른 아군도 맞는다")
+		BattleGrid.Move(s.Grid, "player2", 4, 3)
+		b.Plans[1].Shape = "X"
+		check(#GridBattle.PlannedThreatList(s) == 1, "X자 안(4,3)의 다른 아군도 맞는다")
+		s.AllyId = GridBattle.ALLY_ID
+	end
+	-- 실제 예고: 3페이즈를 돌리며 모양 있는 기술의 plan.Cells 가 5칸 이하이고 Shape 가 박힌다
+	local s = battle()
+	local seenShape = 0
+	for _ = 1, 10 do
+		GridBattle.Ally(s).Health = GridBattle.Ally(s).MaxHealth
+		GridBattle.EnemyPlan(s, rng)
+		local p = boss(s).Plan
+		if p and shapes[p.SkillId] then
+			check(p.Shape == shapes[p.SkillId] and p.Seek == true and #p.Cells <= 5 and #p.Cells >= 2, "예고 plan 에 Shape·Cells<=5 — " .. p.SkillId)
+			seenShape += 1
+		end
+		for _, t in GridBattle.PlannedThreatList(s) do
+			GridBattle.ResolveDodge(s, t.Unit.Id, "Success", t.Index)
+		end
+		GridBattle.EndTurn(s)
+	end
+	check(seenShape >= 3, "1페이즈 예고에서 모양 기술이 나온다 — " .. seenShape)
+	print("14 십자/X 유도기 OK")
 end
 
 print("칼리스토 규칙: 모두 통과")

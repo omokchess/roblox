@@ -1766,7 +1766,10 @@ function BattleClient:_paintTiles()
 			local callisto = unit.DefId == "Callisto"
 			-- 칼리스토 행·열 공격(페크다·메라크)은 지금 내가 선 행·열을 칠한다 — 옮길 때마다 다시 그려 실시간으로 따라온다(2026-11-01 질문 4)
 			local planCells = plan.Cells
-			if callisto and plan.Track and me and me.X and me.Y then
+			if callisto and plan.Shape and me and me.X and me.Y then
+				-- 십자/X 유도기(2026-11-07): 내 칸이 중심 — 옮길 때마다 모양이 따라온다
+				planCells = GridBattle.ShapeCells(plan.Shape, me.X, me.Y, GRID_WIDTH, GRID_HEIGHT)
+			elseif callisto and plan.Track and me and me.X and me.Y then
 				planCells = {}
 				for x = 1, GRID_WIDTH do
 					for y = 1, GRID_HEIGHT do
