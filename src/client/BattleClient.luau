@@ -355,7 +355,7 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 			add("Tester", "테스터", "T", Color3.fromRGB(255, 200, 80), nil, "이번 턴 가하는 피해량 +3500% · 치명타 확률 +100% · 받는 피해량 −80% · 방어막 80(이번 턴까지).")
 		end
 		if boss.Checking then
-			add("Checking", "검수중", "검", Color3.fromRGB(235, 235, 235), nil, "검은 칸(검수됨!) 위. 받는 피해량 +200%. 여기서 턴을 마치면 최대 체력 9% 고정 피해(이 효과로는 죽지 않음), 2턴 뒤 스테미나 20을 잃고 다음 턴 테스터를 얻는다.")
+			add("Checking", "검수중", "검", Color3.fromRGB(235, 235, 235), nil, "검은 칸(검수됨!) 위. 받는 피해량 +200%. 여기서 턴을 마치면 최대 체력 9% 고정 피해(이 피해로는 죽지 않는다), 2턴 뒤 스테미나 20을 잃고 다음 턴 테스터를 얻는다.")
 		end
 		if boss.Pending then
 			add("Pending", "검수 준비중", "준", Color3.fromRGB(255, 60, 200), nil, "이번 턴 가하는 피해량 +400%. 여기서 턴을 마치면 이 칸이 검수됨!이 되고 다음 턴 칸을 움직일 수 없다.")
@@ -364,15 +364,15 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 			add("Locked", "묶임", "묶", Color3.fromRGB(200, 120, 255), boss.Locked, "검수 준비중 칸에서 턴을 마쳤다. 이번 턴은 칸을 움직일 수 없다.")
 		end
 		if (boss.LockImmune or 0) > 0 and (boss.Locked or 0) == 0 then
-			add("LockImmune", "묶임 면역", "免", Color3.fromRGB(170, 230, 255), boss.LockImmune, string.format("묶임을 당한 뒤라 앞으로 %d턴 동안 검수 준비중 칸에서 턴을 마쳐도 묶이지 않음.", boss.LockImmune))
+			add("LockImmune", "묶임 면역", "免", Color3.fromRGB(170, 230, 255), boss.LockImmune, string.format("묶임을 당한 뒤라 앞으로 %d턴 동안 검수 준비중 칸에서 턴을 마쳐도 묶이지 않는다.", boss.LockImmune))
 		end
 		if (boss.StaminaDebt or 0) > 0 then
 			add("StaminaDebt", "검수 후유증", "후", Color3.fromRGB(206, 214, 110), boss.StaminaDebt, string.format("%d턴 뒤 스테미나 20을 잃는다.", boss.StaminaDebt))
 		end
 		if boss.Standing == "Buff" then
-			add("BuffCell", "버프 칸", "▲", Color3.fromRGB(70, 225, 255), nil, "이 칸에 서 있는 동안 주는 피해 +40% · 받는 피해 −20%.")
+			add("BuffCell", "버프 칸", "▲", Color3.fromRGB(70, 225, 255), nil, "이 칸에 서 있는 동안 가하는 피해량 +40%, 받는 피해량 −20%.")
 		elseif boss.Standing == "Debuff" then
-			add("DebuffCell", "버그 칸", "▼", Color3.fromRGB(200, 110, 240), nil, "이 칸에 서 있는 동안 주는 피해 −30% · 받는 피해 +40%.")
+			add("DebuffCell", "버그 칸", "▼", Color3.fromRGB(200, 110, 240), nil, "이 칸에 서 있는 동안 가하는 피해량 −30%, 받는 피해량 +40%.")
 		elseif boss.Standing == "Heal" then
 			add("HealCell", "회복 칸", "✚", Color3.fromRGB(110, 240, 130), nil, "턴 끝에 이 칸에 서 있으면 최대 체력 30% 회복(회복 불가 중에도 15%).")
 		end
@@ -380,7 +380,7 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 	-- 묶임 면역(조율자 미자르·디버그 검수 공통 — BattleSkillEffects.TryBind). 디버그전은 위 검수 칸 줄이 이미 보여 준다
 	local bindImmune = status.Immune and status.Immune[ClassResources.BIND] or 0
 	if not boss and bindImmune > 1 and not (status.Stacks and (status.Stacks[ClassResources.BIND] or 0) > 0) then
-		add("BindImmune", "묶임 면역", "免", Color3.fromRGB(170, 230, 255), bindImmune - 1, string.format("묶인 뒤라 앞으로 %d턴 동안 다시 묶이지 않음.", bindImmune - 1))
+		add("BindImmune", "묶임 면역", "免", Color3.fromRGB(170, 230, 255), bindImmune - 1, string.format("묶인 뒤라 앞으로 %d턴 동안 다시 묶이지 않는다.", bindImmune - 1))
 	end
 	if status.Shield > 0 then
 		add("Shield", "보호막", "盾", Color3.fromRGB(120, 190, 255), status.Shield, "받는 피해를 이 수치만큼 먼저 막는다.")
@@ -2296,7 +2296,7 @@ function BattleClient:_startQte(role: QteDefinitions.Role)
 	self.qteStart = os.clock()
 	local chosen = self:_selectedSkill()
 	local classId = self.snapshot and self.snapshot.AllyClassId or "Berserker"
-	self.qteWord = if classId == "Duelist" then "패리" else "회피"
+	self.qteWord = if classId == "Duelist" then "패링" else "회피"
 	local title = if role == "Skill"
 		then (chosen and chosen.Name or "공격")
 		else (self.pendingThreat and self.pendingThreat.SkillName or "적의 공격") .. (if self.qte.BeatSize then " · ⇄ 비트 2 반대" else "")

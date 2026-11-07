@@ -70,32 +70,32 @@ local definitions: { StatDefinition } = {
 	{
 		Id = "Strength",
 		Name = "힘",
-		Description = "물리 대미지 5%, 체력 1",
+		Description = "근접 피해량 5%, 체력 1",
 	},
 	{
 		Id = "Intellect",
 		Name = "지력",
-		Description = "원거리 대미지 7%, 드랍률 2%",
+		Description = "원거리 피해량 7%, 드랍률 2%",
 	},
 	{
 		Id = "Agility",
 		Name = "민첩",
-		Description = "물리 대미지 3%, 패리·회피 타이밍 3%, 이동속도, 받는 버프 효율 3%",
+		Description = "근접 피해량 3%, 회피 시간·회피 타이밍 3%, 이동속도, 받는 버프 효율 3%",
 	},
 	{
 		Id = "Vitality",
 		Name = "체력",
-		Description = "체력 4, 패리 타이밍 1%, 받는 회복량 1%",
+		Description = "체력 4, 회피 시간 1%, 받는 회복량 1%",
 	},
 	{
 		Id = "Luck",
 		Name = "운",
-		Description = "치명타 확률 0.7%, 치명타 대미지 1.2%, 드랍률 4%, 자동 회피 0.05%",
+		Description = "치명타 확률 0.7%, 치명타 피해량 1.2%, 드랍률 4%, 자동 회피 0.05%",
 	},
 	{
 		Id = "Faith",
 		Name = "신앙심",
-		Description = "기도 대미지 8%, 기도 패널티 -0.5%, 드랍률 2%, 회복·버프 효율",
+		Description = "기도 피해량 8%, 기도 패널티 -0.5%, 드랍률 2%, 회복·버프 효율",
 	},
 }
 

@@ -22,24 +22,24 @@ local normalPools = {
 }
 
 local gimmicks = {
-	{ Id = "None", Name = "고요한 층", Description = "추가 규칙이 없습니다." },
+	{ Id = "None", Name = "고요한 층", Description = "추가 규칙이 없다." },
 	{
 		Id = "EnemyShield",
 		Name = "두꺼운 유약",
-		Description = "적이 층 수에 비례한 보호막을 얻습니다.",
+		Description = "적이 층 수에 비례한 보호막을 얻는다.",
 	},
 	{
 		Id = "OpeningBurn",
 		Name = "과열 가마",
-		Description = "전투 시작 시 파티에 약한 화상이 부여됩니다.",
+		Description = "전투 시작 시 파티에 약한 화상이 걸린다.",
 	},
-	{ Id = "EnemyPower", Name = "불안정 소성", Description = "적 공격력이 추가로 15% 증가합니다." },
+	{ Id = "EnemyPower", Name = "불안정 소성", Description = "적 공격력이 추가로 15% 오른다." },
 	{
 		Id = "PlayerShield",
 		Name = "보호 코팅",
-		Description = "파티가 전투 시작 시 보호막을 얻습니다.",
+		Description = "파티가 전투 시작 시 보호막을 얻는다.",
 	},
-	{ Id = "SkillHaste", Name = "빠른 회전판", Description = "파티 기술 쿨타임이 1턴 감소합니다." },
+	{ Id = "SkillHaste", Name = "빠른 회전판", Description = "파티 기술 재사용 대기가 1턴 줄어든다." },
 }
 
 local floors: { FloorDefinition } = {}

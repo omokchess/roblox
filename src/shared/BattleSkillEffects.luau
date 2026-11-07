@@ -903,7 +903,7 @@ local wallMasonEffects: { [string]: Effect } = {
 				end
 			end
 			applyWall(ctx, holder, stacks)
-			ctx.Log(string.format("벽 %d중첩", BattleStatus.Stack(ctx.StatusOf(holder), R.WALL)))
+			ctx.Log(string.format("벽 %d스택", BattleStatus.Stack(ctx.StatusOf(holder), R.WALL)))
 		end,
 	},
 	-- 뒷벽 허물기: [벽] 중첩 1당 피해 +6%(후열 조준 +).
@@ -921,7 +921,7 @@ local wallMasonEffects: { [string]: Effect } = {
 			for _, ally in targets do
 				applyWall(ctx, ally, stacks)
 			end
-			ctx.Log(string.format("축성 — 벽 %d중첩", BattleStatus.Stack(ctx.Status, R.WALL)))
+			ctx.Log(string.format("축성 — 벽 %d스택", BattleStatus.Stack(ctx.Status, R.WALL)))
 		end,
 	},
 }
@@ -971,7 +971,7 @@ local wallBreakerEffects: { [string]: Effect } = {
 			applyRuin(ctx, math.floor(ctx.Query("SelfCarveRuin", 3)))
 			ctx.Log(
 				string.format(
-					"제 살 깎기 — 체력 %d 소모, 허물 벽 %d중첩",
+					"제 살 깎기 — 체력 %d 소모, 허물 벽 %d스택",
 					cost,
 					BattleStatus.Stack(ctx.Status, R.RUIN)
 				)

@@ -960,7 +960,7 @@ function BattleHud:SetBoss(snapshot: any?)
 			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
-			Text = string.format('<font color="%s">스테미나 부족 — 못 씀</font>  %s', hex(MUTED), table.concat(starved, "  ")),
+			Text = string.format('<font color="%s">스테미나 부족 — 사용 불가</font>  %s', hex(MUTED), table.concat(starved, "  ")),
 			RichText = true,
 			TextWrapped = true,
 			TextColor3 = BODY,
@@ -1220,7 +1220,7 @@ function BattleHud:_paintSlot(index: number)
 		table.insert(parts, string.format('<font color="%s">◆ %d</font>', hex(if lacking then RED else STAMINA), cost))
 	end
 	if (skill.Cooldown or 0) > 0 then
-		table.insert(parts, string.format("쿨 %d", skill.Cooldown))
+		table.insert(parts, string.format("재사용 %d", skill.Cooldown))
 	end
 	slot.Meta.Text = table.concat(parts, "   ")
 	slot.Name.TextTransparency = if lacking then 0.45 else 0
@@ -2066,12 +2066,12 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 	if self.bossTab == "Active" then
 		moves(skillMoves)
 		if #skillMoves == 0 then
-			empty("이 부위는 쓰는 스킬이 없음.")
+			empty("이 부위가 쓰는 스킬은 없다.")
 		end
 	elseif self.bossTab == "Passive" then
 		entries(passives, CRIMSON)
 		if #passives == 0 then
-			empty("이 부위만의 패시브는 없음 — [보스 전체] 탭의 규칙이 모든 부위에 걸림.")
+			empty("이 부위만의 패시브는 없다. [보스 전체] 탭의 규칙이 모든 부위에 적용된다.")
 		end
 	else
 		moves(gimmickMoves)
@@ -2087,7 +2087,7 @@ function BattleHud:ShowBossInfo(snapshot: any, focus: string?)
 			describe(make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = nextOrder() }, self.bossBody), table.concat(def.Rules, "\n"), CRIMSON)
 		end
 		if nGimmick == 0 then
-			empty("이 부위만의 기믹은 없음.")
+			empty("이 부위만의 기믹은 없다.")
 		end
 	end
 
@@ -3063,7 +3063,7 @@ function BattleHud:FlashGrade(role: string, grade: string, word: string)
 	else
 		local text = if grade == "Success" then word elseif grade == "Partial" then "막음" else "피격"
 		-- 결투사 패리는 피해를 다 막지 않는다(GridBattle.PARRY_KEEP — 10% 는 받고 90% 되돌림)
-		local sub = if grade == "Success" and word == "패리" then "받는 피해량 −90%"
+		local sub = if grade == "Success" and word == "패링" then "받는 피해량 −90%"
 			elseif grade == "Success" then "피해 없음"
 			elseif grade == "Partial" then "피해 절반" else "피해 그대로"
 		self:Flash(text, sub, if grade == "Success" then TEAL elseif grade == "Partial" then BONE else RED)

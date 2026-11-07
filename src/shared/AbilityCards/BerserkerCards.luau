@@ -257,8 +257,8 @@ local cards: { Card } = {
 		Id = "Berserker_C_Trance",
 		Art = "Berserker_C_Trance",
 		Name = "무아",
-		Description = "체력이 {30}% 아래일 때, 특수 상태이상을 제외한 디버프의 효과를 {25}% 감소하여 받는다.\n"
-			.. "이 효과는 곱연산으로 계산된다.",
+		Description = "체력이 {30}% 아래일 때, 특수 상태이상을 제외한 디버프의 효과를 {25}% 덜 받는다.\n"
+			.. "이 효과는 곱해서 계산된다.",
 		Levels = { { 30, 30, 30, 30, 30, 30 }, { 25, 30, 35, 40, 45, 50 } },
 		Grade = "Common",
 		ClassId = CLASS_ID,
@@ -385,7 +385,7 @@ local cards: { Card } = {
 		Art = "Berserker_C_Callus",
 		Name = "굳은살",
 		Description = "같은 적에게 연속으로 피격 시 그 적에 한해 해당 전투동안 [받는 피해량]이 {10}% 감소한다.\n"
-			.. "이 효과는 중첩되지 않는다.",
+			.. "이 효과는 스택되지 않는다.",
 		Levels = { { 10, 15, 20, 25 } },
 		Grade = "Common",
 		ClassId = CLASS_ID,

@@ -176,7 +176,7 @@ local cards: { Card } = {
 		Art = "결투사의_레이피어",
 		Name = "날 세우기",
 		Description = "[집중] 스택이 {5} 이상일 때, 적의 [받는 피해량] 감소를 {25}% 무시한다.\n"
-			.. "위 효과는 합연산으로 계산된다.",
+			.. "이 효과는 다른 수치와 더해서 계산된다.",
 		Levels = { { 5, 5, 4, 4, 3, 3 }, { 25, 27, 27, 29, 29, 35 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,
@@ -187,7 +187,7 @@ local cards: { Card } = {
 		MaxLevel = 4,
 		Art = "Duelist_R_Vigil",
 		Name = "경계",
-		Description = "`신경을 곤두세우고 깊은 호흡을 들여` 사용 후 준비자세를 취하는동안 패링을 성공시킬 시 [집중]을 {1} 얻는다.\n"
+		Description = "`신경을 곤두세우고 깊은 호흡을 들여`로 준비 자세를 취하는 동안 패링에 성공하면 [집중]을 {1} 얻는다.\n"
 			.. "(턴당 {1}회)",
 		Levels = { { 1, 1, 1, 1 }, { 1, 2, 3, 4 } },
 		Grade = "Rare",
@@ -313,7 +313,7 @@ local cards: { Card } = {
 		Art = "Duelist_C_LowStance",
 		Name = "자세 낮추기",
 		Description = "같은 태세를 두 턴 이상 유지하면 그 태세 효과가 턴당 {10}%씩, 최대 {30}%까지 증가한다.\n"
-			.. "위 효과는 곱연산으로 계산된다.",
+			.. "이 효과는 곱해서 계산된다.",
 		Levels = { { 10, 12, 14, 15, 15, 15 }, { 30, 40, 50, 60, 70, 80 } },
 		Grade = "Common",
 		ClassId = CLASS_ID,
@@ -324,7 +324,7 @@ local cards: { Card } = {
 		MaxLevel = 1,
 		Art = "결투사의_레이피어",
 		Name = "절제",
-		Description = "공격을 하지 않고 턴을 마치면, 자신의 모든 스킬의 쿨타임이 {1}턴 감소한다.",
+		Description = "공격을 하지 않고 턴을 마치면, 자신의 모든 스킬의 재사용 대기가 {1}턴 감소한다.",
 		Grade = "Common",
 		ClassId = CLASS_ID,
 		Tags = { "Precision" },
@@ -367,8 +367,8 @@ local cards: { Card } = {
 		Id = "Duelist_C_Steady",
 		Art = "Duelist_C_Steady",
 		Name = "안정",
-		Description = "`신경을 곤두세우고 깊은 호흡을 들여 사용 후 준비 자세를 취하는 동안 [받는 피해량]이 {8}% 더 감소한다.\n"
-			.. "위 효과는 합연산으로 계산된다.",
+		Description = "`신경을 곤두세우고 깊은 호흡을 들여`로 준비 자세를 취하는 동안 [받는 피해량]이 {8}% 더 줄어든다.\n"
+			.. "이 효과는 다른 수치와 더해서 계산된다.",
 		Levels = { { 8, 10, 12, 14, 16, 18 } },
 		Grade = "Common",
 		ClassId = CLASS_ID,

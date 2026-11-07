@@ -345,7 +345,7 @@ function MotionValidator.Sanitize(raw: any, enforceBudget: boolean?): (any?, str
 			local attackId = string.sub(tostring(hit.AttackId or "Hit"), 1, 32)
 			local previousRatio = attackRatios[attackId]
 			if previousRatio and math.abs(previousRatio - ratio) > 0.0001 then
-				return nil, "같은 AttackId의 대미지 비율이 서로 다름"
+				return nil, "같은 AttackId의 피해량 비율이 서로 다름"
 			end
 			if not previousRatio then
 				attackRatios[attackId] = ratio
@@ -365,7 +365,7 @@ function MotionValidator.Sanitize(raw: any, enforceBudget: boolean?): (any?, str
 		end
 	end
 	if totalRatio > 1.0001 then
-		return nil, "타격 대미지 비율 합계가 100%를 초과함"
+		return nil, "타격 피해량 비율 합계가 100%를 초과함"
 	end
 	local presetKey = string.sub(tostring(raw.Id or "UserMotion"), 1, 32)
 	local combat, combatError = sanitizeCombat(raw.Combat, presetKey, #frames, enforceBudget)

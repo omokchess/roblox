@@ -54,9 +54,9 @@ local cards: { Card } = {
 		Id = "Alchemist_E_MixAndStrike",
 		Art = "때리면서_섞기",
 		Name = "때리면서 섞기",
-		Description = "`다지기` 스킬에 피해량 {15}가 붙고 범위가 (n,n)이 된다.`섞기` 스킬에 피해량 {20}이 붙고 범위가 (n,n)이 된다.\n"
+		Description = "`다지기`에 피해량 {15}가 붙고 범위가 (n,n)이 된다.\n`섞기`에 피해량 {20}이 붙고 범위가 (n,n)이 된다.\n"
 			.. "각 스킬을 쓸 때마다 [도발]을 {1} 얻는다.\n"
-			.. "각 피해들은 고정피해를 가하며, 버프로 피해량을 증가시킬 수 없다.",
+			.. "이 피해는 고정 피해이며, 버프로 늘릴 수 없다.",
 		Levels = { { 15, 22 }, { 20, 28 }, { 1, 1 } },
 		Grade = "Essential",
 		ClassId = CLASS_ID,
@@ -81,7 +81,7 @@ local cards: { Card } = {
 		Art = "때리면서_섞기",
 		Name = "원샷",
 		Description = "`중독` 스킬 사용 시 [꽉 찬 병]을 소모 후 소모한 모든 [꽉 찬 병]을 돌려받는다.\n"
-			.. "중독을 사용한 턴 이후 {2}턴간 [꽉 찬 병]을 만들지 못한다.",
+			.. "중독을 사용한 턴 이후 {2}턴 동안 [꽉 찬 병]을 만들지 못한다.",
 		Levels = { { 2, 1 } },
 		Grade = "Essential",
 		ClassId = CLASS_ID,
@@ -167,7 +167,7 @@ local cards: { Card } = {
 		Id = "Alchemist_R_Chain",
 		Art = "Alchemist_R_Chain",
 		Name = "연쇄 반응",
-		Description = "`던지기` 적중 시 메인 타겟에게 적용된 디버프 중 {30}%가 인접한 적에게 퍼진다.",
+		Description = "`던지기` 적중 시 주 대상에게 걸린 디버프 중 {30}%가 인접한 적에게 퍼진다.",
 		Levels = { { 30, 36, 42, 48, 54, 60 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,
@@ -178,7 +178,7 @@ local cards: { Card } = {
 		MaxLevel = 2,
 		Art = "포션",
 		Name = "해독제",
-		Description = "자신에게 쌓인 `부작용` 중첩 {1}개를 {2}턴마다 지운다.",
+		Description = "자신에게 쌓인 `부작용` 스택 {1}개를 {2}턴마다 지운다.",
 		Levels = { { 1, 1 }, { 2, 1 } },
 		Grade = "Rare",
 		ClassId = CLASS_ID,
@@ -328,7 +328,7 @@ local cards: { Card } = {
 		Id = "Alchemist_C_Sideeffect",
 		Art = "Alchemist_C_Sideeffect",
 		Name = "부작용 활용",
-		Description = "`부작용` 1중첩마다 `던지기`가 맞힌 적에게 {2} 고정 피해를 더 준다.",
+		Description = "`부작용` 1스택마다 `던지기`가 맞힌 적에게 {2} 고정 피해를 더 준다.",
 		Levels = { { 2, 2.5, 3, 3.5, 4, 5 } },
 		Grade = "Common",
 		ClassId = CLASS_ID,

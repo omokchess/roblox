@@ -20,6 +20,28 @@ local DebugBattlePanel = require(script.DebugBattlePanel)
 local EncounterView = require(script.EncounterView)
 local LevelUpUi = require(script.LevelUpUi)
 
+--[[
+	자동 번역 끄기(2026-11-07 사용자: "한국어 번역좀 어떻게 해봐") — 로블록스 자동 번역이 이미 한국어인 글을 다시 기계 번역해
+	「신경을 곤두세우고 깊은 호흡을 들여」 → 「신경을 예민하게 하고 깊은 호흡을 하기」, 「찔러찔러또찔러」 → 「찌르찌르또찌르」 처럼 바꿨다.
+	모든 화면 글(PlayerGui · 월드의 Billboard/SurfaceGui)에 AutoLocalize = false. 근본 해결은 크리에이터 대시보드의 원본 언어를 한국어로.
+]]
+do
+	local Players = game:GetService("Players")
+	local function keep(inst: Instance)
+		if inst:IsA("GuiBase2d") then
+			inst.AutoLocalize = false
+		end
+	end
+	local function watch(root: Instance)
+		for _, d in root:GetDescendants() do
+			keep(d)
+		end
+		root.DescendantAdded:Connect(keep)
+	end
+	watch(Players.LocalPlayer:WaitForChild("PlayerGui"))
+	watch(workspace)
+end
+
 local remotes = ReplicatedStorage:WaitForChild(Constants.REMOTE_FOLDER)
 -- 광장 카메라 복귀. 모션 에디터(모션 제작·인벤토리 버튼)는 2026-09-29 뺐다(backup/2026-09-29_motion_editor)
 local battle = BattleController.new(remotes)
