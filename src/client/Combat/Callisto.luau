@@ -12,7 +12,7 @@
 
 	사람 모양이라 R6 관절을 그대로 쓴다(CombatRig·전투 모션·무기가 붙는다). 정면 = 모델 -Z(전투에서는 아군 쪽).
 	  옷  셔츠 카탈로그 11985252397 "Mad Scientist Dark Shirt" · 바지 카탈로그 11924564943 "Bondrewd Delver Scientist Black Pants"(아래 SHIRT_TEMPLATE · PANTS_TEMPLATE).
-	      오른팔 = 말레니아식 금빛 의수(2026-11-07 — ReplicatedStorage.CallistoAssets.Prosthetic, models/build_callisto_prosthetic.py · tools/Callisto_Prosthetic.luau)가 손으로 칼 슴베를 쥐고 날이 손에서 이어진다
+	      오른팔 = 말레니아식 금빛 의수(2026-11-07 3판 R6 상자형 — ReplicatedStorage.CallistoAssets.Prosthetic, 안 고르기 V_Prosthetic 1~2, models/build_callisto_prosthetic.py · tools/Callisto_Prosthetic.luau)가 손으로 칼 슴베를 쥐고 날이 손에서 이어진다
         (오른팔 부위는 투명 — 셔츠 소매 대신 의수가 보인다. 의수가 없으면(시험 환경) 지금처럼 소매. 2페이즈에 우주 팔로 바뀌며 함께 사라진다)
       칼 = 무기 CallistoArms Main, 팔 축 고정
 	      (ReplicatedStorage.CallistoAssets.Outfit — 블렌더 옷 4판은 스튜디오에 그대로 남아 있다. 지금은 붙이지 않는다 — 동업자가 옷을 전면 수정할 때 쓸 수 있다.
@@ -498,12 +498,13 @@ end
 
 --=== 말레니아식 의수(오른팔 전체) ===--
 -- ReplicatedStorage.CallistoAssets.Prosthetic(tools/Callisto_Prosthetic.luau) — MeshPart 마다 속성 Offset(오른팔 부위 가운데에서 본 자리), 이름 = 묶음.
--- 색·재질은 여기서 입힌다(바랜 금 · 황동 · 검은 금속 · 별빛). 없으면 빈 목록(시험 환경 — 셔츠 소매 그대로).
+-- 3판(2026-11-07): 형태 = R6 팔 상자(1×2×1) 마디 의수. 색·재질은 여기서 입힌다(광택 금 · 황동 · 검은 금속 · 별빛 · 세공 DetailB). 없으면 빈 목록(시험 환경 — 셔츠 소매 그대로).
 local PROSTHETIC_SKIN: { [string]: { any } } = {
 	Gold = { C(212, 172, 88), Enum.Material.Metal },
 	Brass = { C(150, 116, 60), Enum.Material.Metal },
 	BluedSteel = { C(36, 34, 40), Enum.Material.Metal },
 	Glow = { C(156, 200, 255), Enum.Material.Neon },
+	DetailB = { C(150, 116, 60), Enum.Material.Metal },
 }
 
 local function attachProsthetic(model: Model, arm: BasePart): { BasePart }
@@ -513,7 +514,12 @@ local function attachProsthetic(model: Model, arm: BasePart): { BasePart }
 	if not folder then
 		return made
 	end
+	-- 안 고르기(V_Prosthetic): 1 = 깔끔한 판 · 2 = 세공 많은 판(DetailB 묶음도 붙임 — 한 번 가져온 GLB 에 둘 다 들어 있다)
+	local fancy = require(ReplicatedStorage.Shared.Variant).Index("Prosthetic", 2) == 2
 	for _, src in folder:GetChildren() do
+		if src.Name == "DetailB" and not fancy then
+			continue
+		end
 		local offset = src:GetAttribute("Offset")
 		if not src:IsA("MeshPart") or typeof(offset) ~= "CFrame" then
 			continue

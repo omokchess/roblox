@@ -2,7 +2,7 @@
 --[[
 	Callisto_Prosthetic.luau — 2026-11-07. 블렌더 의수(models/build_callisto_prosthetic.py → models/CallistoProsthetic.glb)를 3D 가져오기로 넣은 뒤
 	MeshPart 을 ReplicatedStorage.CallistoAssets.Prosthetic 으로 옮긴다. 클라이언트 Combat/Callisto(attachProsthetic)가 복제해 오른팔 부위에 용접한다.
-	  메시 이름 CallistoProsthetic_<묶음> — Gold(금판) · Brass(황동 덩굴·고리) · BluedSteel(이음부) · Glow(별빛). 묶음 이름 그대로 Prosthetic 아래 이름이 된다.
+	  메시 이름 CallistoProsthetic_<묶음> — Gold(금판) · Brass(테·세공) · BluedSteel(이음매) · Glow(별빛) · DetailB(B안 전용 짙은 세공). 묶음 이름 그대로 Prosthetic 아래 이름이 된다.
 	  원점 표지 WeaponsOrigin_Marker = 오른팔 부위 가운데 1×1×1 — 자리를 빼서 원점을, 크기로 스터드 배율(k)을 되찾는다.
 	  MeshPart 마다 속성 Offset(오른팔 부위 가운데에서 본 CFrame). 색·재질은 가져오기가 붙인 SurfaceAppearance 를 걷고 코드(Callisto.luau PROSTHETIC_SKIN)가 입힌다.
 	같은 의수를 다시 가져오면 그 묶음만 갈아 끼운다. 보고: /calprosthetic
