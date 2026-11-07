@@ -140,6 +140,8 @@ export type CallistoState = {
 	StarUsed: boolean?,
 	-- 2026-11-06 개선안 3절 R2: 평타를 연달아 쓴 수(2 이면 다음 턴 재사용 1 이하 남은 기술을 바로 쓴다)
 	Basics: number?,
+	-- 2026-11-07 3페이즈 기술 돌림판: 마지막으로 고른 칸 번호
+	Mix: number?,
 	-- 2026-11-06 개선안 2절: 알리오스 장판 6칸(예고 때 정함 — 턴 끝 피해는 이 칸 안에 서 있을 때만)
 	AliothCells: { { number } }?,
 	-- 2026-11-06 궁극기 보장: 이 페이즈에서 지나간 턴 수 · 궁극기(아스트로 세시·북두칠성)를 썼나 · [작은 곰 자리]를 얻은 다음 턴 아스트로 세시
@@ -1891,7 +1893,7 @@ local function callistoNextPage(state: State, unit: Unit, c: CallistoState)
 	BattleStatus.SpendAll(unit.Status, ClassResources.BLINK)
 	c.Page = nextPage
 	c.Cycle, c.Slot, c.Opened, c.Cooldowns = 1, 1, false, {}
-	c.PageTurns, c.UltUsed, c.UltNext, c.Basics = 0, false, nil, 0
+	c.PageTurns, c.UltUsed, c.UltNext, c.Basics, c.Mix = 0, false, nil, 0, 0
 	local health = math.max(1, math.floor(page.Health * c.HealthScale))
 	unit.MaxHealth, unit.Health = health, health
 	-- 1페이즈 것 정리: 작은 곰 자리 · 아군 고찰(심베라즈마가 3페이즈엔 없다)
@@ -2847,10 +2849,10 @@ local function setGochal(unit: Unit, on: boolean)
 	end
 end
 
--- 칠성군(2페이즈 체력 65% 미만): 알리오스·메그레즈·페크다·메라크를 쓸 때마다 [성위 - 칠성] 1(2026-11-01 질문 11-A — 스킬마다 한 번
+-- 칠성군(2·3페이즈 체력 65% 미만): 알리오스·메그레즈·페크다·메라크를 쓸 때마다 [성위 - 칠성] 1(2026-11-01 질문 11-A — 스킬마다 한 번
 -- 제한 없음, 같은 스킬로 여러 번). 7 이면 다음 턴 북두칠성 고정
 local function sevenStar(state: State, c: CallistoState, unit: Unit, _star: string)
-	if c.Page ~= 2 or c.Dipper or not unit.Alive or unit.Health >= unit.MaxHealth * CHILSEONG_RATIO then
+	if c.Page < 2 or c.Dipper or not unit.Alive or unit.Health >= unit.MaxHealth * CHILSEONG_RATIO then
 		return
 	end
 	BattleStatus.AddStack(unit.Status, ClassResources.SEVEN, 1, SEVEN_MAX)
@@ -2966,6 +2968,10 @@ local function callistoBasics(c: CallistoState, id: string?)
 	end
 end
 
+-- 2페이즈 우선순위(위에서부터 쓸 수 있는 첫 기술) · 3페이즈 돌림판 순서
+local P2_CHAIN = { "CallistoAlcor", "CallistoAlioth", "CallistoPhecda", "CallistoMerak", "CallistoMegrez" }
+local P3_MIX = { "CallistoArtificial", "CallistoShower", "CallistoAlioth", "CallistoMerak", "CallistoAlcor", "CallistoPhecda", "CallistoMegrez" }
+
 -- 이번 턴 쓸 스킬(행동 박자 — 위 설명). 고르면서 바퀴·자리·재사용 대기를 넘긴다
 local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Unit): string
 	if c.Page >= 2 then
@@ -2982,14 +2988,24 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 		BattleStatus.AddStack(unit.Status, ClassResources.URSA_MINOR, 1, 1)
 		return "CallistoAstro"
 	end
-	if c.Page == 2 and not c.UltUsed and not c.Dipper and c.PageTurns >= ULT_FORCE_TURN_P2 then
+	if c.Page >= 2 and not c.UltUsed and not c.Dipper and c.PageTurns >= ULT_FORCE_TURN_P2 then
 		c.Dipper = true
 		pushLog(state, "메갈리 아르크토스 — 일곱 별이 다 차기 전에 북두칠성이 떨어진다")
 	end
-	if c.Page == 2 then
+	--[[
+		2페이즈 이상: 3페이즈는 2페이즈 기술을 전부 함께 쓴다(2026-11-07 사용자: "3페이즈에선 2페이즈때 썼던 패턴들을 다 쓸 수 있게도 해줘").
+		3페이즈 차례 = 잠기리(첫 턴) → 북두칠성(고정되면) → 돌림판[인위적 별자리 · 쏟아지는 뭇별 · 알리오스 · 메라크 · 알코르 · 페크다 · 메그레즈] → 평타.
+		3페이즈는 케노스 두 번(4턴)을 빼면 5~6번밖에 못 골라서 한 줄 우선순위로 하면 앞 몇 개만 반복한다 — 돌림판으로 한 번씩 돌게 한다
+		(쓸 수 없는 칸[쿨타임·조건]은 건너뜀). 2페이즈는 옛 우선순위 그대로.
+		재사용 대기는 한 장부를 같이 쓰고, 칠성·북두칠성·궁극기 보장(6번째 턴)도 2페이즈와 같은 규칙. 평타는 3페이즈에서 두 가지를 번갈아.
+	]]
+	if c.Page >= 2 then
 		local cd = c.Cooldowns
 		local id
-		if c.Dipper then
+		if c.Page >= 3 and not c.Opened then
+			c.Opened = true
+			id = "CallistoSubmerge"
+		elseif c.Dipper then
 			-- 메갈리 아르크토스: 고정된 북두칠성 — 쓰면 칠성·별 초기화
 			id = "CallistoDipper"
 			c.UltUsed = true
@@ -2997,18 +3013,35 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 			c.DipperBonus = 0.1 * stackOf(unit, ClassResources.BLINK)
 			BattleStatus.SpendAll(unit.Status, ClassResources.BLINK)
 			BattleStatus.SpendAll(unit.Status, ClassResources.SEVEN)
-		elseif not alcorAlive(state, c) and (cd.CallistoAlcor or 0) <= 0 then
-			id = "CallistoAlcor"
-		elseif c.Aliot <= 0 and (cd.CallistoAlioth or 0) <= 0 then
-			id = "CallistoAlioth"
-		elseif (cd.CallistoPhecda or 0) <= 0 and (stackOf(ally, ClassResources.SEONGWI) >= 4 or stackOf(ally, ClassResources.MUTBYEOL) > 0) then
-			id = "CallistoPhecda"
-		elseif (cd.CallistoMerak or 0) <= 0 then
-			id = "CallistoMerak"
-		elseif (cd.CallistoMegrez or 0) <= 0 and stackOf(ally, ClassResources.ALKAID) > 0 then
-			id = "CallistoMegrez"
 		else
-			id = "CallistoBuried"
+			local function ready(k: string): boolean
+				if (cd[k] or 0) > 0 then
+					return false
+				elseif k == "CallistoAlcor" then
+					return not alcorAlive(state, c)
+				elseif k == "CallistoAlioth" then
+					return c.Aliot <= 0
+				elseif k == "CallistoPhecda" then
+					return stackOf(ally, ClassResources.SEONGWI) >= 4 or stackOf(ally, ClassResources.MUTBYEOL) > 0
+				elseif k == "CallistoMegrez" then
+					return stackOf(ally, ClassResources.ALKAID) > 0
+				end
+				return true
+			end
+			local list = if c.Page >= 3 then P3_MIX else P2_CHAIN
+			for i = 0, #list - 1 do
+				local at = ((if c.Page >= 3 then c.Mix or 0 else 0) + i) % #list + 1
+				if ready(list[at]) then
+					id = list[at]
+					if c.Page >= 3 then
+						c.Mix = at
+					end
+					break
+				end
+			end
+			if not id then
+				id = if c.Page >= 3 and c.PageTurns % 2 == 0 then "CallistoResonance" else "CallistoBuried"
+			end
 		end
 		local skill = BattleSkills.ById(id)
 		if skill and skill.BossCooldown then
@@ -3016,25 +3049,6 @@ local function callistoPick(state: State, c: CallistoState, unit: Unit, ally: Un
 		end
 		if SEVEN_SKILLS[id] then
 			sevenStar(state, c, unit, id)
-		end
-		callistoBasics(c, id)
-		return id
-	end
-	if c.Page >= 3 then
-		local id
-		if not c.Opened then
-			c.Opened = true
-			id = "CallistoSubmerge"
-		elseif (c.Cooldowns.CallistoArtificial or 0) <= 0 then
-			id = "CallistoArtificial"
-		elseif (c.Cooldowns.CallistoShower or 0) <= 0 then
-			id = "CallistoShower"
-		else
-			id = "CallistoResonance"
-		end
-		local skill = BattleSkills.ById(id)
-		if skill and skill.BossCooldown then
-			c.Cooldowns[id] = skill.BossCooldown
 		end
 		callistoBasics(c, id)
 		return id
@@ -3354,7 +3368,7 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 		return
 	end
 	local zone, safe = callistoZone(state, rng, id, here)
-	if c.Page == 2 then
+	if c.Page >= 2 then
 		c.Swing = { Hit = false }
 		if id == "CallistoAlioth" then
 			c.Aliot = ALIOTH_TURNS
@@ -3634,7 +3648,7 @@ local function callistoEndTurn(state: State, c: CallistoState)
 			pushLog(state, ally.Name .. " — 내던져져 [묶임] (다음 턴 움직일 수 없다)")
 		end
 	end
-	if c.Page ~= 2 or not unit.Alive then
+	if c.Page < 2 or not unit.Alive then
 		c.Swing = nil
 		return
 	end
@@ -4512,7 +4526,7 @@ function GridBattle.Snapshot(state: State): any
 			AliothCells = if callisto.AliothCells then table.clone(callisto.AliothCells) else nil,
 			AlcorId = if alcorAlive(state, callisto) then callisto.AlcorId else nil,
 			Dipper = callisto.Dipper,
-			Chilseong = callisto.Page == 2 and unit ~= nil and unit.Health < unit.MaxHealth * CHILSEONG_RATIO,
+			Chilseong = callisto.Page >= 2 and unit ~= nil and unit.Health < unit.MaxHealth * CHILSEONG_RATIO,
 			-- 별자리 칸(추적 공격이 비껴감 / 솔로면 올라서면 회복+별빛 가호 — 여기서 턴을 마치면 성위)
 			Lure = if callisto.Lure then table.clone(callisto.Lure) else nil,
 			LureSeongwi = LURE_SEONGWI,

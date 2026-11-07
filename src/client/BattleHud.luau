@@ -2172,6 +2172,8 @@ function BattleHud:SetCallisto(snapshot: any?)
 	elseif view.Page >= 3 then
 		-- 시험 종료(1%) 눈금
 		make("Frame", { Position = UDim2.fromScale(0.01, 0), Size = UDim2.new(0, 2, 1, 0), BackgroundColor3 = TEAL, BorderSizePixel = 0 }, track)
+		-- 3페이즈도 2페이즈 기술을 쓰므로 칠성군(65%) 눈금
+		make("Frame", { Position = UDim2.fromScale(0.65, 0), Size = UDim2.new(0, 2, 1, 0), BackgroundColor3 = GOLD, BorderSizePixel = 0 }, track)
 	end
 	local chips = make("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = 3 }, bar)
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, chips)
@@ -2186,7 +2188,7 @@ function BattleHud:SetCallisto(snapshot: any?)
 	if (view.Field or 0) > 0 then
 		add(string.format("뭇별 아래에 잠기리 — 장판 %d턴", view.Field), STARLIGHT)
 	end
-	if view.Page == 2 then
+	if view.Page >= 2 then
 		if view.Dipper then
 			add("다음 턴 북두칠성!", RED)
 		end

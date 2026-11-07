@@ -191,49 +191,7 @@ end
 	안전장치: 터지지 않으면 8초 뒤 저절로 터진다.
 ]]
 local function glowLine(a: Vector3, b: Vector3, width: number, grow: number): any
-	local len = math.max(0.05, (b - a).Magnitude)
-	local look = CFrame.lookAt(a, b)
-	local core = CombatVfx.Part(Vector3.new(width, width, 0.05), look, WHITE)
-	local glow = CombatVfx.Part(Vector3.new(width * 2.6, width * 2.6, 0.05), look, STAR)
-	glow.Transparency = 0.7
-	local function set(l: number, w: number)
-		local cf = look * CFrame.new(0, 0, -l / 2)
-		core.Size, core.CFrame = Vector3.new(w, w, l), cf
-		glow.Size, glow.CFrame = Vector3.new(w * 2.6, w * 2.6, l), cf
-	end
-	local obj = { A = a, B = b, Gone = false }
-	CombatVfx.Timed(grow, function(t)
-		if not obj.Gone then
-			set(math.max(0.05, len * t), width)
-		end
-	end)
-	function obj.Flare(p: Vector3)
-		if obj.Gone then
-			return
-		end
-		CombatVfx.Flash(p, { Color = WHITE, Size = 3.5, Life = 0.2, Brightness = 6 })
-		CombatVfx.Burst(p, { Count = 6, Colors = { STAR, WHITE }, Size = 0.18, Speed = 10, Gravity = 6, Life = 0.4 })
-		CombatVfx.Timed(0.18, function(t)
-			if not obj.Gone then
-				set(len, width * (1 + 1.6 * (1 - t)))
-			end
-		end)
-	end
-	function obj.Burst()
-		if obj.Gone then
-			return
-		end
-		obj.Gone = true
-		CombatVfx.Timed(0.4, function(t)
-			set(len, width * (1 + 6 * t))
-			core.Transparency, glow.Transparency = t, 0.7 + 0.3 * t
-		end, function()
-			core:Destroy()
-			glow:Destroy()
-		end)
-	end
-	task.delay(8, obj.Burst)
-	return obj
+	return Common.GlowLine(a, b, width, grow, { Core = WHITE, Glow = STAR, Flash = WHITE, Burst = { STAR, WHITE } }) -- 공용으로 옮김(2026-11-07)
 end
 
 -- 화면 위 GUI(제목 카드 · 레터박스) 바탕. 관전 화면(Quiet)이나 PlayerGui 가 없으면 nil

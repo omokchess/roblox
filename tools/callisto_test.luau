@@ -922,4 +922,50 @@ do
 	print("12 2026-11-06 개선안(케노스·범위 4종·R1~R3·쿨타임·3비트 QTE) OK")
 end
 
+--=== 13. 2026-11-07 사용자: "3페이즈에선 2페이즈때 썼던 패턴들을 다 쓸 수 있게" ===--
+do
+	local function toP3()
+		local s = battle()
+		GridBattle.DebugHitPart(s, s.Callisto.UnitId, 999999)
+		GridBattle.DebugHitPart(s, s.Callisto.UnitId, 999999)
+		GridBattle.EndTurn(s)
+		return s
+	end
+	local s = toP3()
+	local b = boss(s)
+	local seen, hist = {}, {}
+	local sevenMax = 0
+	for i = 1, 14 do
+		-- 체력을 64% 에 붙들어 케노스(70%)는 한 번만, 칠성군(65% 미만)은 켠다. 장판이 깎은 체력은 되돌린다
+		b.Health = math.floor(b.MaxHealth * 0.64)
+		GridBattle.Ally(s).Health = GridBattle.Ally(s).MaxHealth
+		GridBattle.EnemyPlan(s, rng)
+		local id = b.Plan and b.Plan.SkillId
+		if id == nil then
+			for _, ev in s.Events do
+				if ev.Kind == "Cast" and ev.SkillId then
+					id = ev.SkillId
+				end
+			end
+		end
+		sevenMax = math.max(sevenMax, stack(b, ClassResources.SEVEN))
+		for _, t in GridBattle.PlannedThreatList(s) do
+			GridBattle.ResolveDodge(s, t.Unit.Id, if rng() < 0.5 then "Success" else "Fail", t.Index)
+		end
+		GridBattle.EndTurn(s)
+		table.insert(hist, tostring(id))
+		seen[id or "-"] = (seen[id or "-"] or 0) + 1
+		if i >= 3 and hist[i] == hist[i - 1] and hist[i] == hist[i - 2] and (id == "CallistoBuried" or id == "CallistoResonance" or id == "CallistoAlioth" or id == "CallistoShower") then
+			error("실패: 3페이즈 같은 기술 3연속 — " .. table.concat(hist, ","))
+		end
+	end
+	local all = table.concat(hist, ",")
+	check(hist[1] == "CallistoSubmerge" and (seen.CallistoSubmerge or 0) == 1, "3페이즈 첫 턴 잠기리 한 번만 — " .. all)
+	for _, need in { "CallistoArtificial", "CallistoShower", "CallistoAlcor", "CallistoAlioth", "CallistoPhecda", "CallistoMerak", "CallistoMegrez", "CallistoDipper", "CallistoKenos" } do
+		check(seen[need], "3페이즈에 " .. need .. " 가 나온다 — " .. all)
+	end
+	check(sevenMax >= 1, "3페이즈에서도 칠성이 쌓인다")
+	print("13 3페이즈 2페이즈 기술 섞기 OK — " .. all)
+end
+
 print("칼리스토 규칙: 모두 통과")

@@ -282,6 +282,81 @@ function Common.SeptScar(a: Vector3, b: Vector3, pal: { [string]: any }?, total:
 end
 
 --[[
+	남는 빛 선(2026-11-07 조율자 메라크 · 칼리스토 메라크가 같이 쓴다): grow 초에 a → b 로 자라 남아 있다가, Flare(점)로 그 자리가 번쩍 터지고 Burst 로 통째로 터진다.
+	안전장치: 터지지 않으면 8초 뒤 저절로 터진다. pal = { Core, Glow, Flash, Burst = { 색들 } } (기본 = 조율자 별빛)
+]]
+function Common.GlowLine(a: Vector3, b: Vector3, width: number, grow: number, pal: { [string]: any }?): any
+	local p = pal or SEPT_PAL
+	local len = math.max(0.05, (b - a).Magnitude)
+	local look = CFrame.lookAt(a, b)
+	local core = CombatVfx.Part(Vector3.new(width, width, 0.05), look, p.Core or SEPT_PAL.Core)
+	local glow = CombatVfx.Part(Vector3.new(width * 2.6, width * 2.6, 0.05), look, p.Glow or SEPT_PAL.Glow)
+	glow.Transparency = 0.7
+	local function set(l: number, w: number)
+		local cf = look * CFrame.new(0, 0, -l / 2)
+		core.Size, core.CFrame = Vector3.new(w, w, l), cf
+		glow.Size, glow.CFrame = Vector3.new(w * 2.6, w * 2.6, l), cf
+	end
+	local obj = { A = a, B = b, Gone = false }
+	CombatVfx.Timed(grow, function(t)
+		if not obj.Gone then
+			set(math.max(0.05, len * t), width)
+		end
+	end)
+	function obj.Flare(at: Vector3)
+		if obj.Gone then
+			return
+		end
+		CombatVfx.Flash(at, { Color = p.Flash or SEPT_PAL.Flash, Size = 3.5, Life = 0.2, Brightness = 6 })
+		CombatVfx.Burst(at, { Count = 6, Colors = p.Burst or SEPT_PAL.Burst, Size = 0.18, Speed = 10, Gravity = 6, Life = 0.4 })
+		CombatVfx.Timed(0.18, function(t)
+			if not obj.Gone then
+				set(len, width * (1 + 1.6 * (1 - t)))
+			end
+		end)
+	end
+	function obj.Burst()
+		if obj.Gone then
+			return
+		end
+		obj.Gone = true
+		CombatVfx.Timed(0.4, function(t)
+			set(len, width * (1 + 6 * t))
+			core.Transparency, glow.Transparency = t, 0.7 + 0.3 * t
+		end, function()
+			core:Destroy()
+			glow:Destroy()
+		end)
+	end
+	task.delay(8, obj.Burst)
+	return obj
+end
+
+--[[
+	별이 점들을 차례로 곧게 가로지른다(알리오스 문법 — 2026-11-07 칼리스토 알리오스 · 메그레즈).
+	pts = 지나갈 점들, times[k] = k 번째 다리 시간(모자라면 마지막 값), onLand(k, 자리) = k 번째 다리가 닿은 순간 덧붙일 연출
+]]
+function Common.StarZig(ctx: any, pts: { Vector3 }, times: { number }, pal: { [string]: any }?, onLand: ((number, Vector3) -> ())?)
+	local p = pal or SEPT_PAL
+	local t0 = 0
+	for k = 1, #pts - 1 do
+		local a, b, d = pts[k], pts[k + 1], times[k] or times[#times]
+		task.delay(t0, function()
+			ctx.Vfx.Projectile(a, b, { Time = d, Color = p.Flash or SEPT_PAL.Flash, TrailColor = p.Glow or SEPT_PAL.Glow })
+			ctx.Vfx.Beam(a, b, { Color = p.Glow or SEPT_PAL.Glow, Width = 0.5, Life = d + 0.35 })
+		end)
+		task.delay(t0 + d, function()
+			ctx.Vfx.Flash(b, { Color = p.Flash or SEPT_PAL.Flash, Size = 3.5, Life = 0.2, Brightness = 5 })
+			ctx.Vfx.Sparks(b, { Color = p.Core or SEPT_PAL.Core, Count = 6, Speed = 14 })
+			if onLand then
+				onLand(k, b)
+			end
+		end)
+		t0 += d
+	end
+end
+
+--[[
 	범위(광역) 연출 공용 (2026-11-07 사용자: "전체 광역기가 뭔가 단일 대상만 때리는 느낌이야 … 칸 전체를 때리는 느낌이 나게").
 	칸마다 같은 것을 찍지는 않되, 범위 전체(앞뒤 · 옆 길이)에 크기를 맞추고 범위 면을 고르게 덮는다.
 	Area = { Mid, F, R, U0, U1, V0, V1, Radius } — 가운데 · 앞 단위 · 옆 단위 · 앞뒤(u) 범위 · 옆(v) 범위(가운데 기준) · 긴 변의 반
