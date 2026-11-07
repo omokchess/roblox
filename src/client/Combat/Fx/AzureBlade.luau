@@ -369,6 +369,10 @@ function Fx.LineStrike(ctx: any, _ev: any, at: Vector3?)
 	local s = st(ctx)
 	local lines = s.waveLines or {}
 	s.waveLines = {}
+	if #lines > 0 then -- 행 전체를 덮는 면(첫 대상 때 한 번 — 2026-11-07)
+		local home = ctx.Actor.Home.Position
+		Common.AreaFill(ctx, Common.LineArea(ctx, home, home + ctx.Forward * rowReach(ctx), 4), ICE, { Core = WHITE, Quick = true })
+	end
 	for _, m in lines do
 		if m.From then
 			ctx.Vfx.Lightning(m.From, m.To, { Color = ICE })

@@ -562,6 +562,7 @@ function Fx.MegrezFling(ctx: any)
 	end)
 	task.delay(0.28, function()
 		line(ctx, a, b, STAR, 0.5, 0.4)
+		Common.AreaFill(ctx, Common.LineArea(ctx, a, b, 4), STAR, { Core = WHITE, Quick = true }) -- 열 전체를 덮는 면(2026-11-07)
 		fb(ctx.Vfx, b, { Texture = TEX.Shock, Size = 5, Color = STAR, Life = 0.35, LightEmission = 0.9, Transparency = 0.45 })
 	end)
 end
@@ -602,6 +603,7 @@ function Fx.MerakBurst(ctx: any, ev: any, at: Vector3?)
 		if i >= 6 then
 			obj.Burst()
 			ctx.Vfx.Flash(obj.A:Lerp(obj.B, 0.5), { Color = WHITE, Size = 10, Life = 0.35, Brightness = 6 })
+			Common.AreaFill(ctx, Common.LineArea(ctx, obj.A, obj.B, 4), STAR, { Core = WHITE }) -- 행 전체를 덮는 면(2026-11-07)
 			-- 마지막 통째 폭발: 별 폭발 · 성운(번지는 푸른 구름) · 선 따라 연달아 터지는 불꽃
 			local mid = obj.A:Lerp(obj.B, 0.5)
 			fb(ctx.Vfx, mid, { Texture = TEX.Explosion, Size = 14, Color = STAR, Life = 0.5, LightEmission = 0.9, Transparency = 0.4 })
@@ -1236,6 +1238,7 @@ function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 		local center = ctx.EnemyCenter
 		local floor = Vector3.new(center.X, ctx.Ground + 0.1, center.Z)
 		ctx.Vfx.Flash(center + Vector3.new(0, 3, 0), { Color = FUSION, Size = 30, Life = 0.6, Brightness = 10 })
+		Common.AreaFill(ctx, Common.FieldArea(ctx), STAR, { Core = WHITE }) -- 진형 전체 면(2026-11-07)
 		-- 강타의 성운: 별 폭발 · 번지는 푸른 성운 구름 · 룬 고리처럼 퍼지는 충격 · 별가루 비(흰 섬광은 위 Flash 하나뿐)
 		fb(ctx.Vfx, center + Vector3.new(0, 3, 0), { Texture = TEX.Explosion, Size = 26, Color = STAR, Life = 0.7, LightEmission = 0.9, Transparency = 0.4 })
 		fb(ctx.Vfx, center + Vector3.new(0, 5, 0), { Texture = TEX.Energy, Size = 24, Color = PALE, Life = 1.1, LightEmission = 0.9, Transparency = 0.6 })

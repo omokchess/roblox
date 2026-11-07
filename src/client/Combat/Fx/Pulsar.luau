@@ -143,6 +143,11 @@ end
 -- 섬광: 시전자 앞에서 눈부신 빛이 터지고, 대상 줄을 따라 번쩍임이 달린다
 function Fx.Flare(ctx: any, _ev: any, at: Vector3?)
 	local Vfx = ctx.Vfx
+	-- 맞은 적이 여럿이면 범위 전체를 한 번 덮는다(단일 대상처럼 보이지 않게 — 2026-11-07)
+	local area = Common.TargetsArea(ctx)
+	if area and Common.Once(ctx, "Flare") then
+		Common.AreaFill(ctx, area, CYAN, { Core = WHITE })
+	end
 	local chest = ctx.Root.Position + ctx.Forward * 0.8 + Vector3.new(0, 0.4, 0)
 	Vfx.Flash(chest, { Color = WHITE, Size = 14, Life = 0.2, Brightness = 6 })
 	Vfx.Ring(CFrame.lookAt(chest, chest + ctx.Forward), { R0 = 0.5, R1 = 6, Color = WHITE, Life = 0.4, Width = 0.3, Facing = true })

@@ -349,6 +349,14 @@ end
 
 function Fx.PanicHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
+	-- 아군 진영 전체를 덮는 충격 — 범위 전체 면을 한 번 덮는다(단일 대상처럼 보이지 않게 — 2026-11-07)
+	if ctx.AllyTiles and #ctx.AllyTiles > 0 and Common.Once(ctx, "PanicHit") then
+		local cells = {}
+		for _, tile in ctx.AllyTiles do
+			table.insert(cells, tile.Position)
+		end
+		Common.AreaFill(ctx, Common.AreaOf(ctx, cells), c(150, 100, 255), { Core = MAGENTA })
+	end
 	local g = Vector3.new(p.X, ctx.Ground + 0.2, p.Z)
 	ctx.Vfx.Flash(p, { Color = c(170, 120, 255), Size = 14, Life = 0.4, Brightness = 8 })
 	ctx.Vfx.Shockwave(g, { Color = c(150, 100, 255), Radius = 24, Life = 0.6 })

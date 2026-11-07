@@ -47,57 +47,14 @@ end
 	공격 연출은 칸 개수만큼 복제하지 않고, 칸 목록을 "모양"(가운데 · 앞뒤 u · 옆 v 범위 · 반지름)으로만 읽어 하나의 연출로 낸다.
 	(예고 칸은 판이 이미 보여 준다 — 바닥에는 외곽선 Beam 과 낮은 빛만, 칸을 덮는 두꺼운 것은 두지 않는다)
 ]]
-type Area = { Mid: Vector3, F: Vector3, R: Vector3, U0: number, U1: number, V0: number, V1: number, Radius: number }
-local function areaOf(ctx: any, cells: { Vector3 }): Area
-	local sum = Vector3.zero
-	for _, p in cells do
-		sum += p
-	end
-	local mid = sum / math.max(1, #cells)
-	local f = ctx.Forward
-	local r = f:Cross(Vector3.yAxis)
-	local u0, u1, v0, v1 = 0, 0, 0, 0
-	for _, p in cells do
-		local d = p - mid
-		u0, u1 = math.min(u0, d:Dot(f)), math.max(u1, d:Dot(f))
-		v0, v1 = math.min(v0, d:Dot(r)), math.max(v1, d:Dot(r))
-	end
-	local m = 3 -- 반 칸
-	u0, u1, v0, v1 = u0 - m, u1 + m, v0 - m, v1 + m
-	return { Mid = mid, F = f, R = r, U0 = u0, U1 = u1, V0 = v0, V1 = v1, Radius = math.max(u1 - u0, v1 - v0) / 2 }
+-- 범위 도구는 Fx/Common 에 있다(다른 직업의 광역기도 같이 쓴다)
+local areaOf = function(ctx: any, cells: { Vector3 }): any
+	return Common.AreaOf(ctx, cells)
 end
-
--- 범위 안의 한 점(앞 u · 옆 v · 높이 y)
-local function areaAt(a: Area, u: number, v: number, y: number?): Vector3
-	return a.Mid + a.F * u + a.R * v + Vector3.new(0, y or 0, 0)
-end
-
--- 범위 외곽선: 직사각형 네 변을 바닥 위 Beam 으로 긋는다
-local function outline(ctx: any, a: Area, color: Color3, life: number, y: number?)
-	local h = ctx.Ground + (y or 0.25) - a.Mid.Y
-	local c1, c2, c3, c4 = areaAt(a, a.U0, a.V0, h), areaAt(a, a.U0, a.V1, h), areaAt(a, a.U1, a.V1, h), areaAt(a, a.U1, a.V0, h)
-	for _, pair in { { c1, c2 }, { c2, c3 }, { c3, c4 }, { c4, c1 } } do
-		ctx.Vfx.Beam(pair[1], pair[2], { Color = color, Width = 0.2, Life = life })
-	end
-end
-
--- 빛의 장막: p0 → p1 을 잇는 얇고 긴 세로 판이 솟았다가 옅어지며 사라진다
-local function curtain(ctx: any, p0: Vector3, p1: Vector3, color: Color3, height: number, life: number)
-	local len = math.max(0.5, (p1 - p0).Magnitude)
-	local dir = (p1 - p0) / len
-	local mid = (p0 + p1) / 2
-	local wall = ctx.Vfx.Part(Vector3.new(len, 0.1, 0.25), CFrame.fromMatrix(mid, dir, Vector3.yAxis), color)
-	wall.Transparency = 1
-	ctx.Vfx.Timed(life, function(alpha)
-		local rise = math.min(1, alpha / 0.25)
-		local h = height * (1 - (1 - rise) ^ 3)
-		wall.Size = Vector3.new(len, h, 0.25)
-		wall.CFrame = CFrame.fromMatrix(mid + Vector3.new(0, h / 2, 0), dir, Vector3.yAxis)
-		wall.Transparency = 0.35 + 0.65 * math.clamp((alpha - 0.3) / 0.7, 0, 1)
-	end, function()
-		wall:Destroy()
-	end)
-end
+local areaAt = Common.AreaAt
+local outline = Common.Outline
+local curtain = Common.Curtain
+local fillArea = Common.AreaFill
 
 local function center(points: { Vector3 }): Vector3
 	local sum = Vector3.zero
@@ -404,9 +361,11 @@ function Fx.LensBurn(ctx: any)
 	end
 	task.delay(0.5, function()
 		outline(ctx, a, STAR, 0.5)
-		Vfx.Pillar(mid, { Color = STAR, Life = 0.5, Height = 9, Width = 2.4 })
-		boltFb(ctx, mid + Vector3.new(0, 4, 0), 12, STAR_CORE)
-		Vfx.Pack("Big/Lighting-01", CFrame.new(mid), { Color = STAR, Size = 0.4 })
+		-- 범위 크기에 맞춰 키운다: 기둥 굵기 · 번개 시트 · 번개 팩 모두 범위 반지름에 비례 + 범위 전체 면을 덮는 묶음
+		Vfx.Pillar(mid, { Color = STAR, Life = 0.5, Height = 9, Width = math.clamp(a.Radius * 0.35, 2.4, 6) })
+		boltFb(ctx, mid + Vector3.new(0, 4, 0), math.max(12, a.Radius * 1.6), STAR_CORE)
+		Vfx.Pack("Big/Lighting-01", CFrame.new(mid), { Color = STAR, Size = math.max(0.4, a.Radius / 18) })
+		fillArea(ctx, a, STAR, { Core = STAR_CORE })
 	end)
 end
 
@@ -433,8 +392,9 @@ function Fx.BladeStorm(ctx: any)
 	local ar = areaOf(ctx, reach(ctx, "Astro"))
 	task.delay(0.4, function()
 		Vfx.Ring(CFrame.new(Vector3.new(ar.Mid.X, ctx.Ground + 0.2, ar.Mid.Z)), { R0 = 1, R1 = ar.Radius + 2, Color = STAR, Life = 0.4, Width = 0.35, Height = 0.07 })
-		Vfx.Pack("Anime/Slashes-01", CFrame.new(ar.Mid + Vector3.new(0, 1.4, 0)), { Color = STAR, Size = 1.1 })
-		impactFb(ctx, ar.Mid + Vector3.new(0, 1.2, 0), 6, STAR)
+		Vfx.Pack("Anime/Slashes-01", CFrame.new(ar.Mid + Vector3.new(0, 1.4, 0)), { Color = STAR, Size = math.max(1.1, ar.Radius / 6) })
+		impactFb(ctx, ar.Mid + Vector3.new(0, 1.2, 0), math.max(6, ar.Radius * 1.2), STAR)
+		fillArea(ctx, ar, STAR, { Core = STAR_CORE, Quick = true })
 		outline(ctx, ar, STAR, 0.45)
 	end)
 end
@@ -523,7 +483,7 @@ function Fx.StarShower(ctx: any, ev: any)
 	chargeFb(ctx, head, 2.6 + beat * 0.6, if beat == 3 then GOLDEN else STAR_CORE) -- 별 모으기
 	for i = 1, count do
 		task.delay(0.12 + 0.04 * i, function()
-			local land = ctx.Target + Vector3.new(math.random(-20, 20) / 10, -1.5, math.random(-20, 20) / 10)
+			local land = ctx.Target + Vector3.new(math.random(-45, 45) / 10, -1.5, math.random(-45, 45) / 10)
 			local from = land + Vector3.new(math.random(-40, 40) / 10, 18, math.random(-40, 40) / 10)
 			Vfx.Projectile(from, land, { Time = 0.16, Color = STAR_CORE, TrailColor = STAR })
 			task.delay(0.16, function()
@@ -579,6 +539,7 @@ function Fx.Submerge(ctx: any)
 		curtain(ctx, areaAt(area, area.U1, area.V0), areaAt(area, area.U1, area.V1), DEEP, 7, 0.9)
 		outline(ctx, area, STAR, 0.7)
 		waveFb(ctx, mid + Vector3.new(0, 0.3, 0), area.Radius * 2, STAR, 0.7)
+		fillArea(ctx, area, DEEP, { Core = STAR })
 	end)
 end
 
@@ -847,7 +808,8 @@ function Fx.AliothField(ctx: any)
 		Vfx.Ring(CFrame.new(Vector3.new(a.Mid.X, ctx.Ground + 0.2, a.Mid.Z)), { R0 = 1, R1 = a.Radius, Color = GOLDEN, Life = 0.6, Width = 0.3, Height = 0.06 })
 		Vfx.Ring(CFrame.new(Vector3.new(a.Mid.X, ctx.Ground + 0.25, a.Mid.Z)), { R0 = 0.5, R1 = a.Radius * 0.6, Color = STAR, Life = 0.5, Width = 0.2, Height = 0.05 })
 		Vfx.Flash(a.Mid + Vector3.new(0, 0.5, 0), { Color = GOLDEN, Size = 4, Life = 0.2, Brightness = 2 })
-		Vfx.Pack("Anime/Shiny-01", CFrame.new(a.Mid + Vector3.new(0, 0.6, 0)), { Color = GOLDEN, Size = 0.8, Count = 0.6 })
+		Vfx.Pack("Anime/Shiny-01", CFrame.new(a.Mid + Vector3.new(0, 0.6, 0)), { Color = GOLDEN, Size = math.max(0.8, a.Radius / 10), Count = 0.6 })
+		fillArea(ctx, a, GOLDEN, { Core = STAR_CORE, Quick = true })
 		waveFb(ctx, a.Mid + Vector3.new(0, 0.4, 0), a.Radius * 1.6, GOLDEN, 0.6)
 	end)
 end
@@ -895,7 +857,8 @@ function Fx.PhecdaColumn(ctx: any)
 	curtain(ctx, areaAt(a, a.U0, 0), areaAt(a, a.U1, 0), STAR, 8, 0.6)
 	Vfx.Projectile(a.Mid + Vector3.new(0, 20, 0), a.Mid + Vector3.new(0, 0.4, 0), { Time = 0.14, Color = STAR_CORE, TrailColor = STAR })
 	task.delay(0.14, function()
-		Vfx.Pillar(a.Mid, { Color = STAR, Life = 0.5, Height = 10, Width = 2.6 })
+		Vfx.Pillar(a.Mid, { Color = STAR, Life = 0.5, Height = 10, Width = math.clamp((a.U1 - a.U0) * 0.2, 2.6, 6) })
+		fillArea(ctx, a, STAR, { Core = STAR_CORE })
 		Vfx.Pack("Loose/Shockwave", CFrame.new(a.Mid + Vector3.new(0, 0.4, 0)), { Color = STAR_CORE, Size = 0.4 })
 		impactFb(ctx, a.Mid + Vector3.new(0, 0.7, 0), 6, STAR)
 		waveFb(ctx, a.Mid + Vector3.new(0, 0.3, 0), (a.U1 - a.U0) * 1.1, STAR_CORE, 0.5)
@@ -915,6 +878,7 @@ function Fx.MerakRow(ctx: any)
 	-- 행 전체를 가로지르는 금빛 장막 하나 + 충격파 띠 하나(칸마다 찍지 않는다)
 	task.delay(0.1, function()
 		curtain(ctx, areaAt(a, 0, a.V0), areaAt(a, 0, a.V1), GOLDEN, 6, 0.55)
+		fillArea(ctx, a, GOLDEN, { Core = STAR_CORE })
 		Vfx.Shockwave(mid + Vector3.new(0, 0.2, 0), { Color = GOLDEN, Radius = (a.V1 - a.V0) / 2, Life = 0.4 })
 		Vfx.Pack("vfx pack/f", CFrame.new(mid + Vector3.new(0, 0.5, 0)), { Color = GOLDEN, Size = 0.6, Count = 0.6 })
 		outline(ctx, a, GOLDEN, 0.45)
@@ -940,6 +904,9 @@ local DIPPER_PAL = {
 }
 local DIPPER_LINKS = { { 1, 2 }, { 2, 3 }, { 3, 4 }, { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 } } -- 손잡이 → 국자 테두리
 local DIPPER_END = 3.9 -- 강타(DipperCrash) 시각 — 별자리 선이 여기까지 남는다
+local DIPPER_T0 = 0.25 -- Dipper 사건 시각
+local DIPPER_LASER_T = { 0.8, 1.3, 1.6, 1.9, 2.3, 2.55, 2.8 } -- DipperLaser 사건 시각(모션 표와 같아야 한다 — 카메라가 이 시각에 각 별을 지난다)
+local DIPPER_GATHER_T = 3.05 -- DipperGather 사건 시각
 
 local dipperStates: { [any]: any } = setmetatable({}, { __mode = "k" }) :: any
 local function dstate(ctx: any): any
@@ -1031,6 +998,46 @@ function Fx.Dipper(ctx: any)
 			end
 		end)
 	end
+	-- 카메라 동선 (a): 손잡이 끝 별(알카이드 = 1)에서 시작해 별을 따라 국자 입 쪽 끝 별(두베 = 7)까지 이동한다.
+	-- 별 순서 알카이드 → 미자르 → 알리오스 → 메그레즈 → 페크다 → 메라크 → 두베 가 배열 1~7 이다. 카메라는 각 별의 레이저 시각에 그 별 아래를 지나고, 그때마다 앞으로 한 번 쿵 밀린다.
+	local f = ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	local off = r * 7 + f * 7 + Vector3.new(0, -8, 0)
+	local way, arrive = {}, {}
+	for i = 1, 7 do
+		way[i] = stars[i] + off
+		arrive[i] = DIPPER_LASER_T[i] - DIPPER_T0
+	end
+	local from = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.new()
+	ctx.Shot(DIPPER_GATHER_T - DIPPER_T0, function(_, tt)
+		local eye, look
+		if tt < arrive[1] then
+			local u = Common.expoOut(tt / arrive[1])
+			eye = from.Position:Lerp(way[1], u)
+			look = (from.Position + from.LookVector * 30):Lerp(stars[1], u)
+		else
+			local k = 1
+			while k < 7 and tt >= arrive[k + 1] do
+				k += 1
+			end
+			if k == 7 then
+				eye, look = way[7], stars[7]
+			else
+				local u = Common.sine((tt - arrive[k]) / (arrive[k + 1] - arrive[k]))
+				eye, look = way[k]:Lerp(way[k + 1], u), stars[k]:Lerp(stars[k + 1], u)
+			end
+		end
+		local cf = CFrame.lookAt(eye, look)
+		for i = 7, 1, -1 do -- 가장 최근 발사의 줌 펀치
+			local since = tt - arrive[i]
+			if since >= 0 then
+				cf += cf.LookVector * (1.4 * math.exp(-since * 18))
+				break
+			end
+		end
+		s.cam = cf
+		return cf
+	end)
 end
 
 -- 별 하나가 레이저를 쏜다(ev.star = 별 번호 · nth = 몇 번째 · gap = 다음 발사까지 · hold = 강타까지 남은 초): 별로 빛이 빨려 들고(AIM) → 굵은 두 겹 레이저가 바닥 한 점으로(GROW) →
@@ -1043,7 +1050,6 @@ function Fx.DipperLaser(ctx: any, ev: any)
 		Fx.Dipper(ctx)
 	end
 	local i = (ev and ev.star) or 1
-	local gap = math.max(0.2, (ev and ev.gap) or 0.35)
 	local hold = (ev and ev.hold) or 1
 	local top, g = s.Stars[i], s.Ground[i]
 	Vfx.Implode(top, { Color = STAR_CORE, Radius = 5, Count = 10, Life = D_AIM })
@@ -1066,26 +1072,6 @@ function Fx.DipperLaser(ctx: any, ev: any)
 		end
 		s.Fired[i] = true
 	end)
-	-- 카메라 컷(아군 뒤에서 별을 올려다보다가 레이저 끝을 쫓아 내려간다 — 조율자 SeptLaser 와 같은 문법)
-	local f = ctx.Forward
-	local r = f:Cross(Vector3.yAxis)
-	local from = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.new()
-	ctx.Shot(gap, function(_, t)
-		local below = top + r * 10 + f * 6 + Vector3.new(0, -14, 0)
-		local desired
-		if t < D_AIM then
-			desired = CFrame.lookAt(below, top)
-		else
-			local a = Common.quadIn((t - D_AIM) / D_GROW)
-			desired = CFrame.lookAt(below:Lerp(g + r * 11 + f * 5 + Vector3.new(0, 5, 0), a), top:Lerp(g, a))
-		end
-		local cf = from:Lerp(desired, Common.expoOut(t / D_AIM))
-		if t >= D_AIM then
-			cf += cf.LookVector * (1.6 * math.exp(-(t - D_AIM) * 20))
-		end
-		s.cam = cf
-		return cf
-	end)
 end
 
 -- 모으기: 별 일곱이 한꺼번에 조여 들며 커지고 망치에 빛이 모인다. 카메라는 별자리 위로 물러나 진영을 내려다본다(0.5초 멈춰 대비)
@@ -1099,15 +1085,32 @@ function Fx.DipperGather(ctx: any)
 	end
 	local head = ctx.Base and ctx.Base("W") or ctx.Hand("R")
 	chargeFb(ctx, head, 6, GOLDEN)
-	local mid = center(stars)
-	local ground = if s.Ground then center(s.Ground) else mid
+	-- 카메라 동선 (b): 플레이어 기준 아군 칸 왼쪽 맨 위 끝으로 옮겨 가서(0.4초) 떨림이 점점 커진다. 강타(DipperCrash)에서 터진다.
+	-- 플레이어 카메라는 -Forward 쪽(적)을 보므로 화면 왼쪽 = +R, 위(먼 쪽) = -Forward
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
+	local cells = allyCells(ctx)
+	local corner, best = cells[1], -math.huge
+	for _, p in cells do
+		local score = p:Dot(r) - p:Dot(f)
+		if score > best then
+			corner, best = p, score
+		end
+	end
+	local mid = center(cells)
+	local eye = corner + r * 5 - f * 3 + Vector3.new(0, 7, 0)
+	local look = mid
+	s.cornerEye, s.cornerLook = eye, look
 	local from = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.new()
-	local goal = CFrame.lookAt(mid + Vector3.new(0, 10, 0) + f * 22 + r * 6, ground:Lerp(mid, 0.4))
-	ctx.Shot(0.7, function(_, t)
-		local cf = from:Lerp(goal, Common.expoOut(t / 0.3))
-		s.cam = cf
+	ctx.Shot(DIPPER_END - DIPPER_GATHER_T + 0.02, function(_, tt)
+		local u = Common.expoOut(tt / 0.4)
+		local base = CFrame.lookAt(from.Position:Lerp(eye, u), (from.Position + from.LookVector * 30):Lerp(look, u))
+		-- 떨림: 이동이 끝난 뒤 작게 시작해 강타 직전까지 점점 커진다(진동수 높게)
+		local k = math.clamp((tt - 0.4) / (DIPPER_END - DIPPER_GATHER_T - 0.4), 0, 1)
+		local amp = 0.02 + 0.5 * k * k
+		local n = tt * 38
+		local cf = base * CFrame.new(math.noise(n, 0.3) * amp, math.noise(0.7, n) * amp, 0) * CFrame.Angles(0, 0, math.noise(n, 9.1) * amp * 0.04)
+		s.cam = base
 		return cf
 	end)
 end
@@ -1129,26 +1132,34 @@ function Fx.DipperCrash(ctx: any)
 	for _, link in DIPPER_LINKS do
 		Common.SeptScar(points[link[1]] + Vector3.new(0, 0.05, 0), points[link[2]] + Vector3.new(0, 0.05, 0), { Core = FLASH, Glow = GOLDEN }, 4)
 	end
-	Vfx.Pillar(mid, { Color = GOLDEN, Life = 0.7, Height = 26, Width = 6 })
+	Vfx.Pillar(mid, { Color = GOLDEN, Life = 0.7, Height = 26, Width = math.clamp(a.Radius * 0.6, 6, 12) })
 	Vfx.Pack("vfx pack/Explosion", CFrame.new(mid + Vector3.new(0, 0.6, 0)), { Color = STAR, Size = 0.6, Count = 0.5 })
-	Vfx.Pack("Big/Big-Crack-01", CFrame.new(Vector3.new(mid.X, ctx.Ground + 0.15, mid.Z)), { Color = GOLDEN, Size = math.max(0.4, a.Radius / 12) })
-	boomFb(ctx, mid + Vector3.new(0, 1.4, 0), 14, GOLDEN)
+	Vfx.Pack("Big/Big-Crack-01", CFrame.new(Vector3.new(mid.X, ctx.Ground + 0.15, mid.Z)), { Color = GOLDEN, Size = math.max(0.4, a.Radius / 8) })
+	boomFb(ctx, mid + Vector3.new(0, 1.4, 0), math.max(14, a.Radius * 2), GOLDEN)
 	impactFb(ctx, mid + Vector3.new(0, 0.9, 0), 8, STAR_CORE)
 	outline(ctx, a, GOLDEN, 0.9)
+	fillArea(ctx, a, GOLDEN, { Core = STAR_CORE })
 	Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = a.Radius + 5, Color = STAR_CORE, Life = 0.8, Width = 0.5, Height = 0.08 })
 	task.delay(0.1, function()
 		Vfx.Pack("Loose/Shockwave", CFrame.new(mid + Vector3.new(0, 0.6, 0)), { Color = GOLDEN, Size = 1.1 })
 		waveFb(ctx, mid + Vector3.new(0, 0.4, 0), 32, STAR_CORE, 0.7)
 	end)
-	-- 강타 카메라: 모으기 자리에서 범위 쪽으로 천천히 다가가며 머문다
-	local from = (s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.new()).Position
-	local look = center(points)
-	local into = from:Lerp(look, 0.15)
-	ctx.Shot(1.3, function(_, t)
-		local cf = CFrame.lookAt(from:Lerp(into, Common.sine(t / 1.3)), look)
+	-- 강타 카메라 (c): 한 번에 쾅 — 앞으로 쿵 밀리며 크게 흔들렸다가(짧고 묵직하게 가라앉음) 범위 쪽으로 천천히 다가가며 머문 뒤 전투 카메라로 돌아온다
+	local eye = s.cornerEye or (s.cam and s.cam.Position) or mid
+	local look = s.cornerLook or center(points)
+	local base = CFrame.lookAt(eye, look)
+	ctx.Shot(1.3, function(_, tt)
+		local into = base.Position:Lerp(look, 0.12 * Common.sine(tt / 1.3))
+		local amp = 1.6 * math.exp(-tt * 5.5)
+		local n = tt * 45
+		local cf = CFrame.lookAt(into, look)
+			* CFrame.new(math.noise(n, 0.3) * amp, math.noise(0.7, n) * amp, 0)
+			* CFrame.Angles(0, 0, math.noise(n, 9.1) * amp * 0.05)
+		cf += cf.LookVector * (3 * math.exp(-tt * 14))
 		s.cam = cf
 		return cf
 	end)
+	s.Stars, s.Fired = nil, nil -- 다음 시전을 위해 비운다
 end
 
 --=== 3페이즈 케노스 아스테리스모스 — WWE 피니셔(2026-11-06 밤, 설계서 B절) ===--
@@ -1423,6 +1434,7 @@ function Fx.KenosLanding(ctx: any)
 		boomFb(ctx, a.Mid + Vector3.new(0, 0.8, 0), 8 * k, CRACK)
 		Vfx.Pack("Anime/Crack-01", CFrame.new(ground), { Color = CRACK, Size = math.max(1.4, a.Radius / 6) * k })
 		outline(ctx, a, CRACK, 0.7)
+		fillArea(ctx, a, CRACK, { Core = STAR_CORE, Scale = k })
 	end
 	if #safe > 0 then -- 빛 칸 묶음은 장막 하나
 		local a = areaOf(ctx, safe)

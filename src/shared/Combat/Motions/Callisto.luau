@@ -739,7 +739,7 @@ return {
 				{ t = 3.05, k = "Trail", on = true, slot = "W" },
 				{ t = 3.9, k = "Fx", n = "DipperCrash" },
 				{ t = 3.94, k = "Hit", i = 1 },
-				{ t = 3.92, k = "Shake", a = 0.95, d = 0.7 },
+				{ t = 3.92, k = "Shake", a = 2.2, d = 0.9 }, -- 2026-11-07 사용자: 카메라 쉐이크를 강하게(전: 0.95 · 0.7초)
 				{ t = 3.92, k = "Stop", d = 0.09 },
 				{ t = 4.1, k = "Trail", on = false, slot = "W" },
 			},

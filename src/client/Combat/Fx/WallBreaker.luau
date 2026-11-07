@@ -97,6 +97,11 @@ end
 
 function Fx.SweepHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
+	-- 맞은 적이 여럿이면 범위 전체를 한 번 덮는다(단일 대상처럼 보이지 않게 — 2026-11-07)
+	local area = Common.TargetsArea(ctx)
+	if area and Common.Once(ctx, "SweepHit") then
+		Common.AreaFill(ctx, area, EMBER, { Core = HOT })
+	end
 	ctx.Vfx.Flash(p, { Color = EMBER, Size = 7, Life = 0.25 })
 	fb(ctx.Vfx, p, { Texture = TEX.Impact, Size = 6, Color = HOT, Life = 0.3, LightEmission = 1 })
 	Common.Rubble(ctx.Vfx, p, 8, ROCK)
@@ -119,6 +124,11 @@ end
 -- 허물다 타격: 큰 폭발 + 깊은 구덩이 + 불기둥
 function Fx.TearDownBlast(ctx: any, _ev: any, at: Vector3?)
 	local Vfx = ctx.Vfx
+	-- 맞은 적이 여럿이면 범위 전체를 한 번 덮는다(단일 대상처럼 보이지 않게 — 2026-11-07)
+	local area = Common.TargetsArea(ctx)
+	if area and Common.Once(ctx, "TearDownBlast") then
+		Common.AreaFill(ctx, area, EMBER, { Core = HOT })
+	end
 	local p = at or ctx.Target
 	local ground = Vector3.new(p.X, ctx.Ground, p.Z)
 	Vfx.Flash(p, { Color = HOT, Size = 18, Life = 0.4, Brightness = 10 })

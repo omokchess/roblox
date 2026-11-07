@@ -168,6 +168,8 @@ function Fx.NailRain(ctx: any)
 		near, far = 6, 30
 	end
 	near, far = near - 3, far + 3
+	-- 줄 전체를 덮는 면(2026-11-07 — 단일 대상처럼 보이지 않게)
+	Common.AreaFill(ctx, Common.LineArea(ctx, origin + ctx.Forward * near, origin + ctx.Forward * far, 4), CANDLE, { Core = RUST, Quick = true })
 	local rng = Random.new()
 	local count = math.clamp(math.floor((far - near) / 2.5), 9, 18)
 	for i = 1, count do

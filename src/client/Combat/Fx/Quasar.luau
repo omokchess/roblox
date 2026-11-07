@@ -105,6 +105,11 @@ end
 -- 붕괴 타격: 보랏빛 충격파 + 땅이 갈라지고 돌이 튄다
 function Fx.CollapseSlam(ctx: any, _ev: any, at: Vector3?)
 	local Vfx = ctx.Vfx
+	-- 맞은 적이 여럿이면 범위 전체를 한 번 덮는다(단일 대상처럼 보이지 않게 — 2026-11-07)
+	local area = Common.TargetsArea(ctx)
+	if area and Common.Once(ctx, "CollapseSlam") then
+		Common.AreaFill(ctx, area, VIOLET, { Core = STAR })
+	end
 	local ground = Common.Feet(ctx) + ctx.Forward * 3
 	local p = at or ctx.Target
 	Vfx.Flash(p, { Color = VIOLET, Size = 10, Life = 0.22, Brightness = 5 })

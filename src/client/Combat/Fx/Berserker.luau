@@ -161,6 +161,11 @@ end
 
 function Fx.BurstBlast(ctx: any, _ev: any, at: Vector3?)
 	local Vfx = ctx.Vfx
+	-- 맞은 적이 여럿이면 범위 전체를 한 번 덮는다(단일 대상처럼 보이지 않게 — 2026-11-07)
+	local area = Common.TargetsArea(ctx)
+	if area and Common.Once(ctx, "BurstBlast") then
+		Common.AreaFill(ctx, area, EMBER, { Core = BLOOD })
+	end
 	local ground = Common.Feet(ctx) + ctx.Forward * 3
 	Vfx.Flash(ground + Vector3.new(0, 1, 0), { Color = EMBER, Size = 11, Life = 0.22, Brightness = 6 })
 	Vfx.Shockwave(ground + Vector3.new(0, 0.1, 0), { Color = BLOOD, Radius = 9, Life = 0.55 })

@@ -282,6 +282,165 @@ function Common.SeptScar(a: Vector3, b: Vector3, pal: { [string]: any }?, total:
 end
 
 --[[
+	범위(광역) 연출 공용 (2026-11-07 사용자: "전체 광역기가 뭔가 단일 대상만 때리는 느낌이야 … 칸 전체를 때리는 느낌이 나게").
+	칸마다 같은 것을 찍지는 않되, 범위 전체(앞뒤 · 옆 길이)에 크기를 맞추고 범위 면을 고르게 덮는다.
+	Area = { Mid, F, R, U0, U1, V0, V1, Radius } — 가운데 · 앞 단위 · 옆 단위 · 앞뒤(u) 범위 · 옆(v) 범위(가운데 기준) · 긴 변의 반
+	Common.AreaOf(ctx, points)        점들(칸 가운데 · 대상 자리)의 직사각 범위(반 칸 여유)
+	Common.LineArea(ctx, a, b, half)  두 끝 사이 띠(half = 반폭)
+	Common.FieldArea(ctx)             적 진영 범위(FieldBox)
+	Common.TargetsArea(ctx)           이번 타격의 대상이 둘 이상일 때 그들을 덮는 범위(하나면 nil — 단일 대상은 그대로)
+	Common.AreaAt(a, u, v, y?) · Common.Outline(ctx, a, color, life, y?) · Common.Curtain(ctx, p0, p1, color, height, life)
+	Common.AreaFill(ctx, a, color, o?)  범위 전체를 덮는 묶음: ① 바닥 섬광 판(0.3초 — 예고 칸을 오래 가리지 않는다) ② 앞→뒤로 쓸고 가는 띠
+	  ③ 면적에 비례한 무작위 별·파편(4~16곳) ④ 가운데에서 네 모서리까지 닿는 균열 선 + 모서리 불씨. o = { Core = 속색, Scale = 개수 배, Quick = true 면 쓸기 생략 }
+	Common.Once(ctx, key, window?)    같은 시전 안에서 맞은 적마다 불리는 사건이 큰 연출을 한 번만 하게(window 초, 기본 0.6)
+]]
+type Area = { Mid: Vector3, F: Vector3, R: Vector3, U0: number, U1: number, V0: number, V1: number, Radius: number }
+
+function Common.AreaOf(ctx: any, points: { Vector3 }): Area
+	local sum = Vector3.zero
+	for _, p in points do
+		sum += Vector3.new(p.X, ctx.Ground, p.Z)
+	end
+	local mid = sum / math.max(1, #points)
+	local f = ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	local u0, u1, v0, v1 = 0, 0, 0, 0
+	for _, p in points do
+		local d = p - mid
+		u0, u1 = math.min(u0, d:Dot(f)), math.max(u1, d:Dot(f))
+		v0, v1 = math.min(v0, d:Dot(r)), math.max(v1, d:Dot(r))
+	end
+	local m = 3 -- 반 칸
+	u0, u1, v0, v1 = u0 - m, u1 + m, v0 - m, v1 + m
+	return { Mid = mid, F = f, R = r, U0 = u0, U1 = u1, V0 = v0, V1 = v1, Radius = math.max(u1 - u0, v1 - v0) / 2 }
+end
+
+function Common.LineArea(ctx: any, a: Vector3, b: Vector3, half: number): Area
+	local mid = (a + b) / 2
+	local d = b - a
+	d = Vector3.new(d.X, 0, d.Z)
+	local len = d.Magnitude
+	local f = if len > 0.1 then d.Unit else ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	mid = Vector3.new(mid.X, ctx.Ground, mid.Z)
+	return { Mid = mid, F = f, R = r, U0 = -len / 2, U1 = len / 2, V0 = -half, V1 = half, Radius = math.max(len / 2, half) }
+end
+
+function Common.FieldArea(ctx: any): Area
+	local box = Common.FieldBox(ctx)
+	local u, v = (box.U0 + box.U1) / 2, (box.V0 + box.V1) / 2
+	local mid = box.Base + box.F * u + box.R * v
+	return {
+		Mid = Vector3.new(mid.X, ctx.Ground, mid.Z),
+		F = box.F,
+		R = box.R,
+		U0 = box.U0 - u,
+		U1 = box.U1 - u,
+		V0 = box.V0 - v,
+		V1 = box.V1 - v,
+		Radius = math.max(box.U1 - box.U0, box.V1 - box.V0) / 2,
+	}
+end
+
+function Common.TargetsArea(ctx: any): Area?
+	local pts = ctx.Targets
+	if not pts or #pts < 2 then
+		return nil
+	end
+	return Common.AreaOf(ctx, pts)
+end
+
+function Common.AreaAt(a: Area, u: number, v: number, y: number?): Vector3
+	return a.Mid + a.F * u + a.R * v + Vector3.new(0, y or 0, 0)
+end
+
+function Common.Outline(ctx: any, a: Area, color: Color3, life: number, y: number?)
+	local h = ctx.Ground + (y or 0.25) - a.Mid.Y
+	local c1, c2, c3, c4 = Common.AreaAt(a, a.U0, a.V0, h), Common.AreaAt(a, a.U0, a.V1, h), Common.AreaAt(a, a.U1, a.V1, h), Common.AreaAt(a, a.U1, a.V0, h)
+	for _, pair in { { c1, c2 }, { c2, c3 }, { c3, c4 }, { c4, c1 } } do
+		ctx.Vfx.Beam(pair[1], pair[2], { Color = color, Width = 0.2, Life = life })
+	end
+end
+
+function Common.Curtain(ctx: any, p0: Vector3, p1: Vector3, color: Color3, height: number, life: number)
+	local len = math.max(0.5, (p1 - p0).Magnitude)
+	local dir = (p1 - p0) / len
+	local mid = (p0 + p1) / 2
+	local wall = ctx.Vfx.Part(Vector3.new(len, 0.1, 0.25), CFrame.fromMatrix(mid, dir, Vector3.yAxis), color)
+	wall.Transparency = 1
+	ctx.Vfx.Timed(life, function(alpha)
+		local rise = math.min(1, alpha / 0.25)
+		local h = height * (1 - (1 - rise) ^ 3)
+		wall.Size = Vector3.new(len, h, 0.25)
+		wall.CFrame = CFrame.fromMatrix(mid + Vector3.new(0, h / 2, 0), dir, Vector3.yAxis)
+		wall.Transparency = 0.35 + 0.65 * math.clamp((alpha - 0.3) / 0.7, 0, 1)
+	end, function()
+		wall:Destroy()
+	end)
+end
+
+function Common.AreaFill(ctx: any, a: Area, color: Color3, o: { [string]: any }?)
+	local opt = o or {}
+	local Vfx = ctx.Vfx
+	local core = opt.Core or Color3.new(1, 1, 1)
+	local w, d = a.V1 - a.V0, a.U1 - a.U0
+	local ground = Vector3.new(a.Mid.X, ctx.Ground + 0.12, a.Mid.Z)
+	-- ① 바닥 섬광 판: 범위 직사각형 전체를 한 번에 낮게 밝혔다 0.3초에 꺼진다(옅게 — 예고 칸이 비친다)
+	local plate = Vfx.Part(Vector3.new(w, 0.05, d), CFrame.fromMatrix(ground, a.R, Vector3.yAxis), color)
+	plate.Transparency = 1
+	Vfx.Timed(0.3, function(alpha)
+		plate.Transparency = 0.55 + 0.45 * alpha
+	end, function()
+		plate:Destroy()
+	end)
+	-- ② 쓸고 가는 띠: 앞쪽 끝에서 뒤쪽 끝까지 범위 폭 전체를 가로지르는 낮은 띠
+	if not opt.Quick then
+		local band = Vfx.Part(Vector3.new(w, 0.7, 0.9), CFrame.fromMatrix(ground, a.R, Vector3.yAxis), core)
+		band.Transparency = 1
+		Vfx.Timed(0.4, function(alpha)
+			local u = a.U0 + (a.U1 - a.U0) * Common.expoOut(alpha)
+			band.CFrame = CFrame.fromMatrix(Common.AreaAt(a, u, 0, 0.35) + (ground - a.Mid), a.R, Vector3.yAxis)
+			band.Transparency = 0.3 + 0.7 * alpha
+		end, function()
+			band:Destroy()
+		end)
+	end
+	-- ③ 면적에 비례한 별 · 파편(칸 수와 무관, 위치 무작위)
+	local n = math.clamp(math.floor(w * d / 70 * (opt.Scale or 1)), 4, 16)
+	for _ = 1, n do
+		task.delay(math.random() * 0.4, function()
+			local at = Common.AreaAt(a, a.U0 + math.random() * d, a.V0 + math.random() * w, 0.6 + math.random() * 1.2)
+			Vfx.Flash(at, { Color = core, Size = 1.5, Life = 0.14, Brightness = 3 })
+			Vfx.Sparks(at, { Color = color, Count = 3, Speed = 11 })
+		end)
+	end
+	-- ④ 가운데에서 네 모서리까지 닿는 균열 선 + 모서리 불씨
+	local gy = ctx.Ground + 0.18 - a.Mid.Y
+	for _, uv in { { a.U0, a.V0 }, { a.U0, a.V1 }, { a.U1, a.V1 }, { a.U1, a.V0 } } do
+		local corner = Common.AreaAt(a, uv[1], uv[2], gy)
+		local mid = Common.AreaAt(a, (uv[1]) * 0.5, uv[2] * 0.5, gy) + a.R * ((math.random() - 0.5) * 2) -- 살짝 꺾이는 균열
+		Vfx.Beam(Common.AreaAt(a, 0, 0, gy), mid, { Color = core, Width = 0.22, Life = 0.5 })
+		Vfx.Beam(mid, corner, { Color = color, Width = 0.22, Life = 0.5 })
+		Vfx.Burst(corner + Vector3.new(0, 0.3, 0), { Count = 4, Colors = { color, core }, Size = 0.3, Speed = 12, Life = 0.4, Gravity = 24, Material = Enum.Material.Neon })
+	end
+end
+
+local onceMarks: { [any]: { [string]: number } } = setmetatable({}, { __mode = "k" }) :: any
+function Common.Once(ctx: any, key: string, window: number?): boolean
+	local marks = onceMarks[ctx.Actor]
+	if not marks then
+		marks = {}
+		onceMarks[ctx.Actor] = marks
+	end
+	local now = os.clock()
+	if marks[key] and now - marks[key] < (window or 0.6) then
+		return false
+	end
+	marks[key] = now
+	return true
+end
+
+--[[
 	서포팅(버프 · 보호막 · 회복 · 도발 등 아군에게 거는) 이펙트가 그릴 자리: 실제로 효과를 받는 아군 캐릭터만. (2026-11-07 사용자)
 	ctx.Allies = 효과를 받는 아군 Actor 목록(시전자 포함 가능 — 각 Actor 는 .Pos(HumanoidRootPart CFrame) · .Ground(발밑까지 높이))을 CombatDirector 가 넘겨주면 그들을,
 	없으면(아직 안 넘겨줌 · 솔로 전투) 시전자 자신만 돌려준다. 칸 전체(AllyTiles)에 찍지 않는다.
