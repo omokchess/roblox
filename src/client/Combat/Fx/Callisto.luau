@@ -203,6 +203,68 @@ local function snap(ctx: any, at: Vector3, size: number)
 	fb(ctx, at, TEX.Flash, { Size = size * 1.6, Color = FLASH, Life = 0.16, LightEmission = 1 })
 end
 
+--[[
+	십자 · X자 유도기 모양 표시(2026-11-07 사용자: "전체 범위 중 전체기가 아니어도 될 것을 십자 · X자 범위의 유도기로").
+	서버가 넘기는 ctx.ThreatTiles(최대 5칸)에서 모양을 읽는다 — 대상에 가장 가까운 칸이 가운데, 이웃까지 거리가 칸 간격(6)이면 십자, 그보다 멀면(≈8.5) X자.
+	모양이 아니면(칸 1개 · 6개 이상 = 다른 범위 기술) 아무것도 안 한다 → 기술별 고유 연출 위에 얹어 부른다. 칸마다 같은 걸 찍지 않고 하나의 연출로:
+	십자 = 가운데에서 네 방향으로 뻗는 빛 띠(낮은 장막 + 빛줄기), X자 = 대각 네 줄로 갈라지는 별줄기 + 가지 끝 베기. 가지 끝에 작은 폭발, light = 가운데 충격 · 고리 생략
+]]
+local function shapeOf(ctx: any): (Vector3?, { Vector3 }, boolean)
+	local tiles = ctx.ThreatTiles
+	if not tiles or #tiles < 2 or #tiles > 5 then
+		return nil, {}, false
+	end
+	local mid, best = nil, math.huge
+	for _, t in tiles do
+		local d = t.Position - ctx.Target
+		d = Vector3.new(d.X, 0, d.Z).Magnitude
+		if d < best then
+			mid, best = t.Position, d
+		end
+	end
+	local tips, diag = {}, false
+	for _, t in tiles do
+		local d = t.Position - mid
+		d = Vector3.new(d.X, 0, d.Z).Magnitude
+		if d > 1 then
+			table.insert(tips, t.Position)
+			diag = diag or d > 7
+		end
+	end
+	return mid, tips, diag
+end
+
+local function shapeStrike(ctx: any, color: Color3, core: Color3, light: boolean?)
+	local c0, tips, diag = shapeOf(ctx)
+	if not c0 then
+		return
+	end
+	local Vfx = ctx.Vfx
+	local g0 = Vector3.new(c0.X, ctx.Ground + 0.3, c0.Z)
+	local up = Vector3.new(0, 1.4, 0)
+	if not light then
+		impactFb(ctx, g0 + up, 6, core)
+		Vfx.Ring(CFrame.new(g0), { R0 = 0.6, R1 = if diag then 9.5 else 7, Color = color, Life = 0.4, Width = 0.3, Height = 0.07 })
+	end
+	for _, p in tips do
+		local g = Vector3.new(p.X, ctx.Ground + 0.3, p.Z)
+		if diag then
+			Vfx.Projectile(g0 + up, g + up, { Time = 0.1, Color = core, TrailColor = color })
+			Vfx.Beam(g0 + up, g + up, { Color = color, Width = 0.5, Life = 0.35 })
+			task.delay(0.1, function()
+				slashFb(ctx, g + up, 5, color, 0.2)
+			end)
+		else
+			curtain(ctx, g0, g, color, 3, 0.4)
+			Vfx.Beam(g0 + Vector3.new(0, 0.4, 0), g + Vector3.new(0, 0.4, 0), { Color = core, Width = 1, Life = 0.3 })
+		end
+		task.delay(0.1, function()
+			Vfx.Flash(g + Vector3.new(0, 0.5, 0), { Color = core, Size = 2.5, Life = 0.14, Brightness = 3 })
+			Vfx.Burst(g + Vector3.new(0, 0.3, 0), { Count = 4, Colors = { color, core }, Size = 0.25, Speed = 12, Life = 0.4, Gravity = 20, Material = Enum.Material.Neon })
+		end)
+	end
+end
+
 -- 칼날 궤적: 대상 앞에서 비스듬한 원호 + 별가루(트로히아는 style = "Back" — 수평 등손 베기, 팩의 여러 줄 베기 자국)
 -- 연타(트로히아 5연격 2026-11-06): ev.sz = 크기 배율(약 0.7 · 중 0.95 · 강 1.5), ev.flip = 베는 방향 뒤집기(좌↔우 번갈아)
 function Fx.BladeArc(ctx: any, ev: any)
@@ -245,6 +307,7 @@ function Fx.BurnSlash(ctx: any)
 	ctx.Vfx.Sparks(p, { Color = BURN, Count = 8, Speed = 16 })
 	fb(ctx, p, TEX.Flame, { Size = 6, Color = BURN, Life = 0.3, LightEmission = 0.6, Rotation = math.random(0, 360) })
 	impactFb(ctx, p, 4.5, STAR_CORE)
+	shapeStrike(ctx, BURN, STAR_CORE) -- X자 유도기(세시 파라티리시 · 트로히아 마지막 타)
 end
 
 -- 찌르기: 칼날 끝에서 대상까지 한 줄 + 꿰뚫고 나가는 별가루와 충격(팩)
@@ -267,6 +330,7 @@ function Fx.Stab(ctx: any, ev: any)
 		snap(ctx, ctx.Target, 3.4)
 		ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(ctx.Target), { Color = STAR_CORE, Size = 0.5, Count = 0.5 })
 	end
+	shapeStrike(ctx, STAR, STAR_CORE, beat < 3) -- 십자 유도기(신데시): 셋째 비트가 가운데 충격까지
 end
 
 -- 카메라 찰칵(페이탈 프레임): 렌즈에서 흰 섬광, 대상 둘레에 사진 틀(네모 고리) + 반짝이는 빛살
@@ -281,6 +345,7 @@ function Fx.Flash(ctx: any)
 	ctx.Vfx.Pack("Anime/Shiny-01", CFrame.new(ctx.Target), { Color = FLASH, Size = 0.6 })
 	local p = ctx.Target
 	ctx.Vfx.Ring(CFrame.lookAt(p, p - ctx.Forward), { R0 = 3.2, R1 = 2.2, Color = FLASH, Life = 0.35, Width = 0.12, Facing = true, Segments = 4 })
+	shapeStrike(ctx, STAR, FLASH) -- 십자 유도기(파라티리시)
 end
 
 -- 포착 원(영 — 카메라 옵스큐라의 필라멘트가 대상을 향해 좁혀진다): 셔터 직전 0.22초
@@ -308,6 +373,7 @@ function Fx.Throw(ctx: any)
 	ctx.Vfx.Pack("Anime/Shoot-01", CFrame.new(ground), { Color = STAR, Size = 0.9 })
 	waveFb(ctx, ground + Vector3.new(0, 0.4, 0), 9, STAR)
 	impactFb(ctx, ground + Vector3.new(0, 1, 0), 5, STAR_CORE)
+	shapeStrike(ctx, STAR, STAR_CORE) -- 십자 유도기(심베라즈마)
 end
 
 -- 렌즈 모으기: 렌즈 앞에 별빛 구가 0.7초 동안 커지고, 둘레에서 별빛이 빨려 든다(팩 — 기 모으기 · 소용돌이)
@@ -436,6 +502,7 @@ function Fx.StarBolt(ctx: any)
 		ctx.Vfx.Flash(ctx.Target, { Color = STAR, Size = 4, Life = 0.15, Brightness = 4 })
 		ctx.Vfx.Sparks(ctx.Target, { Color = STAR_CORE, Count = 10, Speed = 20 })
 		ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(ctx.Target), { Color = STAR_CORE, Size = 0.7 })
+		shapeStrike(ctx, GOLDEN, STAR_CORE) -- X자 유도기(공명적 성위)
 	end)
 end
 
@@ -461,6 +528,9 @@ function Fx.Constellation(ctx: any)
 	end
 	task.delay(0.8, function()
 		waveFb(ctx, Vector3.new(ctx.Target.X, ctx.Ground + 0.4, ctx.Target.Z), 14, GOLDEN, 0.6)
+		task.delay(0.12, function()
+			shapeStrike(ctx, STAR, STAR_CORE) -- X자 유도기(인위적 별자리): 일곱 별이 꽂힌 뒤 대각으로 갈라진다
+		end)
 		for i, p in points do
 			local land = ctx.Target + (p - ctx.Target) * Vector3.new(0.35, 0, 0.35) - Vector3.new(0, 1.5, 0)
 			Vfx.Projectile(p, land, { Time = 0.08 + 0.01 * i, Color = STAR_CORE, TrailColor = STAR })
@@ -493,6 +563,9 @@ function Fx.StarShower(ctx: any, ev: any)
 			end)
 		end)
 	end
+	task.delay(0.12 + 0.04 * count + 0.16, function()
+		shapeStrike(ctx, STAR, STAR_CORE, beat < 3) -- X자 유도기(쏟아지는 뭇별)
+	end)
 	if beat == 3 then
 		task.delay(0.12 + 0.04 * count + 0.16, function()
 			Vfx.Ring(CFrame.new(Vector3.new(ctx.Target.X, ctx.Ground + 0.15, ctx.Target.Z)), { R0 = 0.8, R1 = 6, Color = STAR, Life = 0.4, Width = 0.25, Height = 0.06 })
@@ -769,6 +842,7 @@ function Fx.HammerSmash(ctx: any)
 	local at = ctx.Tip("W") or ctx.Target
 	smash(ctx, at, 1)
 	ctx.Vfx.Pack("Loose/MiniSparks", CFrame.new(at), { Color = GOLDEN, Size = 0.5, Count = 0.5 })
+	shapeStrike(ctx, GOLDEN, STAR_CORE) -- 십자 유도기(수많은 성위 아래 파묻혀)
 end
 
 --[[
@@ -827,12 +901,8 @@ function Fx.MegrezSwing(ctx: any)
 	ctx.Vfx.Pack("Anime/Punch-02", CFrame.new(ctx.Target), { Color = STAR_CORE, Size = 0.8 })
 	slashFb(ctx, ctx.Target, 8.5, GOLDEN, 0.25)
 	impactFb(ctx, ctx.Target, 5, STAR_CORE)
-	-- 조율자 메그레즈처럼: 금빛 별이 대상 둘레 옆줄을 훑고 지나간다
-	local r = ctx.Forward:Cross(Vector3.yAxis)
-	local y = Vector3.new(0, 1.6, 0)
-	Common.StarZig(ctx, { ctx.Target - r * 9 + y, ctx.Target + r * 9 + y }, { 0.14 }, STAR_PAL, function(_, at)
-		fb(ctx, at, TEX.Bolt, { Size = 5, Color = GOLDEN, Life = 0.3, LightEmission = 1 })
-	end)
+	-- 십자 유도기: 대상을 중심으로 네 방향으로 금빛 별줄기가 뻗는다(조율자 메그레즈의 줄 훑기 → 십자)
+	shapeStrike(ctx, GOLDEN, STAR_CORE)
 end
 
 -- 소환: 망치 머리(미자르 곁)에서 작은 별(알코르)이 떨어져 나와 높이 솟았다가 적 진영으로 떨어지고, 내려앉는 자리에 별 문이 열린다
@@ -884,6 +954,7 @@ function Fx.PhecdaColumn(ctx: any)
 		waveFb(ctx, ground, 10, STAR_CORE, 0.5)
 		Vfx.Pack("Loose/Shockwave", CFrame.new(ground), { Color = STAR_CORE, Size = 0.4 })
 		Vfx.Shake(0.5, 0.25)
+		shapeStrike(ctx, STAR, STAR_CORE) -- 십자 유도기
 	end)
 end
 
@@ -909,6 +980,7 @@ function Fx.MerakRow(ctx: any)
 			Vfx.Burst(from:Lerp(at, k / 3), { Count = 4, Colors = { GOLDEN, STAR_CORE }, Size = 0.25, Speed = 10, Gravity = 6, Life = 0.5 })
 		end
 		Vfx.Shake(0.5, 0.25)
+		shapeStrike(ctx, GOLDEN, STAR_CORE) -- X자 유도기
 	end)
 end
 
