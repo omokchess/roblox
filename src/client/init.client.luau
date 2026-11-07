@@ -59,9 +59,11 @@ task.spawn(require(script.MineCartClient).Start, remotes)
 BattleStore.Init(remotes)
 
 -- 스튜디오 전용 모션 전시장: workspace 속성 CombatShowcase = true 로 켠다(Combat/CombatShowcase.luau)
-if game:GetService("RunService"):IsStudio() and workspace:GetAttribute("CombatShowcase") == true then
+-- (2026-11-07 Studio 를 다시 켜면 이 모듈이 자꾸 없어져 있었다 — 원인 미상, 없으면 조용히 건너뛴다)
+local showcase = script.Combat:FindFirstChild("CombatShowcase")
+if game:GetService("RunService"):IsStudio() and workspace:GetAttribute("CombatShowcase") == true and showcase then
 	task.spawn(function()
-		require(script.Combat.CombatShowcase).Start()
+		require(showcase :: ModuleScript).Start()
 	end)
 end
 
