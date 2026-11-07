@@ -2879,7 +2879,7 @@ function BattleHud:QteOpen(challenge: any, role: string, title: string, word: st
 		self.mashSuccess.Position = UDim2.fromScale((goal - 0.5) / total, 0)
 		self.mashSuccess.Size = UDim2.fromScale(2 / total, 1)
 	else
-		local mistakes = QteDefinitions.COMMAND_DODGE_MISTAKES
+		local mistakes = QteDefinitions.COMMAND_DODGE_MISTAKES + (challenge.Forgive or 0)
 		self.qteHint.Text = string.format(
 			'<font color="%s"><b>방향키</b></font> 또는 <font color="%s"><b>WASD</b></font> — 왼쪽부터 순서대로 (%d번 틀려도 %s)',
 			hex(BONE),
@@ -3003,17 +3003,17 @@ function BattleHud:QteTick(challenge: any, visual: { [string]: any }, elapsed: n
 			local flip = visual.reverseBeats ~= nil and visual.reverseBeats[beat] == true
 			self.dirNote.Text = (if flip then string.format('<font color="%s"><b>반대 방향으로 누르세요!</b></font>   ', hex(REVERSE)) else "") .. string.format(
 				'비트 <b>%d / %d</b>   ·   이번 비트 틀림 <font color="%s"><b>%d</b></font>   ·   0번 %s, 1번 막기',
-				beat, visual.beatCount or 1, hex(if mine > QteDefinitions.CHAIN_DODGE_MISTAKES then RED else BONE), mine, self.qteRole.Text
+				beat, visual.beatCount or 1, hex(if mine > QteDefinitions.CHAIN_DODGE_MISTAKES + (challenge.Forgive or 0) then RED else BONE), mine, self.qteRole.Text
 			)
 			return
 		end
 		self.dirNote.Text = string.format(
 			'틀림 <font color="%s"><b>%d</b></font>   ·   %d번까지 %s, %d번까지 막기',
-			hex(if mistakes > QteDefinitions.COMMAND_DODGE_MISTAKES then RED else BONE),
+			hex(if mistakes > QteDefinitions.COMMAND_DODGE_MISTAKES + (challenge.Forgive or 0) then RED else BONE),
 			mistakes,
-			QteDefinitions.COMMAND_DODGE_MISTAKES,
+			QteDefinitions.COMMAND_DODGE_MISTAKES + (challenge.Forgive or 0),
 			self.qteRole.Text,
-			QteDefinitions.COMMAND_GUARD_MISTAKES
+			QteDefinitions.COMMAND_GUARD_MISTAKES + (challenge.Forgive or 0)
 		)
 	end
 end

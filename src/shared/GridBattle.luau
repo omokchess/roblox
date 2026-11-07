@@ -412,6 +412,11 @@ local GridBattle = {}
 GridBattle.ALLY_ID = ALLY_ID
 
 local function pushEvent(state: State, event: any)
+	-- 강제 결투 응수: 응수 연출이 스킬 연출 뒤에 오도록 잠시 모아 둔다(ResolveSkill 이 스킬 사건을 넣은 뒤 푼다)
+	if (state :: any).EventHold then
+		table.insert((state :: any).EventHold, event)
+		return
+	end
 	state.EventSeq += 1
 	event.Seq = state.EventSeq
 	table.insert(state.Events, event)
@@ -2419,6 +2424,40 @@ function GridBattle.ResolveSkill(
 			return GridBattle.AliveEnemies(state)
 		end,
 		Turn = state.Turn,
+		ForceAttacks = function(units)
+			local anyState: any = state
+			anyState.EventHold = anyState.EventHold or {}
+			local list: { Unit } = {}
+			for _, unit in units do
+				-- 보스 부위·칼리스토·알코르는 "스킬 1" 이 없다 — 강제로 쓰게 할 수 없다
+				if unit.Alive and unit.Side == "Enemy" and not unit.Part and unit.DefId ~= "Alcor" and not callistoOf(state, unit) then
+					table.insert(list, unit)
+				end
+			end
+			-- 앞 열(중앙선 쪽, x 작은 쪽)부터 차례로
+			table.sort(list, function(a, b)
+				local ca, cb = BattleGrid.CellOf(state.Grid, a.Id), BattleGrid.CellOf(state.Grid, b.Id)
+				local ka, kb = if ca then ca.X else 99, if cb then cb.X else 99
+				if ka ~= kb then
+					return ka < kb
+				end
+				return a.Id < b.Id
+			end)
+			local results = {}
+			for _, unit in list do
+				if state.Outcome ~= "Ongoing" or not ally.Alive then
+					break
+				end
+				if not unit.Alive then
+					continue
+				end
+				local ok, _, taken = GridBattle.ResolveDodge(state, unit.Id, "Partial", nil, BattleSkills.Enemy()[1])
+				if ok then
+					table.insert(results, { Enemy = unit, Taken = taken or 0 })
+				end
+			end
+			return results
+		end,
 	}
 
 	local effect = BattleSkillEffects.Get(skill.Id)
@@ -2609,6 +2648,9 @@ function GridBattle.ResolveSkill(
 			hit.Killed = unit ~= nil and not unit.Alive
 		end
 	end
+	local anyState: any = state
+	local held = anyState.EventHold
+	anyState.EventHold = nil
 	pushEvent(state, {
 		Kind = "Skill",
 		Actor = ally.Id,
@@ -2616,6 +2658,9 @@ function GridBattle.ResolveSkill(
 		Grade = grade,
 		Hits = eventHits,
 	})
+	for _, event in held or {} do
+		pushEvent(state, event)
+	end
 
 	watchEnd(state, watch)
 	refreshOutcome(state)
@@ -3782,7 +3827,14 @@ end
 	사양: 패리 성공 시 상대 그로기가 오른다(QteDefinitions.PARRY_GROGGY_GAIN).
 	Dodge 배율은 Success 0 / Partial 0.5 / Fail 1.0 — 즉 성공하면 아예 안 맞는다.
 ]]
-function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefinitions.Grade, planIndex: number?): (boolean, string?)
+function GridBattle.ResolveDodge(
+	state: State,
+	enemyId: string,
+	grade: QteDefinitions.Grade,
+	planIndex: number?,
+	-- 강제 결투 응수: 이 스킬을 지금 쓰게 한다(예고 없이). 스킬 안에서 도는 것이라 앞뒤 비교(watch)는 바깥 스킬이 한다
+	forceSkill: BattleSkills.Skill?
+): (boolean, string?, number?)
 	if state.Outcome ~= "Ongoing" then
 		return false, "전투가 끝났습니다."
 	end
@@ -3792,7 +3844,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	end
 
 	local ally = GridBattle.Ally(state)
-	local skill = GridBattle.EnemySkill(enemy, planIndex)
+	local skill = forceSkill or GridBattle.EnemySkill(enemy, planIndex)
 	--[[
 		2026-10-04 월 필그림 리워크 — 적이 스킬을 쓸 때:
 		  [경련] 걸린 턴에 쓰면 최대 체력 3% 피해 + 그로기 게이지 10%(공격은 그대로 나간다)
@@ -3808,9 +3860,9 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	local tetanus = BattleStatus.Stack(enemy.Status, ClassResources.TETANUS)
 	if tetanus > 0 and nextRandom(state) < tetanus * query(state, "TetanusFail", 0.05) then -- 쇠약 카드가 올린다
 		pushLog(state, string.format("%s — 파상풍으로 %s 실패", enemy.Name, skill.Name))
-		return true, nil
+		return true, nil, 0
 	end
-	local watch = watchBegin(state)
+	local watch = if forceSkill then nil else watchBegin(state)
 	--[[
 		카드: 맞기 직전(배율·자동 패링 확률). 자동 패링은 QTE 를 못 막았을 때 확률로 패링으로 바꾼다
 		(보정값 `AutoParry` + 카드). 궁극기·패링 불가 공격은 아직 적에게 없다.
@@ -3821,6 +3873,11 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		Grade = grade,
 		Mult = 1,
 		AutoParry = BattleStatus.Total(ally.Status, "AutoParry"),
+		-- 결투사: 궁극기·패링 불가(가드만 되는) 스킬인가 — 확정 패링·집중 자동 패링이 건너뛴다. Forced = 강제 결투 응수로 나간 공격
+		Unparryable = skill.GuardOnly == true or skill.BossKind == "Ultimate" or skill.HpRatio ~= nil,
+		Forced = forceSkill ~= nil,
+		-- 카드가 true 로 켜면 아래 "막을 수 없는" 판정(가드만·막기 불가)을 건너뛴다 — 궁극기·패링 불가에도 먹는 자동 패링
+		ForceParry = false,
 		-- 적 치명타: 기본 5% · 200%(= 2 + 적의 치명타 피해량). 카드가 끈다(Crit = 0)거나 배율을 깎는다.
 		Crit = ENEMY_CRIT + BattleStatus.Total(enemy.Status, "CritChance"),
 		CritMult = BattleStatus.CritMultiplier(BattleStatus.Total(enemy.Status, "CritDamage")),
@@ -3842,6 +3899,7 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	fire(state, "BeforeTaken", before)
 	grade = before.Grade
 	local autoParried = before.Auto == true and grade == "Success"
+	local forceParry = before.ForceParry == true and grade == "Success"
 	-- 결투사는 회피가 없고 패리만 한다(2026-10-02 사용자): 패리(성공)는 피해를 PARRY_KEEP 만 받고 나머지를 공격한 쪽에
 	-- 되돌린다. 회피·가드 불가 공격도 패리는 된다(가드는 안 됨)
 	local parryOnly = state.AllyClassId == "Duelist"
@@ -3853,16 +3911,17 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		if grade ~= "Success" and before.AutoParry > 0 and nextRandom(state) < before.AutoParry then
 			grade = "Success"
 			autoParried = true
+			forceParry = true
 			pushLog(state, "자동 패링")
 		end
 		-- 회피만 가능(가드 불가): 막음(Partial)은 실패로 친다. 보스 [루트 권한] 동안은 모든 보스 공격이 그렇다
 		local noGuard = enemy.Part ~= nil and state.Boss ~= nil and bossBuffTotal(state.Boss, "NoGuard") > 0
 		-- 가드만(회피 불가): 회피(성공)는 막기(부분)로 친다
-		if skill.GuardOnly and grade == "Success" then
+		if skill.GuardOnly and grade == "Success" and not forceParry then
 			grade = "Partial"
 			pushLog(state, skill.Name .. " — 피할 수 없는 공격(막기만)")
 		end
-		if (skill.DodgeOnly or skill.Unavoidable or noGuard) and grade == "Partial" then
+		if (skill.DodgeOnly or skill.Unavoidable or noGuard) and grade == "Partial" and not forceParry then
 			grade = "Fail"
 			pushLog(state, skill.Name .. " — 막을 수 없는 공격")
 		end
@@ -3910,6 +3969,12 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 	local buffs = BattleStatus.DealtTerms(enemy.Status)
 	table.insert(buffs, if boss then bossBuffTotal(boss, "Damage") else 0)
 	table.insert(buffs, BattleStatus.TetanusTerm(enemy.Status))
+	-- 강제 결투 응수: 가하는 피해량 증가 항은 0 으로 친다(감소 항은 그대로)
+	if BattleStatus.Total(enemy.Status, "BoostNull") > 0 then
+		for index, term in buffs do
+			buffs[index] = math.min(0, term)
+		end
+	end
 	local incoming = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = multiplier })
 	-- 공격 자체의 위력(회피·막기·치명·보호막·무적을 따지기 전) — 조율자 두베가 "14 이상의 피해"를 이것으로도 센다
 	local raw = BattleStatus.Damage({ Skill = base, Buffs = buffs, Mult = math.max(0, before.Mult) })
@@ -4008,11 +4073,14 @@ function GridBattle.ResolveDodge(state: State, enemyId: string, grade: QteDefini
 		Gimmick = gimmickCut,
 		Reflect = reflected + parryBack,
 		ReflectKilled = not enemy.Alive,
+		Forced = forceSkill ~= nil or nil,
 	})
 
-	watchEnd(state, watch)
+	if watch then
+		watchEnd(state, watch)
+	end
 	refreshOutcome(state)
-	return true, nil
+	return true, nil, taken
 end
 
 --[[
@@ -4543,6 +4611,8 @@ function GridBattle.Snapshot(state: State): any
 			회피 시간(비율). 방향 회피 QTE 의 입력 시간을 이만큼 늘린다(클라이언트, 최대 +100%).
 			보정값 ParryWindow + 민첩 3%/점 + 체력 1%/점(사양 `### 스탯`).
 		]]
+		-- 패링 QTE 에서 실수를 이만큼 더 성공으로 본다(결투사 간파·집중 최대·연계). 클라이언트가 QteDefinitions.Judge 에 넣는다
+		AllyParryForgive = math.floor(BattleStatus.Total(ally.Status, "ParryForgive")),
 		AllyParryWindow = BattleStatus.Total(ally.Status, "ParryWindow")
 			+ (state.AllyStats.Agility or 0) * 0.03
 			+ (state.AllyStats.Vitality or 0) * 0.01,

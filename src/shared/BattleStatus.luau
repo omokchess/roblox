@@ -73,6 +73,8 @@ export type ModifierKind =
 	| "AutoParry" -- 자동 패링 확률 (QTE 를 못 막았을 때 이 확률로 패링)
 	| "StaminaGain" -- 스테미나 획득량(매 턴 회복·명상)
 	| "HealDealt" -- 주는 회복량
+	| "ParryForgive" -- 패링 QTE 에서 실수를 이만큼 더 성공으로 봐준다(결투사 간파·집중·연계). 합산
+	| "BoostNull" -- 0 보다 크면 이 유닛의 [가하는 피해량] 증가(양수 항)가 0 으로 친다(강제 결투 응수)
 
 export type Modifier = {
 	Kind: ModifierKind,

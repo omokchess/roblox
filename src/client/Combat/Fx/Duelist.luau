@@ -197,6 +197,63 @@ function Fx.Chiburi(ctx: any)
 	fb(ctx, tip + side * 1.2, "Blood", { Size = 2.2, Color = BLOODC, Life = 0.4, LightEmission = 0, Speed = 5, Spread = 20 })
 end
 
+-- 결투 신청 — 도전: 대상 머리 위에 붉은 표식(도발)이 내려앉고 발밑에 붉은 고리, 칼끝에서 대상까지 가는 붉은 선 하나
+function Fx.Challenge(ctx: any)
+	local Vfx = ctx.Vfx
+	local p = ctx.Target
+	local mark = p + Vector3.new(0, 4.2, 0)
+	local ground = Vector3.new(p.X, ctx.Ground, p.Z)
+	local tip = ctx.Tip() or (ctx.Root.Position + ctx.Forward * 2)
+	Vfx.Beam(tip, p + Vector3.new(0, 1, 0), { Color = RED, Width = 0.18, Life = 0.35 })
+	Vfx.Ring(CFrame.new(ground + Vector3.new(0, 0.15, 0)), { R0 = 3.2, R1 = 1.2, Color = RED, Life = 0.5, Width = 0.2, Height = 0.06 })
+	-- 표식: 머리 위 붉은 번쩍(짧게) + 별 + 아래로 꽂히는 번개 플립북
+	Vfx.Flash(mark, { Color = RED, Size = 2.6, Life = 0.18, Brightness = 3 })
+	fb(ctx, mark, "Bolt", { Size = 3, Color = RED, Life = 0.22, LightEmission = 0.7 })
+	Vfx.Pack("Anime/Stars-01", CFrame.new(mark), { Color = RED, Size = 0.5 })
+	Common.Land(Vfx, ground, 0.5, BLOODC)
+end
+
+-- 결투 신청 — 보호막: 몸에서 은청 방패 파문이 퍼지고 아군 칸마다 방패가 맺힌다
+function Fx.ShieldWave(ctx: any)
+	local Vfx = ctx.Vfx
+	local mid = ctx.Root.Position + Vector3.new(0, 1, 0)
+	Vfx.Ring(CFrame.new(Vector3.new(mid.X, ctx.Ground + 0.15, mid.Z)), { R0 = 1, R1 = 9, Color = EDGE, Life = 0.6, Width = 0.25, Height = 0.08 })
+	Vfx.Pack("Anime/Shield-01", CFrame.lookAt(mid, mid + ctx.Forward), { Size = 0.8, Tint = EDGE })
+	Vfx.Flash(mid, { Color = EDGE, Size = 3, Life = 0.16, Brightness = 3 })
+	for i, tile in ctx.AllyTiles or {} do
+		task.delay(0.05 + 0.04 * (i - 1), function()
+			local at = tile.Position + Vector3.new(0, 2, 0)
+			Vfx.Pack("Anime/Shield-01", CFrame.lookAt(at, at + ctx.Forward), { Size = 0.7, Tint = EDGE })
+			Vfx.Ring(CFrame.new(Vector3.new(at.X, ctx.Ground + 0.15, at.Z)), { R0 = 0.8, R1 = 3, Color = STEEL, Life = 0.4, Width = 0.15, Height = 0.05 })
+			fb(ctx, at, "Charge", { Size = 3, Color = EDGE, Life = 0.35, LightEmission = 0.6 })
+		end)
+	end
+end
+
+-- 강제 결투 응수 — 도발: 낮아지며 몸 둘레에 붉은 고리 둘(안으로 모임), 앞으로 붉은 번쩍
+function Fx.TauntMark(ctx: any)
+	local Vfx = ctx.Vfx
+	local ground = Vector3.new(ctx.Root.Position.X, ctx.Ground, ctx.Root.Position.Z)
+	Vfx.Ring(CFrame.new(ground + Vector3.new(0, 0.15, 0)), { R0 = 6, R1 = 1.5, Color = RED, Life = 0.55, Width = 0.22, Height = 0.06 })
+	Vfx.Ring(CFrame.new(ground + Vector3.new(0, 0.2, 0)), { R0 = 4, R1 = 1.2, Color = BLOODC, Life = 0.45, Width = 0.14, Height = 0.05 })
+	local head = ctx.Root.Position + Vector3.new(0, 2.4, 0)
+	Vfx.Flash(head, { Color = RED, Size = 2.8, Life = 0.16, Brightness = 3 })
+	Vfx.Pack("Anime/Stars-01", CFrame.new(head), { Color = RED, Size = 0.4 })
+end
+
+-- 강제 결투 응수 — 크게 쳐내는 마지막 패리: 쇳소리 불꽃에 은청 고리와 임팩트 플립북
+function Fx.ParryBig(ctx: any)
+	local p = ctx.Tip() or (ctx.Root.Position + ctx.Forward * 2)
+	local mid = p:Lerp(ctx.Root.Position + Vector3.new(0, 0.8, 0), 0.3)
+	ctx.Vfx.Flash(mid, { Color = c(255, 240, 200), Size = 8.5, Life = 0.16, Brightness = 4 })
+	ctx.Vfx.Sparks(mid, { Color = SPARK, Count = 40, Speed = 36 })
+	ctx.Vfx.Ring(CFrame.lookAt(mid, mid + ctx.Forward), { R0 = 0.3, R1 = 3.6, Color = EDGE, Life = 0.3, Width = 0.22, Facing = true })
+	ctx.Vfx.Shake(0.3, 0.2)
+	fb(ctx, mid, "SlashImpact", { Size = 6, Color = SPARK, Life = 0.28, LightEmission = 0.6 })
+	fb(ctx, mid, "Bolt", { Size = 4.5, Color = STEEL, Life = 0.22, LightEmission = 0.7 })
+	ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(mid), { Color = SPARK, Size = 0.6 })
+end
+
 function Fx.GuardRing(ctx: any)
 	Common.GuardRing(ctx.Vfx, ctx, EDGE)
 	local front = ctx.Root.Position + ctx.Forward * 1.6

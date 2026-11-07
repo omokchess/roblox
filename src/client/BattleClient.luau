@@ -118,6 +118,9 @@ function BattleClient.new(remotes: Folder, plazaUi: any?)
 	-- 서버 결과를 기다리는 연출(스킬 / 적 공격). 결과가 오면 피해 숫자를 붙인다.
 	self.pendingSkillPlay = nil :: any
 	self.pendingAttackPlay = nil :: any
+	-- 강제 결투 응수로 나간 적 공격 연출 대기열
+	self.forcedAttacks = {} :: { any }
+	self.forcedRunning = false
 	-- 적 공격 예고가 왔지만 아직 회피 QTE 를 안 띄웠다(앞 연출이 끝나길 기다림)
 	self.threatWaiting = false
 	-- 연출 중에 받은 스냅샷의 적 자리 갱신을 미뤄둔다 (모션이 끝나야 적이 움직임)
@@ -551,6 +554,21 @@ function BattleClient:_predictTargets(skillId: string): { { string } }
 			local unit = snapshot.Units[id]
 			if unit and unit.Alive and unit.Side == "Enemy" then
 				table.insert(ids, id)
+			end
+		end
+		-- 벨 수 있는 수 제한(결투 신청 = 가장 앞의 적 하나): 서버 ResolveSkill 과 같게 앞 열부터, 같으면 내 줄에 가까운 적부터
+		if skill.MaxTargets and #ids > skill.MaxTargets then
+			table.sort(ids, function(a, b)
+				local ua, ub = snapshot.Units[a], snapshot.Units[b]
+				local ka = ua.X * 10 + math.abs(ua.Y - me.Y)
+				local kb = ub.X * 10 + math.abs(ub.Y - me.Y)
+				if ka ~= kb then
+					return ka < kb
+				end
+				return a < b
+			end)
+			for index = #ids, skill.MaxTargets + 1, -1 do
+				table.remove(ids, index)
 			end
 		end
 		table.insert(groups, ids)
@@ -1080,6 +1098,10 @@ function BattleClient:_consumeEvents(snapshot: any)
 		if ev.Kind == "Skill" and self.pendingSkillPlay then
 			self.pendingSkillPlay:SetResult(ev)
 			self.pendingSkillPlay = nil
+		elseif ev.Kind == "EnemyAttack" and ev.Forced then
+			-- 강제 결투 응수로 나간 공격: QTE 없이 서버가 이미 정했다. 앞 연출이 끝날 때마다 한 명씩 차례로 보여 준다
+			table.insert(self.forcedAttacks, ev)
+			self:_pumpForced()
 		elseif ev.Kind == "EnemyAttack" and self.pendingAttackPlay then
 			local merged = self.chainResult
 			if merged then
@@ -1108,6 +1130,31 @@ function BattleClient:_consumeEvents(snapshot: any)
 			self.director:PlaySkill(ev.Actor, ev.SkillId, { {} })
 		end
 	end
+end
+
+-- 강제 결투 응수 연출 대기열을 앞 열 순서대로 하나씩 보여 준다(앞 연출이 끝나길 기다린다)
+function BattleClient:_pumpForced()
+	if self.forcedRunning then
+		return
+	end
+	self.forcedRunning = true
+	task.spawn(function()
+		while #self.forcedAttacks > 0 and self.director do
+			local waited = 0
+			while self.director and self.director:IsBusy() and waited < 4 do
+				waited += task.wait(0.1)
+			end
+			local ev = table.remove(self.forcedAttacks, 1)
+			if self.director and ev and self.director:Has(ev.Actor) then
+				local play = self.director:PlayEnemyAttack(ev.Actor, ev.SkillId or "SlimeTackle", "player", ev.Grade)
+				if play then
+					play:SetResult(ev)
+				end
+				task.wait(0.2)
+			end
+		end
+		self.forcedRunning = false
+	end)
 end
 
 -- 예고된 적 공격: 앞 연출이 끝났으면 회피 QTE 를 띄운다
@@ -1209,6 +1256,7 @@ function BattleClient:_setupBattle()
 	end
 	self.pendingSkillPlay = nil
 	self.pendingAttackPlay = nil
+	self.forcedAttacks = {}
 	self.threatWaiting = false
 	self.pendingRender = false
 
@@ -1245,6 +1293,7 @@ function BattleClient:_teardownBattle()
 	end
 	self.pendingSkillPlay = nil
 	self.pendingAttackPlay = nil
+	self.forcedAttacks = {}
 	self.threatWaiting = false
 	self.pendingRender = false
 	self.callistoSeen = nil
@@ -1343,6 +1392,8 @@ function BattleClient:_renderUnits()
 		elseif not director:IsHeld("player") then
 			director:SetHome("player", home)
 		end
+		-- 결투사: 방어 태세면 대기 자세 GuardIdle
+		director:SetGuard("player", snapshot.Stance ~= nil and not snapshot.Stance.Attack)
 		-- 조율자: [칠성]을 준 별만 밝게(셉텐트리오네스로 꺼지면 다시 흐려진다)
 		if snapshot.AllyClassId == "Attuner" then
 			director:SetLit("player", snapshot.AllyStarLit or {})
@@ -2293,6 +2344,8 @@ function BattleClient:_startQte(role: QteDefinitions.Role)
 	-- 회피 시간(카드·집중·스탯): 방향 회피 입력 시간을 늘린다(최대 +100%)
 	local extra = if role == "Dodge" then math.clamp((self.snapshot and self.snapshot.AllyParryWindow) or 0, 0, 1) else 0
 	self.qte.DurationMs = math.floor(self.qte.DurationMs * (1 + extra))
+	-- 결투사: 실수 몇 개를 더 성공으로 본다(간파·집중 최대·연계)
+	self.qte.Forgive = if role == "Dodge" then math.max(0, (self.snapshot and self.snapshot.AllyParryForgive) or 0) else 0
 	self.qteStart = os.clock()
 	local chosen = self:_selectedSkill()
 	local classId = self.snapshot and self.snapshot.AllyClassId or "Berserker"

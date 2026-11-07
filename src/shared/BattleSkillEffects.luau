@@ -37,6 +37,7 @@
 local BattleStatus = require(script.Parent.BattleStatus)
 local ClassResources = require(script.Parent.ClassResources)
 local EnemyDefinitions = require(script.Parent.EnemyDefinitions)
+local GroggyGauge = require(script.Parent.GroggyGauge)
 
 local R = ClassResources
 
@@ -84,6 +85,8 @@ export type Context = {
 	Enemies: (() -> { any })?,
 	-- 지금 턴 번호(메라크 "이전 턴에 메그레즈", 집중력 지속)
 	Turn: number?,
+	-- 결투사 강제 결투 응수: 이 적들이 앞 열부터 차례로 스킬 1 을 쓴다. 적마다 받은 피해를 돌려준다
+	ForceAttacks: ((units: { any }) -> { { Enemy: any, Taken: number } })?,
 }
 
 export type Effect = {
@@ -241,8 +244,8 @@ local musicianEffects: { [string]: Effect } = {
 --[[
 	태세를 바꾼다. **스택만 뒤집는다** — 태세의 보정값(받는 피해·피해·치명·자동 패링)은 결투사 키트
 	(`CardEffects/Duelist` 의 Duelist_Kit)가 집중·카드(철벽·광검·양날·자세 낮추기…)를 보고 다시 건다.
-	  공격 태세: 받는 피해 +15%, 피해 +(20 + 집중)%, 치명타 확률 +10%, 적중 시 출혈 1
-	  방어 태세: 받는 피해 −30%, 피해 −45%, (5×집중)% 자동 패링(최대 30%)
+	  공격 태세: 받는 피해 +15%, 피해 +(20 + 집중×2)%, 치명 확률 +15%, 치명 피해 +(치명 확률÷2, 최대 40%), 모든 타격 출혈 1
+	  방어 태세: 받는 피해 −(55 + 집중×1.25)%, 피해 −(55 − 집중×2.5)%, (집중×5)% 자동 패링(궁극기·패링 불가에도)
 ]]
 function BattleSkillEffects.SetStance(status: BattleStatus.State, attack: boolean)
 	BattleStatus.SpendAll(status, R.STANCE_ATTACK)
@@ -256,75 +259,99 @@ local function applyStance(ctx: Context, attack: boolean): ()
 	ctx.Log(if attack then "공격 태세" else "방어 태세")
 end
 
+-- [도발] 상한(GridBattle.TAUNT_MAX 와 같은 값 — 이 모듈은 GridBattle 을 부르지 않는다)
+local TAUNT_CAP = 20
+
+--[[
+	결투 신청(방어 태세 1번): [도발] 5. 지정 대상(가장 앞의 적)은 ([도발]×1)턴 동안 받는 피해 +([도발]×2)%.
+	모든 아군에게 보호막 (최대 체력÷20, 최대 30). 받는 피해량이 1% 이상인 아군은 (최대 체력÷30, 최대 20)을 더 받고 3턴 동안 받는 피해 −30%.
+	얻은 보호막 양은 [결투 보호막]에 적어 둔다 — 키트가 공격 태세가 될 때 그만큼 지운다.
+]]
+local function duelChallenge(ctx: Context, targets: { any }): ()
+	local ally = ctx.Ally
+	ally.Taunt = math.min(TAUNT_CAP, (ally.Taunt or 0) + 5)
+	local taunt = ally.Taunt
+	for _, target in targets do
+		BattleStatus.AddModifier(ctx.StatusOf(target), "DamageTaken", taunt * 0.02, math.max(1, taunt), "결투 신청")
+	end
+	for _, member in ctx.Allies do
+		local status = ctx.StatusOf(member)
+		local granted = math.min(30, math.floor(member.MaxHealth / 20))
+		if BattleStatus.Total(status, "DamageTaken") >= 0.01 then
+			granted += math.min(20, math.floor(member.MaxHealth / 30))
+			BattleStatus.AddModifier(status, "DamageTaken", -0.3, 3, "결투 신청")
+		end
+		BattleStatus.AddShield(status, granted)
+		BattleStatus.AddStack(status, R.DUEL_SHIELD, granted)
+	end
+	ctx.Log(string.format("결투 신청 — 도발 %d · 대상 받는 피해 +%d%% (%d턴)", taunt, taunt * 2, taunt))
+end
+
 local duelistEffects: { [string]: Effect } = {
 	--[[
-		앞뒤관통: 사용 후 2턴 간 아군 회피 시간 +(2×집중)%, 자신 받는 피해 −10%.
+		앞뒤관통(공격 태세 1번): [집중] 1당 이 스킬의 [가하는 피해량] +2.5%. 사용 후 [집중] 1.
 	]]
 	FrontBackPierce = {
-		After = function(ctx)
+		Before = function(ctx)
 			local focus = BattleStatus.Stack(ctx.Status, R.FOCUS)
-			for _, ally in ctx.Allies do
-				BattleStatus.AddModifier(ctx.StatusOf(ally), "ParryWindow", focus * 0.02, 2, "앞뒤관통")
-			end
-			BattleStatus.AddModifier(ctx.Status, "DamageTaken", -0.1, 2, "앞뒤관통")
-			ctx.Log(string.format("회피 시간 +%d%% · 받는 피해 −10%% (2턴)", focus * 2))
+			BattleStatus.AddModifier(ctx.Status, "DamageDealt", focus * 0.025, 1, "앞뒤관통")
+			return 1
+		end,
+		After = function(ctx)
+			ctx.Gain(R.FOCUS, 1)
+			ctx.Log(string.format("집중 %d", BattleStatus.Stack(ctx.Status, R.FOCUS)))
 		end,
 	},
 
 	--[[
-		찔러찔러또찔러: 대상에게 출혈. 3턴 간 [회피 시간] +(2.5×집중)%. 집중 +1.
+		찔러찔러또찔러(공격 태세 2번): 적중 시 [출혈] 2, 사용 시 [집중] 2.
+		[출혈]을 가진 적에게 +20% 는 키트(BeforeSkill·BeforeHit — 스킬 시작 때 [출혈]이 있던 적만)가 한다.
 	]]
 	TripleThrust = {
 		After = function(ctx)
 			for _, target in ctx.Targets do
-				BattleStatus.AddBleed(ctx.StatusOf(target), 3)
+				BattleStatus.AddBleed(ctx.StatusOf(target), 2)
 			end
-			local focus = BattleStatus.Stack(ctx.Status, R.FOCUS)
-			BattleStatus.AddModifier(ctx.Status, "ParryWindow", focus * 0.025, 3, "찔러찔러또찔러")
-			BattleStatus.AddStack(ctx.Status, R.FOCUS, 1, ClassResources.Cap(R.FOCUS))
-			ctx.Log(string.format("출혈 부여 · 집중 %d", BattleStatus.Stack(ctx.Status, R.FOCUS)))
+			ctx.Gain(R.FOCUS, 2)
+			ctx.Log(string.format("출혈 2 부여 · 집중 %d", BattleStatus.Stack(ctx.Status, R.FOCUS)))
 		end,
 	},
 
 	--[[
-		신경을 곤두세우고 깊은 호흡을 들여 (준비 자세).
+		신경을 곤두세우고 깊은 호흡을 들여(공용 3번).
 
-		1턴 간 받는 버프·회복 +30%, 받는 피해 −25%, [회피 시간] +(3×집중)%.
-		집중 +3. 다음 턴에 이 슬롯은 **연계 스킬**로 강화된다.
+		3턴 동안 받는 회복량 +30%, 받는 버프 효율 +30%, 받는 피해량 +10%, 가하는 피해량 +20%.
+		[집중] 4 (쓰기 전에 3 이상이면 1 더). 다음 턴에 이 슬롯 옆에 **연계 스킬**이 열린다.
 	]]
 	DeepBreath = {
 		After = function(ctx)
 			local status = ctx.Status
-			local focus = BattleStatus.Stack(status, R.FOCUS)
-			BattleStatus.AddModifier(status, "BuffTaken", 0.3, 1, "준비 자세")
-			BattleStatus.AddModifier(status, "HealTaken", 0.3, 1, "준비 자세")
-			BattleStatus.AddModifier(status, "DamageTaken", -0.25, 1, "준비 자세")
-			BattleStatus.AddModifier(status, "ParryWindow", focus * 0.03, 1, "준비 자세")
-			BattleStatus.AddStack(status, R.FOCUS, 3, ClassResources.Cap(R.FOCUS))
+			local before = BattleStatus.Stack(status, R.FOCUS)
+			BattleStatus.AddModifier(status, "HealTaken", 0.3, 3, "깊은 호흡")
+			BattleStatus.AddModifier(status, "BuffTaken", 0.3, 3, "깊은 호흡")
+			BattleStatus.AddModifier(status, "DamageTaken", 0.1, 3, "깊은 호흡")
+			BattleStatus.AddModifier(status, "DamageDealt", 0.2, 3, "깊은 호흡")
+			ctx.Gain(R.FOCUS, if before >= 3 then 5 else 4)
 			BattleStatus.AddStack(status, R.READY, 1, 1)
-			ctx.Log(
-				string.format(
-					"준비 자세 — 집중 %d, 다음 턴 연계 가능",
-					BattleStatus.Stack(status, R.FOCUS)
-				)
-			)
+			ctx.Log(string.format("깊은 호흡 — 집중 %d, 다음 턴 연계 가능", BattleStatus.Stack(status, R.FOCUS)))
 		end,
 	},
 
 	--[[
 		연계: 마지막까지 빛나는 점을 향해 검 끝을 쏘아라.
 
-		치명타 확률 보정 +15%, 집중 1스택당 피해 +2.5%.
-		3턴 간 아군 패링 +15% · 받는 피해 −10%. 출혈. **태세 변경.**
-		2턴 간 받는 피해 −15% · 피해 +15%.
+		이 스킬의 치명 확률 +20%, [집중] 1당 [가하는 피해량] +5%·치명 피해량 +5%([집중]은 쓰지 않는다). 적중 시 [출혈] 4.
+		3턴 동안 아군 패링 실패 1개를 성공으로 보고 받는 피해 −20%. **태세 변경**, 바뀐 태세에 따라
+		  방어: 2턴 받는 피해 −20% · 가하는 피해 −20% · 패링 실패 1개 봐줌, 방어 태세인 동안 치명 피해를 한 번 체력 10으로 버틴다([마지막 버팀])
+		  공격: 2턴 받는 피해 +20% · 가하는 피해 +20% · 받는 버프 효율 +30%, [집중] 5
 	]]
 	PointBlank = {
 		Before = function(ctx)
-			BattleStatus.AddModifier(ctx.Status, "CritChance", 0.15, 1, "연계")
-			-- 2026-10-04 사용자: [집중]을 전부 소모, 소모한 1당 [치명타 피해량] +4%(2026-10-04 2% → 4%, 가하는 피해 25% → 10% → 치명타 피해로)
-			local spent = BattleStatus.SpendAll(ctx.Status, R.FOCUS)
-			BattleStatus.AddModifier(ctx.Status, "CritDamage", spent * 0.04, 1, "연계")
-			ctx.Log(string.format("집중 %d 소모 — 치명타 피해 +%d%%", spent, spent * 4))
+			local focus = BattleStatus.Stack(ctx.Status, R.FOCUS)
+			BattleStatus.AddModifier(ctx.Status, "CritChance", 0.2, 1, "연계")
+			BattleStatus.AddModifier(ctx.Status, "CritDamage", focus * 0.05, 1, "연계")
+			BattleStatus.AddModifier(ctx.Status, "DamageDealt", focus * 0.05, 1, "연계")
+			ctx.Log(string.format("집중 %d — 피해 +%d%% · 치명타 피해 +%d%%", focus, focus * 5, focus * 5))
 			return 1
 		end,
 		After = function(ctx)
@@ -332,16 +359,67 @@ local duelistEffects: { [string]: Effect } = {
 			BattleStatus.SpendStack(status, R.READY, 1)
 			for _, ally in ctx.Allies do
 				local allyStatus = ctx.StatusOf(ally)
-				BattleStatus.AddModifier(allyStatus, "ParryWindow", 0.15, 3, "연계")
-				BattleStatus.AddModifier(allyStatus, "DamageTaken", -0.1, 3, "연계")
+				BattleStatus.AddModifier(allyStatus, "ParryForgive", 1, 3, "연계")
+				BattleStatus.AddModifier(allyStatus, "DamageTaken", -0.2, 3, "연계")
 			end
 			for _, target in ctx.Targets do
-				BattleStatus.AddBleed(ctx.StatusOf(target), 3)
+				BattleStatus.AddBleed(ctx.StatusOf(target), 4)
 			end
 			-- 태세를 뒤집는다.
-			applyStance(ctx, BattleStatus.Stack(status, R.STANCE_ATTACK) <= 0)
-			BattleStatus.AddModifier(status, "DamageTaken", -0.15, 2, "연계 여파")
-			BattleStatus.AddModifier(status, "DamageDealt", 0.15, 2, "연계 여파")
+			local toAttack = BattleStatus.Stack(status, R.STANCE_ATTACK) <= 0
+			applyStance(ctx, toAttack)
+			if toAttack then
+				BattleStatus.AddModifier(status, "DamageTaken", 0.2, 2, "연계 여파")
+				BattleStatus.AddModifier(status, "DamageDealt", 0.2, 2, "연계 여파")
+				BattleStatus.AddModifier(status, "BuffTaken", 0.3, 2, "연계 여파")
+				ctx.Gain(R.FOCUS, 5)
+			else
+				BattleStatus.AddModifier(status, "DamageTaken", -0.2, 2, "연계 여파")
+				BattleStatus.AddModifier(status, "DamageDealt", -0.2, 2, "연계 여파")
+				BattleStatus.AddModifier(status, "ParryForgive", 1, 2, "연계 여파")
+				BattleStatus.AddStack(status, R.LAST_STAND, 1, 1)
+			end
+		end,
+	},
+
+	--[[
+		결투 신청(방어 태세 1번) — duelChallenge 위.
+	]]
+	DuelChallenge = {
+		After = function(ctx)
+			duelChallenge(ctx, ctx.Targets)
+		end,
+	},
+
+	--[[
+		강제 결투 응수(방어 태세 2번): [도발] 5. 같은 행의 적이 앞 열부터 차례로 스킬 1을 강제로 쓴다(엔진이 ForceAttacks 로).
+		맞은 적마다: 받은 피해×2% 만큼 그로기(최대 40%) · ([도발]×2)% 받는 피해 증가 · 3턴 가하는 피해 −30% · 3턴 피해 증가 무효.
+		적에게 [출혈]이 있거나 받는 피해량이 30% 이상이면 결투 신청을 추가로 쓴다. 다음 턴 받는 피해 −20%(DUEL_NEXT → 키트가 다음 턴 시작에 건다).
+	]]
+	ForcedDuel = {
+		After = function(ctx)
+			local ally = ctx.Ally
+			ally.Taunt = math.min(TAUNT_CAP, (ally.Taunt or 0) + 5)
+			local results = if ctx.ForceAttacks then ctx.ForceAttacks(ctx.Targets) else {}
+			local met: { any } = {}
+			for _, result in results do
+				local enemy = result.Enemy
+				if not enemy.Alive then
+					continue
+				end
+				GroggyGauge.Add(enemy.Groggy, GroggyGauge.MAX * math.min(0.4, result.Taken * 0.02))
+				BattleStatus.AddModifier(enemy.Status, "DamageTaken", ally.Taunt * 0.02, 3, "강제 결투 응수")
+				BattleStatus.AddModifier(enemy.Status, "DamageDealt", -0.3, 3, "강제 결투 응수")
+				BattleStatus.AddModifier(enemy.Status, "BoostNull", 1, 3, "강제 결투 응수")
+				if enemy.Status.Bleed > 0 or BattleStatus.Total(enemy.Status, "DamageTaken") >= 0.3 then
+					table.insert(met, enemy)
+				end
+			end
+			ctx.Log(string.format("강제 결투 응수 — 적 %d기 응수 · 도발 %d", #results, ally.Taunt))
+			if #met > 0 then
+				duelChallenge(ctx, { met[1] })
+			end
+			BattleStatus.AddStack(ctx.Status, R.DUEL_NEXT, 1, 1)
 		end,
 	},
 }
@@ -1583,9 +1661,14 @@ end
 ]]
 local FOCUS_SWAPS: { [string]: string } = { ScabbardStrike = "FocusCut", IaidoPeak = "SpaceCut" }
 
+-- 결투사 방어 태세: 1·2번이 결투 신청·강제 결투 응수로 바뀐다
+local DUEL_DEFENSE_SWAPS: { [string]: string } = { FrontBackPierce = "DuelChallenge", TripleThrust = "ForcedDuel" }
+
 function BattleSkillEffects.SwapFor(classId: string, status: BattleStatus.State, skillId: string): string?
 	if classId == "AzureBlade" and BattleStatus.Stack(status, R.CONCENTRATION) > 0 then
 		return FOCUS_SWAPS[skillId]
+	elseif classId == "Duelist" and BattleStatus.Stack(status, R.STANCE_ATTACK) <= 0 then
+		return DUEL_DEFENSE_SWAPS[skillId]
 	end
 	return nil
 end

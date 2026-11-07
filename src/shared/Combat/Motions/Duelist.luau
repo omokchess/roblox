@@ -104,6 +104,18 @@ local SHOT = W(DEEP, {
 	LLeg = { -56, 0, -10 },
 })
 
+-- 방어 태세 액티브(2026-11-07 리메이크) — tools/combat/design/duelist_guard.py
+--   GD 가드 대기: 무게 중심 낮추고 뒷발에 싣고 칼을 몸 앞에 세운다(방어 태세 대기·두 기술의 시작/끝 자세)
+--   POINTC 도전: 팔을 쭉 뻗어 칼끝이 적 얼굴 높이 · FLOURISH 경례 푸는 휘두름(오른쪽 아래 바깥, 칼끝은 땅 위 1.3)
+--   SPREAD 보호막 펼침: 칼 높이 세우고 왼팔 활짝 · P_OUT/P_IN/P_HIGH 패리(바깥 · 안쪽 · 머리 위 횡 받기)
+local GD = { Root = { 0, -0.36, 0.3, 0, 54, 0 }, Torso = { 8, -4, 0 }, Head = { -2, -50, 2 }, RArm = { 67.5, -39.9, -0.1 }, LArm = { 14, -6, 10 }, RLeg = { 30, -30, 10 }, LLeg = { -24, 0, -12 }, W = { 0, 0, 0, 0.6, 0, 0.9 } }
+local POINTC = { Root = { 0, -0.22, -0.2, 0, 62, 0 }, Torso = { 10, -6, 0 }, Head = { -6, -54, 4 }, RArm = { 93.6, -46.2, 0 }, LArm = { 14, -6, 10 }, RLeg = { 16, -38, 10 }, LLeg = { -10, 0, -12 }, W = { 0, 0, 0, -90, 0, 0 } }
+local FLOURISH = { Root = { 0, -0.24, 0, 0, 52, 0 }, Torso = { 4, -8, -2 }, Head = { -2, -44, 4 }, RArm = { 57.7, -57.9, 11.2 }, LArm = { 14, -6, 10 }, RLeg = { 16, -38, 10 }, LLeg = { -10, 0, -12 }, W = { 0, 0, 0, -74.3, 0, -22.2 } }
+local SPREAD = { Root = { 0, -0.1, 0.1, 0, 30, 0 }, Torso = { -4, -4, 0 }, Head = { 6, -26, 0 }, RArm = { 154.1, -28.3, -3.2 }, LArm = { 95, 0, -75 }, RLeg = { 16, -38, 10 }, LLeg = { -10, 0, -12 }, W = { 0, 0, 0, -66.3, 0, -10.3 } }
+local P_OUT = { Root = { 0, -0.38, 0.45, 0, 46, 0 }, Torso = { 8, -4, 0 }, Head = { -2, -46, 2 }, RArm = { 81.7, -48, 12.8 }, LArm = { 14, -6, 10 }, RLeg = { 32, -28, 10 }, LLeg = { -26, 0, -12 }, W = { 0, 0, 0, -2.2, 0, 4.2 } }
+local P_IN = { Root = { 0, -0.38, 0.45, 0, 52, 0 }, Torso = { 8, -4, 0 }, Head = { -2, -46, 2 }, RArm = { 79.9, -22.4, -15.8 }, LArm = { 14, -6, 10 }, RLeg = { 32, -28, 10 }, LLeg = { -26, 0, -12 }, W = { 0, 0, 0, -23.7, 0, 17 } }
+local P_HIGH = { Root = { 0, -0.38, 0.45, 0, 44, 0 }, Torso = { 8, -4, 0 }, Head = { -2, -46, 2 }, RArm = { 121.6, -26.7, -4.1 }, LArm = { 14, -6, 10 }, RLeg = { 32, -28, 10 }, LLeg = { -26, 0, -12 }, W = { 0, 0, 0, -30, 0, -77.3 } }
+
 return {
 	Stance = EG,
 
@@ -118,6 +130,18 @@ return {
 			K(0.0, nil, EG, { Root = EG_OUT.Root, Torso = EG_OUT.Torso, Head = EG_OUT.Head, RArm = EG_OUT.RArm, LArm = EG_OUT.LArm, W = { 0, 0, 0, -89.5, 30, -1 } }),
 			K(1.45, nil, EG, { Root = EG_IN.Root, Torso = EG_IN.Torso, Head = EG_IN.Head, RArm = EG_IN.RArm, LArm = EG_IN.LArm, W = { 0, 0, 0, -88, 30, 2 } }),
 			K(2.5, nil, EG, { W = { 0, 0, 0, -91, 30, 0.5 } }),
+		},
+	},
+
+	-- 방어 태세 대기(가드 대기): 낮게 웅크린 채 칼을 세우고 천천히 숨 쉰다. 태세가 방어일 때 Idle 대신 쓸 것(CombatDirector 연결은 프로그래밍)
+	GuardIdle = {
+		Duration = 3.2,
+		Loop = true,
+		Smooth = true,
+		Keys = {
+			K(0.0, nil, GD, { Root = { 0, -0.34, 0.3, 0, 54, 0 }, Torso = { 7, -4, 0 }, W = { 0, 0, 0, 0.6, 0, 0.9 } }),
+			K(1.3, nil, GD, { Root = { 0, -0.39, 0.32, 0, 54, 0 }, Torso = { 10, -4, 0 }, Head = { -3, -50, 2 }, RArm = { 66.5, -39.9, -0.1 }, W = { 0, 0, 0, 2.5, 0, 0.9 } }),
+			K(2.3, nil, GD, { W = { 0, 0, 0, -0.8, 0, 0.9 } }),
 		},
 	},
 
@@ -369,6 +393,67 @@ return {
 				K(0.9, "cubicInOut", EG),
 			},
 			Events = { { t = 0.16, k = "Fx", n = "GuardRing" } },
+		},
+
+		-- 결투 신청(방어 태세 스킬 1, 2026-11-07): 칼을 얼굴 앞에 세워 경례하고 고개를 숙였다가, 칼을 오른쪽 아래로 갈라 내려
+		-- (경례 풀기) 팔을 쭉 뻗어 칼끝을 대상 눈높이에 겨눈다(도전, 붉은 표식) → 칼을 높이 세우고 왼팔을 활짝 펴 아군에게 보호막을 펼친다.
+		-- 피해 없음(Hit 사건 없음). 시작·끝 = 가드 대기(GD)
+		DuelChallenge = {
+			Duration = 2.6,
+			Keys = {
+				K(0, nil, GD),
+				K(0.3, "cubicInOut", SALUTE),
+				K(0.55, "sineInOut", SALUTE, { Head = { 14, -8, 0 }, Torso = { 8, 0, 0 } }),
+				K(0.75, "expoOut", FLOURISH),
+				K(1.0, "expoOut", POINTC),
+				K(1.45, "sineOut", POINTC, { Root = { 0, -0.24, -0.34, 0, 62, 0 }, Torso = { 6, -6, 0 } }),
+				K(1.7, "expoOut", SPREAD),
+				K(2.1, "sineOut", SPREAD, { Root = { 0, -0.04, 0.1, 0, 30, 0 }, Head = { 10, -26, 0 }, LArm = { 100, 0, -80 } }),
+				K(2.6, "cubicInOut", GD),
+			},
+			Events = {
+				{ t = 0.34, k = "Fx", n = "Salute" },
+				{ t = 0.72, k = "Trail", on = true },
+				{ t = 1.1, k = "Trail", on = false },
+				{ t = 1.0, k = "Fx", n = "Challenge" },
+				{ t = 1.7, k = "Fx", n = "ShieldWave" },
+			},
+		},
+
+		-- 강제 결투 응수(방어 태세 스킬 2): 가드 대기에서 한 번 더 낮추며 도발한다 → 끌려온 적의 공격을 칼로 세 번 쳐낸다
+		-- (바깥 중 · 안쪽 약 빠르게 · 머리 위 강 크게 — 강중약 박자) → 밀려난 칼을 당겨 모았다가 한 번 되찌른다(리포스트, Hit 1).
+		-- 패리 수 3은 모션에 박혀 있다(받아낸 수에 따라 바꿀 수 없음). 시작·끝 = 가드 대기(GD)
+		ForcedDuel = {
+			Duration = 3.0,
+			Keys = {
+				K(0, nil, GD),
+				K(0.18, "expoOut", GD, { Root = { 0, -0.48, 0.5, 0, 52, 0 }, Torso = { 12, -4, 0 }, Head = { 4, -50, 2 } }),
+				K(0.55, "sineInOut", GD, { Root = { 0, -0.46, 0.46, 0, 52, 0 }, Torso = { 10, -4, 0 } }),
+				K(0.76, "expoOut", P_OUT),
+				K(0.95, "sineOut", GD),
+				K(1.14, "expoOut", P_IN),
+				K(1.3, "sineOut", GD, { Root = { 0, -0.4, 0.34, 0, 54, 0 } }),
+				K(1.6, "quadIn", GD, { Root = { 0, -0.5, 0.52, 0, 50, 0 }, Torso = { 12, -4, 0 }, RArm = { 62, -34, 0 } }),
+				K(1.7, "expoOut", P_HIGH, { Root = { 0, -0.44, 0.62, 0, 44, 0 }, Torso = { 12, -4, 0 } }),
+				K(1.98, "sineOut", P_HIGH, { Root = { 0, -0.5, 0.7, 0, 44, 0 }, Torso = { 14, -4, 0 } }),
+				K(2.18, "cubicInOut", COCK),
+				K(2.3, "expoOut", LUNGE),
+				K(2.55, "sineOut", LUNGE, { Root = { 0, -0.56, -0.56, 0, 40, 0 } }),
+				K(3.0, "cubicInOut", GD),
+			},
+			Events = {
+				{ t = 0.2, k = "Fx", n = "TauntMark" },
+				{ t = 0.78, k = "Fx", n = "ParrySpark" },
+				{ t = 1.16, k = "Fx", n = "ParrySpark" },
+				{ t = 1.72, k = "Fx", n = "ParryBig" },
+				{ t = 1.72, k = "Shake", a = 0.3, d = 0.2 },
+				{ t = 2.15, k = "Dash", to = "Target", gap = 3.4, d = 0.12 },
+				{ t = 2.2, k = "Trail", on = true },
+				{ t = 2.3, k = "Hit", i = 1, fx = "Pierce" },
+				{ t = 2.31, k = "Stop", d = 0.06 },
+				{ t = 2.6, k = "Trail", on = false },
+				{ t = 2.62, k = "Dash", to = "Home", d = 0.24 },
+			},
 		},
 
 		-- 호흡(2026-10-03 사용자: '명상' → '호흡'): 칼을 얼굴 앞에 세워(경례) 눈을 감고, 크게 들이쉬어 가슴을 펴고 턱을 들었다가 길게 내쉰다

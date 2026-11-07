@@ -66,6 +66,8 @@ export type Challenge = {
 	BeatMistakes: { [number]: number }?,
 	-- 반대 방향 비트(화면에 보이는 화살표와 반대로 눌러야 맞다): ReverseBeats[비트] = true
 	ReverseBeats: { [number]: boolean }?,
+	-- 실수 몇 개를 더 성공으로 봐준다(결투사 간파·집중 최대·연계 — 스냅숏 AllyParryForgive). 성공·막기 기준이 같이 늘어난다
+	Forgive: number?,
 }
 
 --=== 상수 (원본 Qte.js와 동일) ===--
@@ -353,10 +355,11 @@ function QteDefinitions.Judge(challenge: Challenge, elapsedMs: number): Grade
 		if #expected == 0 or state.sequenceIndex < #expected then
 			return "Fail"
 		end
-		if state.mistakes <= COMMAND_DODGE_MISTAKES then
+		local forgive = math.max(0, challenge.Forgive or 0)
+		if state.mistakes <= COMMAND_DODGE_MISTAKES + forgive then
 			return "Success"
 		end
-		if state.mistakes <= COMMAND_GUARD_MISTAKES then
+		if state.mistakes <= COMMAND_GUARD_MISTAKES + forgive then
 			return "Partial"
 		end
 		return "Fail"
@@ -423,10 +426,11 @@ function QteDefinitions.JudgeChain(challenge: Challenge): { Grade }
 	local beats = challenge.BeatCount or 1
 	local done = challenge.SequenceIndex or 0
 	local grades: { Grade } = {}
+	local forgive = math.max(0, challenge.Forgive or 0)
 	for beat = 1, beats do
 		local mistakes = (challenge.BeatMistakes or {})[beat] or 0
-		grades[beat] = if done < beat * size or mistakes > CHAIN_GUARD_MISTAKES then "Fail"
-			elseif mistakes > CHAIN_DODGE_MISTAKES then "Partial"
+		grades[beat] = if done < beat * size or mistakes > CHAIN_GUARD_MISTAKES + forgive then "Fail"
+			elseif mistakes > CHAIN_DODGE_MISTAKES + forgive then "Partial"
 			else "Success"
 	end
 	return grades

@@ -63,22 +63,37 @@ local KITS: { [string]: ClassKit } = {
 		StatusKeywords = { "Focus", "AttackStance", "DefenseStance" },
 		Passives = {
 			{
+				Id = "Duelist_Prep",
+				Name = "네 번의 준비, 한 번의 반격",
+				Description = "- 공격을 받은 스킬이 누적 4번째일 때마다 그 스킬을 반드시 패링한다.\n"
+					.. "  - 스킬 하나는 몇 번을 때려도 한 번으로 센다.\n"
+					.. "  - 궁극기·패링 불가 스킬은 패링하지 않는다.\n"
+					.. "- 이 패링에 성공하면 [집중] 1 획득",
+			},
+			{
 				Id = "Duelist_Read",
 				Name = "간파",
-				Description = "- 4번 맞을 때마다 다음 공격을 반드시 패링한다.\n"
-					.. "  - 궁극기·패링 불가 스킬은 제외",
+				Description = "- 막기의 [받는 피해량] 감소 효과가 절반이 된다.\n"
+					.. "- 패링 실패 1개를 성공으로 본다.",
 			},
 			{
-				Id = "Duelist_Slip",
-				Name = "흘림",
-				Description = "- 방어의 피해 감소 효과가 절반이 된다.\n"
-					.. "  - 대신 [회피 시간] +10%",
+				Id = "Duelist_Situation",
+				Name = "전황 파악",
+				Description = "- 적 1기마다 [받는 피해량] −5%\n"
+					.. "- 적이 5기에서 하나 줄 때마다 [가하는 피해량] +5%\n"
+					.. "  - 적 수가 바뀌면 다시 계산한다.",
 			},
 			{
-				Id = "Duelist_Count",
-				Name = "사전 전략",
-				Description = "- 전투 시작 시 적이 3기 이하면 [가하는 피해량] +5%, 4기 이상이면 [받는 피해량] −5%\n"
-					.. "  - 전투 중 적의 수가 바뀌면 다시 판정한다.",
+				Id = "Duelist_Pain",
+				Name = "아픈 곳 또 때리기",
+				Description = "- 공격 태세일 때 치명타를 내면 [집중] 1 획득",
+			},
+			{
+				Id = "Duelist_Guard",
+				Name = "맨 앞에서 긁기",
+				Description = "- 방어 태세일 때 최대 체력 +100\n"
+					.. "- 방어 태세에서 전열에 있으면 매 턴 [도발] 2 획득\n"
+					.. "- 공격 태세가 되면 두 효과 모두 사라진다.",
 			},
 		},
 	},

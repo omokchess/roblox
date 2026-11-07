@@ -70,6 +70,8 @@ type Actor = {
 	Weapons: any?,
 	ClassId: string,
 	WeaponType: string?,
+	-- 결투사 방어 태세: 대기 자세를 GuardIdle 로(없으면 Idle)
+	Guard: boolean?,
 	Home: CFrame,
 	Pos: CFrame,
 	Chest: number,
@@ -154,6 +156,12 @@ end
 local function flat(v: Vector3): Vector3
 	local f = Vector3.new(v.X, 0, v.Z)
 	return if f.Magnitude > 1e-3 then f.Unit else Vector3.new(0, 0, -1)
+end
+
+-- 사람 배우의 대기 자세. 방어 태세면 GuardIdle(그 직업에 있을 때만), 아니면 Idle
+local function idleFor(a: Actor): any
+	local guard = if a.Guard then CombatMotions.Get(a.ClassId, "GuardIdle", a.WeaponType) else nil
+	return guard or CombatMotions.Get(a.ClassId, "Idle", a.WeaponType)
 end
 
 function CombatDirector:AddHumanoid(id: string, character: Model, classId: string, home: CFrame, weaponId: string?)
@@ -405,12 +413,28 @@ function CombatDirector:SwapWeapon(id: string, weaponId: string)
 	end
 	a.Weapons = CombatWeapons.Attach(a.Model, a.Rig, weaponId, a.ClassId)
 	a.WeaponType = a.Weapons.Type
-	a.Idle = CombatMotions.Get(a.ClassId, "Idle", a.WeaponType)
+	a.Idle = idleFor(a)
 	a.Fidgets = CombatMotions.Get(a.ClassId, "Fidgets", a.WeaponType)
 	if not a.Animator:IsBusy() then
 		a.Animator:SetBase(a.Idle)
 	end
 	CombatVfx.Flash(a.Pos.Position, { Color = Color3.fromRGB(150, 200, 255), Size = 7, Life = 0.4, Brightness = 5 })
+end
+
+--[[
+	결투사 태세에 맞춰 대기 자세를 바꾼다(방어 태세 = GuardIdle, 공격 태세 = Idle). 연출 중이어도 바탕 자세만 바뀌어 끝난 뒤 이어진다.
+	루프 모션을 붙들고 있는 중(Hold)이면 건드리지 않는다.
+]]
+function CombatDirector:SetGuard(id: string, on: boolean)
+	local a = self.Actors[id]
+	if not a or a.Kind ~= "Humanoid" or (a.Guard == true) == on then
+		return
+	end
+	a.Guard = on
+	a.Idle = idleFor(a)
+	if not a.HoldId then
+		a.Animator:SetBase(a.Idle)
+	end
 end
 
 -- 적 하나: 보스 부위면 부위 몸, 사람 모양 적·소환체(defId)면 그 몸, 아니면 슬라임

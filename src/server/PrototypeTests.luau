@@ -841,6 +841,196 @@ local function runStatusAndSkillEffects()
 	)
 	expect(GridBattle.SkillList(duelBattle)[4].Id == "PointBlank", "the follow-up must take slot 4 once open")
 
+	--=== 결투사 리메이크(2026-11-07) ===--
+	do
+		local R = ClassResources
+		local function newDuel()
+			return GridBattle.New(1, "결투사", 200, 10, "Duelist")
+		end
+		-- 보정값 한 출처의 합
+		local function modBy(unit: any, kind: string, source: string): number
+			local total = 0
+			for _, modifier in unit.Status.Modifiers do
+				if modifier.Kind == kind and modifier.Source == source then
+					total += modifier.Value
+				end
+			end
+			return total
+		end
+		local function near(a: number, b: number): boolean
+			return math.abs(a - b) < 1e-6
+		end
+		local function focusOf(unit: any): number
+			return BattleStatus.Stack(unit.Status, R.FOCUS)
+		end
+
+		-- 집중: 최대 8
+		local duel = newDuel()
+		local me = GridBattle.Ally(duel)
+		GridBattle.GainResource(duel, me, R.FOCUS, 20)
+		expect(focusOf(me) == 8, "focus must cap at 8")
+
+		-- 공격 태세(집중 4): 받는 피해 +15%, 가하는 +(20+8)%, 치명 +15%. 집중: 받는 −4%, 가하는 +8%
+		GridBattle.EndTurn(duel)
+		BattleStatus.SpendAll(me.Status, R.FOCUS)
+		GridBattle.GainResource(duel, me, R.FOCUS, 4)
+		GridBattle.EndTurn(duel)
+		expect(near(modBy(me, "DamageTaken", "태세"), 0.15), "attack stance: taken +15%")
+		expect(near(modBy(me, "DamageDealt", "태세"), 0.28), "attack stance: dealt +(20 + focus x 2)%")
+		expect(near(modBy(me, "CritChance", "태세"), 0.15), "attack stance: crit +15%")
+		expect(near(modBy(me, "DamageTaken", "집중"), -0.04) and near(modBy(me, "DamageDealt", "집중"), 0.08), "focus: 1% taken, 2% dealt per stack")
+		expect(me.MaxHealth == 200, "attack stance must not carry the +100 max health")
+
+		-- 방어 태세(집중 4): 받는 −(55+5)%, 가하는 −(55−10)%, 자동 패링 20%, 최대 체력 +100, 스킬 1·2 교체
+		expect(GridBattle.ToggleStance(duel), "toggle to defense")
+		expect(near(modBy(me, "DamageTaken", "태세"), -0.60), "defense stance: taken -(55 + focus x 1.25)%")
+		expect(near(modBy(me, "DamageDealt", "태세"), -0.45), "defense stance: dealt -(55 - focus x 2.5)%")
+		expect(near(modBy(me, "AutoParry", "태세"), 0.20), "defense stance: auto parry focus x 5%")
+		expect(me.MaxHealth == 300, "defense stance: max health +100")
+		local defenseList = GridBattle.SkillList(duel)
+		expect(defenseList[1].Id == "DuelChallenge" and defenseList[2].Id == "ForcedDuel", "defense stance must swap slots 1 and 2")
+		expect(defenseList[3].Id == "DeepBreath", "slot 3 is shared")
+
+		-- 결투 신청: 도발 5 · 보호막(최대 체력÷20) · 공격 태세가 되면 그 보호막 삭제 · 체력 최대치 복귀
+		me.Stamina = me.MaxStamina
+		GridBattle.ResolveSkill(duel, 1, "Partial")
+		expect(me.Taunt >= 5, "DuelChallenge grants taunt 5")
+		expect(me.Status.Shield == 15, "DuelChallenge shield = max health / 20")
+		GridBattle.EndTurn(duel)
+		expect(GridBattle.ToggleStance(duel), "toggle to attack")
+		expect(me.Status.Shield == 0, "DuelChallenge shield is removed when the attack stance returns")
+		expect(me.MaxHealth == 200, "max health +100 is removed with the defense stance")
+		expect(GridBattle.SkillList(duel)[1].Id == "FrontBackPierce", "attack stance restores skill 1")
+
+		-- 공격 태세 액티브: 앞뒤관통 집중 +1, 찔러찔러또찔러 집중 +2
+		local before = focusOf(me)
+		local okPierce, whyPierce = GridBattle.ResolveSkill(duel, 1, "Partial")
+		expect(okPierce and focusOf(me) >= before + 1, "FrontBackPierce grants focus 1 (치명타면 아픈 곳 또 때리기가 더) " .. tostring(whyPierce))
+		local mid = focusOf(me)
+		GridBattle.ResolveSkill(duel, 2, "Partial")
+		expect(focusOf(me) >= mid + 2, "TripleThrust grants focus 2")
+
+		-- 네 번의 준비, 한 번의 반격: 스킬 4번째는 확정 패링 + 집중 +1. 집중 자동 패링은 공격 태세 집중 4 이상
+		local prep = newDuel()
+		local prepAlly = GridBattle.Ally(prep)
+		local foe = GridBattle.AliveEnemies(prep)[1]
+		foe.SkillIndex = 1
+		local taken: { number } = {}
+		for index = 1, 4 do
+			prep.Turn += 1 -- 같은 스킬을 다른 턴에 맞는 것으로 센다
+			prepAlly.Health = prepAlly.MaxHealth
+			GridBattle.ResolveDodge(prep, foe.Id, "Fail")
+			taken[index] = prepAlly.MaxHealth - prepAlly.Health
+		end
+		expect(taken[1] > 0 and taken[4] < taken[1], "the 4th attack must be parried automatically")
+		expect(focusOf(prepAlly) == 1, "the guaranteed parry grants focus 1")
+		-- 한 스킬이 여러 번 때려도 1회로 센다
+		local multi = newDuel()
+		local multiFoe = GridBattle.AliveEnemies(multi)[1]
+		multiFoe.SkillIndex = 1
+		for _ = 1, 6 do
+			GridBattle.ResolveDodge(multi, multiFoe.Id, "Fail") -- 같은 적·같은 스킬·같은 턴 = 한 번
+		end
+		expect(focusOf(GridBattle.Ally(multi)) == 0, "one skill counts once however many times it hits")
+
+		-- 집중 자동 패링: 집중 4 소모, 턴당 1회
+		local auto = newDuel()
+		local autoAlly = GridBattle.Ally(auto)
+		local autoFoe = GridBattle.AliveEnemies(auto)[1]
+		autoFoe.SkillIndex = 1
+		GridBattle.GainResource(auto, autoAlly, R.FOCUS, 5)
+		GridBattle.EndTurn(auto)
+		autoAlly.Health = autoAlly.MaxHealth
+		GridBattle.ResolveDodge(auto, autoFoe.Id, "Fail")
+		expect(focusOf(autoAlly) == 1, "focus auto parry spends 4 focus")
+		GridBattle.GainResource(auto, autoAlly, R.FOCUS, 5)
+		local autoUnits = autoAlly.Health
+		GridBattle.ResolveDodge(auto, autoFoe.Id, "Fail")
+		expect(focusOf(autoAlly) == 6 and autoAlly.Health < autoUnits, "focus auto parry works once per turn")
+
+		-- 패링 실패 봐주기: 최대 집중 + 간파 = 2. 스냅숏이 전한다
+		local forgive = newDuel()
+		local forgiveAlly = GridBattle.Ally(forgive)
+		expect(GridBattle.Snapshot(forgive).AllyParryForgive == 1, "간파 forgives one parry mistake")
+		GridBattle.GainResource(forgive, forgiveAlly, R.FOCUS, 8)
+		GridBattle.EndTurn(forgive)
+		expect(GridBattle.Snapshot(forgive).AllyParryForgive == 2, "max focus adds one more (stacks with 간파)")
+		local QteDefinitions = require(ReplicatedStorage.Shared.QteDefinitions)
+		local qte = QteDefinitions.Create("Dodge", function()
+			return 0.5
+		end, 0, "forgive", true)
+		qte.Type = "Directional"
+		qte.ExpectedDirections = { "Up", "Down", "Left" }
+		qte.SequenceIndex = 3
+		qte.Mistakes = QteDefinitions.COMMAND_DODGE_MISTAKES + 2
+		expect(QteDefinitions.Judge(qte, 100) == "Fail", "two extra mistakes fail without forgive")
+		qte.Forgive = 2
+		expect(QteDefinitions.Judge(qte, 100) == "Success", "forgive widens the success window")
+
+		-- 연계: 방어 태세로 바뀌면 체력 10으로 버틴다(한 번), 3턴에 걸쳐 최대 체력 50% 회복
+		local stand = newDuel()
+		local standAlly = GridBattle.Ally(stand)
+		standAlly.Stamina = standAlly.MaxStamina
+		GridBattle.ResolveSkill(stand, 3, "Partial") -- 깊은 호흡
+		expect(focusOf(standAlly) == 4, "DeepBreath grants focus 4")
+		GridBattle.EndTurn(stand)
+		standAlly.Stamina = standAlly.MaxStamina
+		expect(GridBattle.SkillList(stand)[4].Id == "PointBlank", "PointBlank opens the turn after DeepBreath")
+		GridBattle.ResolveSkill(stand, 4, "Partial")
+		expect(BattleStatus.Stack(standAlly.Status, R.STANCE_ATTACK) == 0, "PointBlank flips to defense from attack")
+		expect(BattleStatus.Stack(standAlly.Status, R.LAST_STAND) == 1, "defense branch arms the last stand")
+		local standFoe = GridBattle.AliveEnemies(stand)[1]
+		standFoe.Power = 9999
+		standFoe.SkillIndex = 1
+		standAlly.Health = 5
+		-- 방어 태세 −60% 에 연계 −20%·−20% 가 더해져 받는 피해가 0 이 된다(합산 칸) — 시험은 보정을 걷고 때린다
+		table.clear(standAlly.Status.Modifiers)
+		GridBattle.ResolveDodge(stand, standFoe.Id, "Fail")
+		expect(standAlly.Alive and standAlly.Health == 10, "lethal damage in defense stance leaves 10 health")
+		expect(BattleStatus.Stack(standAlly.Status, R.LAST_STAND) == 0, "the last stand is spent")
+		GridBattle.EndTurn(stand)
+		expect(standAlly.Health > 10, "the 50% recovery starts next turn")
+
+		-- 강제 결투 응수: 같은 행 적이 스킬 1 을 쓰고 효과가 걸린다
+		local forced = newDuel()
+		local forcedAlly = GridBattle.Ally(forced)
+		local forcedFoe = GridBattle.AliveEnemies(forced)[1]
+		local foeCell = GridBattle.CellOf(forced, forcedFoe.Id)
+		expect(foeCell ~= nil, "foe must stand on the grid")
+		GridBattle.MoveAlly(forced, 1, (foeCell :: any).Y)
+		GridBattle.ToggleStance(forced)
+		forcedAlly.Stamina = forcedAlly.MaxStamina
+		local ok = GridBattle.ResolveSkill(forced, 2, "Partial")
+		expect(ok, "ForcedDuel must be usable in defense stance")
+		expect(forcedAlly.Taunt >= 5, "ForcedDuel grants taunt 5")
+		expect(modBy(forcedFoe, "DamageDealt", "강제 결투 응수") == -0.3, "ForcedDuel: foe deals -30%")
+		expect(BattleStatus.Total(forcedFoe.Status, "BoostNull") > 0, "ForcedDuel nullifies the foe's damage boosts")
+		expect(forcedFoe.Groggy.Value > 0, "ForcedDuel fills the foe's groggy gauge")
+		expect(BattleStatus.Stack(forcedAlly.Status, R.DUEL_NEXT) == 1, "ForcedDuel arms next turn's -20% taken")
+		local forcedSnapshot = GridBattle.Snapshot(forced)
+		local sawSkill, sawForced = false, false
+		for _, event in forcedSnapshot.Events do
+			if event.Kind == "Skill" and event.SkillId == "ForcedDuel" then
+				sawSkill = true
+			elseif event.Kind == "EnemyAttack" and event.Forced and sawSkill then
+				sawForced = true
+			end
+		end
+		expect(sawSkill and sawForced, "the forced attack events must follow the skill event")
+		GridBattle.EndTurn(forced)
+		expect(near(modBy(forcedAlly, "DamageTaken", "카드:Duelist_Kit응수"), -0.2), "next turn: taken -20%")
+
+		-- 아픈 곳 또 때리기: 치명타 시 집중 +1(공격 태세)
+		local pain = newDuel()
+		local painAlly = GridBattle.Ally(pain)
+		local painFoe = GridBattle.AliveEnemies(pain)[1]
+		GridBattle.MoveAlly(pain, 1, (GridBattle.CellOf(pain, painFoe.Id) :: any).Y)
+		BattleStatus.AddModifier(painAlly.Status, "CritChance", 5, 1, "시험")
+		painAlly.Stamina = painAlly.MaxStamina
+		GridBattle.ResolveSkill(pain, 1, "Partial")
+		expect(focusOf(painAlly) >= 2 or painFoe.Health == painFoe.MaxHealth, "a critical hit grants focus")
+	end
+
 	--=== 가드 / 명상 (모든 직업 공용) ===--
 
 	local commonBattle = GridBattle.New(1, "공용", 200, 10, "Berserker")

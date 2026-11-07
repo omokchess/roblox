@@ -27,6 +27,9 @@ ClassResources.BRILLANTE = "Brillante" -- 브릴란테 값
 ClassResources.FOCUS = "Focus" -- 집중
 ClassResources.STANCE_ATTACK = "StanceAttack" -- 공격 태세 (1이면 켜짐)
 ClassResources.READY = "Ready" -- 준비 자세 (3스킬)
+ClassResources.LAST_STAND = "LastStand" -- 연계(방어 태세로 변경)가 켠다: 방어 태세인 동안 치명 피해를 한 번 버틴다
+ClassResources.DUEL_SHIELD = "DuelShield" -- 결투 신청으로 얻은 보호막 양(공격 태세가 되면 그만큼 지운다)
+ClassResources.DUEL_NEXT = "DuelNext" -- 강제 결투 응수: 다음 턴 시작에 받는 피해량 −20% 를 건다
 
 -- 퀘이사
 ClassResources.MASS = "Mass" -- 질량
@@ -98,7 +101,7 @@ ClassResources.STAR_GUARD = "StarGuard" -- 별빛 가호(솔로 별자리 칸 �
 ]]
 local CAPS: { [string]: number } = {
 	[ClassResources.METER] = 3, -- 박자표는 1에서 3까지
-	[ClassResources.FOCUS] = 10,
+	[ClassResources.FOCUS] = 8, -- 2026-11-07 결투사 리메이크: 최대 8
 	[ClassResources.RAGE] = 8,
 	[ClassResources.MASS] = 20,
 	[ClassResources.DEPOLAR] = 3,
@@ -172,6 +175,9 @@ local LABELS: { [string]: string } = {
 	[ClassResources.RAGE] = "분노",
 	[ClassResources.STANCE_ATTACK] = "공격 태세",
 	[ClassResources.READY] = "준비 자세",
+	[ClassResources.LAST_STAND] = "마지막 버팀",
+	[ClassResources.DUEL_SHIELD] = "결투 보호막",
+	[ClassResources.DUEL_NEXT] = "응수 대기",
 	[ClassResources.MASS] = "질량",
 	[ClassResources.CHARGE] = "차징",
 	[ClassResources.GRAVITY] = "중력",
@@ -220,7 +226,7 @@ end
 -- 직업마다 쓰는 자원(자기에게 쌓이는 것). 디버그 패널이 "자원 주기" 목록으로 쓴다.
 local BY_CLASS: { [string]: { string } } = {
 	Musician = { ClassResources.QUARTER, ClassResources.EIGHTH, ClassResources.SIXTEENTH, ClassResources.METER, ClassResources.BRILLANTE },
-	Duelist = { ClassResources.FOCUS, ClassResources.STANCE_ATTACK, ClassResources.READY },
+	Duelist = { ClassResources.FOCUS, ClassResources.STANCE_ATTACK, ClassResources.READY, ClassResources.LAST_STAND },
 	Quasar = { ClassResources.MASS, ClassResources.CHARGE },
 	Pulsar = { ClassResources.FIELD, ClassResources.RESONATE },
 	WallPilgrim = { ClassResources.WALL },

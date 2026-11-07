@@ -779,17 +779,17 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "FrontBackPierce",
 			Name = "앞뒤관통",
-			Description = "- 사용 후 2턴 동안 아군의 [회피 시간] +(2 × [집중])%\n"
-				.. "- 사용 후 2턴 동안 자신의 [받는 피해량] −10%",
+			Description = "- [집중] 1당 이 스킬의 [가하는 피해량] +2.5%\n"
+				.. "- 사용 후 [집중] 1 획득",
 			Damage = 6, -- 2026-10-30 사용자: 강화 스킬 최대 70 기준 결투사 전체 ×0.65(옛 9)
 			Range = "Melee",
 			Shape = { Kind = "Single" , Cells = { { X = 2, Y = 0 }, { X = 1, Y = 0 }, { X = 0, Y = 0 } } }, Motions = { { Kind = "Single", Cells = { { X = -6, Y = 0 }, { X = -3, Y = 0 }, { X = -2, Y = 0 }, { X = -1, Y = 0 }, { X = 0, Y = 0 } } } } },
 		{
 			Id = "TripleThrust", Cooldown = 4,
 			Name = "찔러찔러또찔러",
-			Description = "- 대상에게 [출혈] 3 부여\n"
-				.. "- 사용 후 3턴 동안 [회피 시간] +(2.5 × [집중])%\n"
-				.. "- [집중] 1 획득\n"
+			Description = "- 적중 시 [출혈] 2 부여\n"
+				.. "- 사용 시 [집중] 2 획득\n"
+				.. "- [출혈]이 걸린 적에게 이 스킬의 [가하는 피해량] +20%\n"
 				.. "- 6 피해를 독립 타격으로 세 번 가한다.",
 			-- 2026-10-04 연타 규칙: 한 방 22 를 세 번에 나눠 × 1.2. 2026-11-06 다단히트 개정: 모션마다 독립 타격이라 타당 15 × 1.2 / 3 = 6
 			Damage = 6, -- 2026-10-30 사용자: 강화 스킬 최대 70 기준 결투사 전체 ×0.65(옛 22)
@@ -798,14 +798,14 @@ local classSkills: { [string]: { Skill } } = {
 		{
 			Id = "DeepBreath", Cooldown = 6,
 			Name = "신경을 곤두세우고 깊은 호흡을 들여",
-			Description = "- 1턴 동안 준비 자세를 취한다.\n"
-				.. "- 준비 중 효과\n"
-				.. "  - [받는 버프 효율]·[받는 회복량] +30%\n"
-				.. "  - [받는 피해량] −25%\n"
-				.. "  - [회피 시간] +(3 × [집중])%\n"
-				.. "- 다음 턴까지 아이템 사용 말고는 행동할 수 없다.\n"
-				.. "  - 패링과 막기는 할 수 있다.\n"
-				.. "- [집중] 3 획득",
+			Description = "- 사용 시 3턴 동안 다음 효과를 얻는다.\n"
+				.. "  - [받는 회복량] +30%\n"
+				.. "  - [받는 버프 효율] +30%\n"
+				.. "  - [받는 피해량] +10%\n"
+				.. "  - [가하는 피해량] +20%\n"
+				.. "- 사용 시 [집중] 4 획득\n"
+				.. "- 사용 전 [집중]이 3 이상이면 [집중] 1 추가 획득\n"
+				.. "- 다음 턴에 연계 스킬이 열린다.",
 			Damage = 0,
 			Range = "Supporting",
 			Shape = { Kind = "Line", Radius = 1 , TargetSide = "Ally" },
@@ -1204,12 +1204,21 @@ local upgradeSkills: { Skill } = {
 	{
 		Id = "PointBlank",
 		Name = "마지막까지 빛나는 점을 향해 검 끝을 쏘아라",
-		Description = "- 조건: `신경을 곤두세우고 깊은 호흡을 들여`로 준비 자세를 마친 뒤\n"
-			.. "- [치명타 확률] +15%\n"
-			.. "- 가진 [집중]을 전부 소모하고, 소모한 [집중] 1당 [치명타 피해량] +4%\n"
-			.. "- 사용 후 3턴 동안 아군의 [회피 시간] +15%, [받는 피해량] −10%\n"
-			.. "- 사용 후 대상에게 [출혈] 5 부여\n"
-			.. "- 사용 후 태세를 바꾸고 2턴 동안 [받는 피해량] −15%, [가하는 피해량] +15%",
+		Description = "- 조건: `신경을 곤두세우고 깊은 호흡을 들여`를 쓴 다음 턴\n"
+			.. "- [치명타 확률] +20%\n"
+			.. "- [집중] 1당 이 스킬의 [가하는 피해량] +5%, [치명타 피해량] +5%\n"
+			.. "- 적중 시 [출혈] 4 부여\n"
+			.. "- 사용 후 3턴 동안 아군의 패링 실패 1개를 성공으로 본다.\n"
+			.. "- 사용 후 3턴 동안 아군의 [받는 피해량] −20%\n"
+			.. "- 사용 후 태세를 바꾸고, 바뀐 태세에 따라 효과를 얻는다.\n"
+			.. "  - 방어 태세\n"
+			.. "    - 2턴 동안 [받는 피해량] −20%, [가하는 피해량] −20%\n"
+			.. "    - 2턴 동안 패링 실패 1개를 성공으로 본다.\n"
+			.. "    - 방어 태세인 동안 치명 피해를 받으면 체력 10으로 버티고, 3턴에 걸쳐 최대 체력의 50%를 회복한다.\n"
+			.. "    - 태세를 바꾼 뒤에 다시 쓸 수 있다.\n"
+			.. "  - 공격 태세\n"
+			.. "    - 2턴 동안 [받는 피해량] +20%, [가하는 피해량] +20%, [받는 버프 효율] +30%\n"
+			.. "    - [집중] 5 획득",
 		-- 2026-10-03 사용자: 3배(32 → 96) → 2026-10-28 사용자: 탱커를 겸하는 서브딜러라 너무 높다 — 45
 		Damage = 29, -- 2026-10-30 사용자: 강화 스킬 최대 70 기준 결투사 전체 ×0.65(옛 45)
 		Range = "Melee",
@@ -1330,6 +1339,49 @@ local upgradeSkills: { Skill } = {
 }
 
 --[[
+	결투사 방어 태세 액티브(2026-11-07 리메이크). 방어 태세에서 1·2번 자리를 갈아 끼운다
+	(`BattleSkillEffects.SwapFor` — 청의 검사 [집중력] 변형과 같은 방식).
+	Id 는 모션 부서가 `Skills.DuelChallenge`·`Skills.ForcedDuel` 모션으로 쓴다 — 바꾸지 말 것.
+	피해량은 사양에 없어 0 이다(대상에게 효과를 건다).
+]]
+local duelDefenseSkills: { Skill } = {
+	{
+		Id = "DuelChallenge",
+		Name = "결투 신청",
+		Description = "- 방어 태세일 때 `앞뒤관통`이 바뀌는 스킬\n"
+			.. "- 사용 시 [도발] 5 획득\n"
+			.. "- 가장 앞의 적 하나에게 ([도발] × 1)턴 동안 [받는 피해량] +([도발] × 2)%\n"
+			.. "- 모든 아군에게 [보호막] (최대 체력 ÷ 20, 최대 30) 부여\n"
+			.. "  - [받는 피해량]이 1% 이상인 아군에게는 (최대 체력 ÷ 30, 최대 20)을 더 부여하고, 3턴 동안 [받는 피해량] −30%\n"
+			.. "- 이 스킬로 얻은 [보호막]은 공격 태세가 되면 사라진다.",
+		Damage = 0,
+		Range = "Melee",
+		Shape = { Kind = "Row" },
+		MaxTargets = 1,
+		Cooldown = 3,
+		ClassId = "Duelist",
+	},
+	{
+		Id = "ForcedDuel",
+		Name = "강제 결투 응수",
+		Description = "- 방어 태세일 때 `찔러찔러또찔러`가 바뀌는 스킬\n"
+			.. "- 사용 시 [도발] 5 획득\n"
+			.. "- 같은 행의 적이 앞 열부터 차례로 스킬 1을 강제로 쓴다. 맞은 적마다 다음을 건다.\n"
+			.. "  - 받은 피해 × 2%만큼 그로기 게이지 증가(최대 40%)\n"
+			.. "  - ([도발] × 2)%만큼 [받는 피해량] 증가\n"
+			.. "  - 3턴 동안 [가하는 피해량] −30%\n"
+			.. "  - 3턴 동안 가하는 피해량 증가 효과 무효\n"
+			.. "- 적에게 [출혈]이 있거나 [받는 피해량]이 30% 이상이면 `결투 신청`이 추가로 발동한다.\n"
+			.. "- 다음 턴에 [받는 피해량] −20%",
+		Damage = 0,
+		Range = "Melee",
+		Shape = { Kind = "Row" },
+		Cooldown = 4,
+		ClassId = "Duelist",
+	},
+}
+
+--[[
 	모든 직업이 함께 쓰는 스킬 (요청).
 
 	  가드  이번 턴 받는 피해 70% 감소
@@ -1413,6 +1465,11 @@ function BattleSkills.Focus(): { Skill }
 	return focusSkills
 end
 
+-- 결투사 방어 태세 변형 스킬(1·2번 자리를 갈아 끼움)
+function BattleSkills.DuelistDefense(): { Skill }
+	return duelDefenseSkills
+end
+
 -- 모든 직업이 함께 쓰는 스킬(가드·명상).
 function BattleSkills.Common(): { Skill }
 	return commonSkills
@@ -1453,7 +1510,7 @@ function BattleSkills.ById(id: string): Skill?
 			end
 		end
 	end
-	for _, list in { upgradeSkills, focusSkills, commonSkills, enemySkills, bossSkills } do
+	for _, list in { upgradeSkills, focusSkills, duelDefenseSkills, commonSkills, enemySkills, bossSkills } do
 		for _, skill in list do
 			if skill.Id == id then
 				return skill

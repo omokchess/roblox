@@ -1,12 +1,13 @@
 --!strict
 --[[
-	결투사 — 직업 키트·패시브·카드 34장의 전투 효과. (CardEffects 2판, 2026-09-28)
+	결투사 — 직업 키트·패시브·카드 34장의 전투 효과. (CardEffects 2판, 2026-09-28 · 2026-11-07 결투사 리메이크)
 
-	키트(Duelist_Kit) — `유저 아이디어(직업).md` 결투사
-	  [집중] 스택 1당 받는 피해 −0.5%, 피해 +1%, 회피 시간 +2.5% (무명검이 스택당 효과를 줄인다)
-	  공격 태세  받는 피해 +15%, 피해 +(20+집중)%, 치명 확률 +10%, 적중 시 출혈 1.
-	             집중 5 이상에서 막지도 못하고 맞으면 집중 3을 써서 자동 패링
-	  방어 태세  받는 피해 −30%, 피해 −45%, (5×집중)% 확률 자동 패링(최대 30%)
+	키트(Duelist_Kit) — `결투사_리메이크_사양.md`
+	  [집중] 최대 8, 스택 1당 받는 피해 −1%, 피해 +2%, 최대면 패링 실수 1개를 더 봐준다(무명검이 스택당 효과를 줄인다)
+	  공격 태세  받는 피해 +15%, 피해 +(20+집중×2)%, 치명 확률 +15%, 치명 피해 +(치명 확률÷2, 최대 40%), 모든 타격 출혈 1.
+	             집중 4 이상에서 막지도 패링하지도 못하고 맞으면 집중 4를 써서 자동 패링(턴당 1회, 궁극기·패링 불가에도)
+	  방어 태세  받는 피해 −(55+집중×1.25)%, 피해 −(55−집중×2.5)%, (집중×5)% 확률 자동 패링(궁극기·패링 불가에도). 집중 자동 패링은 꺼진다
+	  공용 패시브 「네 번의 준비, 한 번의 반격」은 키트가 한다(집중 자동 패링보다 먼저 판정해야 해서).
 	  태세 효과 배율(StanceBoost)은 양날·자세 낮추기가, 페널티 감소는 공세·수세가 준다.
 	  철벽(방어 고정)·광검(공격 고정)은 태세를 바꿀 수 없게 막고(StanceLocked) 해당 태세로 되돌린다.
 ]]
@@ -45,6 +46,22 @@ local function bleed(_c: Card, unit: any, amount: number)
 	end
 end
 
+-- 방어 태세 추가 패시브: 최대 체력 +100(공격 태세가 되면 사라진다). 체력은 따로 채우지 않는다(태세를 오가며 회복하는 것을 막는다)
+local BODY_BONUS = 100
+
+local function syncBody(c: Card)
+	local ally = H.Ally(c)
+	local want = not isAttack(c)
+	if want and not c.Mem.body then
+		c.Mem.body = true
+		ally.MaxHealth += BODY_BONUS
+	elseif not want and c.Mem.body then
+		c.Mem.body = false
+		ally.MaxHealth -= BODY_BONUS
+		ally.Health = math.min(ally.Health, ally.MaxHealth)
+	end
+end
+
 local function refreshStance(c: Card)
 	local status = H.Status(c)
 	BattleStatus.RemoveBySource(status, "태세")
@@ -59,19 +76,22 @@ local function refreshStance(c: Card)
 	local stacks = focus(c)
 	local per = Q(c.Rt, "FocusScale", 1)
 	if stacks > 0 then
-		BattleStatus.AddModifier(status, "DamageTaken", -0.005 * stacks * per, -1, "집중")
-		BattleStatus.AddModifier(status, "DamageDealt", 0.01 * stacks * per, -1, "집중")
-		BattleStatus.AddModifier(status, "ParryWindow", 0.025 * stacks * per, -1, "집중")
+		BattleStatus.AddModifier(status, "DamageTaken", -0.01 * stacks * per, -1, "집중")
+		BattleStatus.AddModifier(status, "DamageDealt", 0.02 * stacks * per, -1, "집중")
+		-- 최대 스택이면 패링 실수 1개를 더 성공으로 본다(간파와 합산)
+		if stacks >= Q(c.Rt, "FocusCap", R.Cap(R.FOCUS) or 8) then
+			BattleStatus.AddModifier(status, "ParryForgive", 1, -1, "집중")
+		end
 	end
 	local boost = 1 + Q(c.Rt, "StanceBoost", 0)
 	if isAttack(c) then
 		BattleStatus.AddModifier(status, "DamageTaken", math.max(0, 0.15 - Q(c.Rt, "AttackTakenCut", 0)), -1, "태세")
-		BattleStatus.AddModifier(status, "DamageDealt", (0.2 + 0.01 * stacks * per) * boost, -1, "태세")
-		BattleStatus.AddModifier(status, "CritChance", 0.1 * boost, -1, "태세")
+		BattleStatus.AddModifier(status, "DamageDealt", (0.2 + 0.02 * stacks * per) * boost, -1, "태세")
+		BattleStatus.AddModifier(status, "CritChance", 0.15 * boost, -1, "태세")
 	else
-		BattleStatus.AddModifier(status, "DamageTaken", -0.3 * boost, -1, "태세")
-		BattleStatus.AddModifier(status, "DamageDealt", math.min(0, -0.45 + Q(c.Rt, "DefenseDealtCut", 0)), -1, "태세")
-		BattleStatus.AddModifier(status, "AutoParry", math.min(0.05 * stacks * per, 0.3) * boost, -1, "태세")
+		BattleStatus.AddModifier(status, "DamageTaken", -(0.55 + 0.0125 * stacks * per) * boost, -1, "태세")
+		BattleStatus.AddModifier(status, "DamageDealt", math.min(0, -math.max(0, 0.55 - 0.025 * stacks * per) + Q(c.Rt, "DefenseDealtCut", 0)), -1, "태세")
+		BattleStatus.AddModifier(status, "AutoParry", math.min(0.05 * stacks * per * boost, 1), -1, "태세")
 	end
 end
 
@@ -90,9 +110,28 @@ M.Duelist_Kit = {
 	end,
 	TurnStart = function(c: Card)
 		refreshStance(c)
+		local status = H.Status(c)
+		-- 강제 결투 응수: 다음 턴(= 지금) 받는 피해 −20%
+		if BattleStatus.SpendAll(status, R.DUEL_NEXT) > 0 then
+			H.Mod(c, "DamageTaken", -0.2, 1, "응수")
+		end
+		-- 연계(방어): 쓰러질 뻔한 뒤 3턴에 걸친 회복
+		if (c.Mem.regenTurns or 0) > 0 then
+			c.Mem.regenTurns -= 1
+			H.HealFlat(c, c.Mem.regenAmount or 0)
+		end
 	end,
-	Stance = function(c: Card)
+	Stance = function(c: Card, attack: boolean)
 		refreshStance(c)
+		if attack then
+			local status = H.Status(c)
+			-- 결투 신청으로 얻은 보호막은 공격 태세가 되면 사라진다. 마지막 버팀도 방어 태세 한정
+			local granted = BattleStatus.SpendAll(status, R.DUEL_SHIELD)
+			if granted > 0 then
+				BattleStatus.AddShield(status, -math.min(status.Shield, granted))
+			end
+			BattleStatus.SpendAll(status, R.LAST_STAND)
+		end
 	end,
 	Gain = function(c: Card, id: string)
 		if id == R.FOCUS then
@@ -104,54 +143,101 @@ M.Duelist_Kit = {
 			refreshStance(c)
 		end
 	end,
-	-- 공격 태세: 적중 시 짧은 출혈
+	-- 찔러찔러또찔러: 스킬 시작 때 이미 [출혈]이 있던 적을 적어 둔다. 공격 태세: 치명 피해 +(치명 확률÷2, 최대 40%)
+	BeforeSkill = function(c: Card, info: any)
+		if info.Skill.Id == "TripleThrust" then
+			c.Mem.bleeding = {}
+			for _, target in info.Targets do
+				if target.Status.Bleed > 0 then
+					c.Mem.bleeding[target.Id] = true
+				end
+			end
+		end
+		if isAttack(c) and info.Skill.Damage > 0 then
+			local luck = H.State(c).AllyStats.Luck or 0
+			local chance = 0.05 + luck * 0.007 + BattleStatus.Total(H.Status(c), "CritChance") + info.Crit
+			if info.Skill.Id == "PointBlank" then
+				chance += 0.2 -- 연계 자신의 +20%(효과가 이 훅 뒤에 건다)
+			end
+			info.CritDamage += math.min(0.4, chance / 2)
+		end
+	end,
+	BeforeHit = function(c: Card, info: any)
+		if info.Skill and info.Skill.Id == "TripleThrust" and c.Mem.bleeding and c.Mem.bleeding[info.Target.Id] then
+			info.Bonus += 0.2
+		end
+	end,
+	-- 공격 태세: 모든 타격이 [출혈] 1 을 확정으로 부여
 	Hit = function(c: Card, info: any)
 		if isAttack(c) and info.Damage > 0 then
 			bleed(c, info.Target, 1)
 		end
 	end,
-	-- 공격 태세 · 집중 5 이상: 막지 못하고 맞으면 집중 3을 써서 자동 패링
+	--[[
+		맞기 직전. 순서가 중요하다.
+		  1) 네 번의 준비, 한 번의 반격 — 스킬 하나를 한 번으로 세어(다단히트·여러 모션도 1회) 4번째 스킬을 확정 패링.
+		     궁극기·패링 불가 스킬은 센 뒤 패링하지 않는다. 패링에 성공하면 [집중] 1.
+		  2) 공격 태세 · 집중 4 이상: 막지도 패링하지도 못했으면 집중 4를 써서 자동 패링(턴당 1회, 궁극기·패링 불가에도)
+	]]
 	BeforeTaken = function(c: Card, info: any)
-		if info.Grade ~= "Fail" or not isAttack(c) or focus(c) < 5 then
+		local state = H.State(c)
+		local skillId = if info.Skill then info.Skill.Id else "?"
+		local key = string.format("%s:%d:%s:%s", info.Attacker.Id, state.Turn, skillId, tostring(info.Forced == true))
+		if c.Mem.lastKey ~= key then
+			c.Mem.lastKey = key
+			c.Mem.count = (c.Mem.count or 0) + 1
+			if c.Mem.count >= 4 then
+				c.Mem.count = 0
+				c.Mem.prepKey = key
+			end
+		end
+		local fired = false
+		if c.Mem.prepKey == key and info.Grade ~= "Success" and not info.Unparryable then
+			info.Grade = "Success"
+			info.Auto = true
+			fired = true
+			if c.Mem.prepPaid ~= key then
+				c.Mem.prepPaid = key
+				gainFocus(c, 1)
+				H.Log(c, "네 번의 준비, 한 번의 반격 — 확정 패링 · 집중 +1")
+			end
+		end
+		if info.Grade == "Fail" and isAttack(c) and focus(c) >= 4 and CardEffects.PerTurn(c, "focusParry", 1) then
+			local cost = math.floor(Q(c.Rt, "FocusParryCost", 4))
+			if cost > 0 then
+				H.Spend(c, R.FOCUS, cost)
+			end
+			info.Grade = "Success"
+			info.Auto = true
+			info.ForceParry = true
+			fired = true
+			H.Log(c, if cost > 0 then string.format("집중 %d — 자동 패링", cost) else "집중 — 자동 패링(소모 없음)")
+		end
+		return fired
+	end,
+	-- 연계(방어 태세): 체력이 0에 달하는 피해를 받으면 체력 10으로 버티고 3턴에 걸쳐 최대 체력의 50%를 회복한다
+	Lethal = function(c: Card, save: any)
+		if save.Cancel or isAttack(c) or H.Stack(c, R.LAST_STAND) <= 0 then
 			return false
 		end
-		local cost = math.floor(Q(c.Rt, "FocusParryCost", 3))
-		if cost > 0 then
-			H.Spend(c, R.FOCUS, cost)
-		end
-		info.Grade = "Success"
-		info.Auto = true
-		H.Log(c, if cost > 0 then string.format("집중 %d — 자동 패링", cost) else "집중 — 자동 패링(소모 없음)")
+		BattleStatus.SpendAll(H.Status(c), R.LAST_STAND)
+		save.Cancel = true
+		save.Health = 10
+		c.Mem.regenTurns = 3
+		c.Mem.regenAmount = math.max(1, math.floor(H.Ally(c).MaxHealth * 0.5 / 3))
+		H.Log(c, "마지막까지 — 체력 10으로 버틴다")
 		return true
 	end,
 }
 
 --=== 패시브 ===--
 
--- 간파: 4번 피격될 때마다 다음 공격을 확정으로 패링
-M.Duelist_Read = {
-	Taken = function(c: Card)
-		c.Mem.hits = (c.Mem.hits or 0) + 1
-		if c.Mem.hits >= 4 then
-			c.Mem.hits = 0
-			c.Mem.ready = true
-		end
-	end,
-	BeforeTaken = function(c: Card, info: any)
-		if c.Mem.ready and info.Grade ~= "Success" then
-			c.Mem.ready = false
-			info.Grade = "Success"
-			H.Log(c, "간파 — 확정 패링")
-			return true
-		end
-		return false
-	end,
-}
+-- 「네 번의 준비, 한 번의 반격」은 Duelist_Kit.BeforeTaken 이 한다(위).
 
--- 흘려 받기: 방어의 피해 감소가 절반(50% → 25% 감소), 대신 회피 시간 +10%
-M.Duelist_Slip = {
-	TurnStart = function(c: Card)
-		H.Mod(c, "ParryWindow", 0.1, 1)
+-- 간파: 가드(막기)의 받는 피해 감소가 절반, 대신 패링 QTE 실패 1개를 더 성공으로 본다
+M.Duelist_Read = {
+	BattleStart = function(c: Card)
+		H.Mod(c, "ParryForgive", 1, -1)
 	end,
 	BeforeTaken = function(_c: Card, info: any)
 		if info.Grade == "Partial" then
@@ -160,14 +246,59 @@ M.Duelist_Slip = {
 	end,
 }
 
--- 사전 전략: 적이 3기 이하면 피해 +5%, 4기 이상이면 받는 피해 −5% (매 턴 다시 판정)
-M.Duelist_Count = {
-	TurnStart = function(c: Card)
-		if #H.Enemies(c) <= 3 then
-			H.Mod(c, "DamageDealt", 0.05, 1)
+-- 전황 파악: 적 1기마다 받는 피해 −5%(최대 5기), 5기에서 한 기 줄 때마다 가하는 피해 +5%. 적 수가 바뀔 때마다 다시 계산
+local function enemyCount(c: Card): number
+	local count, parts = 0, false
+	for _, enemy in H.Enemies(c) do
+		if enemy.Part then
+			parts = true
 		else
-			H.Mod(c, "DamageTaken", -0.05, 1)
+			count += 1
 		end
+	end
+	return count + (if parts then 1 else 0)
+end
+
+local function refreshSituation(c: Card)
+	H.Clear(c)
+	local n = enemyCount(c)
+	if n > 0 then
+		H.Mod(c, "DamageTaken", -0.05 * math.min(n, 5), -1)
+		if n < 5 then
+			H.Mod(c, "DamageDealt", 0.05 * (5 - n), -1)
+		end
+	end
+end
+
+M.Duelist_Situation = {
+	BattleStart = refreshSituation,
+	TurnStart = refreshSituation,
+	Kill = refreshSituation,
+}
+
+-- 아픈 곳 또 때리기(공격 태세): 치명타를 낼 때마다 집중 1
+M.Duelist_Pain = {
+	Hit = function(c: Card, info: any)
+		if isAttack(c) and info.Crit and info.Damage > 0 then
+			gainFocus(c, 1)
+			return true
+		end
+		return false
+	end,
+}
+
+-- 방어 태세 추가 패시브: 최대 체력 +100, 맨 앞에서 긁기(전열이면 매 턴 도발 +2). 공격 태세가 되면 사라진다
+M.Duelist_Guard = {
+	BattleStart = syncBody,
+	Stance = syncBody,
+	TurnStart = function(c: Card)
+		syncBody(c)
+		if not isAttack(c) and H.IsFront(c) then
+			local ally = H.Ally(c)
+			ally.Taunt = math.min(20, ally.Taunt + 2)
+			return true
+		end
+		return false
 	end,
 }
 
