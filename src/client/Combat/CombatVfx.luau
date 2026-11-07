@@ -821,11 +821,12 @@ function CombatVfx.Flipbook(at: Vector3 | CFrame | BasePart, opts: { [string]: a
 	end
 	e.LightEmission = opts.LightEmission or 0
 	e.LightInfluence = 0
+	-- NumberRange 는 최솟값 > 최댓값이면 오류 — 음수가 들어와도 순서를 맞춘다(조율자가 Rotation = math.random(-60, 60) 을 넘겼다)
 	local speed = opts.Speed or 0
-	e.Speed = NumberRange.new(speed * 0.8, speed)
+	e.Speed = NumberRange.new(math.min(speed * 0.8, speed), math.max(speed * 0.8, speed))
 	local sp = opts.Spread or 0
 	e.SpreadAngle = Vector2.new(sp, sp)
-	local rot = opts.Rotation or 0
+	local rot = math.abs(opts.Rotation or 0)
 	e.Rotation = NumberRange.new(-rot, rot)
 	e.Acceleration = opts.Accel or Vector3.zero
 	e.Orientation = FLIP_ORIENT[opts.Orientation or "FacingCamera"]
