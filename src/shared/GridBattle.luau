@@ -3193,10 +3193,9 @@ end
 
 --[[
 	2026-11-06 개선안 1·2절: 추적을 끄고 예고 때 칸을 정하는 기술. (칸 목록, 빛 칸 목록?)을 돌려준다 — 없으면 판 전체 형태.
-	  렌즈 노린 아군 열과 양옆 열(9) · 아스트로 세시 둘레 3×3 · 알리오스 선 열과 앞쪽 열(6) · 북두칠성 국자 7칸 ·
+	  렌즈 노린 아군 열과 양옆 열(9) · 아스트로 세시 둘레 3×3 · 알리오스 선 열과 앞쪽 열(6) · (북두칠성은 2026-11-07 판 전체로 돌아감) ·
 	  케노스 빛 칸 6칸(앞 열1~2 · 가운데 3~4 · 뒤 5~6 중 무작위)을 뺀 12칸이 위험 칸
 ]]
-local DIPPER_CELLS = { { 6, 1 }, { 3, 2 }, { 4, 2 }, { 5, 2 }, { 1, 3 }, { 2, 3 }, { 3, 3 } }
 local function callistoZone(state: State, _rng: () -> number, id: string, here: { X: number, Y: number }): ({ { number } }?, { { number } }?)
 	local width, height = state.Grid.Width, state.Grid.Height
 	local cells = {}
@@ -3225,10 +3224,7 @@ local function callistoZone(state: State, _rng: () -> number, id: string, here: 
 		for x = 1, width do
 			table.insert(cells, { x, here.Y })
 		end
-	elseif id == "CallistoDipper" then
-		for _, cell in DIPPER_CELLS do
-			table.insert(cells, { cell[1], cell[2] })
-		end
+	-- 북두칠성은 2026-11-07 사용자: "북두칠성 스킬이 전체 타격기면 좋겠어" — 국자 7칸을 빼고 CALLISTO_FORM "All"(판 전체)로 돌아간다
 	else
 		return nil, nil
 	end

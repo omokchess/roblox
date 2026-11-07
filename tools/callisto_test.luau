@@ -827,7 +827,7 @@ do
 		playTurn(s5)
 		s5.Callisto.Dipper = true
 		GridBattle.EnemyPlan(s5, rng)
-		check(planOf(s5).SkillId == "CallistoDipper" and #planOf(s5).Cells == 7 and has(planOf(s5).Cells, 6, 1) and has(planOf(s5).Cells, 1, 3), "북두칠성 국자 7칸")
+		check(planOf(s5).SkillId == "CallistoDipper" and #planOf(s5).Cells == 18 and has(planOf(s5).Cells, 6, 1) and has(planOf(s5).Cells, 1, 3), "북두칠성 판 전체(2026-11-07 사용자: 전체 타격기)")
 	end
 
 	-- R2: 평타 2연속이면 다음 턴 쿨 1 이하 남은 기술을 바로 · 쿨타임 +3 · R3
