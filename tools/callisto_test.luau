@@ -448,13 +448,13 @@ do
 	-- 알코르가 있어 소환은 건너뛰게
 	GridBattle.EnemyPlan(s, rng)
 	if b.Plans and b.Plans[1].SkillId == "CallistoMerak" then
-		-- 2026-11-06 사용자 답(Q4): 예고 때 줄 고정 — 그 줄 밖으로 옮기면 피한다
-		local row = b.Plans[1].Cells[1][2]
-		check(#b.Plans[1].Cells == 6 and not b.Plans[1].Track, "메라크는 예고 때 줄 하나(6칸) 고정")
+		-- 2026-11-07 사용자: 메라크는 유도기 — 대상 하나를 쫓는다(어디 서도 맞고 파티면 별 밖 다른 아군을 찾아감), 회피 QTE 가능
+		check(b.Plans[1].Seek == true and not b.Plans[1].Track and #b.Plans[1].Cells == 18, "메라크는 유도기(Seek) — 줄 고정 아님")
+		check(not loadShared("BattleSkills").ById("CallistoMerak").Unavoidable, "메라크는 회피 QTE 가능")
 		for x = 1, 6 do
 			for y = 1, 3 do
 				GridBattle.MoveAlly(s, x, y)
-				check(#GridBattle.PlannedThreatList(s) == (if y == row then 1 else 0), string.format("메라크는 고정된 줄(%d)만 맞는다 — (%d,%d)", row, x, y))
+				check(#GridBattle.PlannedThreatList(s) == 1, string.format("메라크는 어디 서도 쫓아와 맞는다 — (%d,%d)", x, y))
 			end
 		end
 	end
@@ -808,20 +808,19 @@ do
 		local s4 = toPage2()
 		playTurn(s4) -- 소환
 		GridBattle.EnemyPlan(s4, rng)
-		check(planOf(s4).SkillId == "CallistoAlioth" and #planOf(s4).Cells == 6 and #s4.Callisto.AliothCells == 6, "알리오스 장판 2열 6칸")
+		check(planOf(s4).SkillId == "CallistoAlioth" and #planOf(s4).Cells == 18 and s4.Callisto.AliothCells == nil, "알리오스 장판 판 전체 18칸(2026-11-07 사용자: 전체광역기)")
 		local ally4 = GridBattle.Ally(s4)
 		local cell = planOf(s4).Cells[1]
 		GridBattle.MoveAlly(s4, cell[1], cell[2])
-		local out
-		for x = 1, 6 do
-			if not has(planOf(s4).Cells, x, 1) then
-				out = x
-			end
+		-- 판 전체 장판: 어디 서 있어도 턴 끝에 피해·두베 1
+		for _, spot in { { 1, 1 }, { 6, 3 } } do
+			GridBattle.MoveAlly(s4, spot[1], spot[2])
+			local dub = stack(ally4, ClassResources.DUBHE)
+			local hp = ally4.Health
+			GridBattle.EndTurn(s4)
+			check(ally4.Health < hp and stack(ally4, ClassResources.DUBHE) >= math.max(0, dub - 1) and s4.Callisto.Aliot < 5, string.format("알리오스 장판은 판 전체 — (%d,%d)에서도 턴 끝 피해", spot[1], spot[2]))
+			GridBattle.EnemyPlan(s4, rng)
 		end
-		GridBattle.MoveAlly(s4, out, 1)
-		local dub = stack(ally4, ClassResources.DUBHE)
-		GridBattle.EndTurn(s4)
-		check(stack(ally4, ClassResources.DUBHE) == math.max(0, dub - 1), "장판 밖에 서 있으면 턴 끝 피해·두베 없음")
 
 		local s5 = toPage2()
 		playTurn(s5)
@@ -965,6 +964,8 @@ do
 		check(seen[need], "3페이즈에 " .. need .. " 가 나온다 — " .. all)
 	end
 	check(sevenMax >= 1, "3페이즈에서도 칠성이 쌓인다")
+	-- 2026-11-07 사용자: 알리오스 전체 광역 · 다른 스킬 둘(페크다·메라크)은 유도기
+	check(GridBattle.CALLISTO_FORM.CallistoAlioth == "All" and GridBattle.CALLISTO_FORM.CallistoPhecda == "Seek" and GridBattle.CALLISTO_FORM.CallistoMerak == "Seek" and GridBattle.CALLISTO_FORM.CallistoMegrez == "Seek", "알리오스 All · 페크다·메라크·메그레즈 Seek")
 	print("13 3페이즈 2페이즈 기술 섞기 OK — " .. all)
 end
 

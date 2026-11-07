@@ -2785,8 +2785,8 @@ local CALLISTO_FORM: { [string]: string } = {
 	CallistoBuried = "Seek",
 	CallistoAlioth = "All",
 	CallistoMegrez = "Seek",
-	CallistoPhecda = "TrackColumn",
-	CallistoMerak = "TrackRow",
+	CallistoPhecda = "Seek", -- 2026-11-07 사용자: 알리오스는 전체 광역, 다른 스킬 둘은 유도기(총괄 판단: 페크다·메라크)
+	CallistoMerak = "Seek",
 	CallistoDipper = "All",
 	CallistoKenos = "All",
 }
@@ -3207,7 +3207,7 @@ end
 
 --[[
 	2026-11-06 개선안 1·2절: 추적을 끄고 예고 때 칸을 정하는 기술. (칸 목록, 빛 칸 목록?)을 돌려준다 — 없으면 판 전체 형태.
-	  렌즈 노린 아군 열과 양옆 열(9) · 아스트로 세시 둘레 3×3 · 알리오스 선 열과 앞쪽 열(6) · (북두칠성은 2026-11-07 판 전체로 돌아감) ·
+	  렌즈 노린 아군 열과 양옆 열(9) · 아스트로 세시 둘레 3×3 · (알리오스·북두칠성은 2026-11-07 판 전체 — 알리오스는 사용자 "전체광역기로", 페크다·메라크는 유도기) ·
 	  케노스 빛 칸 6칸(앞 열1~2 · 가운데 3~4 · 뒤 5~6 중 무작위)을 뺀 12칸이 위험 칸
 ]]
 local function callistoZone(state: State, _rng: () -> number, id: string, here: { X: number, Y: number }): ({ { number } }?, { { number } }?)
@@ -3225,18 +3225,6 @@ local function callistoZone(state: State, _rng: () -> number, id: string, here: 
 			for y = math.max(1, here.Y - 1), math.min(height, here.Y + 1) do
 				table.insert(cells, { x, y })
 			end
-		end
-	elseif id == "CallistoAlioth" then
-		local front = if here.X > 1 then here.X - 1 else 2
-		for _, x in { math.min(front, here.X), math.max(front, here.X) } do
-			for y = 1, height do
-				table.insert(cells, { x, y })
-			end
-		end
-	elseif id == "CallistoMerak" then
-		-- 2026-11-06 사용자 답(Q4): 예고 때 줄 고정(추적 아님) — 옮기면 피한다
-		for x = 1, width do
-			table.insert(cells, { x, here.Y })
 		end
 	-- 북두칠성은 2026-11-07 사용자: "북두칠성 스킬이 전체 타격기면 좋겠어" — 국자 7칸을 빼고 CALLISTO_FORM "All"(판 전체)로 돌아간다
 	else
@@ -3372,8 +3360,8 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 		c.Swing = { Hit = false }
 		if id == "CallistoAlioth" then
 			c.Aliot = ALIOTH_TURNS
-			c.AliothCells = zone
-			pushLog(state, string.format("알리오스 — 선 열과 앞쪽 열 %d칸에 장판 %d턴", if zone then #zone else 0, ALIOTH_TURNS))
+			c.AliothCells = nil -- 판 전체 장판(2026-11-07) — 턴 끝 피해는 서 있는 곳과 상관없이 모두에게
+			pushLog(state, string.format("알리오스 — 판 전체에 장판 %d턴", ALIOTH_TURNS))
 		end
 	end
 	local form = CALLISTO_FORM[id] or "All"

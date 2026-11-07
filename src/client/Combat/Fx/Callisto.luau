@@ -535,11 +535,8 @@ function Fx.Submerge(ctx: any)
 		boomFb(ctx, mid + Vector3.new(0, 2, 0), 14, DEEP)
 		shatterFb(ctx, mid + Vector3.new(0, 4, 0), 18, NEBULA)
 		-- 내려앉는 하늘: 범위 전체를 한 장으로 덮는 어두운 장막이 가장자리부터 솟고, 가운데로 큰 파문 하나
-		curtain(ctx, areaAt(area, area.U0, area.V0), areaAt(area, area.U0, area.V1), DEEP, 7, 0.9)
-		curtain(ctx, areaAt(area, area.U1, area.V0), areaAt(area, area.U1, area.V1), DEEP, 7, 0.9)
-		outline(ctx, area, STAR, 0.7)
 		waveFb(ctx, mid + Vector3.new(0, 0.3, 0), area.Radius * 2, STAR, 0.7)
-		fillArea(ctx, area, DEEP, { Core = STAR })
+		Common.FullBoard(ctx, area, DEEP, { Core = STAR, Height = 12, Shake = 1.4 }) -- 판 전체(아군 + 적)가 가장자리까지 한꺼번에
 	end)
 end
 
@@ -741,19 +738,6 @@ end
 
 --=== 2페이즈 성위 품은 자 — 북두칠성 망치 ===--
 
--- 대상과 같은 열(앞뒤 같은 칸 = 칼리스토가 보는 방향 성분이 같다) · 같은 행(옆 성분이 같다)의 아군 칸
-local function lineCells(ctx: any, along: "Column" | "Row"): { Vector3 }
-	local axis = if along == "Column" then ctx.Forward else ctx.Forward:Cross(Vector3.yAxis)
-	local out = {}
-	for _, p in allyCells(ctx) do
-		local d = p - ctx.Target
-		if math.abs(Vector3.new(d.X, 0, d.Z):Dot(axis)) < 2.6 then
-			table.insert(out, p)
-		end
-	end
-	return out
-end
-
 -- 망치 머리가 닿은 자리: 금빛 충격 고리 + 별 파편 + 땅 균열(팩 — 큰 균열 · 바닥 금)
 local function smash(ctx: any, at: Vector3, size: number)
 	local ground = Vector3.new(at.X, ctx.Ground + 0.15, at.Z)
@@ -807,25 +791,20 @@ function Fx.AliothField(ctx: any)
 	local Vfx = ctx.Vfx
 	local hit = ctx.Tip("W") or (ctx.Root.Position + ctx.Forward * 3)
 	smash(ctx, hit, 1.2)
-	local cells = reach(ctx, "Alioth") -- 아군이 선 열 + 앞 열 6칸(2026-11-06)
+	local cells = allyCells(ctx) -- 판 전체(18칸 — 2026-11-07 전체 광역기)
 	local mid = center(cells)
 	local from = Vector3.new(hit.X, ctx.Ground + 0.2, hit.Z)
 	for k = 1, 6 do
 		task.delay(0.05 * k, function()
 			local at = from:Lerp(Vector3.new(mid.X, ctx.Ground + 0.2, mid.Z), k / 6)
-			Vfx.Ring(CFrame.new(at), { R0 = 0.5, R1 = 3 + k * 0.6, Color = GOLDEN, Life = 0.35, Width = 0.2, Height = 0.05 })
+			Vfx.Ring(CFrame.new(at), { R0 = 0.5, R1 = 3 + k * 0.8, Color = GOLDEN, Life = 0.35, Width = 0.2, Height = 0.05 })
 		end)
 	end
-	-- 장판 문양이 한 번에 퍼진다: 외곽선 + 안에서 바깥으로 달리는 고리 둘(칸마다 찍지 않는다)
+	-- 판 전체가 가장자리까지 한꺼번에 맞고(FullBoard), 이어서 별이 판 전체를 X 자로 가로지르며 장판을 새긴다
 	local a = areaOf(ctx, cells)
-	task.delay(0.32, function()
-		outline(ctx, a, GOLDEN, 0.8)
-		Vfx.Ring(CFrame.new(Vector3.new(a.Mid.X, ctx.Ground + 0.2, a.Mid.Z)), { R0 = 1, R1 = a.Radius, Color = GOLDEN, Life = 0.6, Width = 0.3, Height = 0.06 })
-		Vfx.Ring(CFrame.new(Vector3.new(a.Mid.X, ctx.Ground + 0.25, a.Mid.Z)), { R0 = 0.5, R1 = a.Radius * 0.6, Color = STAR, Life = 0.5, Width = 0.2, Height = 0.05 })
-		Vfx.Flash(a.Mid + Vector3.new(0, 0.5, 0), { Color = GOLDEN, Size = 4, Life = 0.2, Brightness = 2 })
+	task.delay(0.05, function()
+		Common.FullBoard(ctx, a, GOLDEN, { Core = STAR_CORE, Shake = 1.3 })
 		Vfx.Pack("Anime/Shiny-01", CFrame.new(a.Mid + Vector3.new(0, 0.6, 0)), { Color = GOLDEN, Size = math.max(0.8, a.Radius / 10), Count = 0.6 })
-		fillArea(ctx, a, GOLDEN, { Core = STAR_CORE, Quick = true })
-		waveFb(ctx, a.Mid + Vector3.new(0, 0.4, 0), a.Radius * 1.6, GOLDEN, 0.6)
 	end)
 	-- 조율자 알리오스처럼: 망치에서 튄 별이 장판을 X 자로 가로질러 긋는다(간격이 갈수록 짧아짐), 마지막 모서리에서 큰 금빛 폭발
 	local pts = { hit + Vector3.new(0, 2, 0) }
@@ -883,72 +862,53 @@ function Fx.SummonStar(ctx: any)
 	end)
 end
 
--- 페크다: 대상이 선 열을 따라 위에서 별빛 기둥이 차례로 내리꽂힌다(칸마다 충격파)
+-- 페크다(유도기): 하늘의 별 셋이 대상을 겨눠 레이저를 내리꽂는다 — 가운데 줄기는 굵게, 양옆 둘은 가늘게 대상 한 점으로 모인다(조율자 셉텐트리오네스 레이저 문법)
 function Fx.PhecdaColumn(ctx: any)
 	local Vfx = ctx.Vfx
-	smash(ctx, ctx.Tip("W") or ctx.Target, 1.3)
-	local a = areaOf(ctx, lineCells(ctx, "Column"))
-	-- 대상 열 전체를 따라 빛의 장막이 서고, 하늘에서 별빛 하나가 열 가운데로 떨어진다
-	curtain(ctx, areaAt(a, a.U0, 0), areaAt(a, a.U1, 0), STAR, 8, 0.6)
-	-- 조율자 셉텐트리오네스처럼: 하늘의 별 셋이 열 앞 · 가운데 · 뒤로 차례로 레이저를 꽂고 그 착점들이 선 자국으로 이어진다
-	local land = {}
-	for k, u in { a.U0 + 3, 0, a.U1 - 3 } do
-		land[k] = areaAt(a, u, 0, 0.3)
+	local at = ctx.Target
+	local ground = Vector3.new(at.X, ctx.Ground + 0.3, at.Z)
+	local r = ctx.Forward:Cross(Vector3.yAxis)
+	smash(ctx, ctx.Tip("W") or at, 1)
+	for k, off in { 0, -7, 7 } do
 		task.delay((k - 1) * 0.05, function()
-			local top = land[k] + Vector3.new(0, 24, 0)
+			local top = at + r * off + Vector3.new(0, 24, 0)
 			Vfx.Flash(top, { Color = FLASH, Size = 3, Life = 0.14, Brightness = 4 })
 			Common.SeptLaser(ctx, function()
 				return top
-			end, land[k], if k == 2 then 1.5 else 1, 0.14, 0.25, STAR_PAL)
+			end, ground, if k == 1 then 1.5 else 0.8, 0.14, 0.25, STAR_PAL)
 		end)
 	end
-	task.delay(0.24, function()
-		Common.SeptScar(land[1], land[2], STAR_PAL, 1.6)
-		Common.SeptScar(land[2], land[3], STAR_PAL, 1.6)
-	end)
 	task.delay(0.14, function()
-		Vfx.Pillar(a.Mid, { Color = STAR, Life = 0.5, Height = 10, Width = math.clamp((a.U1 - a.U0) * 0.2, 2.6, 6) })
-		fillArea(ctx, a, STAR, { Core = STAR_CORE })
-		Vfx.Pack("Loose/Shockwave", CFrame.new(a.Mid + Vector3.new(0, 0.4, 0)), { Color = STAR_CORE, Size = 0.4 })
-		impactFb(ctx, a.Mid + Vector3.new(0, 0.7, 0), 6, STAR)
-		waveFb(ctx, a.Mid + Vector3.new(0, 0.3, 0), (a.U1 - a.U0) * 1.1, STAR_CORE, 0.5)
-		outline(ctx, a, STAR, 0.45)
+		Vfx.Pillar(ground, { Color = STAR, Life = 0.5, Height = 10, Width = 2.4 })
+		impactFb(ctx, at, 6, STAR)
+		waveFb(ctx, ground, 10, STAR_CORE, 0.5)
+		Vfx.Pack("Loose/Shockwave", CFrame.new(ground), { Color = STAR_CORE, Size = 0.4 })
+		Vfx.Shake(0.5, 0.25)
 	end)
 end
 
--- 메라크: 휘두른 자리에서 금빛 초승달 충격파가 대상의 행을 따라 끝까지 달린다
+-- 메라크(유도기): 휘두른 망치 끝에서 금빛 선이 대상까지 이어지고, 선이 세 번 부분부분 터진 뒤 대상 쪽에서 통째로 터진다(조율자 메라크 문법)
 function Fx.MerakRow(ctx: any)
 	local Vfx = ctx.Vfx
-	local cells = lineCells(ctx, "Row")
-	local a = areaOf(ctx, cells)
-	local mid = a.Mid
 	local from = ctx.Tip("W") or ctx.Root.Position
-	Vfx.Beam(from, mid + Vector3.new(0, 0.6, 0), { Color = GOLDEN, Width = 1.6, Life = 0.4 })
+	local at = ctx.Target
 	slashFb(ctx, from, 8, GOLDEN, 0.25)
-	-- 행 전체를 가로지르는 금빛 장막 하나 + 충격파 띠 하나(칸마다 찍지 않는다)
-	task.delay(0.1, function()
-		curtain(ctx, areaAt(a, 0, a.V0), areaAt(a, 0, a.V1), GOLDEN, 6, 0.55)
-		fillArea(ctx, a, GOLDEN, { Core = STAR_CORE })
-		Vfx.Shockwave(mid + Vector3.new(0, 0.2, 0), { Color = GOLDEN, Radius = (a.V1 - a.V0) / 2, Life = 0.4 })
-		Vfx.Pack("vfx pack/f", CFrame.new(mid + Vector3.new(0, 0.5, 0)), { Color = GOLDEN, Size = 0.6, Count = 0.6 })
-		outline(ctx, a, GOLDEN, 0.45)
-	end)
-	-- 조율자 메라크처럼: 휘두른 행에 금빛 선이 남아 네 번 부분부분 터지고(강중약 간격) 마지막에 통째로 터진다
-	local line = Common.GlowLine(areaAt(a, 0, a.V0 + 2, 1.4), areaAt(a, 0, a.V1 - 2, 1.4), 0.2, 0.15, STAR_PAL)
-	for k, t in { 0.3, 0.42, 0.52, 0.6 } do
+	local line = Common.GlowLine(from, at, 0.2, 0.06, STAR_PAL)
+	impactFb(ctx, at, 5, STAR_CORE)
+	for k, t in { 0.08, 0.14, 0.2 } do
 		task.delay(t, function()
-			line.Flare(line.A:Lerp(line.B, (k - 0.5) / 4 + (math.random() - 0.5) * 0.15))
+			line.Flare(from:Lerp(at, (k - 0.5) / 3))
 		end)
 	end
-	task.delay(0.8, function()
+	task.delay(0.3, function()
 		line.Burst()
-		local m = line.A:Lerp(line.B, 0.5)
-		Vfx.Flash(m, { Color = FLASH, Size = 8, Life = 0.2, Brightness = 5 })
-		boomFb(ctx, m, (a.V1 - a.V0) * 0.55, GOLDEN)
-		waveFb(ctx, mid + Vector3.new(0, 0.3, 0), (a.V1 - a.V0) * 0.9, STAR_CORE, 0.5)
-		for k = 0, 4 do
-			Vfx.Burst(line.A:Lerp(line.B, k / 4), { Count = 4, Colors = { GOLDEN, STAR_CORE }, Size = 0.25, Speed = 10, Gravity = 6, Life = 0.5 })
+		Vfx.Flash(at, { Color = FLASH, Size = 7, Life = 0.2, Brightness = 5 })
+		boomFb(ctx, at, 9, GOLDEN)
+		waveFb(ctx, Vector3.new(at.X, ctx.Ground + 0.3, at.Z), 9, STAR_CORE, 0.5)
+		for k = 0, 3 do
+			Vfx.Burst(from:Lerp(at, k / 3), { Count = 4, Colors = { GOLDEN, STAR_CORE }, Size = 0.25, Speed = 10, Gravity = 6, Life = 0.5 })
 		end
+		Vfx.Shake(0.5, 0.25)
 	end)
 end
 
@@ -1318,8 +1278,7 @@ function Fx.DipperCrash(ctx: any)
 	Vfx.Pack("Big/Big-Crack-01", CFrame.new(Vector3.new(mid.X, ctx.Ground + 0.15, mid.Z)), { Color = DIPPER_MIX, Size = math.max(0.4, a.Radius / 8) })
 	boomFb(ctx, mid + Vector3.new(0, 1.4, 0), math.max(11, a.Radius * 2), DIPPER_MIX)
 	impactFb(ctx, mid + Vector3.new(0, 0.9, 0), 6.4, STAR_CORE)
-	outline(ctx, a, DIPPER_MIX, 0.9)
-	fillArea(ctx, a, DIPPER_MIX, { Core = STAR_CORE })
+	Common.FullBoard(ctx, areaOf(ctx, allyCells(ctx)), DIPPER_MIX, { Core = STAR_CORE, Shake = 1.6 }) -- 판 전체(별자리 모양 a 는 기둥 · 균열 크기용)
 	Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = a.Radius + 5, Color = STAR_CORE, Life = 0.8, Width = 0.4, Height = 0.08 })
 	task.delay(0.1, function()
 		Vfx.Pack("Loose/Shockwave", CFrame.new(mid + Vector3.new(0, 0.6, 0)), { Color = DIPPER_MIX, Size = 0.9 })
@@ -1614,8 +1573,7 @@ function Fx.KenosLanding(ctx: any)
 		Vfx.Ring(CFrame.new(ground), { R0 = 0.6, R1 = a.Radius + 3, Color = CRACK, Life = 0.5, Width = 0.35, Height = 0.07 })
 		boomFb(ctx, a.Mid + Vector3.new(0, 0.8, 0), 8 * k, CRACK)
 		Vfx.Pack("Anime/Crack-01", CFrame.new(ground), { Color = CRACK, Size = math.max(1.4, a.Radius / 6) * k })
-		outline(ctx, a, CRACK, 0.7)
-		fillArea(ctx, a, CRACK, { Core = STAR_CORE, Scale = k })
+		Common.FullBoard(ctx, a, CRACK, { Core = STAR_CORE, Shake = 1.2 * k }) -- 붉은 칸 전체가 가장자리까지 한꺼번에
 	end
 	if #safe > 0 then -- 빛 칸 묶음은 장막 하나
 		local a = areaOf(ctx, safe)

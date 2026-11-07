@@ -637,7 +637,7 @@ local bossSkills: { Skill } = {
 		Id = "CallistoAlioth",
 		Name = "알리오스",
 		Description = "- 상대 필드 변화기.\n"
-			.. "- 아군이 선 열과 그 앞쪽 열(2열 6칸)에 5턴 동안 남는 장판을 깖. 장판 밖에 서 있으면 맞지 않는다.\n"
+			.. "- 판 전체(18칸)에 5턴 동안 남는 장판을 깖. 피할 칸이 없다.\n"
 			.. "  - 턴이 지날 때마다 피해 5 · [두베] 1 · [성위] 2.\n"
 			.. "- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
 		Damage = 5,
@@ -674,24 +674,23 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoPhecda",
 		Name = "페크다",
-		Description = "- 대상이 선 열 전체를 침.\n"
+		Description = "- 유도기: 대상 하나를 쫓아 침(옮겨도 따라가고, 회피 QTE).\n"
 			.. "- 맞은 대상의 [성위]를 [뭇별]로 바꾼다.\n"
 			.. "- 이미 [뭇별]이 있으면 피해 +30%.\n"
 			.. "- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
 		Damage = 20,
 		Range = "Melee",
-		Shape = { Kind = "Column" },
+		Shape = { Kind = "Single" },
 		BossKind = "Attack",
 		BossCooldown = 11, -- 2026-11-06 개선안 5절: 8 → 11
 	},
 	{
 		Id = "CallistoMerak",
 		Name = "메라크",
-		Description = "- 예고 때 대상이 선 행을 고정해 친다(옮기면 피한다). 회피·막기 QTE 없음, 보호막·무적·피해 감소는 적용.\n- 맞으면 [알카이드] 3 · [두베] 1.\n  - 대상에게 [뭇별]이 있으면 [두베] 4 · [알카이드] 3 추가.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
+		Description = "- 유도기: 대상 하나를 쫓아 침(옮겨도 따라가고, 회피 QTE).\n- 맞으면 [알카이드] 3 · [두베] 1.\n  - 대상에게 [뭇별]이 있으면 [두베] 4 · [알카이드] 3 추가.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
 		Damage = 30,
 		Range = "Melee",
-		Shape = { Kind = "Row" },
-		Unavoidable = true,
+		Shape = { Kind = "Single" },
 		BossKind = "Attack",
 		BossCooldown = 6, -- 2026-11-06 개선안 5절: 3 → 6
 	},

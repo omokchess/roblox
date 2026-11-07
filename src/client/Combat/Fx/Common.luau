@@ -500,6 +500,63 @@ function Common.AreaFill(ctx: any, a: Area, color: Color3, o: { [string]: any }?
 	end
 end
 
+--[[
+	판 전체 광역 연출(2026-11-07 사용자: "전체 광역기는 진짜 전체 광역기처럼"). AreaFill 위에 "가장자리 끝까지 · 한꺼번에"를 더한 묶음 — 전부 같은 순간에 시작한다:
+	① 판 네 변을 따라 빛 장막이 동시에 솟음 ② 가운데에서 판 모서리 너머까지 퍼지는 돔 파문(고리 셋 + 큰 파문 시트) ③ 판 전체에 고르게 흩은 균열 6
+	④ 하늘에서 판 전 영역으로 동시에 쏟아지는 별비(격자 구역마다 하나씩 흩뿌림 — 칸 수와 무관) ⑤ 변 · 모서리 불씨 ⑥ 바닥 섬광 판(AreaFill Quick) · 외곽선
+	⑦ 맞는 사람 전원(ctx.Targets)에게 동시에 피격 번쩍 ⑧ 큰 화면 흔들림. o = { Core, Height(장막 높이), Shake }
+]]
+function Common.FullBoard(ctx: any, a: Area, color: Color3, o: { [string]: any }?)
+	local opt = o or {}
+	local Vfx = ctx.Vfx
+	local core = opt.Core or Color3.new(1, 1, 1)
+	local w, d = a.V1 - a.V0, a.U1 - a.U0
+	local diag = math.sqrt(w * w + d * d) / 2
+	local gy = Vector3.new(a.Mid.X, ctx.Ground + 0.2, a.Mid.Z)
+	local corners = { Common.AreaAt(a, a.U0, a.V0), Common.AreaAt(a, a.U0, a.V1), Common.AreaAt(a, a.U1, a.V1), Common.AreaAt(a, a.U1, a.V0) }
+	for i = 1, 4 do
+		Common.Curtain(ctx, corners[i], corners[i % 4 + 1], color, opt.Height or 10, 0.7)
+		for _, t in { 0, 0.5 } do -- 변 불씨: 모서리와 변 가운데
+			Vfx.Burst(corners[i]:Lerp(corners[i % 4 + 1], t) + Vector3.new(0, 0.3, 0), { Count = 4, Colors = { color, core }, Size = 0.3, Speed = 14, Life = 0.45, Gravity = 24, Material = Enum.Material.Neon })
+		end
+	end
+	for k = 0, 2 do -- 돔: 판 모서리 너머까지
+		task.delay(0.08 * k, function()
+			Vfx.Ring(CFrame.new(gy), { R0 = 1, R1 = diag + 6 + 3 * k, Color = if k == 1 then core else color, Life = 0.6, Width = 0.5, Height = 0.1 })
+		end)
+	end
+	Vfx.Flipbook(gy + Vector3.new(0, 0.5, 0), { Texture = "rbxassetid://13634052022", Layout = "Grid4x4", Size = diag * 2.2, Life = 0.6, Color = color, LightEmission = 1 })
+	local cell = math.max(1.2, a.Radius / 9)
+	for i = 0, 2 do -- 균열 3 × 2, 구역마다 조금 흔든 자리
+		for j = 0, 1 do
+			local u = a.U0 + d * (i + 0.3 + math.random() * 0.4) / 3
+			local v = a.V0 + w * (j + 0.3 + math.random() * 0.4) / 2
+			Vfx.Pack("Anime/Crack-01", CFrame.new(Common.AreaAt(a, u, v, 0.1) + Vector3.new(0, ctx.Ground - a.Mid.Y, 0)), { Color = color, Size = cell })
+		end
+	end
+	local n = math.clamp(math.floor(w * d / 40), 8, 16) -- 별비: 4열 격자 구역마다 하나
+	local rows = math.ceil(n / 4)
+	for idx = 0, n - 1 do
+		local u = a.U0 + d * (idx % 4 + math.random()) / 4
+		local v = a.V0 + w * (idx // 4 + math.random()) / rows
+		local land = Common.AreaAt(a, u, v, 0.4)
+		task.delay(math.random() * 0.1, function()
+			Vfx.Projectile(land + Vector3.new(0, 22, 0), land, { Time = 0.2, Color = core, TrailColor = color })
+		end)
+		task.delay(0.2 + math.random() * 0.1, function()
+			Vfx.Flash(land, { Color = core, Size = 2.2, Life = 0.14, Brightness = 4 })
+			Vfx.Sparks(land, { Color = color, Count = 3, Speed = 11 })
+		end)
+	end
+	Common.AreaFill(ctx, a, color, { Core = core, Quick = true, Scale = 1.5 })
+	Common.Outline(ctx, a, color, 0.8)
+	for _, p in ctx.Targets or {} do -- 맞는 전원 동시에
+		Vfx.Flash(p, { Color = core, Size = 4, Life = 0.15, Brightness = 5 })
+		Vfx.Sparks(p, { Color = color, Count = 6, Speed = 14 })
+	end
+	Vfx.Shake(opt.Shake or 1.1, 0.5)
+end
+
 local onceMarks: { [any]: { [string]: number } } = setmetatable({}, { __mode = "k" }) :: any
 function Common.Once(ctx: any, key: string, window: number?): boolean
 	local marks = onceMarks[ctx.Actor]
