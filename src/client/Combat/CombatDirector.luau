@@ -599,6 +599,15 @@ function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 		return (weapons and weapons:OrbPosition(i)) or (a.Pos.Position + Vector3.new(0, 3.6, 0))
 	end
 	ctx.EnemyCenter = self:_enemyCenter(a)
+	-- 시전자 편의 살아 있는 배우들(서포트 이펙트를 받는 아군에게만 — 2026-11-07 사용자: "서포트 받는 아군한테만 나오게")
+	local foe = a.Kind ~= "Humanoid" or a.Foe == true
+	local allies = {}
+	for _, o in self.Actors do
+		if not o.Dying and (o.Kind ~= "Humanoid" or o.Foe == true) == foe then
+			table.insert(allies, o)
+		end
+	end
+	ctx.Allies = allies
 	ctx.EnemyTiles = self.EnemyTiles
 	ctx.AllyTiles = self.AllyTiles
 	ctx.ThreatTiles = self.ThreatTiles

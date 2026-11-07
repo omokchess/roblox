@@ -83,19 +83,8 @@ local function st(ctx: any): any
 	return s
 end
 
-local function sine(x: number): number
-	return -(math.cos(math.pi * math.clamp(x, 0, 1)) - 1) / 2
-end
-
--- 급가속 뒤 급정지(카메라 꺾기) · 서서히 붙는 가속(레이저를 쫓는 카메라)
-local function expoOut(x: number): number
-	x = math.clamp(x, 0, 1)
-	return if x >= 1 then 1 else 1 - 2 ^ (-10 * x)
-end
-local function quadIn(x: number): number
-	x = math.clamp(x, 0, 1)
-	return x * x
-end
+-- 급가속 뒤 급정지(카메라 꺾기) · 서서히 붙는 가속(레이저를 쫓는 카메라) — 공용(Common)
+local sine, expoOut, quadIn = Common.sine, Common.expoOut, Common.quadIn
 
 -- 별자리 선(두 별 사이 빛줄)
 local function line(ctx: any, a: Vector3, b: Vector3, color: Color3, width: number, life: number)
@@ -1091,51 +1080,10 @@ end
 	뻗는 동안 빛고리 셋이 줄기를 감아 내려간다. 닿으면 번쩍 · 충격파 · 파편. size = 굵기 배(강타 땐 크게)
 ]]
 local AIM, GROW = 0.12, 0.1 -- 2026-11-06 속도감: 0.25 + 0.22 → 0.12 + 0.1
-local LAYERS: { { any } } = { { STAR, 1.4, 0.55 }, { PALE, 0.7, 0.3 }, { WHITE, 0.26, 0 } } -- 빛 · 굵기 · 투명도
 local function laser(ctx: any, i: number, g: Vector3, size: number, grow: number, life: number)
-	local parts: { Part } = {}
-	for k, layer in LAYERS do
-		parts[k] = CombatVfx.Part(Vector3.new(0.1, 0.1, 0.05), CFrame.new(g), layer[1])
-		parts[k].Transparency = 1
-	end
-	CombatVfx.Timed(grow + life, function(t)
-		local a = t * (grow + life)
-		local top = ctx.Star(i)
-		local head = top:Lerp(g, math.min(1, a / grow))
-		local len = math.max(0.05, (head - top).Magnitude)
-		local cf = CFrame.lookAt(top, if len > 0.06 then head else top - Vector3.new(0, 0.1, 0), ctx.Forward) * CFrame.new(0, 0, -len / 2)
-		local fade = math.clamp((a - grow) / life, 0, 1)
-		local w = size * (1 - fade) ^ 2 * (1 + 0.15 * math.sin(a * 50)) -- 꼬리는 제곱으로 날카롭게 끊긴다
-		for k, layer in LAYERS do
-			local d = 0.03 + layer[2] * w
-			parts[k].Size, parts[k].CFrame = Vector3.new(d, d, len), cf
-			parts[k].Transparency = layer[3] + (1 - layer[3]) * fade
-		end
-	end, function()
-		for _, p in parts do
-			p:Destroy()
-		end
-	end)
-	for k = 1, 3 do
-		task.delay(grow * k / 3, function()
-			local top = ctx.Star(i)
-			local p = top:Lerp(g, k / 3)
-			ctx.Vfx.Ring(CFrame.lookAt(p, p + (g - top).Unit, ctx.Forward), {
-				R0 = 0.4 * size,
-				R1 = 2.2 * size,
-				Color = PALE,
-				Life = 0.2,
-				Width = 0.1 * size,
-				Facing = true,
-				Segments = 16,
-			})
-		end)
-	end
-	task.delay(grow, function()
-		ctx.Vfx.Flash(g, { Color = WHITE, Size = 6 * size, Life = 0.2, Brightness = 6 })
-		ctx.Vfx.Shockwave(Vector3.new(g.X, ctx.Ground + 0.1, g.Z), { Color = STAR, Radius = 5 * size, Life = 0.3 })
-		ctx.Vfx.Burst(g, { Count = 8, Colors = { STAR, WHITE }, Size = 0.2, Speed = 14, Gravity = 20, Life = 0.5 })
-	end)
+	Common.SeptLaser(ctx, function()
+		return ctx.Star(i)
+	end, g, size, grow, life)
 end
 
 --[[
@@ -1246,25 +1194,9 @@ function Fx.SeptGather(ctx: any)
 	end)
 end
 
--- 별을 잇는 선이 진형 바닥을 가르며 타오르고(0.3) 자국으로 남았다가(3.5) 천천히 사라진다(1.2)
+-- 별을 잇는 선이 진형 바닥을 가르며 타오르고(0.3) 자국으로 남았다가(3.5) 천천히 사라진다(1.2) — 공용 Common.SeptScar
 local function scar(a: Vector3, b: Vector3)
-	local len = math.max(0.05, (b - a).Magnitude)
-	local cf = CFrame.lookAt(a, b) * CFrame.new(0, 0, -len / 2)
-	local core = CombatVfx.Part(Vector3.new(0.5, 0.06, len), cf, WHITE)
-	local glow = CombatVfx.Part(Vector3.new(1.6, 0.05, len), cf, STAR)
-	local TOTAL = 5
-	CombatVfx.Timed(TOTAL, function(t)
-		local a2 = t * TOTAL
-		local blaze = 1 - math.min(1, a2 / 0.3)
-		local fade = math.clamp((a2 - 3.8) / 1.2, 0, 1)
-		core.Size = Vector3.new(0.22 + 0.9 * blaze, 0.06, len)
-		glow.Size = Vector3.new(0.9 + 2.4 * blaze, 0.05, len)
-		core.Transparency = 0.15 + 0.85 * fade
-		glow.Transparency = 0.55 + 0.45 * fade - 0.4 * blaze
-	end, function()
-		core:Destroy()
-		glow:Destroy()
-	end)
+	Common.SeptScar(a, b)
 end
 
 --[[

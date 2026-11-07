@@ -182,6 +182,124 @@ function Common.Rubble(Vfx: any, at: Vector3, count: number?, color: Color3?)
 	Vfx.Burst(at, { Count = count or 10, Colors = { color or Color3.fromRGB(150, 140, 125), Color3.fromRGB(110, 102, 92), Color3.fromRGB(180, 172, 158) }, Size = 0.55, Speed = 20, Gravity = 70, Life = 0.9, Material = Enum.Material.Slate })
 end
 
+--[[
+	별 레이저 문법 공용(2026-11-07 — 조율자 셉텐트리오네스 · 칼리스토 북두칠성이 같이 쓴다). 조율자의 값이 기본이다.
+	easing: Common.sine · expoOut(급가속 뒤 급정지) · quadIn(서서히 붙는 가속)
+	Common.SeptLaser(ctx, top, g, size, grow, life, pal?)  별(top() 이 돌려주는 자리, 매 프레임 읽음)에서 바닥 g 로 grow 초에 뻗어 life 초 머물다 가늘어지는 겹 레이저.
+	  뻗는 동안 빛고리 셋이 줄기를 감고, 닿으면 번쩍 · 충격파 · 파편. size = 굵기 배.
+	  pal = { Layers = { { 색, 굵기, 투명도 }, ... }, Ring, Flash, Shock, Burst = { 색들 } }
+	Common.SeptScar(a, b, pal?, total?)  두 점 사이 바닥에 선 자국이 타오르고(0.3초) total(기본 5)초 동안 남았다 사라진다. pal = { Core, Glow }
+]]
+function Common.sine(x: number): number
+	return -(math.cos(math.pi * math.clamp(x, 0, 1)) - 1) / 2
+end
+function Common.expoOut(x: number): number
+	x = math.clamp(x, 0, 1)
+	return if x >= 1 then 1 else 1 - 2 ^ (-10 * x)
+end
+function Common.quadIn(x: number): number
+	x = math.clamp(x, 0, 1)
+	return x * x
+end
+
+local SEPT_PAL = {
+	Layers = { { c(110, 180, 255), 1.4, 0.55 }, { c(190, 214, 255), 0.7, 0.3 }, { c(255, 250, 235), 0.26, 0 } },
+	Ring = c(190, 214, 255),
+	Flash = c(255, 250, 235),
+	Shock = c(110, 180, 255),
+	Burst = { c(110, 180, 255), c(255, 250, 235) },
+	Core = c(255, 250, 235),
+	Glow = c(110, 180, 255),
+}
+function Common.SeptLaser(ctx: any, top: () -> Vector3, g: Vector3, size: number, grow: number, life: number, pal: { [string]: any }?)
+	local p = pal or SEPT_PAL
+	local layers = p.Layers or SEPT_PAL.Layers
+	local parts: { Part } = {}
+	for k, layer in layers do
+		parts[k] = CombatVfx.Part(Vector3.new(0.1, 0.1, 0.05), CFrame.new(g), layer[1])
+		parts[k].Transparency = 1
+	end
+	CombatVfx.Timed(grow + life, function(t)
+		local a = t * (grow + life)
+		local from = top()
+		local head = from:Lerp(g, math.min(1, a / grow))
+		local len = math.max(0.05, (head - from).Magnitude)
+		local cf = CFrame.lookAt(from, if len > 0.06 then head else from - Vector3.new(0, 0.1, 0), ctx.Forward) * CFrame.new(0, 0, -len / 2)
+		local fd = math.clamp((a - grow) / life, 0, 1)
+		local w = size * (1 - fd) ^ 2 * (1 + 0.15 * math.sin(a * 50)) -- 꼬리는 제곱으로 날카롭게 끊긴다
+		for k, layer in layers do
+			local d = 0.03 + layer[2] * w
+			parts[k].Size, parts[k].CFrame = Vector3.new(d, d, len), cf
+			parts[k].Transparency = layer[3] + (1 - layer[3]) * fd
+		end
+	end, function()
+		for _, part in parts do
+			part:Destroy()
+		end
+	end)
+	for k = 1, 3 do
+		task.delay(grow * k / 3, function()
+			local from = top()
+			local at = from:Lerp(g, k / 3)
+			ctx.Vfx.Ring(CFrame.lookAt(at, at + (g - from).Unit, ctx.Forward), {
+				R0 = 0.4 * size,
+				R1 = 2.2 * size,
+				Color = p.Ring or SEPT_PAL.Ring,
+				Life = 0.2,
+				Width = 0.1 * size,
+				Facing = true,
+				Segments = 16,
+			})
+		end)
+	end
+	task.delay(grow, function()
+		ctx.Vfx.Flash(g, { Color = p.Flash or SEPT_PAL.Flash, Size = 6 * size, Life = 0.2, Brightness = 6 })
+		ctx.Vfx.Shockwave(Vector3.new(g.X, ctx.Ground + 0.1, g.Z), { Color = p.Shock or SEPT_PAL.Shock, Radius = 5 * size, Life = 0.3 })
+		ctx.Vfx.Burst(g, { Count = 8, Colors = p.Burst or SEPT_PAL.Burst, Size = 0.2, Speed = 14, Gravity = 20, Life = 0.5 })
+	end)
+end
+
+function Common.SeptScar(a: Vector3, b: Vector3, pal: { [string]: any }?, total: number?)
+	local p = pal or SEPT_PAL
+	local len = math.max(0.05, (b - a).Magnitude)
+	local cf = CFrame.lookAt(a, b) * CFrame.new(0, 0, -len / 2)
+	local core = CombatVfx.Part(Vector3.new(0.5, 0.06, len), cf, p.Core or SEPT_PAL.Core)
+	local glow = CombatVfx.Part(Vector3.new(1.6, 0.05, len), cf, p.Glow or SEPT_PAL.Glow)
+	local TOTAL = total or 5
+	local fadeFrom = TOTAL - 1.2
+	CombatVfx.Timed(TOTAL, function(t)
+		local a2 = t * TOTAL
+		local blaze = 1 - math.min(1, a2 / 0.3)
+		local fd = math.clamp((a2 - fadeFrom) / 1.2, 0, 1)
+		core.Size = Vector3.new(0.22 + 0.9 * blaze, 0.06, len)
+		glow.Size = Vector3.new(0.9 + 2.4 * blaze, 0.05, len)
+		core.Transparency = 0.15 + 0.85 * fd
+		glow.Transparency = 0.55 + 0.45 * fd - 0.4 * blaze
+	end, function()
+		core:Destroy()
+		glow:Destroy()
+	end)
+end
+
+--[[
+	서포팅(버프 · 보호막 · 회복 · 도발 등 아군에게 거는) 이펙트가 그릴 자리: 실제로 효과를 받는 아군 캐릭터만. (2026-11-07 사용자)
+	ctx.Allies = 효과를 받는 아군 Actor 목록(시전자 포함 가능 — 각 Actor 는 .Pos(HumanoidRootPart CFrame) · .Ground(발밑까지 높이))을 CombatDirector 가 넘겨주면 그들을,
+	없으면(아직 안 넘겨줌 · 솔로 전투) 시전자 자신만 돌려준다. 칸 전체(AllyTiles)에 찍지 않는다.
+	돌려주는 것: { { Pos = 몸 가운데, Ground = 발밑 y } }
+]]
+function Common.Recipients(ctx: any): { { Pos: Vector3, Ground: number } }
+	local out = {}
+	for _, a in ctx.Allies or {} do
+		if a.Pos then
+			table.insert(out, { Pos = a.Pos.Position, Ground = a.Pos.Position.Y + (a.Ground or -3) })
+		end
+	end
+	if #out == 0 then
+		table.insert(out, { Pos = ctx.Root.Position, Ground = ctx.Ground })
+	end
+	return out
+end
+
 function Common.Head(ctx: any): Vector3
 	return ctx.Root.Position + Vector3.new(0, 1.6, 0)
 end

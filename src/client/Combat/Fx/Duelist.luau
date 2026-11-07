@@ -213,18 +213,19 @@ function Fx.Challenge(ctx: any)
 	Common.Land(Vfx, ground, 0.5, BLOODC)
 end
 
--- 결투 신청 — 보호막: 몸에서 은청 방패 파문이 퍼지고 아군 칸마다 방패가 맺힌다
+-- 결투 신청 — 보호막: 몸에서 은청 방패 파문이 퍼지고, 보호막을 받는 아군 몸에만 방패가 맺힌다
 function Fx.ShieldWave(ctx: any)
 	local Vfx = ctx.Vfx
 	local mid = ctx.Root.Position + Vector3.new(0, 1, 0)
 	Vfx.Ring(CFrame.new(Vector3.new(mid.X, ctx.Ground + 0.15, mid.Z)), { R0 = 1, R1 = 9, Color = EDGE, Life = 0.6, Width = 0.25, Height = 0.08 })
 	Vfx.Pack("Anime/Shield-01", CFrame.lookAt(mid, mid + ctx.Forward), { Size = 0.8, Tint = EDGE })
 	Vfx.Flash(mid, { Color = EDGE, Size = 3, Life = 0.16, Brightness = 3 })
-	for i, tile in ctx.AllyTiles or {} do
-		task.delay(0.05 + 0.04 * (i - 1), function()
-			local at = tile.Position + Vector3.new(0, 2, 0)
+	-- 방패는 실제로 보호막을 받는 아군 몸에만(칸마다 찍지 않는다)
+	for i, who in Common.Recipients(ctx) do
+		task.delay(0.05 + 0.08 * (i - 1), function()
+			local at = who.Pos + Vector3.new(0, 0.6, 0)
 			Vfx.Pack("Anime/Shield-01", CFrame.lookAt(at, at + ctx.Forward), { Size = 0.7, Tint = EDGE })
-			Vfx.Ring(CFrame.new(Vector3.new(at.X, ctx.Ground + 0.15, at.Z)), { R0 = 0.8, R1 = 3, Color = STEEL, Life = 0.4, Width = 0.15, Height = 0.05 })
+			Vfx.Ring(CFrame.new(Vector3.new(at.X, who.Ground + 0.15, at.Z)), { R0 = 0.8, R1 = 3, Color = STEEL, Life = 0.4, Width = 0.15, Height = 0.05 })
 			fb(ctx, at, "Charge", { Size = 3, Color = EDGE, Life = 0.35, LightEmission = 0.6 })
 		end)
 	end
