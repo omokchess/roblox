@@ -1,0 +1,4 @@
+{
+	"설명": "공식 덤프에 없지만 실제 스튜디오에 있는 항목(덤프가 숨기거나 옛것). 검사기(roblox_api.luau·check_roblox_api.py)가 덤프에 보탠다.",
+	"EnumItems": { "PoseEasingStyle": ["CubicV2"] }
+}

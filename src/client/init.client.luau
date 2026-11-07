@@ -67,6 +67,14 @@ if game:GetService("RunService"):IsStudio() and workspace:GetAttribute("CombatSh
 	end)
 end
 
+-- 스튜디오 전용 QA 촬영장: workspace 속성 QaSkill = "Callisto/CallistoDipper" 처럼 있으면 그 기술 하나를 반복 재생(Combat/QaStage.luau)
+local qaStage = script.Combat:FindFirstChild("QaStage")
+if game:GetService("RunService"):IsStudio() and type(workspace:GetAttribute("QaSkill")) == "string" and qaStage then
+	task.spawn(function()
+		require(qaStage :: ModuleScript).Start()
+	end)
+end
+
 -- 스튜디오 전용 칼리스토 페이즈 미리보기: 얼어붙은 호수 workspace.CallistoPreview 자리표마다 1·2·3페이즈 모습(Combat/CallistoPreview.luau)
 if game:GetService("RunService"):IsStudio() and workspace:FindFirstChild("CallistoPreview") then
 	task.spawn(function()

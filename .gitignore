@@ -5,3 +5,6 @@ __pycache__/
 # SQLite 임시 파일(본 파일 config_edits.db 는 올린다)
 *.db-shm
 *.db-wal
+
+# 로블록스 공식 API 덤프(4MB) — tools/roblox_api/fetch.sh 로 받는다. extra.json 은 올린다
+tools/roblox_api/API-Dump.json

@@ -13,6 +13,7 @@ local fs = require("@lune/fs")
 local luau = require("@lune/luau")
 local serde = require("@lune/serde")
 local roblox = require("@lune/roblox")
+local ApiCheck = require("../roblox_api") -- 로블록스 공식 API 목록 대조(2026-11-07)
 
 local Instance, CFrame, Vector3 = roblox.Instance, roblox.CFrame, roblox.Vector3
 
@@ -110,6 +111,7 @@ local function fillDefaults(inst)
 	return inst
 end
 local FakeInstance = { new = function(class, parent)
+	ApiCheck.checkClass(class)
 	local inst = fillDefaults(Instance.new(class))
 	if parent then
 		inst.Parent = parent
@@ -245,7 +247,8 @@ local function fakeRequire(target)
 			table.insert(failures, "warn: " .. table.concat(parts, " "))
 		end,
 	}, { __index = _G })
-	local fn = luau.load(luau.compile(fs.readFile(file)), { debugName = file, environment = env })
+	ApiCheck.apply(env, roblox) -- Enum·NumberRange·시퀀스를 공식 API 검사판으로 덮는다
+	local fn = luau.load(luau.compile(ApiCheck.rewrite(fs.readFile(file))), { debugName = file, environment = env })
 	local result = fn()
 	cache[target] = result
 	return result
@@ -851,7 +854,10 @@ try("정리", function()
 end)
 step(3)
 
-print(string.format("재생한 동작 %d개, 흉내 시간 %.0f초", played, now))
+for _, e in ApiCheck.errors do
+	table.insert(failures, "API: " .. e) -- pcall 이 삼킨 것도 포함
+end
+print(string.format("재생한 동작 %d개, 흉내 시간 %.0f초, API 속성 쓰기 검사 %d건", played, now, ApiCheck.writes))
 if #failures > 0 then
 	print("\n실패:")
 	for _, f in failures do
