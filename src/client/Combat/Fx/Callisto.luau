@@ -222,16 +222,15 @@ local function shapeOf(ctx: any): (Vector3?, { Vector3 }, boolean)
 			mid, best = t.Position, d
 		end
 	end
-	local tips, diag = {}, false
+	local tips = {}
 	for _, t in tiles do
 		local d = t.Position - mid
 		d = Vector3.new(d.X, 0, d.Z).Magnitude
 		if d > 1 then
 			table.insert(tips, t.Position)
-			diag = diag or d > 7
 		end
 	end
-	return mid, tips, diag
+	return mid, tips, false -- 십자만(십자 유지 3기술: 파라티리시 · 심베라즈마 · 메그레즈). X자·거리 추정은 하지 않는다
 end
 
 local function shapeStrike(ctx: any, color: Color3, core: Color3, light: boolean?)
@@ -307,7 +306,6 @@ function Fx.BurnSlash(ctx: any)
 	ctx.Vfx.Sparks(p, { Color = BURN, Count = 8, Speed = 16 })
 	fb(ctx, p, TEX.Flame, { Size = 6, Color = BURN, Life = 0.3, LightEmission = 0.6, Rotation = math.random(0, 360) })
 	impactFb(ctx, p, 4.5, STAR_CORE)
-	shapeStrike(ctx, BURN, STAR_CORE) -- X자 유도기(세시 파라티리시 · 트로히아 마지막 타)
 end
 
 -- 찌르기: 칼날 끝에서 대상까지 한 줄 + 꿰뚫고 나가는 별가루와 충격(팩)
@@ -330,7 +328,6 @@ function Fx.Stab(ctx: any, ev: any)
 		snap(ctx, ctx.Target, 3.4)
 		ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(ctx.Target), { Color = STAR_CORE, Size = 0.5, Count = 0.5 })
 	end
-	shapeStrike(ctx, STAR, STAR_CORE, beat < 3) -- 십자 유도기(신데시): 셋째 비트가 가운데 충격까지
 end
 
 -- 카메라 찰칵(페이탈 프레임): 렌즈에서 흰 섬광, 대상 둘레에 사진 틀(네모 고리) + 반짝이는 빛살
@@ -502,7 +499,6 @@ function Fx.StarBolt(ctx: any)
 		ctx.Vfx.Flash(ctx.Target, { Color = STAR, Size = 4, Life = 0.15, Brightness = 4 })
 		ctx.Vfx.Sparks(ctx.Target, { Color = STAR_CORE, Count = 10, Speed = 20 })
 		ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(ctx.Target), { Color = STAR_CORE, Size = 0.7 })
-		shapeStrike(ctx, GOLDEN, STAR_CORE) -- X자 유도기(공명적 성위)
 	end)
 end
 
@@ -529,7 +525,6 @@ function Fx.Constellation(ctx: any)
 	task.delay(0.8, function()
 		waveFb(ctx, Vector3.new(ctx.Target.X, ctx.Ground + 0.4, ctx.Target.Z), 14, GOLDEN, 0.6)
 		task.delay(0.12, function()
-			shapeStrike(ctx, STAR, STAR_CORE) -- X자 유도기(인위적 별자리): 일곱 별이 꽂힌 뒤 대각으로 갈라진다
 		end)
 		for i, p in points do
 			local land = ctx.Target + (p - ctx.Target) * Vector3.new(0.35, 0, 0.35) - Vector3.new(0, 1.5, 0)
@@ -564,7 +559,6 @@ function Fx.StarShower(ctx: any, ev: any)
 		end)
 	end
 	task.delay(0.12 + 0.04 * count + 0.16, function()
-		shapeStrike(ctx, STAR, STAR_CORE, beat < 3) -- X자 유도기(쏟아지는 뭇별)
 	end)
 	if beat == 3 then
 		task.delay(0.12 + 0.04 * count + 0.16, function()
@@ -842,7 +836,6 @@ function Fx.HammerSmash(ctx: any)
 	local at = ctx.Tip("W") or ctx.Target
 	smash(ctx, at, 1)
 	ctx.Vfx.Pack("Loose/MiniSparks", CFrame.new(at), { Color = GOLDEN, Size = 0.5, Count = 0.5 })
-	shapeStrike(ctx, GOLDEN, STAR_CORE) -- 십자 유도기(수많은 성위 아래 파묻혀)
 end
 
 --[[
@@ -901,8 +894,7 @@ function Fx.MegrezSwing(ctx: any)
 	ctx.Vfx.Pack("Anime/Punch-02", CFrame.new(ctx.Target), { Color = STAR_CORE, Size = 0.8 })
 	slashFb(ctx, ctx.Target, 8.5, GOLDEN, 0.25)
 	impactFb(ctx, ctx.Target, 5, STAR_CORE)
-	-- 십자 유도기: 대상을 중심으로 네 방향으로 금빛 별줄기가 뻗는다(조율자 메그레즈의 줄 훑기 → 십자)
-	shapeStrike(ctx, GOLDEN, STAR_CORE)
+	shapeStrike(ctx, GOLDEN, STAR_CORE) -- 십자 유도기(메그레즈): 대상을 중심으로 네 방향으로 금빛 별줄기
 end
 
 -- 소환: 망치 머리(미자르 곁)에서 작은 별(알코르)이 떨어져 나와 높이 솟았다가 적 진영으로 떨어지고, 내려앉는 자리에 별 문이 열린다
@@ -954,7 +946,6 @@ function Fx.PhecdaColumn(ctx: any)
 		waveFb(ctx, ground, 10, STAR_CORE, 0.5)
 		Vfx.Pack("Loose/Shockwave", CFrame.new(ground), { Color = STAR_CORE, Size = 0.4 })
 		Vfx.Shake(0.5, 0.25)
-		shapeStrike(ctx, STAR, STAR_CORE) -- 십자 유도기
 	end)
 end
 
@@ -980,7 +971,6 @@ function Fx.MerakRow(ctx: any)
 			Vfx.Burst(from:Lerp(at, k / 3), { Count = 4, Colors = { GOLDEN, STAR_CORE }, Size = 0.25, Speed = 10, Gravity = 6, Life = 0.5 })
 		end
 		Vfx.Shake(0.5, 0.25)
-		shapeStrike(ctx, GOLDEN, STAR_CORE) -- X자 유도기
 	end)
 end
 
@@ -1088,10 +1078,22 @@ local function dipperGround(ctx: any, stars: { Vector3 }): { Vector3 }
 	return out
 end
 
--- 별자리(별 일곱 + 착점 일곱)가 한 화면에 들어오는 카메라 자리: 25° 내려다보는 방향으로 물러나며 세로 FOV 70 의 80%·가로(1.5:1) 안에 전부 들어올 때까지 거리를 늘린다.
--- 별자리는 화면 위쪽, 판(착점)은 아래쪽에 놓인다
+-- 레이저 구간 카메라 자리: 플레이어 진형(아군 칸)의 오른쪽 맨 위(먼 쪽) 모서리 칸 위 높은 곳에서 북두칠성(별 · 착점)을 내려다본다.
+-- 플레이어 카메라는 -Forward(적) 쪽을 보므로 화면 오른쪽 = -R, 위(먼 쪽) = -Forward. 별자리보다 높아야 하므로 높이는 별자리 위 +6 부터 올리며
+-- 세로 FOV 70 의 80% · 가로(1.5:1) 안에 별(위아래 반지름 포함)과 착점이 전부 들어올 때까지 키운다. 시선은 별자리 · 착점 묶음 상자의 한가운데
 local function dipperFrame(ctx: any, stars: { Vector3 }, ground: { Vector3 }): (Vector3, Vector3)
+	local f = ctx.Forward
+	local r = f:Cross(Vector3.yAxis)
+	local cells = allyCells(ctx)
+	local corner, best = cells[1], -math.huge
+	for _, p in cells do
+		local score = -p:Dot(r) - p:Dot(f)
+		if score > best then
+			corner, best = p, score
+		end
+	end
 	local pts = {}
+	local lo, hi = stars[1], stars[1]
 	for _, p in stars do
 		table.insert(pts, p + Vector3.new(0, 2, 0)) -- 별 반지름 몫
 		table.insert(pts, p - Vector3.new(0, 1.5, 0))
@@ -1099,18 +1101,16 @@ local function dipperFrame(ctx: any, stars: { Vector3 }, ground: { Vector3 }): (
 	for _, p in ground do
 		table.insert(pts, p)
 	end
-	local lo, hi = pts[1], pts[1]
 	for _, p in pts do
 		lo, hi = lo:Min(p), hi:Max(p)
 	end
 	local aim = (lo + hi) / 2
-	local pitch = math.rad(25)
-	local dir = ctx.Forward * math.cos(pitch) + Vector3.yAxis * math.sin(pitch)
 	local ty = math.tan(math.rad(35)) * 0.8
 	local tx = ty * 1.5
-	local eye = aim + dir * 120
-	for dist = 20, 120 do
-		local e = aim + dir * dist
+	local top = hi.Y + 6
+	local eye = corner + Vector3.new(0, 80, 0)
+	for h = top, 80, 1 do
+		local e = Vector3.new(corner.X, h, corner.Z)
 		local cf = CFrame.lookAt(e, aim)
 		local ok = true
 		for _, p in pts do
@@ -1216,7 +1216,7 @@ function Fx.Dipper(ctx: any)
 			end
 		end)
 	end
-	-- 카메라 (a): 먼저 별자리와 판이 한 화면에 들어오는 자리(dipperFrame — 별자리 위쪽, 착점 아래쪽, 25° 내려다봄)로 옮겨 가 잡고(0.75초) 레이저가 끝날 때까지 머문다.
+	-- 카메라 (a): 먼저 별자리와 판이 한 화면에 들어오는 자리(dipperFrame — 아군 진형 오른쪽 맨 위 칸 위 높은 곳에서 별자리와 판을 내려다봄)로 옮겨 가 잡고(0.75초) 레이저가 끝날 때까지 머문다.
 	-- 레이저 첫 세 발만 작게 앞으로 쿵(줌 펀치), 나머지 연사는 펀치 없이 쏟아진다
 	local eyeTo, lookTo = dipperFrame(ctx, stars, s.Ground)
 	s.frameEye, s.frameLook = eyeTo, lookTo

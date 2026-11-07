@@ -457,13 +457,13 @@ local bossSkills: { Skill } = {
 		GuardOnly = true, -- 2026-11-06 사용자 답: 회피 → 가드 QTE
 		Gimmick = { Id = "Struck", Name = "맞받아치기", Reduce = 0.6, Text = "이번 턴 칼리스토에게 스킬 적중" },
 		Name = "세시 파라티리시",
-		Description = "- 유도기(X자): 쫓는 대상 칸과 그 대각 네 칸(최대 5칸). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 팔에서 나온 칼날로 벤다.\n"
+		Description = "- 유도기(줄): 쫓는 대상이 선 행 6칸. 옮겨도 따라오고 그 줄의 아군은 모두 맞는다.\n- 팔에서 나온 칼날로 벤다.\n"
 			.. "- 맞으면 [성위] 2 · [화상] 4.\n"
 			.. "- 대상에게 [뭇별]이 있으면 [성위] 대신 [화상] 2를 더(화상 6).\n"
 			.. "- 가드 QTE(회피 불가). 기믹 [맞받아치기]: 이번 턴 칼리스토에게 스킬을 적중시키면 피해 −60% · [성위] 없음.",
 		Damage = 15,
 		Range = "Melee",
-		Shape = { Kind = "Single", Cells = { { X = 0, Y = 0 }, { X = -1, Y = -1 }, { X = 1, Y = -1 }, { X = -1, Y = 1 }, { X = 1, Y = 1 } } },
+		Shape = { Kind = "Row" },
 		BossKind = "Attack",
 	},
 	{
@@ -482,10 +482,10 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoTrohia",
 		Name = "트로히아",
-		Description = "- 유도기(X자): 쫓는 대상 칸과 그 대각 네 칸(최대 5칸). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 팔등에서 나온 칼날로 5번 연달아 벰(5 × 5).\n- 회피 QTE 한 번(5타 모두 같은 등급).\n- 맞을 때마다 [성위] 1.\n- 대상에게 [뭇별]이 있으면 한 번마다 [성위] 대신 [화상] 3.",
+		Description = "- 유도기(3×3): 쫓는 대상 칸이 중심인 3×3(판 밖은 잘림). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 팔등에서 나온 칼날로 5번 연달아 벰(5 × 5).\n- 회피 QTE 한 번(5타 모두 같은 등급).\n- 맞을 때마다 [성위] 1.\n- 대상에게 [뭇별]이 있으면 한 번마다 [성위] 대신 [화상] 3.",
 		Damage = 5,
 		Range = "Melee",
-		Shape = { Kind = "Single", Cells = { { X = 0, Y = 0 }, { X = -1, Y = -1 }, { X = 1, Y = -1 }, { X = -1, Y = 1 }, { X = 1, Y = 1 } } },
+		Shape = { Kind = "Square", Radius = 1 },
 		Strikes = 5,
 		ChainQte = true,
 		SameGrade = true,
@@ -509,10 +509,10 @@ local bossSkills: { Skill } = {
 		Id = "CallistoSynthesis",
 		Gimmick = { Id = "Stand", Name = "발 묶기", Reduce = 0.5, Text = "이번 턴 이동하지 않음" },
 		Name = "신데시 톤 아스트론",
-		Description = "- 유도기(십자): 쫓는 대상 칸과 그 상하좌우(최대 5칸). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 손을 칼날로 바꿔 3번 찌름(12 × 3).\n- 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 대상에게 [성위]가 있으면 피해 +30% · 찌를 때마다 [화상] 5.\n- 기믹 [발 묶기]: 이번 턴 이동하지 않으면 피해 −50%.",
+		Description = "- 유도기(줄): 쫓는 대상이 선 행 6칸. 옮겨도 따라오고 그 줄의 아군은 모두 맞는다.\n- 손을 칼날로 바꿔 3번 찌름(12 × 3).\n- 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 대상에게 [성위]가 있으면 피해 +30% · 찌를 때마다 [화상] 5.\n- 기믹 [발 묶기]: 이번 턴 이동하지 않으면 피해 −50%.",
 		Damage = 12,
 		Range = "Melee",
-		Shape = { Kind = "Cross", Radius = 1 },
+		Shape = { Kind = "Row" },
 		Strikes = 3,
 		ChainQte = true, -- 2026-11-06 개선안 4절: 회피 QTE 3번 대신 QTE 1개 안의 3비트
 		BossKind = "Attack",
@@ -550,10 +550,10 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoResonance",
 		Name = "공명적 성위",
-		Description = "- 유도기(X자): 쫓는 대상 칸과 그 대각 네 칸(최대 5칸). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 평타. 재사용 대기 없음.",
+		Description = "- 유도기(줄): 쫓는 대상이 선 행 6칸. 옮겨도 따라오고 그 줄의 아군은 모두 맞는다.\n- 평타. 재사용 대기 없음.",
 		Damage = 15,
 		Range = "Ranged",
-		Shape = { Kind = "Single", Cells = { { X = 0, Y = 0 }, { X = -1, Y = -1 }, { X = 1, Y = -1 }, { X = -1, Y = 1 }, { X = 1, Y = 1 } } },
+		Shape = { Kind = "Row" },
 		BossKind = "Attack",
 	},
 	{
@@ -561,20 +561,20 @@ local bossSkills: { Skill } = {
 		GuardOnly = true,
 		Gimmick = { Id = "Edge", Name = "로프 기대기", Reduce = 0.5, Text = "맞는 순간 열 1 또는 6에 서 있음" },
 		Name = "인위적 별자리",
-		Description = "- 유도기(X자): 쫓는 대상 칸과 그 대각 네 칸(최대 5칸). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 맞으면 [성위] 4.\n- 가드 QTE(회피 불가). 기믹 [로프 기대기]: 맞는 순간 열 1 또는 6에 서 있으면 피해 −50%.",
+		Description = "- 유도기(3×3): 쫓는 대상 칸이 중심인 3×3(판 밖은 잘림). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 맞으면 [성위] 4.\n- 가드 QTE(회피 불가). 기믹 [로프 기대기]: 맞는 순간 열 1 또는 6에 서 있으면 피해 −50%.",
 		Damage = 20,
 		Range = "Ranged",
-		Shape = { Kind = "Single", Cells = { { X = 0, Y = 0 }, { X = -1, Y = -1 }, { X = 1, Y = -1 }, { X = -1, Y = 1 }, { X = 1, Y = 1 } } },
+		Shape = { Kind = "Square", Radius = 1 },
 		BossKind = "Attack",
 		BossCooldown = 6,
 	},
 	{
 		Id = "CallistoShower",
 		Name = "쏟아지는 뭇별",
-		Description = "- 유도기(X자): 쫓는 대상 칸과 그 대각 네 칸(최대 5칸). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 별을 쏟아 3번 때림(5 × 3). 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 맞을 때마다 [성위] 1.",
+		Description = "- 유도기(열): 쫓는 대상이 선 열 3칸. 옮겨도 따라오고 그 열의 아군은 모두 맞는다.\n- 별을 쏟아 3번 때림(5 × 3). 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 맞을 때마다 [성위] 1.",
 		Damage = 5,
 		Range = "Ranged",
-		Shape = { Kind = "Single", Cells = { { X = 0, Y = 0 }, { X = -1, Y = -1 }, { X = 1, Y = -1 }, { X = -1, Y = 1 }, { X = 1, Y = 1 } } },
+		Shape = { Kind = "Column" },
 		Strikes = 3,
 		ChainQte = true,
 		BossKind = "Attack",
@@ -627,10 +627,10 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoBuried",
 		Name = "수많은 성위 아래 파묻혀",
-		Description = "- 유도기(십자): 쫓는 대상 칸과 그 상하좌우(최대 5칸). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 평타. 재사용 대기 없음.",
+		Description = "- 유도기(줄): 쫓는 대상이 선 행 6칸. 옮겨도 따라오고 그 줄의 아군은 모두 맞는다.\n- 평타. 재사용 대기 없음.",
 		Damage = 10,
 		Range = "Melee",
-		Shape = { Kind = "Cross", Radius = 1 },
+		Shape = { Kind = "Row" },
 		BossKind = "Attack",
 	},
 	{
@@ -674,23 +674,23 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoPhecda",
 		Name = "페크다",
-		Description = "- 유도기(십자): 쫓는 대상 칸과 그 상하좌우(최대 5칸). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n"
+		Description = "- 유도기: 대상 하나를 쫓아 침(옮겨도 따라가고, 회피 QTE).\n"
 			.. "- 맞은 대상의 [성위]를 [뭇별]로 바꾼다.\n"
 			.. "- 이미 [뭇별]이 있으면 피해 +30%.\n"
 			.. "- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
 		Damage = 20,
 		Range = "Melee",
-		Shape = { Kind = "Cross", Radius = 1 },
+		Shape = { Kind = "Single" },
 		BossKind = "Attack",
 		BossCooldown = 11, -- 2026-11-06 개선안 5절: 8 → 11
 	},
 	{
 		Id = "CallistoMerak",
 		Name = "메라크",
-		Description = "- 유도기(X자): 쫓는 대상 칸과 그 대각 네 칸(최대 5칸). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 맞으면 [알카이드] 3 · [두베] 1.\n  - 대상에게 [뭇별]이 있으면 [두베] 4 · [알카이드] 3 추가.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
+		Description = "- 유도기: 대상 하나를 쫓아 침(옮겨도 따라가고, 회피 QTE).\n- 맞으면 [알카이드] 3 · [두베] 1.\n  - 대상에게 [뭇별]이 있으면 [두베] 4 · [알카이드] 3 추가.\n- [칠성군]: 쓰면 [성위 - 칠성] 1(`북두칠성` 전까지 이 스킬로 1번).",
 		Damage = 30,
 		Range = "Melee",
-		Shape = { Kind = "Single", Cells = { { X = 0, Y = 0 }, { X = -1, Y = -1 }, { X = 1, Y = -1 }, { X = -1, Y = 1 }, { X = 1, Y = 1 } } },
+		Shape = { Kind = "Single" },
 		BossKind = "Attack",
 		BossCooldown = 6, -- 2026-11-06 개선안 5절: 3 → 6
 	},

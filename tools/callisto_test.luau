@@ -450,7 +450,7 @@ do
 	GridBattle.EnemyPlan(s, rng)
 	if b.Plans and b.Plans[1].SkillId == "CallistoMerak" then
 		-- 2026-11-07 사용자: 메라크는 유도기 — 대상 하나를 쫓는다(어디 서도 맞고 파티면 별 밖 다른 아군을 찾아감), 회피 QTE 가능
-		check(b.Plans[1].Seek == true and not b.Plans[1].Track and b.Plans[1].Shape == "X" and #b.Plans[1].Cells <= 5, "메라크는 X자 유도기(Seek) — 줄 고정 아님")
+		check(b.Plans[1].Seek == true and not b.Plans[1].Track and b.Plans[1].Shape == "Single" and #b.Plans[1].Cells == 1, "메라크는 단일 유도기(Seek) — 줄 고정 아님")
 		check(not loadShared("BattleSkills").ById("CallistoMerak").Unavoidable, "메라크는 회피 QTE 가능")
 		for x = 1, 6 do
 			for y = 1, 3 do
@@ -976,23 +976,34 @@ do
 	print("13 3페이즈 2페이즈 기술 섞기 OK — " .. all)
 end
 
---=== 14. 2026-11-07 사용자: "전체기가 아니어도 될 것 같은걸 각각 십자, X자 범위로 해서 유도기로" ===--
+--=== 14. 2026-11-07 총괄 정정: 십자 3개(파라티리시·심베라즈마·메그레즈) + 원래 모양 9개(줄·열·3×3·단일) 유도기 ===--
 do
 	local BattleSkills = loadShared("BattleSkills")
 	local shapes = GridBattle.CALLISTO_SHAPE
-	local crosses, xs = 0, 0
-	for id, kind in shapes do
+	local want = {
+		CallistoPhoto = "Cross", CallistoSymberasma = "Cross", CallistoMegrez = "Cross",
+		CallistoSlash = "Row", CallistoSynthesis = "Row", CallistoResonance = "Row", CallistoBuried = "Row",
+		CallistoTrohia = "Square", CallistoArtificial = "Square", CallistoShower = "Column",
+		CallistoPhecda = "Single", CallistoMerak = "Single",
+	}
+	for id, kind in want do
+		check(shapes[id] == kind, id .. " 모양 " .. kind)
 		check(GridBattle.CALLISTO_FORM[id] == "Seek", id .. " 은 유도기(Seek)")
-		check(BattleSkills.ById(id).Shape ~= nil and BattleSkills.ById(id).Shape.Kind ~= "All", id .. " 범위 표시가 판 전체가 아니다")
-		if kind == "Cross" then crosses += 1 else xs += 1 end
+		local k = BattleSkills.ById(id).Shape.Kind
+		check(k ~= "All" and (k == kind or kind == "X"), id .. " 범위 표시 " .. k)
 	end
-	check(crosses >= 5 and xs >= 5, string.format("십자 %d · X자 %d 고르게", crosses, xs))
 	for _, id in { "CallistoSubmerge", "CallistoAlioth", "CallistoDipper", "CallistoKenos" } do
-		check(shapes[id] == nil and GridBattle.CALLISTO_FORM[id] == if id == "CallistoAlioth" or id == "CallistoDipper" or id == "CallistoSubmerge" or id == "CallistoKenos" then "All" else nil, id .. " 은 전체로 남는다")
+		check(shapes[id] == nil and GridBattle.CALLISTO_FORM[id] == "All", id .. " 은 전체로 남는다")
 	end
-	-- 칸 수: 가운데 5 · 모서리 3 · 가장자리 4, X 는 대각만
-	check(#GridBattle.ShapeCells("Cross", 3, 2, 6, 3) == 5 and #GridBattle.ShapeCells("X", 3, 2, 6, 3) == 5, "가운데 5칸")
-	check(#GridBattle.ShapeCells("Cross", 1, 1, 6, 3) == 3 and #GridBattle.ShapeCells("X", 1, 1, 6, 3) == 2, "모서리에서 잘림 — 십자 3 · X 2(중심+대각 1)")
+	-- 칸 수(6×3 판): 가운데 기준
+	local function n(kind, x, y)
+		return #GridBattle.ShapeCells(kind, x, y, 6, 3)
+	end
+	check(n("Cross", 3, 2) == 5 and n("X", 3, 2) == 5 and n("Cross", 1, 1) == 3 and n("X", 1, 1) == 2, "십자·X 칸 수")
+	check(n("Row", 3, 2) == 6 and n("Row", 1, 1) == 6, "줄 = 선 행 6칸")
+	check(n("Column", 3, 2) == 3 and n("Column", 6, 1) == 3, "열 = 선 열 3칸")
+	check(n("Square", 3, 2) == 9 and n("Square", 1, 1) == 4 and n("Square", 1, 2) == 6, "3×3 — 가운데 9 · 모서리 4 · 가장자리 6(판 밖 잘림)")
+	check(n("Single", 3, 2) == 1 and n("Single", 6, 3) == 1, "단일 1칸")
 	local function has(list, x, y)
 		for _, c in list do
 			if c[1] == x and c[2] == y then return true end
@@ -1000,9 +1011,10 @@ do
 		return false
 	end
 	check(has(GridBattle.ShapeCells("Cross", 3, 2, 6, 3), 3, 1) and not has(GridBattle.ShapeCells("Cross", 3, 2, 6, 3), 2, 1), "십자는 상하좌우")
-	check(has(GridBattle.ShapeCells("X", 3, 2, 6, 3), 2, 1) and not has(GridBattle.ShapeCells("X", 3, 2, 6, 3), 3, 1), "X자는 대각")
-	-- 대상 따라가기: 예고한 뒤 어디로 옮겨도 대상이 중심이라 맞는다(솔로)
-	for _, kind in { "Cross", "X" } do
+	check(has(GridBattle.ShapeCells("Row", 3, 2, 6, 3), 6, 2) and not has(GridBattle.ShapeCells("Row", 3, 2, 6, 3), 3, 1), "줄은 같은 행만")
+	check(has(GridBattle.ShapeCells("Column", 3, 2, 6, 3), 3, 3) and not has(GridBattle.ShapeCells("Column", 3, 2, 6, 3), 4, 2), "열은 같은 열만")
+	-- 대상 따라가기: 모양마다 어디로 옮겨도 대상은 자기 모양 안이라 맞는다(솔로)
+	for _, kind in { "Cross", "X", "Row", "Column", "Square", "Single" } do
 		local s = battle()
 		local b = boss(s)
 		b.Plans = { { SkillId = "CallistoBuried", Cells = {}, Seek = true, Shape = kind } }
@@ -1015,7 +1027,7 @@ do
 			end
 		end
 	end
-	-- 파티: 모양 안에 선 다른 아군도 맞고, 밖이면 안 맞는다(대상 = 쫓는 아군 칸이 중심)
+	-- 파티: 모양 안에 선 다른 아군만 맞는다(대상 = 쫓는 아군 칸 기준)
 	do
 		local s = battle()
 		local b = boss(s)
@@ -1032,12 +1044,19 @@ do
 		check(#GridBattle.PlannedThreatList(s) == 0, "십자 밖(6,3)의 다른 아군은 안 맞는다")
 		BattleGrid.Move(s.Grid, "player2", 3, 3)
 		check(#GridBattle.PlannedThreatList(s) == 1, "십자 안(3,3)의 다른 아군도 맞는다")
-		BattleGrid.Move(s.Grid, "player2", 4, 3)
-		b.Plans[1].Shape = "X"
-		check(#GridBattle.PlannedThreatList(s) == 1, "X자 안(4,3)의 다른 아군도 맞는다")
+		b.Plans[1].Shape = "Row"
+		BattleGrid.Move(s.Grid, "player2", 6, 2)
+		check(#GridBattle.PlannedThreatList(s) == 1, "줄 안(6,2)의 다른 아군도 맞는다")
+		BattleGrid.Move(s.Grid, "player2", 6, 3)
+		check(#GridBattle.PlannedThreatList(s) == 0, "줄 밖(6,3)의 다른 아군은 안 맞는다")
+		b.Plans[1].Shape = "Column"
+		BattleGrid.Move(s.Grid, "player2", 3, 1)
+		check(#GridBattle.PlannedThreatList(s) == 1, "열 안(3,1)의 다른 아군도 맞는다")
+		b.Plans[1].Shape = "Single"
+		check(#GridBattle.PlannedThreatList(s) == 0, "단일은 대상 한 칸만 — 옆 칸 아군은 안 맞는다")
 		s.AllyId = GridBattle.ALLY_ID
 	end
-	-- 실제 예고: 3페이즈를 돌리며 모양 있는 기술의 plan.Cells 가 5칸 이하이고 Shape 가 박힌다
+	-- 실제 예고: 3페이즈를 돌리며 모양 기술의 Shape 가 박히고 Cells 가 그 모양 칸 수와 같다(판 전체 18칸 아님)
 	local s = battle()
 	local seenShape = 0
 	for _ = 1, 10 do
@@ -1045,7 +1064,7 @@ do
 		GridBattle.EnemyPlan(s, rng)
 		local p = boss(s).Plan
 		if p and shapes[p.SkillId] then
-			check(p.Shape == shapes[p.SkillId] and p.Seek == true and #p.Cells <= 5 and #p.Cells >= 2, "예고 plan 에 Shape·Cells<=5 — " .. p.SkillId)
+			check(p.Shape == shapes[p.SkillId] and p.Seek == true and #p.Cells < 18 and #p.Cells >= 1, "예고 plan 에 Shape·Cells<18 — " .. p.SkillId)
 			seenShape += 1
 		end
 		for _, t in GridBattle.PlannedThreatList(s) do
@@ -1054,7 +1073,7 @@ do
 		GridBattle.EndTurn(s)
 	end
 	check(seenShape >= 3, "1페이즈 예고에서 모양 기술이 나온다 — " .. seenShape)
-	print("14 십자/X 유도기 OK")
+	print("14 십자 3 + 원래 모양 9 유도기 OK")
 end
 
 print("칼리스토 규칙: 모두 통과")

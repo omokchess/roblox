@@ -2793,33 +2793,42 @@ local CALLISTO_FORM: { [string]: string } = {
 GridBattle.CALLISTO_FORM = CALLISTO_FORM
 --[[
 	2026-11-07 사용자: "전체 범위를 가진 스킬들중 전체기가 아니어도 될 것 같은걸 각각 십자, X자 범위로 해서 유도기로 만들어줘".
-	Seek 유도기 가운데 모양이 있는 것: 쫓는 대상 칸을 중심으로 십자(+) 또는 X자(×) 5칸(판 밖은 잘림). 대상이 움직이면 모양도 따라가고
+	Seek 유도기 가운데 모양이 있는 것: 쫓는 대상 칸 기준 모양(십자 3개 / 줄·열·3×3·단일 9개, 판 밖은 잘림). 대상이 움직이면 모양도 따라가고
 	맞는 건 그 모양 안에 선 아군 모두. 전체로 남은 것: 잠기리·알리오스·북두칠성·케노스(+ 고정 칸 렌즈 9칸·아스트로 세시 3×3).
 ]]
 local CALLISTO_SHAPE: { [string]: string } = {
-	CallistoSlash = "X",
+	-- 십자 유지 3개(2026-11-07 총괄 정정)
 	CallistoPhoto = "Cross",
-	CallistoTrohia = "X",
 	CallistoSymberasma = "Cross",
-	CallistoSynthesis = "Cross",
-	CallistoResonance = "X",
-	CallistoArtificial = "X",
-	CallistoShower = "X",
-	CallistoBuried = "Cross",
 	CallistoMegrez = "Cross",
-	CallistoPhecda = "Cross",
-	CallistoMerak = "X",
+	-- 나머지 아홉은 3a62a86 이전 원래 모양 — 대상 기준으로만 칠하고 맞는다(판 전체 아님)
+	CallistoSlash = "Row",
+	CallistoSynthesis = "Row",
+	CallistoResonance = "Row",
+	CallistoBuried = "Row",
+	CallistoTrohia = "Square",
+	CallistoArtificial = "Square",
+	CallistoShower = "Column",
+	CallistoPhecda = "Single",
+	CallistoMerak = "Single",
 }
 GridBattle.CALLISTO_SHAPE = CALLISTO_SHAPE
 
--- (cx, cy) 중심 십자/X 5칸(판 밖 잘림)
+-- (cx, cy) 기준 모양 칸(판 밖 잘림): Cross 십자 5 · X X자 5 · Row 선 행 · Column 선 열 · Square 3×3 · Single 1칸
 local function shapeCells(kind: string, cx: number, cy: number, width: number, height: number): { { number } }
-	local offsets = if kind == "Cross" then { { 0, 0 }, { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } else { { 0, 0 }, { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } }
 	local cells = {}
-	for _, o in offsets do
-		local x, y = cx + o[1], cy + o[2]
-		if x >= 1 and x <= width and y >= 1 and y <= height then
-			table.insert(cells, { x, y })
+	for x = 1, width do
+		for y = 1, height do
+			local dx, dy = math.abs(x - cx), math.abs(y - cy)
+			local inside = if kind == "Cross" then dx + dy <= 1
+				elseif kind == "X" then dx == dy and dx <= 1
+				elseif kind == "Row" then y == cy
+				elseif kind == "Column" then x == cx
+				elseif kind == "Square" then dx <= 1 and dy <= 1
+				else dx == 0 and dy == 0
+			if inside then
+				table.insert(cells, { x, y })
+			end
 		end
 	end
 	return cells
