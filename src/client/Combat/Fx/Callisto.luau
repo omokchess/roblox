@@ -903,10 +903,11 @@ local DIPPER_PAL = {
 	Glow = GOLDEN,
 }
 local DIPPER_LINKS = { { 1, 2 }, { 2, 3 }, { 3, 4 }, { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 } } -- 손잡이 → 국자 테두리
-local DIPPER_END = 3.9 -- 강타(DipperCrash) 시각 — 별자리 선이 여기까지 남는다
-local DIPPER_T0 = 0.25 -- Dipper 사건 시각
-local DIPPER_LASER_T = { 0.8, 1.3, 1.6, 1.9, 2.3, 2.55, 2.8 } -- DipperLaser 사건 시각(모션 표와 같아야 한다 — 카메라가 이 시각에 각 별을 지난다)
-local DIPPER_GATHER_T = 3.05 -- DipperGather 사건 시각
+-- 리듬(2026-11-07 사용자: "따다다다다다다- 쿠구구구구- 콰앙!!!"): 연사 0.6~1.08(0.08초 간격) → 모으기·우르릉 1.15~2.0 → 강타 2.0. 모션 표(Skills.CallistoDipper)와 같아야 한다
+local DIPPER_END = 2.0 -- 강타(DipperCrash) 시각 — 별자리 선이 여기까지 남는다
+local DIPPER_T0 = 0.15 -- Dipper 사건 시각
+local DIPPER_LASER_T = { 0.6, 0.68, 0.76, 0.84, 0.92, 1.0, 1.08 } -- DipperLaser 사건 시각 — 카메라가 멈추지 않고 이 시각에 각 별 곁을 지난다
+local DIPPER_GATHER_T = 1.15 -- DipperGather 사건 시각
 
 local dipperStates: { [any]: any } = setmetatable({}, { __mode = "k" }) :: any
 local function dstate(ctx: any): any
@@ -921,7 +922,7 @@ end
 -- 북두칠성: 아군 진영 하늘의 일곱 별 자리(국자 넷 + 손잡이 셋 — 알카이드가 칼리스토 쪽 끝). 조율자보다 크게 펼친다
 local function dipperStars(ctx: any): { Vector3 }
 	local cells = allyCells(ctx)
-	local mid = center(cells) + Vector3.new(0, 18, 0)
+	local mid = center(cells) + Vector3.new(0, 11, 0) -- 낮춰서 올려다보지 않고 판과 한 화면에 들어오게
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
 	local shape = { { 6, 1 }, { 3, 2 }, { 0.5, 1.5 }, { -1.5, 0 }, { -1.5, -3.5 }, { -6, -3 }, { -5.5, 0.5 } }
@@ -970,7 +971,7 @@ function Fx.Dipper(ctx: any)
 	local stars = dipperStars(ctx)
 	s.Stars, s.Ground, s.Fired, s.Slammed, s.Gather = stars, dipperGround(ctx, stars), {}, false, false
 	for i, p in stars do
-		task.delay(0.07 * i, function()
+		task.delay(0.03 * i, function()
 			local glow = Vfx.Part(Vector3.one * 0.3, CFrame.new(p), GOLDEN)
 			glow.Shape = Enum.PartType.Ball
 			local core = Vfx.Part(Vector3.one * 0.2, CFrame.new(p), STAR_CORE)
@@ -994,44 +995,49 @@ function Fx.Dipper(ctx: any)
 			Vfx.Pack("Loose/Flare", CFrame.new(p), { Color = STAR_CORE, Size = 0.9 })
 			chargeFb(ctx, p, 5, GOLDEN)
 			if i > 1 then
-				Vfx.Beam(stars[i - 1], p, { Color = GOLDEN, Width = 0.3, Life = math.max(0.5, DIPPER_END - 0.25 - 0.07 * i) })
+				Vfx.Beam(stars[i - 1], p, { Color = GOLDEN, Width = 0.3, Life = math.max(0.5, DIPPER_END - DIPPER_T0 - 0.03 * i) })
 			end
 		end)
 	end
-	-- 카메라 동선 (a): 손잡이 끝 별(알카이드 = 1)에서 시작해 별을 따라 국자 입 쪽 끝 별(두베 = 7)까지 이동한다.
-	-- 별 순서 알카이드 → 미자르 → 알리오스 → 메그레즈 → 페크다 → 메라크 → 두베 가 배열 1~7 이다. 카메라는 각 별의 레이저 시각에 그 별 아래를 지나고, 그때마다 앞으로 한 번 쿵 밀린다.
+	-- 카메라 동선 (a): 알카이드(1)에서 두베(7)까지 멈추지 않는 한 번의 연속 이동 — 각 별 곁에 도착하는 시각이 곧 그 별의 발사 시각이라 레이저가 지나가며 차례로 터진다.
+	-- 별 순서 알카이드 → 미자르 → 알리오스 → 메그레즈 → 페크다 → 메라크 → 두베 = 배열 1~7. 카메라는 별보다 약간 높은 곳(별 +3.5)에서 별과 바닥 사이를 바라본다(약 25° 내려다봄 — 올려다보지 않는다)
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
-	local off = r * 7 + f * 7 + Vector3.new(0, -8, 0)
-	local way, arrive = {}, {}
+	local way, look, arrive = {}, {}, {}
+	local gmid = if s.Ground then center(s.Ground) else center(stars)
 	for i = 1, 7 do
-		way[i] = stars[i] + off
+		way[i] = stars[i] + r * 8 + f * 12 + Vector3.new(0, 3.5, 0)
+		look[i] = stars[i]:Lerp(gmid, 0.3)
 		arrive[i] = DIPPER_LASER_T[i] - DIPPER_T0
 	end
 	local from = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.new()
+	local look0 = from.Position + from.LookVector * 30
 	ctx.Shot(DIPPER_GATHER_T - DIPPER_T0, function(_, tt)
-		local eye, look
+		local eye, aim
 		if tt < arrive[1] then
-			local u = Common.expoOut(tt / arrive[1])
-			eye = from.Position:Lerp(way[1], u)
-			look = (from.Position + from.LookVector * 30):Lerp(stars[1], u)
+			local u = tt / arrive[1] -- 일정 속도로 알카이드 쪽으로(시작에서 서서히 붙는 가속만)
+			u = u * u * (2 - u)
+			eye, aim = from.Position:Lerp(way[1], u), look0:Lerp(look[1], u)
 		else
 			local k = 1
 			while k < 7 and tt >= arrive[k + 1] do
 				k += 1
 			end
 			if k == 7 then
-				eye, look = way[7], stars[7]
+				-- 두베를 지난 뒤에도 같은 속도로 조금 더 흘러간다(멈추지 않는다)
+				local v = (way[7] - way[6]) / (arrive[7] - arrive[6])
+				local dt = tt - arrive[7]
+				eye, aim = way[7] + v * dt * 0.5, look[7]
 			else
-				local u = Common.sine((tt - arrive[k]) / (arrive[k + 1] - arrive[k]))
-				eye, look = way[k]:Lerp(way[k + 1], u), stars[k]:Lerp(stars[k + 1], u)
+				local u = (tt - arrive[k]) / (arrive[k + 1] - arrive[k]) -- 선형: 별마다 멈추지 않는다
+				eye, aim = way[k]:Lerp(way[k + 1], u), look[k]:Lerp(look[k + 1], u)
 			end
 		end
-		local cf = CFrame.lookAt(eye, look)
-		for i = 7, 1, -1 do -- 가장 최근 발사의 줌 펀치
+		local cf = CFrame.lookAt(eye, aim)
+		for i = 7, 1, -1 do -- 발사 줌 펀치는 아주 작게(연사라 어지럽지 않게)
 			local since = tt - arrive[i]
 			if since >= 0 then
-				cf += cf.LookVector * (1.4 * math.exp(-since * 18))
+				cf += cf.LookVector * (0.35 * math.exp(-since * 30))
 				break
 			end
 		end
@@ -1042,7 +1048,7 @@ end
 
 -- 별 하나가 레이저를 쏜다(ev.star = 별 번호 · nth = 몇 번째 · gap = 다음 발사까지 · hold = 강타까지 남은 초): 별로 빛이 빨려 들고(AIM) → 굵은 두 겹 레이저가 바닥 한 점으로(GROW) →
 -- 떨어진 자리에 충격 · 앞서 쏜 점과 선으로 이어진다. 카메라는 별을 올려다보다 레이저를 쫓아 내려가 끝에 딱 멈추고, 발사 순간 앞으로 한 번 쿵 밀린다
-local D_AIM, D_GROW = 0.1, 0.1
+local D_AIM, D_GROW = 0.03, 0.06 -- 연사라 짧게
 function Fx.DipperLaser(ctx: any, ev: any)
 	local Vfx = ctx.Vfx
 	local s = dstate(ctx)
@@ -1052,12 +1058,11 @@ function Fx.DipperLaser(ctx: any, ev: any)
 	local i = (ev and ev.star) or 1
 	local hold = (ev and ev.hold) or 1
 	local top, g = s.Stars[i], s.Ground[i]
-	Vfx.Implode(top, { Color = STAR_CORE, Radius = 5, Count = 10, Life = D_AIM })
-	chargeFb(ctx, top, 6, GOLDEN)
+	Vfx.Implode(top, { Color = STAR_CORE, Radius = 4, Count = 4, Life = 0.08 })
 	task.delay(D_AIM, function()
 		Common.SeptLaser(ctx, function()
 			return top
-		end, g, 1.7, D_GROW, 0.24, DIPPER_PAL)
+		end, g, 1.7, D_GROW, 0.2, DIPPER_PAL)
 		Vfx.Flash(top, { Color = FLASH, Size = 4, Life = 0.14, Brightness = 6 })
 	end)
 	task.delay(D_AIM + D_GROW, function()
@@ -1098,16 +1103,16 @@ function Fx.DipperGather(ctx: any)
 		end
 	end
 	local mid = center(cells)
-	local eye = corner + r * 5 - f * 3 + Vector3.new(0, 7, 0)
+	local eye = corner + r * 5 - f * 3 + Vector3.new(0, 10, 0)
 	local look = mid
 	s.cornerEye, s.cornerLook = eye, look
 	local from = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.new()
 	ctx.Shot(DIPPER_END - DIPPER_GATHER_T + 0.02, function(_, tt)
-		local u = Common.expoOut(tt / 0.4)
+		local u = Common.sine(tt / 0.4)
 		local base = CFrame.lookAt(from.Position:Lerp(eye, u), (from.Position + from.LookVector * 30):Lerp(look, u))
-		-- 떨림: 이동이 끝난 뒤 작게 시작해 강타 직전까지 점점 커진다(진동수 높게)
-		local k = math.clamp((tt - 0.4) / (DIPPER_END - DIPPER_GATHER_T - 0.4), 0, 1)
-		local amp = 0.02 + 0.5 * k * k
+		-- 우르릉: 옮겨 가는 중에 이미 떨리기 시작해 강타 직전까지 진폭이 점점 커진다(진동수 높게)
+		local k = math.clamp(tt / (DIPPER_END - DIPPER_GATHER_T), 0, 1)
+		local amp = 0.03 + 0.65 * k * k
 		local n = tt * 38
 		local cf = base * CFrame.new(math.noise(n, 0.3) * amp, math.noise(0.7, n) * amp, 0) * CFrame.Angles(0, 0, math.noise(n, 9.1) * amp * 0.04)
 		s.cam = base
