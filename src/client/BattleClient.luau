@@ -870,9 +870,7 @@ function BattleClient:_callistoGimmickUi(snapshot: any)
 	if self.finSeq == nil then
 		self.finSeq, self.pinSeq = view.FinisherSeq, view.PinnedSeq
 	end
-	if view.FinisherSeq > self.finSeq then
-		self.hud:Cutin("Finisher", "FINISHER", "빈 별자리 · KENOS ASTERISMOS")
-	end
+	-- FINISHER 컷인은 뺐다(2026-11-07 사용자: "피니셔 안내가 이펙트를 다 가려버려. 그냥 피니셔 안내를 없애버리자.")
 	if view.PinnedSeq > self.pinSeq then
 		self.hud:Cutin("Pin", "PIN!", "핀 성공 · PIN FALL")
 	end
