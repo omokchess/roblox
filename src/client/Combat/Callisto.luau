@@ -12,12 +12,15 @@
 
 	사람 모양이라 R6 관절을 그대로 쓴다(CombatRig·전투 모션·무기가 붙는다). 정면 = 모델 -Z(전투에서는 아군 쪽).
 	  옷  셔츠 카탈로그 11985252397 "Mad Scientist Dark Shirt" · 바지 카탈로그 11924564943 "Bondrewd Delver Scientist Black Pants"(아래 SHIRT_TEMPLATE · PANTS_TEMPLATE).
-	      오른팔 = 검(소맷부리에서 날이 나옴 — 무기 CallistoArms Main, 팔 축 고정)
+	      오른팔 = 말레니아식 금빛 의수(2026-11-07 — ReplicatedStorage.CallistoAssets.Prosthetic, models/build_callisto_prosthetic.py · tools/Callisto_Prosthetic.luau)가 손으로 칼 슴베를 쥐고 날이 손에서 이어진다
+        (오른팔 부위는 투명 — 셔츠 소매 대신 의수가 보인다. 의수가 없으면(시험 환경) 지금처럼 소매. 2페이즈에 우주 팔로 바뀌며 함께 사라진다)
+      칼 = 무기 CallistoArms Main, 팔 축 고정
 	      (ReplicatedStorage.CallistoAssets.Outfit — 블렌더 옷 4판은 스튜디오에 그대로 남아 있다. 지금은 붙이지 않는다 — 동업자가 옷을 전면 수정할 때 쓸 수 있다.
 	       부품마다 속성 Host(관절 부품) · Offset(그 부품에서 본 CFrame), 만든 곳 models/build_callisto_outfit.py · tools/Callisto_Outfit.luau)
 	  머리 ReplicatedStorage.CallistoAssets.Hair(카탈로그 70421887676551 "Carmen") — 손잡이를 머리 HairAttachment(0, 0.6, 0)에 맞춰 용접
 	  머리카락이 없으면(시험 환경) 맨머리.
-	얼굴(1페이즈) — FacePlate 의 SurfaceGui: 별무리 띠, 둥근 눈썹, 작은 코, 작은 입, 볼터치.
+	얼굴(1페이즈) — FacePlate 의 SurfaceGui: 둥근 눈썹, 작은 코, 작은 입, 볼터치. 눈은 3D 별 눈가리개(buildBlindfold)가 가린다.
+  별 눈가리개(2026-11-07 사용자: "별들이 모여서 생긴 눈가리개처럼") — 반투명 성운 띠 + 촘촘한 작은 별(Neon 구 · ✦ 반짝임) + 가는 별자리 빛줄(Beam). 별이 띠를 따라 물결로 흐르며 반짝인다. 안 고르기 V_Blindfold 1~3.
 	  Callisto.FaceOf(model) → face:Set(mood, 초?) 잠깐 표정 · face:SetBase(mood) 기본 표정
 	  표정 이름(Observe · Resolve · Sorrow · Attack · …)은 받지만 얼굴은 늘 같다 — 2026-11-01 사용자: "입은 무표정, 표정 변화 딱히 없게"
 	페이즈 — Callisto.SetPage(model, page, fade?)(한 번 넘어가면 되돌리지 않는다 — 컷신이 그 순간에 부른다)
@@ -99,8 +102,7 @@ local FACE_W, FACE_H = 200, 180
 local FACE_TWEEN = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local BROW = C(110, 78, 62)
 local ROSE = C(206, 112, 132)
-local BAND = C(12, 14, 38)
-local BAND_GLOW = C(140, 170, 255)
+local BAND_Y = 98 -- 눈 자리(눈물이 흘러내리는 시작 높이)
 
 local function frame(parent: Instance, name: string, size: UDim2, pos: UDim2, color: Color3, round: number?, alpha: number?): Frame
 	local f = Instance.new("Frame")
@@ -120,15 +122,12 @@ local function frame(parent: Instance, name: string, size: UDim2, pos: UDim2, co
 	return f
 end
 
-type Twinkle = { Label: TextLabel, Phase: number, Speed: number }
 type Face = {
 	Gui: SurfaceGui,
 	Brows: { Frame },
 	Mouths: { [string]: GuiObject },
 	Blush: { Frame },
 	Tear: Frame,
-	Stars: { Twinkle },
-	Glow: UIStroke,
 	Level: number,
 	Base: string,
 	Mood: string,
@@ -139,7 +138,7 @@ type Face = {
 	Step: (self: Face, now: number, dt: number) -> (),
 }
 
--- 표정 값: Brow = {안쪽 끝이 오르는 각, 위아래} · Mouth = smile/line/open/frown/o · Blush = 볼터치 투명도 · Band = 별무리 띠 밝기 · Tear = 눈물.
+-- 표정 값: Brow = {안쪽 끝이 오르는 각, 위아래} · Mouth = smile/line/open/frown/o · Blush = 볼터치 투명도 · Band = (쓰지 않음) · Tear = 눈물.
 -- 2026-11-01 사용자: "입은 무표정, 표정 변화 딱히 없게" — 어떤 표정 이름이든 같은 얼굴(일자 입 · 곧은 눈썹 · 띠 밝기 일정 · 눈물 없음)
 local NEUTRAL = { Brow = { 0, 0 }, Mouth = "line", Blush = 0.6, Band = 0.5, Tear = false }
 local MOODS: { [string]: typeof(NEUTRAL) } = setmetatable({}, {
@@ -148,16 +147,6 @@ local MOODS: { [string]: typeof(NEUTRAL) } = setmetatable({}, {
 	end,
 }) :: any
 Callisto.MOODS = MOODS
-
--- 별무리 띠(176 × 44, 눈 자리 y 98 을 덮는다)의 별 { 띠 안 x, y, 크기, 글자, 색 } — 눈 자리(50·126)엔 큰 별 둘
-local BAND_W, BAND_H, BAND_Y = 176, 44, 98
-local BAND_STARS: { { any } } = {
-	{ 50, 21, 17, "✦", STAR }, { 126, 21, 17, "✦", STAR }, { 16, 24, 9, "✦", GLOW }, { 30, 11, 6, "·", STAR },
-	{ 36, 33, 8, "✧", GLOW }, { 66, 34, 7, "·", GOLD }, { 74, 12, 9, "✧", STAR }, { 88, 26, 11, "✦", GLOW },
-	{ 100, 10, 6, "·", STAR }, { 108, 35, 7, "✧", STAR }, { 142, 12, 8, "✧", GOLD }, { 150, 31, 10, "✦", STAR },
-	{ 164, 19, 6, "·", GLOW }, { 22, 37, 5, "·", STAR }, { 58, 6, 5, "·", STAR }, { 94, 39, 5, "·", GOLD },
-	{ 118, 6, 5, "·", STAR }, { 136, 38, 5, "·", GLOW }, { 170, 34, 5, "·", STAR },
-}
 
 local function buildFace(plate: BasePart): Face
 	local gui = Instance.new("SurfaceGui")
@@ -170,38 +159,6 @@ local function buildFace(plate: BasePart): Face
 	gui.ZOffset = 1
 	gui.ClipsDescendants = false
 	gui.Parent = plate
-	-- 별무리 띠: 끝이 흐려지는 밤하늘 띠 + 테두리 빛 + 반짝이는 별
-	local band = frame(gui, "StarBand", UDim2.fromOffset(BAND_W, BAND_H), UDim2.fromOffset(100, BAND_Y), BAND, 0.5, 0.06)
-	band.ZIndex = 4
-	local fade = Instance.new("UIGradient")
-	fade.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.7),
-		NumberSequenceKeypoint.new(0.12, 0),
-		NumberSequenceKeypoint.new(0.88, 0),
-		NumberSequenceKeypoint.new(1, 0.7),
-	})
-	fade.Parent = band
-	local glow = Instance.new("UIStroke")
-	glow.Color = BAND_GLOW
-	glow.Thickness = 1.5
-	glow.Transparency = 0.6
-	glow.Parent = band
-	local twinkles: { Twinkle } = {}
-	for i, s in BAND_STARS do
-		local label = Instance.new("TextLabel")
-		label.Name = "Star" .. i
-		label.AnchorPoint = Vector2.new(0.5, 0.5)
-		label.Size = UDim2.fromOffset(s[3], s[3])
-		label.Position = UDim2.fromOffset(s[1], s[2])
-		label.BackgroundTransparency = 1
-		label.Text = s[4]
-		label.TextColor3 = s[5]
-		label.TextScaled = true
-		label.Font = Enum.Font.GothamBold
-		label.ZIndex = 5
-		label.Parent = band
-		table.insert(twinkles, { Label = label, Phase = i * 1.7, Speed = 1.6 + (i % 5) * 0.45 })
-	end
 	-- 데포르메: 눈썹은 띠 위로 짧고 둥글게 · 작은 코 · 입은 작게 아래로 · 볼터치는 크고 둥글게
 	local brows = {
 		frame(gui, "BrowL", UDim2.fromOffset(30, 6), UDim2.fromOffset(62, 66), BROW, 0.5),
@@ -255,8 +212,6 @@ local function buildFace(plate: BasePart): Face
 		Mouths = mouths,
 		Blush = blush,
 		Tear = tear,
-		Stars = twinkles,
-		Glow = glow,
 		Level = 0.4,
 		Base = "Observe",
 		Mood = "Observe",
@@ -287,7 +242,6 @@ local function buildFace(plate: BasePart): Face
 		for _, b in blush do
 			tween(b, { BackgroundTransparency = m.Blush })
 		end
-		tween(glow, { Transparency = 0.85 - 0.6 * m.Band })
 		if not m.Tear then
 			tear.BackgroundTransparency = 1
 		end
@@ -307,15 +261,11 @@ local function buildFace(plate: BasePart): Face
 			apply(mood)
 		end
 	end
-	-- 매 프레임(몸의 Heartbeat): 잠깐 표정이 끝나면 기본으로 · 별 반짝임(밝기 = 표정) · 눈물
+	-- 매 프레임(몸의 Heartbeat): 잠깐 표정이 끝나면 기본으로 · 눈물
 	function face.Step(self: any, now: number, dt: number)
 		if self.Until > 0 and now >= self.Until then
 			self.Until = 0
 			apply(self.Base)
-		end
-		local level = 0.25 + 0.75 * self.Level
-		for _, s in self.Stars do
-			s.Label.TextTransparency = 1 - level * (0.55 + 0.45 * math.sin(now * s.Speed + s.Phase))
 		end
 		local m = MOODS[self.Mood] or MOODS.Observe
 		if m.Tear then
@@ -333,12 +283,260 @@ end
 local faces: { [Model]: any } = setmetatable({}, { __mode = "k" }) :: any
 -- 페이즈 모습에 쓰는 것: 붙인 것(머리카락 — 셔츠·바지는 부품이 아니라 몸 부위에 그려진다) · 지금 페이즈 · 우주 머리의 도는 관절
 type Arm = { Joint: Motor6D, Base: CFrame, Phase: number, Sway: number }
-type Look = { Dressed: { BasePart }, Page: number, Orbits: { Motor6D }, Halo: Motor6D?, HaloGlow: BasePart?, Arms: { Arm } }
+type Look = { Dressed: { BasePart }, Blindfold: any?, Prosthetic: { BasePart }, Page: number, Orbits: { Motor6D }, Halo: Motor6D?, HaloGlow: BasePart?, Arms: { Arm } }
 local looks: { [Model]: Look } = setmetatable({}, { __mode = "k" }) :: any
 
 -- 몸에 붙은 얼굴 조종기(없으면 nil)
 function Callisto.FaceOf(model: Model): Face?
 	return faces[model]
+end
+
+--=== 별 눈가리개(1페이즈) ===--
+--[[
+	2026-11-07 2판(QA 반려: "불투명한 검은 띠 위에 점을 찍은 머리띠로 보인다 — 띠 자체가 별로 이루어져야 한다").
+	검은 띠를 없앴다. 머리를 감는 **반투명 성운 빛 띠**(청백·보라 안개 — 조각마다 SurfaceGui 세로 그라디언트라 위아래 가장자리가 부드럽게 풀린다, Neon 아님)가
+	눈을 은은히 덮고, 그 위에 크기 다른 별(Neon 구 · 큰 별은 ✦ 반짝임)이 훨씬 촘촘하다 — 눈 자리(±19°)는 특히 빽빽하고,
+	위아래 가장자리로 갈수록 별 밀도가 흩어지며 사라진다. 별자리 선(Beam)은 큰 별끼리 가늘게 몇 줄만. 별빛이 띠를 따라 천천히 흐르는 물결은 그대로.
+	별 자리는 고정 씨앗(Random.new(11))으로 한 번 뿌린다(모든 클라이언트가 같은 하늘) — 밀도 = 앞쪽 > 옆·뒤, 눈 자리 가중, 세로로 멀수록 성김.
+	안 고르기(src/shared/Variant.luau — Studio workspace 속성 V_Blindfold = 1 · 2 · 3):
+	  1 A안(기본) 성운 띠 + 촘촘한 별 · 2 B안 안개 거의 없이 별만 훨씬 빽빽(별 ×1.5) · 3 C안 넓고 짙은 성운 + 별은 성기고 큼(×0.65)
+	머리 윤곽(고전 머리 메시 ×1.25, 반폭 ≈ 0.62)을 옆면·뒤까지 감는다. 2페이즈에 얼굴과 함께 사라진다.
+]]
+local BF_R = 0.665 -- 별 놓이는 반지름
+local BF_Y = -0.03 -- 띠 가운데 높이(눈 자리)
+-- 안: 안개 가운데 투명도 · 안개 높이 · 별 밀도 · 큰 별 비율 가중
+local BF_LOOKS = {
+	[1] = { Haze = 0.52, HazeH = 0.34, Density = 1.0, Big = 1.0 },
+	[2] = { Haze = 0.93, HazeH = 0.3, Density = 1.5, Big = 1.0 },
+	[3] = { Haze = 0.36, HazeH = 0.46, Density = 0.65, Big = 1.9 },
+}
+local BF_SIZE = { 0.03, 0.048, 0.075, 0.115 }
+local BF_COLORS = { STAR, GLOW, C(255, 226, 170), C(206, 184, 255) }
+local BF_NEBULA_A, BF_NEBULA_B = C(150, 190, 255), C(182, 140, 255) -- 청백 ↔ 보라
+
+local function bfPos(a: number, y: number, wave: number): Vector3
+	local r = math.rad(a + wave)
+	return Vector3.new(math.sin(r) * BF_R, y, -math.cos(r) * BF_R)
+end
+
+-- 별 자리: { 각(도, 앞 0 · 오른쪽 +), 높이, 크기 등급 1~4 }
+local function scatterStars(look: { Density: number, Big: number }): { { number } }
+	local rng = Random.new(11)
+	local out: { { number } } = {}
+	for row = 0, 16 do
+		local y0 = -0.27 + row * 0.03
+		local dy = y0 - BF_Y
+		local vert = math.exp(-((dy / 0.15) ^ 2))
+		for col = 0, 77 do
+			local a0 = col * 360 / 78
+			local ang = (a0 + 180) % 360 - 180 -- -180..180, 0 = 앞
+			local front = 0.18 + 0.82 * math.max(0, math.cos(math.rad(ang))) ^ 1.3
+			local eye = 1 + 1.3 * math.exp(-(((math.abs(ang) - 19) / 20) ^ 2) - (dy / 0.07) ^ 2)
+			if rng:NextNumber() < math.min(0.9, 0.26 * look.Density * front * vert * eye) then
+				local k = rng:NextNumber()
+				local grade = if k < 0.58 then 1 elseif k < 0.86 then 2 elseif k < 0.96 then 3 else 4
+				if grade < 4 and rng:NextNumber() < 0.06 * (look.Big - 1) then
+					grade += 1
+				end
+				table.insert(out, { ang + rng:NextNumber(-2, 2), y0 + rng:NextNumber(-0.012, 0.012), grade })
+			end
+		end
+	end
+	return out
+end
+
+local function buildBlindfold(model: Model, head: BasePart): any
+	local Variant = require(ReplicatedStorage.Shared.Variant)
+	local look = BF_LOOKS[Variant.Index("Blindfold", 3)]
+	local pieces: { BasePart } = {}
+	local guis: { SurfaceGui } = {}
+	-- 성운 띠: 스무 조각 다각 고리 두 겹(청백 · 보라). 조각은 투명, SurfaceGui 세로 그라디언트가 안개를 그린다
+	local segs = 20
+	for layer = 1, 2 do
+		local r = BF_R - (if layer == 1 then 0.014 else 0.03)
+		local h = look.HazeH * (if layer == 1 then 1 else 0.72)
+		local peak = math.min(0.97, look.Haze + (if layer == 1 then 0 else 0.12))
+		local w = 2 * r * math.tan(math.pi / segs) * 1.03
+		for i = 0, segs - 1 do
+			local a = i / segs * 360
+			local p = deco(model, head, "BlindfoldHaze", Vector3.new(w, h, 0.02), { math.sin(math.rad(a)) * r, BF_Y, -math.cos(math.rad(a)) * r, 0, -a, 0 }, BF_NEBULA_A, Enum.Material.SmoothPlastic)
+			p.Transparency = 1
+			local gui = Instance.new("SurfaceGui")
+			gui.Face = Enum.NormalId.Front
+			gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+			gui.PixelsPerStud = 60
+			gui.LightInfluence = 0
+			gui.Brightness = 2
+			gui.AlwaysOnTop = false
+			gui.Parent = p
+			local mix = 0.5 + 0.5 * math.sin(math.rad(a) * 2 + layer * 1.7)
+			local f = Instance.new("Frame")
+			f.Size = UDim2.fromScale(1, 1)
+			f.BorderSizePixel = 0
+			f.BackgroundColor3 = BF_NEBULA_A:Lerp(BF_NEBULA_B, if layer == 1 then mix * 0.5 else 0.35 + mix * 0.65)
+			f.Parent = gui
+			local g = Instance.new("UIGradient")
+			g.Rotation = 90
+			g.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(0.22, math.min(1, peak + 0.28)),
+				NumberSequenceKeypoint.new(0.5, peak),
+				NumberSequenceKeypoint.new(0.78, math.min(1, peak + 0.28)),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			g.Parent = f
+			table.insert(guis, gui)
+			table.insert(pieces, p)
+		end
+	end
+	-- 별
+	local stars = {}
+	local seed = scatterStars(look)
+	for i, s in seed do
+		local grade = s[3]
+		local color = BF_COLORS[(i * 7) % 4 + 1]
+		local size = BF_SIZE[grade]
+		local p = part("BlindfoldStar" .. i, Vector3.new(size, size, size), color, Enum.Material.Neon, "Ball")
+		p.CFrame = head.CFrame * CFrame.new(bfPos(s[1], s[2], 0))
+		p.Parent = model
+		local joint = motor("BlindfoldStarJoint", head, p, CFrame.new(bfPos(s[1], s[2], 0)), CFrame.new())
+		local att = Instance.new("Attachment")
+		att.Parent = p
+		local sparkle: TextLabel? = nil
+		if grade >= 3 then
+			local gui = Instance.new("BillboardGui")
+			gui.Size = UDim2.fromScale(size * 5, size * 5)
+			gui.LightInfluence = 0
+			gui.AlwaysOnTop = false
+			gui.Parent = p
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.fromScale(1, 1)
+			label.BackgroundTransparency = 1
+			label.Text = "✦"
+			label.TextColor3 = color
+			label.TextScaled = true
+			label.Font = Enum.Font.GothamBold
+			label.Parent = gui
+			sparkle = label
+		end
+		table.insert(pieces, p)
+		stars[i] = { Part = p, Joint = joint, Att = att, Sparkle = sparkle, A = s[1], Y = s[2], K = grade, Phase = i * 1.9 }
+	end
+	-- 별자리 선: 큰 별(등급 3 이상)끼리 가까운 것 하나씩, 열여섯 줄까지만 가늘게
+	local beams: { Beam } = {}
+	local linked: { [string]: boolean } = {}
+	for i, si in stars do
+		if si.K < 3 or #beams >= 16 then
+			continue
+		end
+		local best, bestD = nil, 0.34
+		for j, sj in stars do
+			if j ~= i and sj.K >= 2 then
+				local d = (bfPos(si.A, si.Y, 0) - bfPos(sj.A, sj.Y, 0)).Magnitude
+				if d < bestD and not linked[j .. "_" .. i] then
+					best, bestD = j, d
+				end
+			end
+		end
+		if best then
+			linked[i .. "_" .. best] = true
+			local beam = Instance.new("Beam")
+			beam.Attachment0, beam.Attachment1 = si.Att, stars[best].Att
+			beam.Width0, beam.Width1 = 0.01, 0.01
+			beam.Color = ColorSequence.new(GLOW)
+			beam.LightEmission = 1
+			beam.FaceCamera = true
+			beam.Segments = 1
+			beam.Transparency = NumberSequence.new(0.45)
+			beam.Parent = si.Part
+			table.insert(beams, beam)
+		end
+	end
+	local bf: any = { Stars = stars, Beams = beams }
+	-- 매 프레임: 별이 띠를 따라 물결로 흐르고(앞뒤 ±1.6°) 같은 물결로 반짝인다
+	function bf.Step(self: any, t: number)
+		for _, s in self.Stars do
+			if s.Joint.Parent then
+				local wave = math.sin(t * 0.55 - math.rad(s.A) * 2.0 + s.Phase * 0.15)
+				s.Joint.C0 = CFrame.new(bfPos(s.A, s.Y + math.sin(t * 0.8 + s.Phase) * 0.005, wave * 1.6))
+				local glint = 0.5 + 0.5 * math.sin(t * 1.7 - math.rad(s.A) * 3.0 + s.Phase)
+				s.Part.Transparency = 0.45 * (1 - glint)
+				if s.Sparkle then
+					s.Sparkle.TextTransparency = 0.85 * (1 - glint) ^ 1.5
+				end
+			end
+		end
+	end
+	-- 2페이즈: 얼굴과 함께 사라진다
+	function bf.Hide(self: any, fade: number)
+		for _, b in self.Beams do
+			b.Enabled = false
+		end
+		for _, g in guis do
+			g.Enabled = false
+		end
+		for _, s in self.Stars do
+			if s.Sparkle then
+				s.Sparkle.TextTransparency = 1
+			end
+		end
+		for _, p in pieces do
+			if fade > 0 then
+				TweenService:Create(p, TweenInfo.new(fade, Enum.EasingStyle.Sine), { Transparency = 1 }):Play()
+			else
+				p.Transparency = 1
+			end
+		end
+		task.delay(fade + 0.1, function()
+			for _, p in pieces do
+				p:Destroy()
+			end
+		end)
+	end
+	return bf
+end
+
+--=== 말레니아식 의수(오른팔 전체) ===--
+-- ReplicatedStorage.CallistoAssets.Prosthetic(tools/Callisto_Prosthetic.luau) — MeshPart 마다 속성 Offset(오른팔 부위 가운데에서 본 자리), 이름 = 묶음.
+-- 색·재질은 여기서 입힌다(바랜 금 · 황동 · 검은 금속 · 별빛). 없으면 빈 목록(시험 환경 — 셔츠 소매 그대로).
+local PROSTHETIC_SKIN: { [string]: { any } } = {
+	Gold = { C(212, 172, 88), Enum.Material.Metal },
+	Brass = { C(150, 116, 60), Enum.Material.Metal },
+	BluedSteel = { C(36, 34, 40), Enum.Material.Metal },
+	Glow = { C(156, 200, 255), Enum.Material.Neon },
+}
+
+local function attachProsthetic(model: Model, arm: BasePart): { BasePart }
+	local made: { BasePart } = {}
+	local kit = ReplicatedStorage:FindFirstChild("CallistoAssets")
+	local folder = kit and kit:FindFirstChild("Prosthetic")
+	if not folder then
+		return made
+	end
+	for _, src in folder:GetChildren() do
+		local offset = src:GetAttribute("Offset")
+		if not src:IsA("MeshPart") or typeof(offset) ~= "CFrame" then
+			continue
+		end
+		local mp = src:Clone()
+		mp:ClearAllChildren() -- 가져오기가 붙인 SurfaceAppearance 는 걷고 색·재질을 직접 입힌다
+		local skin = PROSTHETIC_SKIN[src.Name]
+		if skin then
+			mp.Color = skin[1]
+			mp.Material = skin[2]
+		end
+		mp.Anchored = false
+		mp.CanCollide, mp.CanQuery, mp.CanTouch, mp.Massless = false, false, false, true
+		mp.CastShadow = src.Name ~= "Glow"
+		mp.CFrame = arm.CFrame * offset
+		weld(arm, mp)
+		mp.Parent = model
+		table.insert(made, mp)
+	end
+	if #made > 0 then
+		arm.Transparency = 1 -- 셔츠 소매 대신 의수가 보인다
+	end
+	return made
 end
 
 --=== 팔 검(날) ===--
@@ -390,6 +588,10 @@ local function cosmicHead(model: Model, look: Look, head: BasePart)
 	local hair = model:FindFirstChild("Hair")
 	if hair and hair:IsA("BasePart") then
 		hair.Transparency = 1
+	end
+	if look.Blindfold then
+		look.Blindfold:Hide(0.25)
+		look.Blindfold = nil
 	end
 	-- 팔 검과 오른 소매가 부서져(파편은 컷신 이펙트) 그 자리를 우주를 담은 팔이 채운다 — SetPage 가 spaceLimb 로 오른팔을 감춘다
 	local function attach(name: string, size: Vector3, color: Color3, material: Enum.Material, shape: string?, c0: CFrame): (Part, Motor6D)
@@ -589,6 +791,9 @@ function Callisto.SetPage(model: Model, page: number, fadeTime: number?)
 	if look.Page < 2 and page >= 2 then
 		cosmicHead(model, look, head)
 		spaceLimb(model, "Right Arm", 0.25) -- 팔 검 자리를 채우는 우주 팔(레이어)
+		for _, p in look.Prosthetic do -- 의수도 함께 사라진다(부서지는 연출은 이펙트)
+			fadeOut(p, 0.25)
+		end
 	end
 	if look.Page < 3 and page >= 3 then
 		cosmicBody(model, look, fadeTime)
@@ -675,6 +880,7 @@ function Callisto.Build(name: string): Model
 	pants.PantsTemplate = PANTS_TEMPLATE
 	pants.Parent = model
 	local dressed = dress(model, head)
+	local prosthetic = attachProsthetic(model, rightArm)
 	-- 얼굴 판(투명) — SurfaceGui 로 그린다
 	local plate = deco(model, head, "FacePlate", Vector3.new(1.0, 0.9, 0.04), { 0, 0.02, -0.63 }, SKIN)
 	plate.Transparency = 1
@@ -719,8 +925,9 @@ function Callisto.Build(name: string): Model
 	--- 얼굴 + 매 프레임(혼천의·별가루·우주 머리·표정) ---
 	local face: any = buildFace(plate)
 	faces[model] = face
-	local look: Look = { Dressed = dressed, Page = 1, Orbits = {}, Arms = {} }
+	local look: Look = { Dressed = dressed, Blindfold = nil, Prosthetic = prosthetic, Page = 1, Orbits = {}, Arms = {} }
 	looks[model] = look
+	look.Blindfold = buildBlindfold(model, head)
 	local t0 = math.random() * 10
 	-- 한 번 자리에 놓인 뒤 부모가 사라지면(치워짐) 스스로 끊는다
 	local placed = false
@@ -765,6 +972,9 @@ function Callisto.Build(name: string): Model
 				local tilt = CFrame.Angles(0, ring * 1.05, (ring - 1) * 0.6)
 				joint.C0 = CFrame.new(0, 0.1, 0) * tilt * CFrame.new(math.cos(a) * r, 0, math.sin(a) * r)
 			end
+		end
+		if look.Blindfold then
+			look.Blindfold:Step(t)
 		end
 		face:Step(now, dt)
 	end)

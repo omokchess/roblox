@@ -520,6 +520,7 @@ local weapons: { [string]: Weapon } = {
 			2026-11-01 4판(사용자: "의수를 놓지 말고 그냥 팔을 검으로"): 소맷부리에서 날이 곧장 나온다. 모터 C0(팔 끝 · X -90°)에서 무기 -Z 가
 			팔 축 아래로 이어지므로 Fixed(모션 W 값 무시)면 날이 늘 팔의 연장선. 블렌더 메시 = models/CallistoBlade.glb(build_callisto_outfit.py)
 			→ WeaponMeshes.CallistoArms.Main(Blade 강철 · Fuller 푸른 혈조 · Collar 금 고리 · Edge 혈조의 별빛 일곱). 아래 Parts 는 메시가 없을 때.
+			2026-11-07: 오른팔 전체가 말레니아식 금빛 의수(models/build_callisto_prosthetic.py)가 되어 그 주먹이 이 날의 슴베(팔 끝 위 0.25)를 쥔다 — 금 날밑 고리는 주먹 바로 아래. 날 기하는 그대로.
 			날이 들고 나는 것(등장 컷신 시험 · 기술 동안만 나옴)은 Combat/Callisto.Blade.
 		]]
 		Main = {
