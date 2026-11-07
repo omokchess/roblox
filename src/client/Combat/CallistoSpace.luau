@@ -102,54 +102,41 @@ local function galaxyPoint(g: Model, r0: number, r1: number): Vector3
 end
 
 --[[
-	은하 팩 묶음 연출(2026-11-06 "100배"): big=false 면 가끔 한 번(보라 번짐·별·반짝 줄기 중 하나 + 연기 플립북),
+	은하 팩 묶음 연출(2026-11-06 "100배"): big=false 면 가끔 한 번(보라 번짐·별·반짝 줄기 중 하나 + 번쩍 플립북),
 	big=true 면 은하가 떠오르는 순간의 큰 폭발(고리 곳곳 + 중심 소용돌이). 밝기 절제: 판 중심(반지름 < 22)과 카메라 쪽은 피하고
 	LightEmission ≤ 0.6, 터지는 입자는 한 번에 +500 이하.
-	쓰는 팩: Loose/PurpleExpanding · Anime/Stars-01 · Loose/Sparkles_Beam · Loose/Swirling · Loose/Twirl · Anime/Portal-01
-	쓰는 플립북: Anime/Smoke-01(16669188960) · Loose/Flash-3(11372587580), 둘 다 Grid4x4
+	쓰는 팩: Loose/PurpleExpanding · Anime/Stars-01 · Loose/Sparkles_Beam · Loose/Swirling
+	쓰는 플립북: Loose/Flash-3(11372587580, Grid4x4). 연기 계열은 쓰지 않는다(2026-11-07). 판 아래 중심이 묻히지 않게 반지름 45 밖에서만 터진다.
 ]]
-local SMOKE_FLIP = "rbxassetid://16669188960"
 local FLASH_FLIP = "rbxassetid://11372587580"
 local BURST_TINTS = { Color3.fromRGB(170, 120, 255), Color3.fromRGB(255, 140, 200), Color3.fromRGB(110, 220, 235), Color3.fromRGB(140, 150, 255) }
 function CallistoSpace._Burst(g: Model, big: boolean)
 	local function tint(): Color3
 		return BURST_TINTS[math.random(#BURST_TINTS)]
 	end
-	local function smoke(at: Vector3, size: number, n: number)
-		CombatVfx.Flipbook(at, {
-			Texture = SMOKE_FLIP, Layout = "Grid4x4", Mode = "OneShot", Size = size, Count = n, Life = 4, Speed = 3, Spread = 180,
-			Color = tint():Lerp(Color3.fromRGB(30, 20, 50), 0.4), LightEmission = 0.1, Rotation = 180,
-			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.55), NumberSequenceKeypoint.new(1, 1) }),
-		})
-	end
 	local function flash(at: Vector3, size: number)
 		CombatVfx.Flipbook(at, {
-			Texture = FLASH_FLIP, Layout = "Grid4x4", Mode = "OneShot", Size = size, Life = 0.9, Color = tint():Lerp(Color3.new(1, 1, 1), 0.5),
-			LightEmission = 0.6, Rotation = 180, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.45), NumberSequenceKeypoint.new(1, 1) }),
+			Texture = FLASH_FLIP, Layout = "Grid4x4", Mode = "OneShot", Size = size, Life = 0.9, Color = tint():Lerp(Color3.new(1, 1, 1), 0.3),
+			LightEmission = 0.3, Rotation = 180, ZOffset = -15, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) }),
 		})
 	end
 	if not big then
-		local at = galaxyPoint(g, 25, 110)
+		local at = galaxyPoint(g, 45, 110)
 		local kinds = { "Loose/PurpleExpanding", "Anime/Stars-01", "Loose/Sparkles_Beam" }
-		CombatVfx.Pack(kinds[math.random(#kinds)], CFrame.new(at), { Scale = 1.6, Tint = tint(), Count = 0.6 })
-		smoke(at, 18, 2)
-		flash(at + Vector3.new(0, 2, 0), 12)
+		CombatVfx.Pack(kinds[math.random(#kinds)], CFrame.new(at), { Scale = 1.2, Tint = tint(), Count = 0.4 })
+		flash(at + Vector3.new(0, 2, 0), 8)
 		return
 	end
-	for _ = 1, 6 do
-		local at = galaxyPoint(g, 30, 105)
-		CombatVfx.Pack("Loose/PurpleExpanding", CFrame.new(at), { Scale = 2.4, Tint = tint(), Count = 0.8 })
-		smoke(at, 26, 4)
-		flash(at + Vector3.new(0, 2, 0), 18)
+	for _ = 1, 5 do
+		local at = galaxyPoint(g, 45, 105)
+		CombatVfx.Pack("Loose/PurpleExpanding", CFrame.new(at), { Scale = 1.8, Tint = tint(), Count = 0.6 })
+		flash(at + Vector3.new(0, 2, 0), 12)
 	end
-	for _ = 1, 4 do
-		CombatVfx.Pack("Anime/Stars-01", CFrame.new(galaxyPoint(g, 25, 100)), { Scale = 2, Tint = tint(), Count = 0.8 })
-		CombatVfx.Pack("Loose/Sparkles_Beam", CFrame.new(galaxyPoint(g, 25, 100)), { Scale = 2, Tint = tint(), Count = 0.8 })
+	for _ = 1, 3 do
+		CombatVfx.Pack("Anime/Stars-01", CFrame.new(galaxyPoint(g, 45, 100)), { Scale = 1.5, Tint = tint(), Count = 0.6 })
+		CombatVfx.Pack("Loose/Sparkles_Beam", CFrame.new(galaxyPoint(g, 45, 100)), { Scale = 1.5, Tint = tint(), Count = 0.6 })
 	end
-	local mid = g:GetPivot().Position
-	CombatVfx.Pack("Loose/Swirling", CFrame.new(mid), { Scale = 3.2, Tint = tint() })
-	CombatVfx.Pack("Loose/Twirl", CFrame.new(galaxyPoint(g, 35, 60)), { Scale = 1.2, Tint = Color3.fromRGB(190, 150, 255) })
-	CombatVfx.Pack("Anime/Portal-01", CFrame.new(mid + Vector3.new(0, -4, 0)) * CFrame.Angles(math.rad(-90), 0, 0), { Scale = 2.5, Tint = Color3.fromRGB(120, 90, 200), Time = 1.5 })
+	CombatVfx.Pack("Loose/Swirling", CFrame.new(g:GetPivot().Position), { Scale = 2, Tint = Color3.fromRGB(150, 115, 200) })
 end
 
 function CallistoSpace.Show(fadeTime: number?)
@@ -235,7 +222,7 @@ function CallistoSpace.Show(fadeTime: number?)
 			-- 살아 있는 은하: 몇 초마다 은하 어딘가에서 팩 묶음이 한 번 터진다
 			s.NextBurst -= dt
 			if s.NextBurst <= 0 then
-				s.NextBurst = 2.5 + math.random() * 2.5
+				s.NextBurst = 4 + math.random() * 4
 				CallistoSpace._Burst(galaxy, false)
 			end
 		end

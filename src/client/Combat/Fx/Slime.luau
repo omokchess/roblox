@@ -46,7 +46,6 @@ function Fx.SlimeAcid(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	goo(ctx.Vfx, p, Vector3.new(0, 1, 0), 12, 16)
 	ctx.Vfx.Flash(p, { Color = ACID, Size = 6, Life = 0.25 })
-	ctx.Vfx.Dust(p - Vector3.new(0, 1, 0), { Color = c(190, 240, 150), Count = 8, Size = 0.9, Speed = 6 })
 end
 
 function Fx.SlimeMelt(ctx: any)

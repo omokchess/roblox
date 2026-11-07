@@ -1832,7 +1832,7 @@ function BattleClient:_paintTiles()
 				local ally = unit.Side ~= "Enemy"
 				r.FillColor = if ally then Color3.fromRGB(190, 225, 255) else Color3.fromRGB(255, 150, 140)
 				r.OutlineColor = if ally then Color3.fromRGB(235, 245, 255) else Color3.fromRGB(255, 90, 80)
-				r.FillTransparency = 0.92
+				r.FillTransparency = 1 -- 2026-11-07 채움은 반투명 인상을 줘서 윤곽만
 				r.OutlineTransparency = 0.1
 				r.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 				r.Parent = model

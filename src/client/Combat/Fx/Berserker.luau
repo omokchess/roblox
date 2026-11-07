@@ -22,7 +22,6 @@ local TEX = {
 	Fire = { "rbxassetid://13818306392", "Grid4x4" },
 	Fire2 = { "rbxassetid://16676544947", "Grid4x4" },
 	FireSlash = { "rbxassetid://16951304645", "Grid4x4" },
-	Smoke = { "rbxassetid://14006773822", "Grid4x4" },
 	Ash = { "rbxassetid://16955854038", "Grid4x4" },
 	Punch = { "rbxassetid://16937107174", "Grid4x4" },
 	Impact = { "rbxassetid://16923007448", "Grid4x4" },
@@ -44,13 +43,6 @@ local function fb(ctx: any, at: Vector3, key: string, o: { [string]: any })
 	flip(at, opt)
 end
 
--- 여운: 그을린 연기가 피어오른다
-local function smolder(ctx: any, at: Vector3, size: number, delay: number)
-	task.delay(delay, function()
-		fb(ctx, at, "Smoke", { Size = size, Color = ASH, Transparency = 0.4, Life = 1, Accel = Vector3.new(0, 3, 0), LightEmission = 0 })
-	end)
-end
-
 local Fx = {}
 
 function Fx.Crater(ctx: any)
@@ -58,7 +50,6 @@ function Fx.Crater(ctx: any)
 	local feet = Common.Feet(ctx)
 	Vfx.Shockwave(feet + Vector3.new(0, 0.1, 0), { Color = BLOOD, Radius = 6, Life = 0.45 })
 	Common.Rubble(Vfx, feet + Vector3.new(0, 0.5, 0), 14)
-	Vfx.Dust(feet, { Count = 14, Size = 1.6, Speed = 14 })
 	for k = 0, 5 do
 		Common.Crack(Vfx, feet, CFrame.fromAxisAngle(Vector3.new(0, 1, 0), k / 6 * math.pi * 2) * ctx.Forward, 3.5, DARK)
 	end
@@ -95,10 +86,8 @@ end
 function Fx.ShoulderCheck(ctx: any)
 	local p = ctx.Root.Position + ctx.Forward * 1.4
 	ctx.Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.4, R1 = 2.6, Color = BLOOD, Life = 0.25, Width = 0.2, Facing = true })
-	ctx.Vfx.Dust(Common.Feet(ctx), { Count = 6, Size = 1 })
 	ctx.Vfx.Shake(0.25, 0.2)
 	fb(ctx, p, "Punch", { Size = 4, Color = BLOODC, Life = 0.26, LightEmission = 0.3 })
-	fb(ctx, Common.Feet(ctx) + Vector3.new(0, 0.6, 0), "Smoke", { Size = 3, Color = c(140, 120, 115), Transparency = 0.45, Life = 0.6, LightEmission = 0 })
 end
 
 -- 핏빛 분쇄 준비: 몸에서 피가 끓어오른다
@@ -135,7 +124,6 @@ function Fx.BloodCrash(ctx: any, _ev: any, at: Vector3?)
 	fb(ctx, ground + Vector3.new(0, 1, 0), "Fire", { Size = 6, Color = EMBER, Life = 0.6, LightEmission = 0.4, Transparency = 0.35, Accel = Vector3.new(0, 4, 0) })
 	Vfx.Pack("Anime/Crack-01", CFrame.new(ground + Vector3.new(0, 0.2, 0)), { Color = BLOOD, Size = 1.6, Count = 0.6 })
 	Vfx.Pack("Anime/Blood-01", CFrame.new(p), { Color = BLOOD, Size = 1.2 })
-	smolder(ctx, ground + Vector3.new(0, 1.2, 0), 6, 0.25)
 	task.delay(0.3, function()
 		fb(ctx, ground + Vector3.new(0, 1.5, 0), "Ash", { Size = 7, Color = ASH, Transparency = 0.4, Life = 0.9, LightEmission = 0, Accel = Vector3.new(0, 2, 0) })
 	end)
@@ -160,17 +148,14 @@ function Fx.AxeSlashB(ctx: any, _ev: any, at: Vector3?)
 	fb(ctx, p, "BloodPunch2", { Size = 5, Color = BLOODC, Life = 0.45, LightEmission = 0, Speed = 3, Spread = 25 })
 	fb(ctx, p, "FireSlash", { Size = 6, Color = EMBER, Life = 0.28, LightEmission = 0.5 })
 	ctx.Vfx.Pack("Anime/Slash-Impact-01", CFrame.new(p), { Color = BLOOD, Size = 1.1, Count = 0.6 })
-	smolder(ctx, p, 3, 0.2)
 end
 
 -- 회오리: 몸 둘레 핏빛 원호 + 흙먼지. 원호는 몸이 도는 쪽(모션 Root 돌림이 음수 = 위에서 보아 시계 방향)으로 돈다
 -- (2026-10-03 사용자: 회전 모션과 회전 이펙트 방향이 반대 — -180 → 180 으로 뒤집음)
 function Fx.Whirl(ctx: any)
 	Common.Arc(ctx, ctx.Root.Position + Vector3.new(0, 0.3, 0), 90, -180, 180, { Radius = 4.6, Color = BLOOD, Core = EMBER, Width = 1, Sweep = 0.22, Life = 0.25, Segments = 26 })
-	ctx.Vfx.Dust(Common.Feet(ctx), { Count = 10, Size = 1.2, Speed = 14 })
 	local feet = Common.Feet(ctx)
 	fb(ctx, feet + Vector3.new(0, 1, 0), "Wave", { Size = 9, Color = BLOODC, Life = 0.3, LightEmission = 0.3, Transparency = 0.5 })
-	fb(ctx, feet + Vector3.new(0, 0.6, 0), "Smoke", { Size = 5, Color = c(150, 125, 115), Transparency = 0.45, Life = 0.6, LightEmission = 0 })
 	ctx.Vfx.Pack("Anime/Fire-01", CFrame.new(feet + Vector3.new(0, 0.6, 0)), { Color = EMBER, Size = 1.2, Count = 0.25 })
 end
 
@@ -181,7 +166,6 @@ function Fx.BurstBlast(ctx: any, _ev: any, at: Vector3?)
 	Vfx.Shockwave(ground + Vector3.new(0, 0.1, 0), { Color = BLOOD, Radius = 9, Life = 0.55 })
 	Vfx.Shockwave(ground + Vector3.new(0, 0.2, 0), { Color = EMBER, Radius = 5, Life = 0.35 })
 	Common.Rubble(Vfx, ground + Vector3.new(0, 0.5, 0), 20)
-	Vfx.Dust(ground, { Count = 18, Size = 2, Speed = 18 })
 	if at then
 		Common.Blood(Vfx, at, Vector3.new(0, 1, 0), 10, 18)
 		fb(ctx, at, "BloodPunch", { Size = 5, Color = BLOODC, Life = 0.45, LightEmission = 0 })
@@ -193,7 +177,6 @@ function Fx.BurstBlast(ctx: any, _ev: any, at: Vector3?)
 	fb(ctx, mid, "Wave", { Size = 13, Color = BLOODC, Life = 0.4, LightEmission = 0.3, Transparency = 0.5 })
 	Vfx.Pack("Anime/Crack-01", CFrame.new(ground + Vector3.new(0, 0.2, 0)), { Color = BLOOD, Size = 1.5, Count = 0.6 })
 	Vfx.Pack("Anime/Fire-02", CFrame.new(mid), { Color = EMBER, Size = 1.2, Count = 0.6 })
-	smolder(ctx, mid, 7, 0.25)
 	task.delay(0.3, function()
 		fb(ctx, mid + Vector3.new(0, 0.5, 0), "Ash", { Size = 7, Color = ASH, Transparency = 0.4, Life = 0.9, LightEmission = 0, Accel = Vector3.new(0, 2, 0) })
 	end)

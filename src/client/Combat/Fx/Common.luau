@@ -65,13 +65,10 @@ end
 --[[
 	2026-11-06 팩 묶음·플립북(ctx.Vfx.Pack / ctx.Vfx.Flipbook) — 크기는 Size 키로 줘서 ScaledVfx 가 같이 키운다.
 	쓴 팩: Anime/Slash-Impact-01 · Anime/Blood-Punch-01 · Anime/Shield-01 · Anime/Crack-01 · Loose/Sparkles
-	쓴 플립북(Grid4x4): Loose/Flash-3 rbxassetid://11372587580(번쩍) · Anime/Blood-Punch-01 Blood1 16668936898(피) ·
-	  Anime/Smoke-01 16669188960(먼지) · Anime/Wind-02 Smoke2 12144047227(흙먼지)
+	쓴 플립북(Grid4x4): Loose/Flash-3 rbxassetid://11372587580(번쩍) · Anime/Blood-Punch-01 Blood1 16668936898(피)
 ]]
 local FLASH = "rbxassetid://11372587580"
 local BLOOD_FLIP = "rbxassetid://16668936898"
-local DUST_FLIP = "rbxassetid://16669188960"
-local DIRT_FLIP = "rbxassetid://12144047227"
 
 local function fade(a: number, b: number): NumberSequence
 	return NumberSequence.new({ NumberSequenceKeypoint.new(0, a), NumberSequenceKeypoint.new(0.5, (a + b) / 2), NumberSequenceKeypoint.new(1, b) })
@@ -102,13 +99,7 @@ end
 -- 땅 먼지 + 바닥 고리
 function Common.Land(Vfx: any, ground: Vector3, size: number?, color: Color3?)
 	local s = size or 1
-	Vfx.Dust(ground + Vector3.new(0, 0.3, 0), { Count = math.floor(10 * s), Size = 1.2 * s, Speed = 10 * s, Color = color })
 	Vfx.Ring(CFrame.new(ground + Vector3.new(0, 0.15, 0)), { R0 = 0.6, R1 = 4 * s, Color = color or c(230, 225, 210), Life = 0.35, Width = 0.25, Height = 0.08 })
-	-- 먼지 연기 플립북(퍼져 오르며 흩어진다)
-	Vfx.Flipbook(ground + Vector3.new(0, 0.6 * s, 0), {
-		Texture = DUST_FLIP, Layout = "Grid4x4", Count = math.max(2, math.floor(3 * s)), Size = 3.4 * s, Life = 0.7, Speed = 5 * s, Spread = 80,
-		Color = color or c(215, 208, 192), Rotation = 180, Transparency = fade(0.45, 1), Accel = Vector3.new(0, 1.5, 0),
-	})
 end
 
 -- 명상: 발밑 고리 + 떠오르는 빛가루
@@ -189,10 +180,6 @@ end
 -- 돌 조각 튀기
 function Common.Rubble(Vfx: any, at: Vector3, count: number?, color: Color3?)
 	Vfx.Burst(at, { Count = count or 10, Colors = { color or Color3.fromRGB(150, 140, 125), Color3.fromRGB(110, 102, 92), Color3.fromRGB(180, 172, 158) }, Size = 0.55, Speed = 20, Gravity = 70, Life = 0.9, Material = Enum.Material.Slate })
-	Vfx.Flipbook(at, {
-		Texture = DIRT_FLIP, Layout = "Grid4x4", Count = 3, Size = 3.5, Life = 0.8, Speed = 6, Spread = 70, Color = color or Color3.fromRGB(150, 140, 125),
-		Rotation = 180, Transparency = fade(0.4, 1), Accel = Vector3.new(0, 1, 0),
-	})
 end
 
 function Common.Head(ctx: any): Vector3

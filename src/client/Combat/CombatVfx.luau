@@ -352,28 +352,6 @@ function CombatVfx.Sparks(pos: Vector3, opts: { [string]: any })
 	Debris:AddItem(anchor, 1.2)
 end
 
--- 연기·먼지(입자)
-function CombatVfx.Dust(pos: Vector3, opts: { [string]: any })
-	local anchor = part(Vector3.new(0.2, 0.2, 0.2), CFrame.new(pos), Color3.new(1, 1, 1))
-	anchor.Transparency = 1
-	local e = Instance.new("ParticleEmitter")
-	e.Texture = "rbxassetid://10180479311"
-	e.Color = ColorSequence.new(opts.Color or Color3.fromRGB(170, 160, 140))
-	e.LightInfluence = 1
-	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, opts.Size or 1.4), NumberSequenceKeypoint.new(1, (opts.Size or 1.4) * 2.6) })
-	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) })
-	e.Lifetime = NumberRange.new(0.5, 0.9)
-	e.Speed = NumberRange.new(math.min(4, opts.Speed or 12), opts.Speed or 12)
-	e.SpreadAngle = Vector2.new(180, 10)
-	e.EmissionDirection = Enum.NormalId.Top
-	e.Drag = 5
-	e.Rate = 0
-	e.RotSpeed = NumberRange.new(-60, 60)
-	e.Parent = anchor
-	e:Emit(opts.Count or 14)
-	Debris:AddItem(anchor, 1.5)
-end
-
 --=== 기둥(빛·물기둥) ===--
 function CombatVfx.Pillar(pos: Vector3, opts: { [string]: any })
 	local h = opts.Height or 14
@@ -639,6 +617,18 @@ function CombatVfx.MyTurn()
 	end
 end
 
+-- 연기 계열 텍스처(2026-11-07 사용자: "연기 이펙트는 빼자") — 팩 묶음 안에 섞여 있어도 Pack 이 이 이미터를 걷어내고, Flipbook 은 그리지 않는다
+local SMOKE_TEX = {
+	["14006773822"] = true, ["16669188960"] = true, -- Anime/Smoke-01
+	["14595543880"] = true, ["12144047227"] = true, -- Anime/Wind-02 Smoke
+	["10180479311"] = true, -- Big/Explosion-01 SmokeDark
+	["275871881"] = true, -- Waterfall-01 Clouds
+	["11364555263"] = true, ["11589526610"] = true, -- vfx pack/Projectile Smoke
+}
+local function isSmoke(texture: string): boolean
+	return SMOKE_TEX[string.match(texture, "%d+") or ""] == true
+end
+
 --[[
 	마켓 VFX 팩(2026-11-01 사용자: "자체 제작 이펙트만으론 한계가 있으니 마켓플레이스 것도"): ReplicatedStorage.VfxLibrary
 	(tools/Vfx_Import.luau 가 스크립트를 걷어 내고 옮겨 둔다) 아래 이펙트 하나(파티클·빔·트레일을 품은 Attachment / Part / Model)를
@@ -701,6 +691,8 @@ function CombatVfx.Pack(name: string, cf: CFrame, opts: { [string]: any }?): boo
 		if d:IsA("BasePart") then
 			d.Anchored, d.CanCollide, d.CanQuery, d.CanTouch = true, false, false, false
 			d.Transparency = 1
+		elseif d:IsA("ParticleEmitter") and isSmoke(d.Texture) then
+			d:Destroy()
 		elseif d:IsA("ParticleEmitter") then
 			if k ~= 1 then
 				local keys = {}
@@ -805,6 +797,12 @@ function CombatVfx.Flipbook(at: Vector3 | CFrame | BasePart, opts: { [string]: a
 	local fps: number = opts.Framerate or 30
 	local life: number = opts.Life or (FLIP_FRAMES[layoutName] / math.max(1, fps))
 	local e = Instance.new("ParticleEmitter")
+	if isSmoke(opts.Texture or "") then
+		e.Texture = "" -- 연기는 그리지 않는다(반환 모양만 지킨다)
+		e.Enabled = false
+		task.defer(e.Destroy, e)
+		return e
+	end
 	e.Texture = opts.Texture
 	e.FlipbookLayout = FLIP_LAYOUT[layoutName]
 	e.FlipbookMode = FLIP_MODE[modeName]

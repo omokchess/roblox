@@ -54,8 +54,6 @@ local TEX = {
 	Slash = "rbxassetid://16939611858",
 	Impact = "rbxassetid://16923007448",
 	Hit = "rbxassetid://16678929169",
-	Smoke = "rbxassetid://14006773822",
-	Wind = "rbxassetid://14595543880",
 	Break = "rbxassetid://15514662196",
 	Energy = "rbxassetid://15041986621",
 	Light = "rbxassetid://16664675233",
@@ -1310,7 +1308,6 @@ function Fx.SeptSlam(ctx: any, _ev: any, at: Vector3?)
 		fb(ctx.Vfx, center + Vector3.new(0, 3, 0), { Texture = TEX.Explosion, Size = 26, Color = STAR, Life = 0.7, LightEmission = 0.9, Transparency = 0.4 })
 		fb(ctx.Vfx, center + Vector3.new(0, 5, 0), { Texture = TEX.Energy, Size = 24, Color = PALE, Life = 1.1, LightEmission = 0.9, Transparency = 0.6 })
 		fb(ctx.Vfx, floor + Vector3.new(0, 0.4, 0), { Texture = TEX.Shock, Size = 40, Color = STAR, Life = 0.9, LightEmission = 0.8, Transparency = 0.55 })
-		fb(ctx.Vfx, floor + Vector3.new(0, 1, 0), { Texture = TEX.Smoke, Size = 14, Color = PALE, Life = 1.6, Transparency = 0.6, Speed = 10, Spread = 180, Count = 4, Accel = Vector3.new(0, 3, 0) })
 		ctx.Vfx.Pack("Loose/Rays", CFrame.new(center + Vector3.new(0, 3, 0)), { Color = PALE, Size = 1.2 })
 		ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(center + Vector3.new(0, 6, 0)), { Color = PALE, Size = 1.6 })
 		ctx.Vfx.Pack("Loose/Sparkles", CFrame.new(center + Vector3.new(0, 4, 0)), { Color = WHITE, Size = 1.5 })

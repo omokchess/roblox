@@ -11,13 +11,11 @@ local c = Common.c
 local VIOLET = c(150, 120, 255)
 local DEEP = c(60, 30, 120)
 local STAR = c(230, 225, 255)
-local ABYSS = c(40, 24, 80)
 
 -- 플립북 그림(tools/combat/out/vfx_textures.tsv 의 flip=Grid* 만)
 local TEX = {
 	Charge = { "rbxassetid://15041986621", "Grid4x4" },
 	Impact = { "rbxassetid://16923007448", "Grid4x4" },
-	Smoke = { "rbxassetid://14006773822", "Grid4x4" },
 	Ash = { "rbxassetid://16955854038", "Grid4x4" },
 	Wave = { "rbxassetid://16477162837", "Grid4x4" },
 	Shield = { "rbxassetid://17086390547", "Grid4x4" },
@@ -39,13 +37,6 @@ local function fb(ctx: any, at: Vector3, key: string, o: { [string]: any })
 	flip(at, opt)
 end
 
--- 여운: 어둠 연기가 피어올라 흩어진다
-local function darkSmoke(ctx: any, at: Vector3, size: number, delay: number)
-	task.delay(delay, function()
-		fb(ctx, at, "Smoke", { Size = size, Color = ABYSS, Transparency = 0.4, Life = 1, Accel = Vector3.new(0, 2, 0), LightEmission = 0 })
-	end)
-end
-
 local Fx = {}
 
 function Fx.HeavyLand(ctx: any)
@@ -53,7 +44,6 @@ function Fx.HeavyLand(ctx: any)
 	Common.Land(ctx.Vfx, feet, 1.4, c(180, 170, 200))
 	ctx.Vfx.Shockwave(feet + Vector3.new(0, 0.1, 0), { Color = VIOLET, Radius = 5, Life = 0.4 })
 	Common.Crack(ctx.Vfx, feet + ctx.Forward * 1.5, ctx.Forward, 4, DEEP)
-	fb(ctx, feet + Vector3.new(0, 0.8, 0), "Smoke", { Size = 4.5, Color = c(150, 140, 175), Transparency = 0.4, Life = 0.8, LightEmission = 0 })
 	fb(ctx, feet + Vector3.new(0, 0.6, 0), "Wave", { Size = 6, Color = VIOLET, Life = 0.4, LightEmission = 0.4, Transparency = 0.4 })
 	ctx.Vfx.Pack("Anime/Crack-01", CFrame.new(feet + Vector3.new(0, 0.2, 0)), { Color = VIOLET, Size = 0.9, Count = 0.6 })
 end
@@ -69,7 +59,6 @@ end
 function Fx.GravityWall(ctx: any)
 	local front = ctx.Root.Position + ctx.Forward * 2
 	ctx.Vfx.Ring(CFrame.lookAt(front, front + ctx.Forward), { R0 = 0.5, R1 = 3, Color = VIOLET, Life = 0.45, Width = 0.3, Facing = true })
-	ctx.Vfx.Dust(Common.Feet(ctx) + ctx.Forward * 2, { Color = c(160, 150, 180), Count = 8 })
 	fb(ctx, front, "Shield", { Size = 5.5, Color = VIOLET, Life = 0.45, LightEmission = 0.4, Transparency = 0.35 })
 	ctx.Vfx.Pack("Anime/Shield-01", CFrame.lookAt(front, front + ctx.Forward), { Color = VIOLET, Size = 0.7, Count = 0.8 })
 end
@@ -122,7 +111,6 @@ function Fx.CollapseSlam(ctx: any, _ev: any, at: Vector3?)
 	Vfx.Shockwave(ground + Vector3.new(0, 0.1, 0), { Color = VIOLET, Radius = 9, Life = 0.5 })
 	Vfx.Shockwave(ground + Vector3.new(0, 0.2, 0), { Color = DEEP, Radius = 6, Life = 0.35 })
 	Common.Rubble(Vfx, ground, 16, c(120, 110, 140))
-	Vfx.Dust(ground, { Color = c(150, 140, 170), Count = 18, Size = 1.8, Speed = 16 })
 	for k = -1, 1 do
 		local dir = (CFrame.fromAxisAngle(Vector3.new(0, 1, 0), k * 0.5) * ctx.Forward)
 		Common.Crack(Vfx, ground, dir, 6, DEEP, 1.2)
@@ -137,7 +125,6 @@ function Fx.CollapseSlam(ctx: any, _ev: any, at: Vector3?)
 	fb(ctx, ground + Vector3.new(0, 1, 0), "Ash", { Size = 7, Color = c(110, 100, 135), Life = 0.7, LightEmission = 0, Transparency = 0.3, Accel = Vector3.new(0, 3, 0) })
 	Vfx.Pack("Anime/Stars-01", CFrame.new(p), { Color = STAR, Size = 1 })
 	Vfx.Pack("Loose/Black", CFrame.new(ground + Vector3.new(0, 1, 0)), { Size = 0.4, Count = 0.5 })
-	darkSmoke(ctx, ground + Vector3.new(0, 1.5, 0), 6, 0.2)
 end
 
 -- 붕괴 차징: 앞쪽 적 칸들에서 보랏빛이 시전자 쪽으로 끌려온다
@@ -235,7 +222,6 @@ function Fx.SummonSword(ctx: any)
 	Vfx.Implode(top, { Color = STAR, Radius = 9, Count = 20, Life = 0.5 })
 	-- 예비: 하늘의 포털에서 검이 나타난다(어둠 소용돌이 + 모으기 + 별)
 	fb(ctx, top, "Charge", { Size = 9 * S, Color = VIOLET, Life = 0.55, LightEmission = 0.5, Transparency = 0.3 })
-	fb(ctx, top, "Smoke", { Size = 8 * S, Color = ABYSS, Life = 0.9, Transparency = 0.35, LightEmission = 0 })
 	Vfx.Pack("Anime/Portal-01", CFrame.lookAt(top, top - Vector3.yAxis), { Color = VIOLET, Size = 1.4 * S, Count = 0.6 })
 	Vfx.Pack("Loose/BlackSwirl", CFrame.new(top), { Size = 0.6 * S, Count = 0.5 })
 	Vfx.Pack("Anime/Stars-01", CFrame.new(top), { Color = STAR, Size = 1.2 * S })
@@ -312,7 +298,6 @@ function Fx.SingularityHit(ctx: any, _ev: any, at: Vector3?)
 	Vfx.Pack("Anime/Stars-01", CFrame.new(p), { Color = STAR, Size = 1.3 })
 	Vfx.Pack("Anime/Crack-01", CFrame.new(ground + Vector3.new(0, 0.2, 0)), { Color = VIOLET, Size = 1.6, Count = 0.6 })
 	Vfx.Pack("Loose/BlackSwirl", CFrame.new(ground + Vector3.new(0, 1, 0)), { Size = 0.6, Count = 0.5 })
-	darkSmoke(ctx, ground + Vector3.new(0, 2, 0), 8, 0.25)
 end
 
 function Fx.InfallCut(ctx: any, _ev: any, at: Vector3?)
@@ -324,7 +309,6 @@ function Fx.InfallCut(ctx: any, _ev: any, at: Vector3?)
 	fb(ctx, p, "Slash", { Size = 7, Color = VIOLET, Life = 0.26, LightEmission = 0.6 })
 	fb(ctx, p, "Impact", { Size = 5, Color = STAR, Life = 0.3, LightEmission = 0.6 })
 	ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(p), { Color = STAR, Size = 0.7 })
-	darkSmoke(ctx, p, 3.5, 0.15)
 end
 
 function Fx.Meditate(ctx: any)

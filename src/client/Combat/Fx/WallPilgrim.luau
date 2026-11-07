@@ -15,7 +15,6 @@ local TEX = {
 	Slash = "rbxassetid://16939611858",
 	Impact = "rbxassetid://16923007448",
 	Hit = "rbxassetid://16678929169",
-	Smoke = "rbxassetid://14006773822",
 	Blood = "rbxassetid://16668936898",
 	Break = "rbxassetid://15514662196",
 	Energy = "rbxassetid://15041986621",
@@ -59,11 +58,9 @@ end
 function Fx.Genuflect(ctx: any)
 	local front = Common.Feet(ctx) + ctx.Forward * 1.6
 	ctx.Vfx.Sparks(front, { Color = CANDLE, Count = 14 })
-	ctx.Vfx.Dust(front, { Count = 8, Color = c(150, 140, 130) })
 	crossMark(ctx.Vfx, front, ctx.Forward)
 	-- 무릎 꿇는 자리: 촛불 한 송이 + 가라앉는 먼지
 	fb(ctx.Vfx, front + Vector3.new(0, 0.6, 0), { Texture = TEX.Energy, Size = 3, Color = CANDLE, Life = 0.5, LightEmission = 0.8, Transparency = 0.3 })
-	fb(ctx.Vfx, front + Vector3.new(0, 0.4, 0), { Texture = TEX.Smoke, Size = 3.5, Color = c(150, 140, 130), Life = 0.7, Transparency = 0.5 })
 	ctx.Vfx.Pack("Loose/Sparkles", CFrame.new(front + Vector3.new(0, 0.8, 0)), { Color = CANDLE, Size = 0.5 })
 end
 
@@ -89,9 +86,7 @@ function Fx.CrossBlock(ctx: any)
 	ctx.Vfx.Pack("Anime/Shield-Break-01", CFrame.new(p), { Color = CANDLE, Size = 0.45 })
 end
 
-function Fx.Scuttle(ctx: any)
-	ctx.Vfx.Dust(Common.Feet(ctx), { Count = 6, Color = c(140, 130, 120), Size = 0.9 })
-	fb(ctx.Vfx, Common.Feet(ctx) + Vector3.new(0, 0.4, 0), { Texture = TEX.Smoke, Size = 3, Color = c(140, 130, 120), Life = 0.6, Transparency = 0.55 })
+function Fx.Scuttle(_ctx: any)
 end
 
 -- 못질: 두 못이 박히며 불꽃 + 핏빛 십자
@@ -108,7 +103,6 @@ function Fx.NailDown(ctx: any, _ev: any, at: Vector3?)
 	local g = Vector3.new(p.X, ctx.Ground + 0.3, p.Z)
 	fb(Vfx, p, { Texture = TEX.Impact, Size = 8, Color = CANDLE, Life = 0.35, LightEmission = 1, Transparency = 0.15 })
 	fb(Vfx, p, { Texture = TEX.Blood, Size = 6, Color = RUST, Life = 0.55, Transparency = 0.1 })
-	fb(Vfx, g, { Texture = TEX.Smoke, Size = 6, Color = c(150, 140, 130), Life = 0.9, Transparency = 0.45, Speed = 3, Spread = 180 })
 	Vfx.Pack("Anime/Crack-01", CFrame.new(g), { Color = RUST, Size = 0.5 })
 	Vfx.Pack("Loose/Sparkles", CFrame.new(p), { Color = CANDLE, Size = 0.6 })
 end
@@ -139,7 +133,6 @@ function Fx.Split(ctx: any)
 	-- 양옆으로 번지는 핏빛 · 먼지 플립북(가운데서 갈라져 나간다)
 	for _, d in { side, -side } do
 		fb(ctx.Vfx, p + d * 1.5, { Texture = TEX.Blood, Size = 5, Color = RUST, Life = 0.5, Speed = 12, Spread = 10, Transparency = 0.15 })
-		fb(ctx.Vfx, p + d * 1.2, { Texture = TEX.Smoke, Size = 4, Color = c(150, 140, 130), Life = 0.7, Speed = 8, Spread = 15, Transparency = 0.5 })
 	end
 	fb(ctx.Vfx, p, { Texture = TEX.Hit, Size = 5, Color = CANDLE, Life = 0.25, LightEmission = 1 })
 end
@@ -192,9 +185,7 @@ function Fx.NailRain(ctx: any)
 			end
 			model:PivotTo(CFrame.new(ground + Vector3.new(0, 0.8, 0)) * CFrame.Angles(math.pi, 0, 0))
 			Vfx.Sparks(ground + Vector3.new(0, 0.2, 0), { Color = CANDLE, Count = 8 })
-			Vfx.Dust(ground, { Count = 4, Color = c(140, 130, 120), Size = 0.8 })
 			fb(Vfx, ground + Vector3.new(0, 0.5, 0), { Texture = TEX.Hit, Size = 3.5, Color = CANDLE, Life = 0.25, LightEmission = 1 })
-			fb(Vfx, ground + Vector3.new(0, 0.4, 0), { Texture = TEX.Smoke, Size = 3, Color = c(140, 130, 120), Life = 0.7, Transparency = 0.5 })
 			task.wait(0.8)
 			model:Destroy()
 		end)

@@ -34,23 +34,21 @@ local METEOR_SQUASH = 0.8 -- 유성 입자를 길게 늘이는 Squash 값(부호
 
 type Spec = { [string]: any }
 
--- FX 팩(VfxLibrary) 텍스처: Loose/Sparkles(별 반짝임)·Waterfall-01 Clouds(부드러운 구름)
+-- FX 팩(VfxLibrary) 텍스처: Loose/Sparkles(별 반짝임)
 local SPARKLE = "rbxassetid://1084970835"
-local SMOKE = "rbxassetid://275871881"
--- 플립북(tools/combat/out/vfx_textures.tsv 의 flip=Grid4x4): Anime/Smoke-01 연기 · Anime/Wind-02 Smoke2 · Loose/Flash-3 번쩍
--- 소용돌이(플립북 아님): Loose/Swirling · Loose/Twirl · Loose/BlackSwirl(어두운 소용돌이) · Anime/Portal-01 Portal
+-- 플립북(Grid4x4): Loose/Flash-3 번쩍. 소용돌이(플립북 아님): Loose/Swirling · Twirl · BlackSwirl. 연기·구름 텍스처는 쓰지 않는다(2026-11-07 사용자: 분위기와 안 맞음)
 local TEX: { [string]: string } = {
-	Sparkle = SPARKLE, Smoke = SMOKE, None = "",
-	SmokeFlip = "rbxassetid://16669188960", SmokeFlip2 = "rbxassetid://12144047227", FlashFlip = "rbxassetid://11372587580",
-	Swirl = "rbxassetid://14426307916", Twirl = "rbxassetid://14426232568", BlackSwirl = "rbxassetid://14477910720", Portal = "rbxassetid://1084982817",
+	Sparkle = SPARKLE, None = "",
+	FlashFlip = "rbxassetid://11372587580",
+	Swirl = "rbxassetid://14426307916", Twirl = "rbxassetid://14426232568", BlackSwirl = "rbxassetid://14477910720",
 }
+local Z_OFFSET = -15 -- 판·캐릭터 뒤로 밀어 그린다(문서: 음수 = 방출 위치보다 뒤). 은하는 판 26 아래, 하늘 구는 480 밖이라 그 사이 값
 
 local GOLD = { 255, 207, 138 }
 local PALEGOLD = { 255, 238, 200 }
 local WHITE = { 255, 255, 255 }
 local BLUE = { 168, 200, 255 }
 local NEBULA = { { 150, 100, 240 }, { 255, 120, 190 }, { 90, 220, 230 }, { 120, 130, 255 } } -- 팔마다 보라·분홍·청록·남색
-local DUST = { 62, 42, 34 }
 
 -- 두 색 사이를 흘러가는 Color 표
 local function grad(...: { number }): { any }
@@ -105,33 +103,8 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 				Name = ("ArmStars_%d_%d"):format(arm, k), Layer = "ArmStars", Arm = arm,
 				Pos = { x, 0, z }, Look = { dx, dz }, Size = { width, 2 + (1 - r / 135) * 3, len },
 				Shape = "Box", Dir = "Front", Rate = 2.2 + 0.035 * len, Life = { 5, 7 }, Speed = { 3, 6 }, Spread = 4,
-				Tex = "Sparkle", Glow = 1, RotSpeed = { -40, 40 },
-				Color = if r < 45 then grad(GOLD, WHITE) else grad(WHITE, BLUE), Scale = bell(3, 1.4), Alpha = fadeAlpha(0.1),
-			})
-		end
-		-- ② 팔 바깥 성운(크고 옅음, 낮은 LightEmission)과 ③ 안쪽 경계 먼지(어둡고 반투명, 발광 0)
-		for i, tc in { 5.2, 8.4 } do
-			local x, z, dx, dz, rx, rz = pt(arm, tc)
-			local r = R0 * math.exp(K * tc)
-			local off = 6 + r * 0.14
-			add({
-				Name = ("Nebula_%d_%d"):format(arm, i), Layer = "Nebula", Arm = arm,
-				Pos = { x + rx * off, 0, z + rz * off }, Look = { dx, dz }, Size = { 12 + r * 0.2, 5, 22 + r * 0.35 },
-				Shape = "Box", Dir = "Front", Rate = 1.4, Life = { 10, 13 }, Speed = { 0.5, 1.5 }, Spread = 20,
-				Tex = "SmokeFlip", Flip = "Grid4x4", Glow = 0.3, RotSpeed = { -6, 6 }, -- 연기 플립북: 수명 내내 천천히 피어오른다
-				Color = grad(NEBULA[arm + 1], BLUE), Scale = { { 0, 28 + r * 0.15, 6 }, { 1, 40 + r * 0.2, 8 } }, Alpha = { { 0, 1 }, { 0.3, 0.9 }, { 0.7, 0.92 }, { 1, 1 } },
-			})
-		end
-		for i, tc in { 3.9, 7.0 } do
-			local x, z, dx, dz, rx, rz = pt(arm, tc)
-			local r = R0 * math.exp(K * tc)
-			local off = 5 + r * 0.11
-			add({
-				Name = ("Dust_%d_%d"):format(arm, i), Layer = "Dust", Arm = arm,
-				Pos = { x - rx * off, 0, z - rz * off }, Look = { dx, dz }, Size = { 8 + r * 0.12, 4, 18 + r * 0.3 },
-				Shape = "Box", Dir = "Front", Rate = 1.1, Life = { 10, 12 }, Speed = { 0.5, 1.5 }, Spread = 15,
-				Tex = "SmokeFlip2", Flip = "Grid4x4", Glow = 0, RotSpeed = { -5, 5 },
-				Color = grad(DUST, { 90, 62, 48 }), Scale = { { 0, 18 + r * 0.1, 4 }, { 1, 28 + r * 0.14, 6 } }, Alpha = { { 0, 1 }, { 0.3, 0.8 }, { 0.7, 0.86 }, { 1, 1 } },
+				Tex = "Sparkle", Glow = if r < 45 then 0.55 else 1, RotSpeed = { -40, 40 },
+				Color = if r < 45 then grad({ 210, 160, 100 }, { 230, 200, 150 }) else grad(WHITE, BLUE), Scale = if r < 45 then bell(1.6, 0.8) else bell(3, 1.4), Alpha = if r < 45 then fadeAlpha(0.4) else fadeAlpha(0.1),
 			})
 		end
 	end
@@ -152,20 +125,17 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 		s.Name, s.Layer, s.Pos, s.Size, s.Shape = name, "Bulge", { 0, 0, 0 }, { size, size * 0.5, size }, "Sphere"
 		add(s)
 	end
-	bulge("BulgeGrain", 26, { Rate = 18, Life = { 3, 4.5 }, Speed = { 0, 2 }, Tex = "Sparkle", Glow = 1, RotSpeed = { -60, 60 },
-		Color = grad(GOLD, PALEGOLD), Scale = bell(2.6, 1.2), Alpha = fadeAlpha(0.1) })
-	bulge("BulgeGlowBig", 14, { Rate = 2.2, Life = { 8, 10 }, Speed = { 0, 1 }, Tex = "Smoke", Glow = 1, RotSpeed = { -8, 8 },
-		Color = grad(GOLD, { 255, 170, 90 }), Scale = { { 0, 36, 6 }, { 1, 56, 8 } }, Alpha = { { 0, 1 }, { 0.3, 0.86 }, { 0.7, 0.9 }, { 1, 1 } } })
-	bulge("BulgeGlowMid", 8, { Rate = 3, Life = { 5, 6 }, Speed = { 0, 1 }, Tex = "Smoke", Glow = 1, RotSpeed = { -12, 12 },
-		Color = grad(PALEGOLD, GOLD), Scale = { { 0, 14, 3 }, { 1, 24, 4 } }, Alpha = { { 0, 1 }, { 0.3, 0.72 }, { 0.7, 0.8 }, { 1, 1 } } })
-	bulge("BulgeFlare", 4, { Rate = 1.2, Life = { 2.2, 3 }, Speed = { 0, 0 }, Tex = "Sparkle", Glow = 1, RotSpeed = { 20, 60 },
-		Color = grad(WHITE, GOLD), Scale = { { 0, 0, 0 }, { 0.5, 16, 4 }, { 1, 0, 0 } }, Alpha = { { 0, 0.2 }, { 1, 0.2 } } })
+	-- 중심은 은은한 금빛만(2026-11-07 "중앙 부분이 너무 밝게 반짝거려"): 알갱이 적게·작게·옅게, 번쩍은 드물게
+	bulge("BulgeGrain", 26, { Rate = 5, Life = { 3, 4.5 }, Speed = { 0, 2 }, Tex = "Sparkle", Glow = 0.5, RotSpeed = { -60, 60 },
+		Color = grad({ 190, 140, 85 }, { 215, 175, 120 }), Scale = bell(1.5, 0.7), Alpha = fadeAlpha(0.45) })
+	bulge("BulgeFlare", 4, { Rate = 0.35, Life = { 2.2, 3 }, Speed = { 0, 0 }, Tex = "Sparkle", Glow = 0.5, RotSpeed = { 20, 60 },
+		Color = grad({ 235, 205, 150 }, { 210, 160, 100 }), Scale = { { 0, 0, 0 }, { 0.5, 6, 2 }, { 1, 0, 0 } }, Alpha = { { 0, 0.5 }, { 1, 0.5 } } })
 
 	-- 팽대부 소용돌이(밝기 절제): 금보라 소용돌이 + 옅은 트월 + 판 중심 아래를 눌러 어둡게 하는 검은 소용돌이(캐릭터가 묻히지 않게 대비)
-	bulge("BulgeSwirl", 6, { Rate = 0.7, Life = { 8, 10 }, Speed = { 0, 0 }, Tex = "Swirl", Glow = 0.25, RotSpeed = { 14, 22 },
-		Color = grad({ 200, 150, 255 }, GOLD), Scale = { { 0, 30, 4 }, { 1, 46, 6 } }, Alpha = { { 0, 1 }, { 0.3, 0.74 }, { 0.7, 0.8 }, { 1, 1 } } })
-	bulge("BulgeTwirl", 4, { Rate = 0.8, Life = { 5, 6 }, Speed = { 0, 0 }, Tex = "Twirl", Glow = 0.4, RotSpeed = { -30, -18 },
-		Color = grad(PALEGOLD, { 190, 140, 255 }), Scale = { { 0, 22, 3 }, { 1, 6, 2 } }, Alpha = { { 0, 1 }, { 0.3, 0.7 }, { 0.8, 0.78 }, { 1, 1 } } })
+	bulge("BulgeSwirl", 6, { Rate = 0.7, Life = { 8, 10 }, Speed = { 0, 0 }, Tex = "Swirl", Glow = 0.1, RotSpeed = { 14, 22 },
+		Color = grad({ 140, 105, 190 }, { 190, 150, 100 }), Scale = { { 0, 22, 3 }, { 1, 34, 4 } }, Alpha = { { 0, 1 }, { 0.3, 0.88 }, { 0.7, 0.9 }, { 1, 1 } } })
+	bulge("BulgeTwirl", 4, { Rate = 0.4, Life = { 5, 6 }, Speed = { 0, 0 }, Tex = "Twirl", Glow = 0.15, RotSpeed = { -30, -18 },
+		Color = grad({ 215, 185, 140 }, { 150, 115, 200 }), Scale = { { 0, 14, 2 }, { 1, 4, 1 } }, Alpha = { { 0, 1 }, { 0.3, 0.86 }, { 0.8, 0.9 }, { 1, 1 } } })
 	add({
 		Name = "BulgeDarkVortex", Layer = "Bulge", Pos = { 0, -3, 0 }, Size = { 8, 2, 8 }, Shape = "Sphere", Rate = 0.5, Life = { 9, 11 }, Speed = { 0, 0 },
 		Tex = "BlackSwirl", Glow = 0, RotSpeed = { -10, -6 },
@@ -183,8 +153,6 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 		Color = grad(WHITE, BLUE), Scale = { { 0, 0, 0 }, { 0.25, 1.4, 0.6 }, { 0.5, 0.6, 0.3 }, { 0.75, 1.4, 0.6 }, { 1, 0, 0 } }, Alpha = fadeAlpha(0.1) })
 	discLayer("DiscStarsColor", { Rate = 6, Life = { 8, 10 }, Tex = "Sparkle", Glow = 1, RotSpeed = { -30, 30 },
 		Color = grad({ 190, 210, 255 }, { 255, 190, 220 }, GOLD), Scale = bell(2.4, 1), Alpha = fadeAlpha(0.15) })
-	discLayer("DiscHaze", { Rate = 2.4, Life = { 12, 15 }, Tex = "Smoke", Glow = 0.3, RotSpeed = { -4, 4 },
-		Color = grad({ 120, 90, 220 }, { 90, 140, 230 }), Scale = { { 0, 45, 8 }, { 1, 70, 10 } }, Alpha = { { 0, 1 }, { 0.3, 0.93 }, { 0.7, 0.95 }, { 1, 1 } } })
 	discLayer("DiscFlare", { Rate = 1.5, Life = { 1.8, 2.6 }, Tex = "Sparkle", Glow = 1, RotSpeed = { 20, 60 },
 		Color = grad(WHITE, GOLD), Scale = { { 0, 0, 0 }, { 0.5, 12, 4 }, { 1, 0, 0 } }, Alpha = { { 0, 0.15 }, { 1, 0.15 } } })
 	discLayer("DiscFlashFlip", { Rate = 0.9, Life = { 1.4, 2 }, Tex = "FlashFlip", Flip = "Grid4x4", Glow = 0.6, RotSpeed = { -30, 30 },
@@ -219,12 +187,12 @@ function GalaxyParticles.Plan(radius: number): ({ Spec }, { Spec })
 			local pad = (tb - ta) * 0.1
 			local b = bez(arm, ta - (if k > 1 then pad else 0), tb + (if k < BAND then pad else 0))
 			b.Name, b.Layer, b.Arm, b.Segments = ("BandWide_%d_%d"):format(arm, k), "BandWide", arm, 12
-			b.W0, b.W1, b.Tex, b.Glow, b.TexLen, b.TexSpeed = 5 + b.R0 * 0.16, 5 + b.R1 * 0.16, "Smoke", 1, 40, 0.1
+			b.W0, b.W1, b.Tex, b.Glow, b.TexLen, b.TexSpeed = 5 + b.R0 * 0.16, 5 + b.R1 * 0.16, "None", 1, 40, 0.1
 			b.Color, b.Alpha = grad(NEBULA[arm + 1], BLUE), { { 0, 1 }, { 0.12, 0.88 }, { 0.88, 0.88 }, { 1, 1 } }
 			add2(beams, b)
 			local n = bez(arm, ta - (if k > 1 then pad else 0), tb + (if k < BAND then pad else 0))
 			n.Name, n.Layer, n.Arm, n.Segments = ("BandCore_%d_%d"):format(arm, k), "BandCore", arm, 12
-			n.W0, n.W1, n.Tex, n.Glow, n.TexLen, n.TexSpeed = 1.5 + n.R0 * 0.05, 1.5 + n.R1 * 0.05, "Smoke", 1, 25, 0.2
+			n.W0, n.W1, n.Tex, n.Glow, n.TexLen, n.TexSpeed = 1.5 + n.R0 * 0.05, 1.5 + n.R1 * 0.05, "None", 1, 25, 0.2
 			n.Color = if n.R1 < 50 then grad(GOLD, WHITE) else grad(WHITE, BLUE)
 			n.Alpha = { { 0, 1 }, { 0.12, 0.7 }, { 0.88, 0.7 }, { 1, 1 } }
 			add2(beams, n)
@@ -305,6 +273,7 @@ function GalaxyParticles.Build(g: Model, cf: CFrame, radius: number): { Particle
 		e.Enabled = false
 		e.LockedToPart = true
 		e.LightInfluence = 0
+		e.ZOffset = Z_OFFSET
 		e.LightEmission = s.Glow
 		e.Texture = TEX[s.Tex]
 		if s.Flip then
@@ -357,6 +326,7 @@ function GalaxyParticles.Build(g: Model, cf: CFrame, radius: number): { Particle
 		b.FaceCamera = true
 		b.LightEmission = s.Glow
 		b.LightInfluence = 0
+		b.ZOffset = Z_OFFSET
 		b.Texture = TEX[s.Tex]
 		b.TextureMode = Enum.TextureMode.Wrap
 		b.TextureLength = s.TexLen

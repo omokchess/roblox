@@ -22,7 +22,6 @@ local GOLDEN_STAR = c(255, 222, 150)
 local GOLDEN = c(255, 214, 130)
 local NEBULA = c(140, 100, 225) -- 3페이즈 성운 보라
 local CORONA = c(255, 190, 120) -- 3페이즈 일식 코로나
-local ASH = c(190, 196, 214) -- 연기 · 먼지 회청
 
 local Fx = {}
 
@@ -135,13 +134,11 @@ local TEX = {
 	Charge = "rbxassetid://15041986460", -- Anime/Charge-01
 	Bolt = "rbxassetid://16664675233", -- Anime/Lighting-01
 	Punch = "rbxassetid://16678929169", -- Anime/Punch-02
-	Smoke = "rbxassetid://16669188960", -- Anime/Smoke-01
 	Shoot = "rbxassetid://16477162837", -- Anime/Shoot-01
 	Shatter = "rbxassetid://17086390547", -- Anime/Shield-Break-01
 	Wave = "rbxassetid://13634052022", -- Anime/ForceField-Break-01
 	Boom = "http://www.roblox.com/asset/?id=11395089850", -- Big/Explosion-01
 	Flame = "rbxassetid://16951304645", -- Anime/Fire-Slash-01
-	Wind = "rbxassetid://14595543880", -- Anime/Wind-02
 	Flash = "rbxassetid://11372772717", -- Loose/Flash
 }
 
@@ -162,11 +159,6 @@ end
 local function impactFb(ctx: any, at: Vector3, size: number, color: Color3)
 	fb(ctx, at, TEX.Impact, { Size = size, Color = color, Life = 0.4, LightEmission = 1, Rotation = math.random(0, 360) })
 	fb(ctx, at, TEX.Punch, { Size = size * 0.7, Color = color, Life = 0.4, LightEmission = 1 })
-end
-
--- 연기 · 먼지 덩어리(위로 번지며 흩어짐)
-local function smokeFb(ctx: any, at: Vector3, size: number, color: Color3, n: number?)
-	fb(ctx, at, TEX.Smoke, { Size = size, Color = color, Count = n or 3, Life = 1.2, Speed = 3, Spread = 180, Accel = Vector3.new(0, 1.5, 0), LightEmission = 0.1 })
 end
 
 -- 기 모으기(예비 동작)
@@ -239,7 +231,6 @@ function Fx.BurnSlash(ctx: any)
 	ctx.Vfx.Sparks(p, { Color = BURN, Count = 8, Speed = 16 })
 	fb(ctx, p, TEX.Flame, { Size = 6, Color = BURN, Life = 0.3, LightEmission = 0.6, Rotation = math.random(0, 360) })
 	impactFb(ctx, p, 4.5, STAR_CORE)
-	smokeFb(ctx, p + Vector3.new(0, 0.5, 0), 2.5, ASH, 2)
 end
 
 -- 찌르기: 칼날 끝에서 대상까지 한 줄 + 꿰뚫고 나가는 별가루와 충격(팩)
@@ -261,7 +252,6 @@ function Fx.Stab(ctx: any, ev: any)
 	if beat >= 3 then
 		snap(ctx, ctx.Target, 3.4)
 		ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(ctx.Target), { Color = STAR_CORE, Size = 0.5, Count = 0.5 })
-		smokeFb(ctx, ctx.Target, 3, ASH, 2)
 	end
 end
 
@@ -296,18 +286,13 @@ function Fx.Grab(ctx: any)
 	ctx.Vfx.Pack("Anime/Punch-03", CFrame.new(at), { Color = STAR_CORE, Size = 0.5 })
 	ctx.Vfx.Sparks(at, { Color = STAR, Count = 8, Speed = 12 })
 	impactFb(ctx, at, 3.2, STAR)
-	smokeFb(ctx, at, 1.8, ASH, 2)
 end
 
 -- 내던짐: 대상이 떨어진 자리에 먼지와 충격파
 function Fx.Throw(ctx: any)
 	local ground = Vector3.new(ctx.Target.X, ctx.Ground + 0.3, ctx.Target.Z)
-	ctx.Vfx.Pack("Anime/Smoke-01", CFrame.new(ground), { Color = c(180, 186, 205), Size = 0.8 })
 	ctx.Vfx.Pack("Anime/Shoot-01", CFrame.new(ground), { Color = STAR, Size = 0.9 })
-	ctx.Vfx.Dust(ground, { Color = c(190, 196, 214), Count = 12, Size = 1.4, Speed = 12 })
-	smokeFb(ctx, ground, 5, ASH, 4)
 	waveFb(ctx, ground + Vector3.new(0, 0.4, 0), 9, STAR)
-	fb(ctx, ground + Vector3.new(0, 1, 0), TEX.Wind, { Size = 8, Color = ASH, Life = 0.5, LightEmission = 0.3 })
 	impactFb(ctx, ground + Vector3.new(0, 1, 0), 5, STAR_CORE)
 end
 
@@ -364,7 +349,6 @@ function Fx.LensBurn(ctx: any)
 				fb(ctx, p + Vector3.new(0, 1, 0), TEX.Flame, { Size = 4.5, Color = BURN, Life = 0.4, LightEmission = 0.6 })
 			end
 			task.delay(0.35, function()
-				smokeFb(ctx, p + Vector3.new(0, 0.5, 0), 3, ASH, 2)
 			end)
 		end)
 	end
@@ -387,7 +371,6 @@ function Fx.BladeStorm(ctx: any)
 		end
 		task.delay(burst * 0.36, function()
 			Vfx.Pack("Big/Tornado-01", CFrame.new(a.Pos.Position - Vector3.new(0, 2, 0)), { Color = STAR, Size = 0.45, Count = 0.5 })
-			fb(ctx, a.Pos.Position, TEX.Wind, { Size = 12, Color = STAR, Life = 0.5, LightEmission = 0.6 })
 		end)
 	end
 	-- 베기 자국은 맞는 칸(대상 둘레 3×3 — 2026-11-06)에만 남긴다
@@ -406,10 +389,7 @@ end
 -- 도약: 발밑에서 바람과 눈가루
 function Fx.LeapDust(ctx: any)
 	local feet = Common.Feet(ctx)
-	ctx.Vfx.Pack("Anime/Wind-02", CFrame.new(feet + Vector3.new(0, 0.3, 0)), { Color = c(220, 230, 245), Size = 0.6 })
 	ctx.Vfx.Ring(CFrame.new(feet + Vector3.new(0, 0.1, 0)), { R0 = 0.6, R1 = 5, Color = STAR, Life = 0.35, Width = 0.18, Height = 0.05 })
-	smokeFb(ctx, feet + Vector3.new(0, 0.4, 0), 4, ASH, 3)
-	fb(ctx, feet + Vector3.new(0, 0.6, 0), TEX.Wind, { Size = 8, Color = STAR_CORE, Life = 0.4, LightEmission = 0.4 })
 end
 
 -- 칼춤 착지: 칼바람 고리가 퍼지고 땅에 베기 자국
@@ -427,7 +407,6 @@ function Fx.StormEnd(ctx: any)
 	end
 	waveFb(ctx, ground + Vector3.new(0, 0.5, 0), 18, STAR)
 	impactFb(ctx, ground + Vector3.new(0, 1, 0), 6, STAR_CORE)
-	smokeFb(ctx, ground + Vector3.new(0, 0.4, 0), 7, ASH, 4)
 end
 
 -- 공명적 성위(평타): 망치 머리에서 별이 튕겨 나가(충격 고리) 대상에게 꽂힌다
@@ -506,7 +485,6 @@ function Fx.StarShower(ctx: any, ev: any)
 			Vfx.Ring(CFrame.new(Vector3.new(ctx.Target.X, ctx.Ground + 0.15, ctx.Target.Z)), { R0 = 0.8, R1 = 6, Color = STAR, Life = 0.4, Width = 0.25, Height = 0.06 })
 			local ground = Vector3.new(ctx.Target.X, ctx.Ground + 0.4, ctx.Target.Z)
 			waveFb(ctx, ground, 12, GOLDEN)
-			smokeFb(ctx, ground, 4, ASH, 3)
 		end)
 	end
 end
@@ -611,7 +589,6 @@ function Fx.IntroShot(ctx: any, ev: any)
 	ctx.Vfx.Ring(CFrame.new(Common.Feet(ctx) + Vector3.new(0, 0.12, 0)), { R0 = 0.5, R1 = 6, Color = STAR, Life = 1.2, Width = 0.2, Height = 0.05 })
 	local feet = Common.Feet(ctx) + Vector3.new(0, 0.3, 0)
 	waveFb(ctx, feet, 12, STAR, 0.9)
-	smokeFb(ctx, feet, 5, ASH, 3)
 end
 
 -- 의수 칼날: 손 속에서 미끄러져 나옴(날을 따라 별빛 한 줄기) · 다시 들어감
@@ -677,7 +654,6 @@ function Fx.PhaseTwo(ctx: any)
 		shatterFb(ctx, at, 10, STAR_CORE)
 		boomFb(ctx, at, 8, GOLDEN_STAR)
 		impactFb(ctx, at, 6, GOLDEN)
-		smokeFb(ctx, at, 5, ASH, 4)
 		Vfx.Pack("Anime/ForceField-Break-01", CFrame.new(at), { Color = GOLDEN_STAR, Size = 0.7, Count = 0.5 })
 		Vfx.Pack("Anime/Stars-01", CFrame.new(at), { Color = STAR_CORE, Size = 0.9, Count = 0.6 })
 	end
@@ -716,7 +692,6 @@ function Fx.PhaseThree(ctx: any)
 			boltFb(ctx, chest + Vector3.new(math.random(-5, 5), math.random(0, 4), math.random(-5, 5)), 7, NEBULA)
 		end)
 	end
-	smokeFb(ctx, Vector3.new(ctx.Root.Position.X, ctx.Ground + 0.4, ctx.Root.Position.Z), 8, ASH, 4)
 end
 
 -- 우주 회전이 서서히 빨라진다(옷이 다 바뀐 뒤)
@@ -738,7 +713,6 @@ function Fx.PageBurst(ctx: any)
 	waveFb(ctx, ground, 22, STAR)
 	boomFb(ctx, p + Vector3.new(0, 1.5, 0), 9, STAR)
 	shatterFb(ctx, p + Vector3.new(0, 1.5, 0), 10, GOLDEN_STAR)
-	smokeFb(ctx, ground, 8, ASH, 4)
 	Vfx.Pack("Anime/Stars-01", CFrame.new(p + Vector3.new(0, 1.5, 0)), { Color = STAR_CORE, Size = 0.9, Count = 0.6 })
 	for i = 0, 2 do
 		task.delay(0.12 * i, function()
@@ -772,7 +746,6 @@ local function smash(ctx: any, at: Vector3, size: number)
 	boomFb(ctx, ground + Vector3.new(0, 0.8, 0), 6 * size, GOLDEN)
 	impactFb(ctx, at, 5 * size, STAR_CORE)
 	waveFb(ctx, ground + Vector3.new(0, 0.3, 0), 9 * size, GOLDEN)
-	smokeFb(ctx, ground + Vector3.new(0, 0.3, 0), 4 * size, ASH, 3)
 	ctx.Vfx.Burst(ground + Vector3.new(0, 0.3, 0), { Count = math.floor(10 * size), Colors = { STAR, STAR_CORE, GOLDEN }, Size = 0.4, Speed = 18, Life = 0.55, Gravity = 40, Material = Enum.Material.Neon })
 	ctx.Vfx.Pack("Big/Big-Crack-01", CFrame.new(ground + Vector3.new(0, 0.2, 0)), { Color = GOLDEN, Size = 0.3 * size })
 	ctx.Vfx.Pack("Anime/Crack-01", CFrame.new(ground + Vector3.new(0, 0.1, 0)), { Color = STAR, Size = 1.4 * size })
@@ -794,7 +767,6 @@ end
 function Fx.HammerSmash(ctx: any)
 	local at = ctx.Tip("W") or ctx.Target
 	smash(ctx, at, 1)
-	fb(ctx, at + Vector3.new(0, 1, 0), TEX.Wind, { Size = 6, Color = GOLDEN, Life = 0.35, LightEmission = 0.5 })
 	ctx.Vfx.Pack("Loose/MiniSparks", CFrame.new(at), { Color = GOLDEN, Size = 0.5, Count = 0.5 })
 end
 
@@ -810,7 +782,6 @@ function Fx.AliothField(ctx: any)
 		task.delay(0.05 * k, function()
 			local at = from:Lerp(Vector3.new(mid.X, ctx.Ground + 0.2, mid.Z), k / 6)
 			Vfx.Ring(CFrame.new(at), { R0 = 0.5, R1 = 3 + k * 0.6, Color = GOLDEN, Life = 0.35, Width = 0.2, Height = 0.05 })
-			fb(ctx, at + Vector3.new(0, 0.8, 0), TEX.Wind, { Size = 4 + k * 0.4, Color = GOLDEN, Life = 0.3, LightEmission = 0.5 })
 		end)
 	end
 	task.delay(0.32, function()
@@ -896,7 +867,6 @@ function Fx.MerakRow(ctx: any)
 			Vfx.Burst(p + Vector3.new(0, 0.4, 0), { Count = 5, Colors = { GOLDEN, STAR_CORE }, Size = 0.35, Speed = 14, Life = 0.45, Material = Enum.Material.Neon })
 			Vfx.Pack("vfx pack/f", CFrame.new(p + Vector3.new(0, 0.4, 0)), { Color = GOLDEN, Size = 0.3, Count = 0.5 })
 			slashFb(ctx, p + Vector3.new(0, 0.9, 0), 6, GOLDEN, 0.25)
-			smokeFb(ctx, p + Vector3.new(0, 0.3, 0), 3, ASH, 2)
 		end)
 	end
 end
@@ -967,7 +937,6 @@ function Fx.DipperCrash(ctx: any)
 		Vfx.Ring(CFrame.new(mid + Vector3.new(0, 0.2, 0)), { R0 = 2, R1 = 12, Color = STAR_CORE, Life = 0.7, Width = 0.5, Height = 0.08 })
 		Vfx.Pack("Loose/Shockwave", CFrame.new(mid + Vector3.new(0, 0.6, 0)), { Color = STAR_CORE, Size = 0.9 })
 		waveFb(ctx, mid + Vector3.new(0, 0.4, 0), 30, STAR_CORE, 0.7)
-		smokeFb(ctx, mid + Vector3.new(0, 0.4, 0), 8, ASH, 4)
 	end)
 end
 
@@ -1038,7 +1007,6 @@ function Fx.KenosSnuff(ctx: any)
 	fb(ctx, p, TEX.Flash, { Size = 6, Color = FLASH, Life = 0.2, LightEmission = 1 })
 	task.delay(0.3, function()
 		shatterFb(ctx, p, 8, DEEP)
-		smokeFb(ctx, p, 5, c(60, 70, 130), 3)
 		Vfx.Ring(CFrame.lookAt(p, p + Vector3.yAxis), { R0 = 0.5, R1 = 4, Color = DEEP, Life = 0.6, Width = 0.12, Facing = true })
 		Vfx.Burst(p, { Count = 10, Colors = { DEEP, c(30, 40, 90) }, Size = 0.3, Speed = 8, Life = 0.7, Gravity = 6, Material = Enum.Material.Neon })
 	end)
@@ -1069,7 +1037,6 @@ function Fx.KenosStep(ctx: any, ev: any)
 	Vfx.Flash(at, { Color = STAR_CORE, Size = 3.5 * k, Life = 0.35, Brightness = 4 })
 	waveFb(ctx, at, 6 * k, STAR, 0.4)
 	chargeFb(ctx, at, 3 * k, STAR_CORE)
-	smokeFb(ctx, at - Vector3.new(0, 0.3, 0), 3 * k, ASH, 2)
 	Vfx.Ring(CFrame.new(at), { R0 = 0.4, R1 = 3.2 * k, Color = STAR, Life = 0.45, Width = 0.18, Height = 0.05 })
 	Vfx.Pack("Loose/Flare", CFrame.new(at), { Color = STAR_CORE, Size = 0.45 * k })
 	Vfx.Sparks(at, { Color = STAR_CORE, Count = 8, Speed = 10 })
@@ -1096,7 +1063,6 @@ function Fx.KenosCast(ctx: any)
 			local ground = Vector3.new(p.X, ctx.Ground + 0.12, p.Z)
 			Vfx.Pack("Anime/Crack-01", CFrame.new(ground), { Color = CRACK, Size = 1.5 })
 			Vfx.Ring(CFrame.new(ground), { R0 = 0.4, R1 = 3, Color = CRACK, Life = 0.6, Width = 0.15, Height = 0.05 })
-			smokeFb(ctx, ground + Vector3.new(0, 0.3, 0), 2.4, c(70, 40, 60), 2) -- 붉은 칸에 금 간 틈의 검은 김
 		end)
 	end
 end
@@ -1213,9 +1179,7 @@ function Fx.KenosTail(ctx: any)
 	for i = -1, 1 do
 		ctx.Vfx.Projectile(from + r * (i * 1.4), to + r * (i * 1.1), { Time = 0.5, Color = STAR_CORE, TrailColor = STAR })
 	end
-	ctx.Vfx.Pack("Anime/Wind-02", CFrame.new(from), { Color = STAR, Size = 0.6 })
 	chargeFb(ctx, from, 5, STAR_CORE)
-	fb(ctx, from, TEX.Wind, { Size = 10, Color = STAR, Life = 0.4, LightEmission = 0.6 })
 	-- 낙하 중 잔상: 경로를 따라 별빛 시트가 차례로 남는다
 	for k = 1, 4 do
 		task.delay(0.1 * k, function()
@@ -1238,7 +1202,6 @@ function Fx.KenosLanding(ctx: any)
 	boomFb(ctx, gnd + Vector3.new(0, 1.5, 0), 12 * k, GOLDEN_STAR)
 	shatterFb(ctx, gnd + Vector3.new(0, 1, 0), 15 * k, STAR_CORE)
 	waveFb(ctx, gnd, 24 * k, NEBULA, 0.7)
-	smokeFb(ctx, gnd, 8 * k, ASH, 5)
 	boltFb(ctx, gnd + Vector3.new(0, 3, 0), 10 * k, NEBULA)
 	Vfx.Pack("Big/Explosion-01", CFrame.new(gnd + Vector3.new(0, 1, 0)), { Color = GOLDEN_STAR, Size = 0.45 * k, Count = 0.35 })
 	table.sort(dark, function(a, b)
@@ -1304,7 +1267,6 @@ function Fx.KenosSlam(ctx: any)
 	boomFb(ctx, ground + Vector3.new(0, 1.8, 0), 16, GOLDEN_STAR)
 	shatterFb(ctx, ground + Vector3.new(0, 1.2, 0), 18, STAR_CORE)
 	waveFb(ctx, ground + Vector3.new(0, 0.3, 0), 28, NEBULA, 0.8)
-	smokeFb(ctx, ground, 12, ASH, 6)
 	for i = 0, 2 do
 		boltFb(ctx, ground + CFrame.Angles(0, math.rad(i * 120 + 30), 0) * Vector3.new(5, 3, 0), 9, if i == 1 then CORONA else NEBULA)
 	end
@@ -1327,13 +1289,11 @@ function Fx.KenosCrash(ctx: any)
 	local Vfx = ctx.Vfx
 	local ground = Vector3.new(ctx.Root.Position.X, ctx.Ground + 0.2, ctx.Root.Position.Z)
 	Vfx.Ring(CFrame.new(ground), { R0 = 1, R1 = 12, Color = STAR_CORE, Life = 0.6, Width = 0.4, Height = 0.07 })
-	Vfx.Dust(ground, { Color = c(190, 196, 214), Count = 14, Size = 1.6, Speed = 14 })
 	Vfx.Pack("Anime/Crack-01", CFrame.new(ground), { Color = STAR, Size = 1.8 })
 	Vfx.Pack("Loose/Shockwave", CFrame.new(ground + Vector3.new(0, 0.5, 0)), { Color = STAR_CORE, Size = 0.7 })
 	impactFb(ctx, ground + Vector3.new(0, 1, 0), 7, STAR_CORE)
 	waveFb(ctx, ground + Vector3.new(0, 0.3, 0), 18, STAR, 0.6)
 	shatterFb(ctx, ground + Vector3.new(0, 1.5, 0), 10, DEEP)
-	smokeFb(ctx, ground, 8, ASH, 4)
 end
 
 return Fx

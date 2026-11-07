@@ -15,7 +15,6 @@ local TEX = {
 	Slash = "rbxassetid://16939611858",
 	Impact = "rbxassetid://16923007448",
 	Hit = "rbxassetid://16678929169",
-	Smoke = "rbxassetid://14006773822",
 	Fire = "rbxassetid://13818306392",
 	Break = "rbxassetid://15514662196",
 	Energy = "rbxassetid://15041986621",
@@ -37,7 +36,6 @@ local Fx = {}
 
 function Fx.Stomp(ctx: any)
 	Common.Land(ctx.Vfx, Common.Feet(ctx), 0.8, STONE)
-	fb(ctx.Vfx, Common.Feet(ctx) + Vector3.new(0, 0.4, 0), { Texture = TEX.Smoke, Size = 4, Color = STONE, Life = 0.7, Transparency = 0.5 })
 end
 
 function Fx.GroundTap(ctx: any)
@@ -45,7 +43,6 @@ function Fx.GroundTap(ctx: any)
 	ctx.Vfx.Sparks(p + Vector3.new(0, 0.2, 0), { Color = SPARK, Count = 10 })
 	ctx.Vfx.Ring(CFrame.new(p + Vector3.new(0, 0.12, 0)), { R0 = 0.3, R1 = 1.6, Color = GOLD, Life = 0.3, Width = 0.1, Height = 0.05 })
 	fb(ctx.Vfx, p + Vector3.new(0, 0.3, 0), { Texture = TEX.Hit, Size = 3, Color = SPARK, Life = 0.25, LightEmission = 1 })
-	fb(ctx.Vfx, p + Vector3.new(0, 0.3, 0), { Texture = TEX.Smoke, Size = 2.5, Color = STONE, Life = 0.5, Transparency = 0.55 })
 end
 
 -- 방어: 발 앞 땅에서 돌벽이 쿵 솟는다
@@ -55,18 +52,14 @@ function Fx.StoneWall(ctx: any)
 	local cf = CFrame.lookAt(base, base + ctx.Forward)
 	Vfx.Block(cf * CFrame.new(0, 1.6, 0), Vector3.new(3.6, 3.2, 0.9), { Color = STONE, Material = Enum.Material.Slate, Rise = 0.1, Hold = 0.55 })
 	Vfx.Block(cf * CFrame.new(-1.4, 1.1, 0.3), Vector3.new(1.2, 2.2, 1), { Color = c(140, 134, 124), Material = Enum.Material.Slate, Rise = 0.12, Hold = 0.5 })
-	Vfx.Dust(base, { Count = 10, Color = STONE, Size = 1.2 })
 	Common.Rubble(Vfx, base + Vector3.new(0, 0.5, 0), 6, STONE)
 	-- 벽이 솟는 땅: 돌가루 구름 + 금 가는 바닥 + 축성 빛가루
-	fb(Vfx, base + Vector3.new(0, 0.5, 0), { Texture = TEX.Smoke, Size = 7, Color = STONE, Life = 0.9, Transparency = 0.4, Speed = 5, Spread = 90 })
 	fb(Vfx, base + Vector3.new(0, 1.6, 0), { Texture = TEX.Break, Size = 5, Color = GOLD, Life = 0.35, LightEmission = 0.7, Transparency = 0.4 })
 	Vfx.Pack("Anime/Crack-01", CFrame.new(base + Vector3.new(0, 0.2, 0)), { Color = c(90, 80, 70), Size = 0.4 })
 	Vfx.Pack("Loose/Sparkles", CFrame.new(base + Vector3.new(0, 1.8, 0)), { Color = GOLD, Size = 0.5 })
 end
 
-function Fx.RollDust(ctx: any)
-	ctx.Vfx.Dust(Common.Feet(ctx), { Count = 8, Color = STONE, Size = 1 })
-	fb(ctx.Vfx, Common.Feet(ctx) + Vector3.new(0, 0.4, 0), { Texture = TEX.Smoke, Size = 3.5, Color = STONE, Life = 0.6, Transparency = 0.55 })
+function Fx.RollDust(_ctx: any)
 end
 
 -- 정 다듬기: 정 끝에서 불꽃이 튄다(톡)
@@ -88,11 +81,9 @@ function Fx.ChiselHit(ctx: any, _ev: any, at: Vector3?)
 	Common.Rubble(Vfx, p, 10, STONE)
 	Vfx.Ring(CFrame.lookAt(p, p + ctx.Forward), { R0 = 0.3, R1 = 2.4, Color = GOLD, Life = 0.3, Width = 0.18, Facing = true })
 	Vfx.Pack("Anime/Punch-03", CFrame.new(p), { Color = GOLD, Size = 0.9 })
-	Vfx.Pack("Anime/Smoke-01", CFrame.new(p), { Color = STONE, Size = 0.6 })
 	-- 석공 한 방: 균열 번쩍(금 간 돌) → 슬래시 임팩트 → 돌가루 구름
 	fb(Vfx, p, { Texture = TEX.Break, Size = 7, Color = GOLD, Life = 0.35, LightEmission = 0.8, Transparency = 0.3 })
 	fb(Vfx, p, { Texture = TEX.Impact, Size = 6, Color = SPARK, Life = 0.3, LightEmission = 1, Transparency = 0.1 })
-	fb(Vfx, p, { Texture = TEX.Smoke, Size = 6, Color = STONE, Life = 0.9, Transparency = 0.45, Speed = 4, Spread = 180 })
 	Vfx.Pack("Anime/Crack-01", CFrame.new(Vector3.new(p.X, ctx.Ground + 0.2, p.Z)), { Color = c(90, 80, 70), Size = 0.4 })
 	Vfx.Pack("Loose/MiniSparks", CFrame.new(p), { Color = SPARK, Size = 0.6 })
 end
@@ -107,8 +98,6 @@ function Fx.WallBreakWave(ctx: any)
 		task.delay(i * 0.05, function()
 			local p = start + ctx.Forward * (i * 2.6)
 			Vfx.Block(CFrame.new(p) * CFrame.Angles(0, math.rad(i * 37), 0) * CFrame.new(0, 0.7, 0), Vector3.new(1.4, 1.4 + i * 0.25, 1.4), { Color = STONE, Material = Enum.Material.Slate, Rise = 0.08, Hold = 0.25 })
-			Vfx.Dust(p, { Count = 5, Color = STONE, Size = 1 })
-			fb(Vfx, p + Vector3.new(0, 0.6, 0), { Texture = TEX.Smoke, Size = 4.5, Color = STONE, Life = 0.7, Transparency = 0.45 })
 			fb(Vfx, p + Vector3.new(0, 0.8, 0), { Texture = TEX.Break, Size = 3.5, Color = GOLD, Life = 0.3, LightEmission = 0.7, Transparency = 0.4 })
 		end)
 	end
@@ -121,7 +110,6 @@ function Fx.Rubble(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
 	Common.Rubble(ctx.Vfx, p, 12, STONE)
 	ctx.Vfx.Flash(p, { Color = GOLD, Size = 6, Life = 0.2 })
-	fb(ctx.Vfx, p, { Texture = TEX.Smoke, Size = 5, Color = STONE, Life = 0.8, Transparency = 0.45, Speed = 3, Spread = 180 })
 	fb(ctx.Vfx, p, { Texture = TEX.Hit, Size = 4, Color = SPARK, Life = 0.25, LightEmission = 1 })
 end
 
@@ -150,7 +138,6 @@ function Fx.Consecrate(ctx: any)
 	for k = 0, 3 do
 		local a = k / 4 * math.pi * 2 + math.pi / 4
 		local p = feet + Vector3.new(math.cos(a) * 3.2, 0.4, math.sin(a) * 3.2)
-		fb(Vfx, p, { Texture = TEX.Smoke, Size = 4, Color = STONE, Life = 0.8, Transparency = 0.5 })
 		Vfx.Pack("Loose/Sparkles", CFrame.new(p + Vector3.new(0, 1.5, 0)), { Color = GOLD, Size = 0.5 })
 	end
 	Vfx.Pack("Anime/Stars-01", CFrame.new(feet + Vector3.new(0, 3, 0)), { Color = GOLD, Size = 0.6 })

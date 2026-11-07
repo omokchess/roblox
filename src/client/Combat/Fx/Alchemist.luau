@@ -13,12 +13,10 @@ local ORANGE = c(255, 140, 60)
 local PURPLE = c(180, 110, 255)
 local GLASS = c(220, 245, 240)
 local HERB = c(150, 190, 90)
-local TOXIC = c(140, 220, 120)
 
 -- 플립북 그림(tools/combat/out/vfx_textures.tsv 의 flip=Grid* 만)
 local TEX = {
 	Splash = { "rbxassetid://17063077953", "Grid4x4" },
-	Smoke = { "rbxassetid://14006773822", "Grid4x4" },
 	Water = { "rbxassetid://16664715772", "Grid4x4" },
 	Water2 = { "rbxassetid://16664772965", "Grid4x4" },
 	Fire = { "rbxassetid://13818306392", "Grid4x4" },
@@ -44,22 +42,13 @@ local function fb(ctx: any, at: Vector3, key: string, o: { [string]: any })
 	flip(at, opt)
 end
 
--- 여운: 약물 김이 피어오른다
-local function vapor(ctx: any, at: Vector3, color: Color3, size: number, delay: number)
-	task.delay(delay, function()
-		fb(ctx, at, "Smoke", { Size = size, Color = color, Transparency = 0.45, Life = 1, Accel = Vector3.new(0, 2.5, 0), LightEmission = 0.1 })
-	end)
-end
-
 local Fx = {}
 
 local function bubbles(Vfx: any, at: Vector3, color: Color3, count: number)
 	Vfx.Burst(at, { Count = count, Color = color, Size = 0.22, Speed = 5, Gravity = -12, Life = 0.7, Material = Enum.Material.Neon })
 end
 
-function Fx.Stumble(ctx: any)
-	ctx.Vfx.Dust(Common.Feet(ctx), { Count = 5, Size = 0.8 })
-	fb(ctx, Common.Feet(ctx) + Vector3.new(0, 0.4, 0), "Smoke", { Size = 2, Color = c(190, 185, 170), Transparency = 0.5, Life = 0.5, LightEmission = 0 })
+function Fx.Stumble(_ctx: any)
 end
 
 function Fx.Slosh(ctx: any)
@@ -76,9 +65,7 @@ end
 -- 다지기: 절구(왼손 병) 위로 풀빛 가루가 폴폴
 function Fx.GrindPuff(ctx: any)
 	local p = ctx.Tip("O") or ctx.Root.Position
-	ctx.Vfx.Dust(p, { Count = 5, Color = HERB, Size = 0.6, Speed = 4 })
 	ctx.Vfx.Sparks(p, { Color = HERB, Count = 6, MinSpeed = 2, Speed = 6, Accel = Vector3.new(0, 3, 0) })
-	fb(ctx, p, "Smoke", { Size = 1.8, Color = HERB, Transparency = 0.5, Life = 0.5, Accel = Vector3.new(0, 2, 0), LightEmission = 0 })
 end
 
 function Fx.GrindDone(ctx: any)
@@ -106,7 +93,6 @@ function Fx.Fizz(ctx: any)
 			local p = ctx.Tip(if i % 2 == 0 then "W" else "O") or ctx.Root.Position
 			local col = if i % 2 == 0 then GREEN else ORANGE
 			bubbles(Vfx, p, col, 5)
-			fb(ctx, p, "Smoke", { Size = 1.8, Color = col, Transparency = 0.5, Life = 0.5, Accel = Vector3.new(0, 2, 0), LightEmission = 0.2 })
 			if i % 2 == 1 then
 				fb(ctx, p, "Fire", { Size = 1.6, Color = ORANGE, Transparency = 0.4, Life = 0.4, Accel = Vector3.new(0, 3, 0), LightEmission = 0.4 })
 			end
@@ -122,7 +108,6 @@ function Fx.MixDone(ctx: any)
 	fb(ctx, p, "Charge", { Size = 3.6, Color = PURPLE, Life = 0.4, LightEmission = 0.5 })
 	fb(ctx, p, "Splash", { Size = 3.4, Color = GREEN, Life = 0.4, LightEmission = 0.3 })
 	Vfx.Pack("Anime/Stars-01", CFrame.new(p), { Color = PURPLE, Size = 0.5 })
-	vapor(ctx, p, PURPLE, 3, 0.15)
 end
 
 -- 던지기: 손의 병 모양 그대로 포물선을 그려 날아간다(0.45초 뒤 Hit)
@@ -155,16 +140,13 @@ function Fx.Shatter(ctx: any, _ev: any, at: Vector3?)
 	Vfx.Burst(p, { Count = 12, Colors = { GREEN, c(80, 200, 80) }, Size = 0.4, Speed = 14, Gravity = 50, Life = 0.7, Material = Enum.Material.Neon })
 	Vfx.Flash(p, { Color = GREEN, Size = 7, Life = 0.2 })
 	Vfx.Ring(CFrame.new(Vector3.new(p.X, ctx.Ground + 0.12, p.Z)), { R0 = 0.5, R1 = 3.6, Color = GREEN, Life = 0.5, Width = 0.3, Height = 0.05 })
-	Vfx.Dust(p - Vector3.new(0, 1, 0), { Count = 10, Color = c(170, 230, 150), Size = 1.2 })
 	Vfx.Pack("Anime/Splash-01", CFrame.new(p), { Color = GREEN, Size = 1.2 })
-	Vfx.Pack("Anime/Smoke-01", CFrame.new(p - Vector3.new(0, 0.5, 0)), { Color = c(170, 230, 150), Size = 0.8 })
 	-- 타격 층: 병 깨짐(유리 파편 모양) + 약물 튐 + 임팩트
 	fb(ctx, p, "Shatter", { Size = 6, Color = GLASS, Life = 0.4, LightEmission = 0.4, Transparency = 0.3 })
 	fb(ctx, p, "Splash", { Size = 6, Color = GREEN, Life = 0.5, LightEmission = 0.3 })
 	fb(ctx, p, "Punch", { Size = 4, Color = c(200, 255, 190), Life = 0.26, LightEmission = 0.5 })
 	Vfx.Pack("Anime/Stars-01", CFrame.new(p), { Color = GLASS, Size = 0.5 })
 	-- 여운: 바닥에 번지는 약물 웅덩이 김
-	vapor(ctx, p - Vector3.new(0, 0.6, 0), TOXIC, 5, 0.2)
 end
 
 function Fx.Pop(ctx: any)
@@ -188,7 +170,6 @@ end
 
 function Fx.Shudder(ctx: any)
 	ctx.Vfx.Burst(ctx.Root.Position, { Count = 8, Colors = { GREEN, PURPLE }, Size = 0.25, Speed = 10, Gravity = -4, Life = 0.5, Material = Enum.Material.Neon })
-	fb(ctx, ctx.Root.Position, "Smoke", { Size = 3.2, Color = PURPLE, Transparency = 0.5, Life = 0.6, LightEmission = 0.2 })
 	fb(ctx, ctx.Root.Position, "Charge", { Size = 3, Color = GREEN, Life = 0.4, LightEmission = 0.5, Transparency = 0.3 })
 end
 
@@ -198,24 +179,18 @@ function Fx.ToxicAura(ctx: any)
 	local feet = Common.Feet(ctx)
 	Vfx.Pillar(feet, { Color = GREEN, Height = 10, Width = 3, Life = 0.6 })
 	Vfx.Shockwave(feet + Vector3.new(0, 0.1, 0), { Color = GREEN, Radius = 5, Life = 0.5 })
-	Vfx.Dust(ctx.Root.Position, { Count = 14, Color = TOXIC, Size = 1.4, Speed = 10 })
 	-- 예비·여운: 독 기운이 피어오르고 안개가 앞으로 번진다
 	fb(ctx, ctx.Root.Position, "Charge", { Size = 5, Color = GREEN, Life = 0.5, LightEmission = 0.5, Transparency = 0.3 })
-	fb(ctx, feet + Vector3.new(0, 1.2, 0), "Smoke", { Size = 6, Color = TOXIC, Transparency = 0.5, Life = 1, Accel = Vector3.new(0, 2, 0), LightEmission = 0.15 })
-	fb(ctx, feet + ctx.Forward * 2.5 + Vector3.new(0, 1, 0), "Smoke", { Size = 7, Color = TOXIC, Transparency = 0.55, Life = 1.1, LightEmission = 0.15 })
-	Vfx.Pack("Anime/Smoke-01", CFrame.new(feet + Vector3.new(0, 1, 0)), { Color = TOXIC, Size = 1.2 })
 	Vfx.Pack("Anime/Stars-01", CFrame.new(ctx.Root.Position), { Color = GREEN, Size = 0.5 })
 end
 
 function Fx.ToxicHit(ctx: any, _ev: any, at: Vector3?)
 	local p = at or ctx.Target
-	ctx.Vfx.Dust(p, { Count = 10, Color = TOXIC, Size = 1.3 })
 	bubbles(ctx.Vfx, p, GREEN, 10)
 	ctx.Vfx.Flash(p, { Color = GREEN, Size = 5, Life = 0.18 })
 	fb(ctx, p, "Splash", { Size = 4.5, Color = GREEN, Life = 0.45, LightEmission = 0.3 })
 	fb(ctx, p, "Punch", { Size = 3.4, Color = c(190, 255, 170), Life = 0.26, LightEmission = 0.5 })
 	ctx.Vfx.Pack("Anime/Splash-01", CFrame.new(p), { Color = GREEN, Size = 0.8, Count = 0.6 })
-	vapor(ctx, p, TOXIC, 4, 0.15)
 end
 
 function Fx.Meditate(ctx: any)

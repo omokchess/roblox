@@ -12,7 +12,6 @@ local STEEL = c(214, 234, 255)
 local EDGE = c(150, 200, 255)
 local RED = c(220, 30, 40)
 local BLOODC = c(200, 40, 48)
-local SMOKE = c(190, 198, 215)
 local SPARK = c(255, 220, 150)
 
 -- 플립북 그림(tools/combat/out/vfx_textures.tsv 의 flip=Grid* 만)
@@ -21,7 +20,6 @@ local TEX = {
 	Slash = { "rbxassetid://16939611858", "Grid4x4" },
 	BloodPunch = { "rbxassetid://16668936898", "Grid4x4" },
 	Blood = { "rbxassetid://16664856199", "Grid4x4" },
-	Smoke = { "rbxassetid://14006773822", "Grid4x4" },
 	Charge = { "rbxassetid://15041986621", "Grid4x4" },
 	Bolt = { "rbxassetid://16951505034", "Grid2x2" },
 	Punch = { "rbxassetid://16937107174", "Grid4x4" },
@@ -41,20 +39,12 @@ local function fb(ctx: any, at: Vector3, key: string, o: { [string]: any })
 	flip(at, opt)
 end
 
--- 여운: 칼이 스친 자리에 가벼운 연기가 피어오른다
-local function afterglow(ctx: any, at: Vector3, k: number, delay: number)
-	task.delay(delay, function()
-		fb(ctx, at + Vector3.new(0, 0.4, 0), "Smoke", { Size = 3 * k, Color = SMOKE, Transparency = 0.45, Life = 0.9, Accel = Vector3.new(0, 2.5, 0), LightEmission = 0 })
-	end)
-end
-
 local Fx = {}
 
 function Fx.Appel(ctx: any)
 	local foot = ctx.Root.Position + ctx.Forward * 1.2
 	local ground = Vector3.new(foot.X, ctx.Ground, foot.Z)
 	Common.Land(ctx.Vfx, ground, 0.6)
-	fb(ctx, ground + Vector3.new(0, 0.5, 0), "Smoke", { Size = 2.2, Color = SMOKE, Transparency = 0.5, Life = 0.6, LightEmission = 0 })
 	ctx.Vfx.Pack("Anime/Stars-01", CFrame.new(ground + Vector3.new(0, 0.4, 0)), { Color = STEEL, Size = 0.35 })
 end
 
@@ -68,7 +58,6 @@ local function pierce(ctx: any, at: Vector3, dir: Vector3, scale: number)
 	-- 타격 층: 은빛 임팩트 + 뒤로 뿜는 혈흔
 	fb(ctx, at, "SlashImpact", { Size = 4.5 * scale, Color = STEEL, Life = 0.32, LightEmission = 0.5 })
 	fb(ctx, at + dir * 0.9, "BloodPunch", { Size = 3.2 * scale, Color = BLOODC, Life = 0.45, LightEmission = 0, Speed = 3, Spread = 25 })
-	afterglow(ctx, at, scale, 0.18)
 end
 
 function Fx.Pierce(ctx: any, _ev: any, at: Vector3?)
@@ -198,7 +187,6 @@ function Fx.PointBlank(ctx: any, _ev: any, at: Vector3?)
 		fb(ctx, p - dir * 1.5, "Blood", { Size = 4, Color = BLOODC, Life = 0.5, LightEmission = 0 })
 	end)
 	-- 여운: 꿰뚫린 자리의 연기
-	afterglow(ctx, p, 1.6, 0.3)
 end
 
 -- 피 털기: 칼 옆으로 핏방울이 흩뿌려진다

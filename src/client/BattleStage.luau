@@ -32,7 +32,9 @@ local function tile(name: string, cf: CFrame, size: Vector3, parent: Instance): 
 	gui.Name = "Mark"
 	gui.Adornee = p
 	gui.Face = Enum.NormalId.Top
-	gui.AlwaysOnTop = true
+	-- 2026-11-07 사용자: "플레이어가 칸보다 레이어가 낮아서 플레이어가 반투명해보이는 문제" → AlwaysOnTop 은 캐릭터까지 덮는다.
+	-- 보통 깊이로 되돌려 캐릭터가 칸 앞에 오게 한다(은하가 덮는 문제는 은하 쪽 ZOffset 으로).
+	gui.AlwaysOnTop = false
 	gui.LightInfluence = 0
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	gui.PixelsPerStud = 24
