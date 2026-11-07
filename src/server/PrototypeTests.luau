@@ -459,6 +459,24 @@ local function runCardEffects()
 	GridBattle.ResolveDodge(stars, starFoe.Id, "Success")
 	expect((starAlly :: any).StarLit and (starAlly :: any).StarLit.Phecda == true, "페크다 must light when the ally dodges by QTE")
 	expect((starAlly :: any).StarLit.Dubhe == true, "두베 must always light in debug god / auto-dodge mode")
+	-- 셉텐트리오네스 뒤 3턴 동안 칠성 잠김(2026-11-07 사용자: "다음턴에 바로 셉텐트리오네스를 또 사용할 수 있어")
+	do
+		local Effects = require(ReplicatedStorage.Shared.BattleSkillEffects)
+		local lockBattle = battleWith("Attuner", {})
+		lockBattle.Debug = { God = true, NoCooldown = true }
+		local lockAlly = GridBattle.Ally(lockBattle) :: any
+		local function gain(_id: string, amount: number): number
+			return amount
+		end
+		Effects.ResetStars(lockAlly)
+		expect(Effects.LightStar(lockAlly, "Megrez", gain) == 0, "칠성 must not light right after Septentriones")
+		for _ = 1, 3 do -- 쓴 턴 끝 + 다음 두 턴 끝: 아직 잠김(세 번째 턴)
+			GridBattle.EndTurn(lockBattle)
+		end
+		expect(Effects.LightStar(lockAlly, "Megrez", gain) == 0, "칠성 lock must last 3 turns after Septentriones")
+		GridBattle.EndTurn(lockBattle)
+		expect(Effects.LightStar(lockAlly, "Megrez", gain) == 1, "칠성 must light again once the 3-turn lock ends")
+	end
 	-- 두베: 공격 한 번에 받은 피해(보호막이 먹은 양도 그대로) ≥ 최대 체력 14%. 최대 체력 100 이면 슬라임 한 대(18 이상)가
 	-- 보호막에 막혀도 켜진다. 최대 체력 200 이면 한 대(18 ~ 27 < 28)씩 두 번 맞아도 쌓이지 않는다
 	local function hits(maxHealth: number, shield: number, count: number): boolean

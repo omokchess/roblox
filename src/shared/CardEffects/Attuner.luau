@@ -115,6 +115,13 @@ M.Attuner_Kit = {
 	},
 	TurnEnd = function(c: Card)
 		local ally = H.Ally(c)
+		-- 셉텐트리오네스 뒤 [칠성] 잠김(BattleSkillEffects.STAR_LOCK_TURNS)
+		if (ally.StarLock or 0) > 0 then
+			ally.StarLock -= 1
+			if ally.StarLock == 0 then
+				H.Log(c, "칠성 잠김 풀림")
+			end
+		end
 		-- [묶임]은 공통 상태이상 — 턴 끝 풀기는 GridBattle.EndTurn 이 누구에게나(2026-11-01)
 		if H.Stack(c, R.FUSION) > 0 then
 			ally.FusionAge = (ally.FusionAge or 0) + 1

@@ -1369,10 +1369,16 @@ function BattleSkillEffects.RefreshStars(status: BattleStatus.State)
 	end
 end
 
--- 별 하나를 켠다. 이미 켜졌으면 0. gain 은 직업 규칙대로 자원을 주는 함수(ctx.Gain · H.Gain)
+--[[
+	셉텐트리오네스를 쓴 뒤 [칠성]을 얻지 못하는 턴 수(2026-11-07 사용자: "셉텐트리오네스를 사용하고 다음턴에 바로 셉텐트리오네스를 또 사용할 수 있어.
+	사용 후 3턴간 `칠성` 획득 불가능.을 넣자"). 쓴 턴의 남은 시간(적 차례)도 막고, 그 뒤 3턴 동안 — `StarLock` 은 조율자 키트의 턴 끝마다 1씩 준다.
+]]
+BattleSkillEffects.STAR_LOCK_TURNS = 3
+
+-- 별 하나를 켠다. 이미 켜졌거나 셉텐트리오네스 뒤 잠김이면 0. gain 은 직업 규칙대로 자원을 주는 함수(ctx.Gain · H.Gain)
 function BattleSkillEffects.LightStar(ally: any, source: string, gain: (string, number) -> number): number
 	ally.StarLit = ally.StarLit or {}
-	if ally.StarLit[source] then
+	if ally.StarLit[source] or (ally.StarLock or 0) > 0 then
 		return 0
 	end
 	ally.StarLit[source] = true
@@ -1381,9 +1387,10 @@ function BattleSkillEffects.LightStar(ally: any, source: string, gain: (string, 
 	return gained
 end
 
--- 셉텐트리오네스 뒤: 별을 전부 끈다
+-- 셉텐트리오네스 뒤: 별을 전부 끄고 STAR_LOCK_TURNS 동안 잠근다(쓴 턴 끝에도 1 줄어드니 +1)
 function BattleSkillEffects.ResetStars(ally: any)
 	ally.StarLit = {}
+	ally.StarLock = BattleSkillEffects.STAR_LOCK_TURNS + 1
 	BattleStatus.SpendAll(ally.Status, R.STAR)
 	BattleSkillEffects.RefreshStars(ally.Status)
 end
