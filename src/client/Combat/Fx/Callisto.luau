@@ -903,11 +903,16 @@ local DIPPER_PAL = {
 	Glow = GOLDEN,
 }
 local DIPPER_LINKS = { { 1, 2 }, { 2, 3 }, { 3, 4 }, { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 } } -- 손잡이 → 국자 테두리
--- 리듬(2026-11-07 사용자: "따다다다다다다- 쿠구구구구- 콰앙!!!"): 연사 0.6~1.08(0.08초 간격) → 모으기·우르릉 1.15~2.0 → 강타 2.0. 모션 표(Skills.CallistoDipper)와 같아야 한다
-local DIPPER_END = 2.0 -- 강타(DipperCrash) 시각 — 별자리 선이 여기까지 남는다
+-- 리듬(2026-11-07 사용자: "띵 - 띵-띵ㅡ 띠디디디딩- 쿠구구구구... 콰앙!!!"): 카메라 이동·입자 모임 0.15~1.05 → 별 탄생(0.09초씩 순차) 1.05~1.59 → 떨림 1.95 → 레이저 가속 2.3~3.44 → 회전 이동·우르릉 3.25~4.7 → 강타 4.7. 모션 표(Skills.CallistoDipper)와 같아야 한다
+local DIPPER_END = 4.7 -- 강타(DipperCrash) 시각 — 별자리 선이 여기까지 남는다
 local DIPPER_T0 = 0.15 -- Dipper 사건 시각
-local DIPPER_LASER_T = { 0.6, 0.68, 0.76, 0.84, 0.92, 1.0, 1.08 } -- DipperLaser 사건 시각 — 카메라가 멈추지 않고 이 시각에 각 별 곁을 지난다
-local DIPPER_GATHER_T = 1.15 -- DipperGather 사건 시각
+local DIPPER_BIRTH_T = 1.05 -- 첫 별(알카이드) 탄생 시각, 이후 DIPPER_BIRTH_STEP 간격
+local DIPPER_BIRTH_STEP = 0.09
+local DIPPER_TREMBLE_T = 1.95 -- 별 떨림 시작(레이저 직전까지 진폭 증가)
+local DIPPER_LASER_T = { 2.3, 2.75, 3.05, 3.25, 3.33, 3.39, 3.44 } -- 간격 0.45 · 0.30 · 0.20 · 0.08 · 0.06 · 0.05
+local DIPPER_PUNCH_N = 3 -- 첫 세 발만 줌 펀치
+local DIPPER_GATHER_T = 3.25 -- DipperGather 사건 시각(카메라 회전 이동 시작)
+local DIPPER_ORBIT = 0.7 -- 회전 이동 시간
 
 local dipperStates: { [any]: any } = setmetatable({}, { __mode = "k" }) :: any
 local function dstate(ctx: any): any
@@ -964,84 +969,113 @@ local function dipperGround(ctx: any, stars: { Vector3 }): { Vector3 }
 	return out
 end
 
--- 북두칠성 1: 하늘에 큰 별 일곱이 차례로 켜져 금빛 공으로 떠 있고(강타까지 맥동) 선으로 이어진다
+-- 북두칠성 1: 카메라가 먼저 하늘로 옮겨 가고 → 별가루 입자가 별자리 모양으로 모였다가 → 별이 차례로 터지듯 커지고 → 떨린다
 function Fx.Dipper(ctx: any)
 	local Vfx = ctx.Vfx
 	local s = dstate(ctx)
 	local stars = dipperStars(ctx)
 	s.Stars, s.Ground, s.Fired, s.Slammed, s.Gather = stars, dipperGround(ctx, stars), {}, false, false
+	local t0 = os.clock()
+	local function birthOf(i: number): number -- Dipper 사건 기준 상대 시각
+		return DIPPER_BIRTH_T + DIPPER_BIRTH_STEP * (i - 1) - DIPPER_T0
+	end
+	-- 별가루: 별 자리마다 4알 + 이을 선마다 5알이 흩어진 자리에서 별자리 모양으로 모여든다(별이 태어나면 그 별 알은 사라진다) — 총 63알
+	local motes = {}
+	local rng = Random.new(7)
+	local function addMote(target: Vector3, dieAt: number, i: number)
+		local part = Vfx.Part(Vector3.one * 0.35, CFrame.new(target), STAR_CORE)
+		part.Shape = Enum.PartType.Ball
+		part.Transparency = 1
+		local off = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1)).Unit * rng:NextNumber(7, 16)
+		table.insert(motes, { Part = part, To = target, Off = off, Die = dieAt, Delay = rng:NextNumber(0, 0.25), Ph = i + rng:NextNumber(0, 6) })
+	end
 	for i, p in stars do
-		task.delay(0.03 * i, function()
+		for _ = 1, 4 do
+			addMote(p + Vector3.new(rng:NextNumber(-0.4, 0.4), rng:NextNumber(-0.4, 0.4), rng:NextNumber(-0.4, 0.4)), birthOf(i), i)
+		end
+	end
+	for li, link in DIPPER_LINKS do
+		for k = 1, 5 do
+			addMote(stars[link[1]]:Lerp(stars[link[2]], k / 6), birthOf(math.max(link[1], link[2])), li)
+		end
+	end
+	Vfx.Timed(birthOf(7) + 0.3, function(_, _dt)
+		local el = os.clock() - t0
+		for _, m in motes do
+			local u = math.clamp((el - 0.05 - m.Delay) / 0.7, 0, 1)
+			m.Part.Position = m.To + m.Off * (1 - Common.expoOut(u)) + Vector3.new(0, math.sin(el * 6 + m.Ph) * 0.15, 0)
+			local twinkle = 0.25 + 0.2 * math.sin(el * 14 + m.Ph)
+			m.Part.Transparency = if el >= m.Die then 1 else math.max(0, 1 - u * 1.2) * 0.6 + twinkle * 0.4
+		end
+	end, function()
+		for _, m in motes do
+			m.Part:Destroy()
+		end
+	end)
+	-- 별 탄생: 알카이드 → 두베 순서로 빠르게 연달아 터지며 커진다
+	for i, p in stars do
+		task.delay(birthOf(i), function()
 			local glow = Vfx.Part(Vector3.one * 0.3, CFrame.new(p), GOLDEN)
 			glow.Shape = Enum.PartType.Ball
 			local core = Vfx.Part(Vector3.one * 0.2, CFrame.new(p), STAR_CORE)
 			core.Shape = Enum.PartType.Ball
 			glow.Transparency, core.Transparency = 0.4, 0.05
 			local gone, t = 0, 0
-			Vfx.Timed(5.4, function(_, dt)
+			Vfx.Timed(DIPPER_END - DIPPER_BIRTH_T + 0.6, function(_, dt)
 				t += dt
 				if s.Slammed then
 					gone = math.min(1, gone + dt / 0.3)
 				end
-				local k = Common.expoOut(t / 0.2) * (1 - gone)
+				local k = Common.expoOut(t / 0.4) * (1 - gone)
+				local el = os.clock() - t0 + DIPPER_T0
+				-- 떨림: 모두 커진 뒤(DIPPER_TREMBLE_T) 레이저 직전까지 진폭이 커지고, 이후엔 잔떨림 + 깜빡
+				local tr = math.clamp((el - DIPPER_TREMBLE_T) / (DIPPER_LASER_T[1] - DIPPER_TREMBLE_T), 0, 1)
+				local amp = if el < DIPPER_TREMBLE_T then 0 else 0.08 + 0.5 * tr
+				local n = el * 40 + i * 7
+				local at = p + Vector3.new(math.noise(n, 1.1), math.noise(2.2, n), math.noise(n, 3.3)) * amp
+				glow.Position, core.Position = at, at
 				local pulse = if s.Gather then 1.35 else 1 + 0.1 * math.sin(t * 9 + i)
 				glow.Size = Vector3.one * (3.4 * k * pulse + 0.01)
 				core.Size = Vector3.one * (1.5 * k * pulse + 0.01)
+				if amp > 0 and not s.Gather then
+					glow.Transparency = 0.4 + 0.25 * (math.noise(n, 8.8) * 0.5 + 0.5) * tr -- 깜빡
+				end
 			end, function()
 				glow:Destroy()
 				core:Destroy()
 			end)
-			Vfx.Flash(p, { Color = STAR_CORE, Size = 4, Life = 0.25, Brightness = 5 })
-			Vfx.Pack("Loose/Flare", CFrame.new(p), { Color = STAR_CORE, Size = 0.9 })
+			-- 한번에 터져 나오는 별빛
+			Vfx.Flash(p, { Color = FLASH, Size = 5, Life = 0.18, Brightness = 6 })
+			Vfx.Pack("Loose/Sparkles", CFrame.new(p), { Color = STAR_CORE, Size = 1.2 })
+			Vfx.Pack("Loose/Flare", CFrame.new(p), { Color = STAR_CORE, Size = 1.0 })
+			Vfx.Pack("Anime/Stars-01", CFrame.new(p), { Color = GOLDEN, Size = 0.6 })
 			chargeFb(ctx, p, 5, GOLDEN)
 			if i > 1 then
-				Vfx.Beam(stars[i - 1], p, { Color = GOLDEN, Width = 0.3, Life = math.max(0.5, DIPPER_END - DIPPER_T0 - 0.03 * i) })
+				Vfx.Beam(stars[i - 1], p, { Color = GOLDEN, Width = 0.3, Life = math.max(0.5, DIPPER_END - DIPPER_T0 - birthOf(i)) })
 			end
 		end)
 	end
-	-- 카메라 동선 (a): 알카이드(1)에서 두베(7)까지 멈추지 않는 한 번의 연속 이동 — 각 별 곁에 도착하는 시각이 곧 그 별의 발사 시각이라 레이저가 지나가며 차례로 터진다.
-	-- 별 순서 알카이드 → 미자르 → 알리오스 → 메그레즈 → 페크다 → 메라크 → 두베 = 배열 1~7. 카메라는 별보다 약간 높은 곳(별 +3.5)에서 별과 바닥 사이를 바라본다(약 25° 내려다봄 — 올려다보지 않는다)
+	-- 카메라 (a): 먼저 별자리 앞 하늘 자리로 옮겨 가 잡고(0.75초) 머문다. 별보다 높은 곳에서 약 25° 내려다봄 — 올려다보지 않는다.
+	-- 레이저 첫 세 발만 작게 앞으로 쿵(줌 펀치), 나머지 연사는 펀치 없이 쏟아진다
 	local f = ctx.Forward
-	local r = f:Cross(Vector3.yAxis)
-	local way, look, arrive = {}, {}, {}
-	local gmid = if s.Ground then center(s.Ground) else center(stars)
-	for i = 1, 7 do
-		way[i] = stars[i] + r * 8 + f * 12 + Vector3.new(0, 3.5, 0)
-		look[i] = stars[i]:Lerp(gmid, 0.3)
-		arrive[i] = DIPPER_LASER_T[i] - DIPPER_T0
-	end
+	local smid = center(stars)
+	local gmid = if s.Ground then center(s.Ground) else smid
+	local eyeTo = smid + f * 32 + Vector3.new(0, 9, 0)
+	local lookTo = smid:Lerp(gmid, 0.3)
 	local from = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.new()
 	local look0 = from.Position + from.LookVector * 30
 	ctx.Shot(DIPPER_GATHER_T - DIPPER_T0, function(_, tt)
-		local eye, aim
-		if tt < arrive[1] then
-			local u = tt / arrive[1] -- 일정 속도로 알카이드 쪽으로(시작에서 서서히 붙는 가속만)
-			u = u * u * (2 - u)
-			eye, aim = from.Position:Lerp(way[1], u), look0:Lerp(look[1], u)
-		else
-			local k = 1
-			while k < 7 and tt >= arrive[k + 1] do
-				k += 1
-			end
-			if k == 7 then
-				-- 두베를 지난 뒤에도 같은 속도로 조금 더 흘러간다(멈추지 않는다)
-				local v = (way[7] - way[6]) / (arrive[7] - arrive[6])
-				local dt = tt - arrive[7]
-				eye, aim = way[7] + v * dt * 0.5, look[7]
-			else
-				local u = (tt - arrive[k]) / (arrive[k + 1] - arrive[k]) -- 선형: 별마다 멈추지 않는다
-				eye, aim = way[k]:Lerp(way[k + 1], u), look[k]:Lerp(look[k + 1], u)
-			end
-		end
-		local cf = CFrame.lookAt(eye, aim)
-		for i = 7, 1, -1 do -- 발사 줌 펀치는 아주 작게(연사라 어지럽지 않게)
-			local since = tt - arrive[i]
+		local u = Common.sine(tt / 0.75)
+		local base = CFrame.lookAt(from.Position:Lerp(eyeTo, u), look0:Lerp(lookTo, u))
+		local cf = base
+		for i = DIPPER_PUNCH_N, 1, -1 do
+			local since = tt - (DIPPER_LASER_T[i] - DIPPER_T0)
 			if since >= 0 then
-				cf += cf.LookVector * (0.35 * math.exp(-since * 30))
+				cf += cf.LookVector * (0.5 * math.exp(-since * 14))
 				break
 			end
 		end
-		s.cam = cf
+		s.cam = base
 		return cf
 	end)
 end
@@ -1085,12 +1119,14 @@ function Fx.DipperGather(ctx: any)
 	local s = dstate(ctx)
 	local stars = s.Stars or dipperStars(ctx)
 	s.Gather = true
-	for _, p in stars do
-		Vfx.Implode(p, { Color = GOLDEN, Radius = 6, Count = 8, Life = 0.35 })
-	end
+	task.delay(0.2, function() -- 별이 조여 드는 건 연사가 끝날 즈음(3.44)
+		for _, p in stars do
+			Vfx.Implode(p, { Color = GOLDEN, Radius = 6, Count = 8, Life = 0.35 })
+		end
+	end)
 	local head = ctx.Base and ctx.Base("W") or ctx.Hand("R")
 	chargeFb(ctx, head, 6, GOLDEN)
-	-- 카메라 동선 (b): 플레이어 기준 아군 칸 왼쪽 맨 위 끝으로 옮겨 가서(0.4초) 떨림이 점점 커진다. 강타(DipperCrash)에서 터진다.
+	-- 카메라 (b): 축을 놓고 빙 돌며(orbit) 플레이어 기준 아군 칸 왼쪽 맨 위 끝으로 옮겨 간다(축 = 아군 칸 중심의 수직선, 0.7초). 그 뒤 우르릉 떨림이 점점 커진다.
 	-- 플레이어 카메라는 -Forward 쪽(적)을 보므로 화면 왼쪽 = +R, 위(먼 쪽) = -Forward
 	local f = ctx.Forward
 	local r = f:Cross(Vector3.yAxis)
@@ -1107,10 +1143,18 @@ function Fx.DipperGather(ctx: any)
 	local look = mid
 	s.cornerEye, s.cornerLook = eye, look
 	local from = s.cam or (workspace.CurrentCamera and workspace.CurrentCamera.CFrame) or CFrame.new()
+	local look0 = from.Position + from.LookVector * 30
+	local d0, d1 = from.Position - mid, eye - mid
+	local a0, a1 = math.atan2(d0.Z, d0.X), math.atan2(d1.Z, d1.X)
+	local da = (a1 - a0 + math.pi) % (2 * math.pi) - math.pi -- 짧은 쪽 회전각
+	local r0, r1 = Vector2.new(d0.X, d0.Z).Magnitude, Vector2.new(d1.X, d1.Z).Magnitude
 	ctx.Shot(DIPPER_END - DIPPER_GATHER_T + 0.02, function(_, tt)
-		local u = Common.sine(tt / 0.4)
-		local base = CFrame.lookAt(from.Position:Lerp(eye, u), (from.Position + from.LookVector * 30):Lerp(look, u))
-		-- 우르릉: 옮겨 가는 중에 이미 떨리기 시작해 강타 직전까지 진폭이 점점 커진다(진동수 높게)
+		local u = Common.sine(tt / DIPPER_ORBIT)
+		local ang = a0 + da * u
+		local rad = r0 + (r1 - r0) * u
+		local pos = Vector3.new(mid.X + math.cos(ang) * rad, mid.Y + d0.Y + (d1.Y - d0.Y) * u, mid.Z + math.sin(ang) * rad)
+		local base = CFrame.lookAt(pos, look0:Lerp(look, u))
+		-- 쿠구구구구: 도는 중에도 이미 떨리고 강타 직전까지 진폭이 점점 커진다(진동수 높게)
 		local k = math.clamp(tt / (DIPPER_END - DIPPER_GATHER_T), 0, 1)
 		local amp = 0.03 + 0.65 * k * k
 		local n = tt * 38
