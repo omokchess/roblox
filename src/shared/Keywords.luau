@@ -165,7 +165,8 @@ local LIST: { Keyword } = {
 		Name = "보호막",
 		Kind = "Buff",
 		Description = "받는 피해의 {100}%를 대신 흡수하고, 흡수한 만큼 줄어든다.\n"
-			.. "남은 양은 다음 턴까지 이어진다.",
+			.. "남은 양은 다음 턴까지 이어진다.\n"
+			.. "한 유닛이 가진 보호막은 합쳐서 최대 50이다.",
 		Scalable = true,
 		Unit = "",
 		Color = "#5ce0d0",

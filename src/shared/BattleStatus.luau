@@ -93,6 +93,8 @@ export type State = {
 	-- 화상을 건 연금술사의 저항 무시(맹독성 물질). 연금술사가 걸 때마다 갱신, 화상이 다 타면 지움
 	BurnIgnore: number?,
 	Oil: number,
+	-- 지속 피해(출혈·독·화상·기름)가 걸리지 않는다(칼리스토 2페이즈~). [융해]는 GridBattle 이 잠깐 풀고 터뜨린다
+	DotImmune: boolean?,
 	Stacks: { [string]: number },
 	-- 다시 걸리지 않는 남은 턴(파상풍 터진 뒤 2턴, 경련 사라진 뒤 3턴). EndTurn 이 줄인다
 	Immune: { [string]: number }?,
@@ -202,8 +204,11 @@ end
 
 --=== 보호막 ===--
 
+-- 유닛 하나가 가질 수 있는 보호막 합의 상한(2026-11-08 사용자). 넘친 몫은 버린다
+BattleStatus.SHIELD_CAP = 50
+
 function BattleStatus.AddShield(state: State, amount: number): number
-	state.Shield = math.max(0, state.Shield + math.floor(amount))
+	state.Shield = math.clamp(state.Shield + math.floor(amount), 0, BattleStatus.SHIELD_CAP)
 	return state.Shield
 end
 
@@ -220,16 +225,25 @@ end
 --=== 지속 피해 ===--
 
 function BattleStatus.AddBleed(state: State, amount: number): number
+	if state.DotImmune and amount > 0 then
+		return state.Bleed
+	end
 	state.Bleed = math.max(0, state.Bleed + math.floor(amount))
 	return state.Bleed
 end
 
 function BattleStatus.AddPoison(state: State, amount: number): number
+	if state.DotImmune and amount > 0 then
+		return state.Poison
+	end
 	state.Poison = math.max(0, state.Poison + math.floor(amount))
 	return state.Poison
 end
 
 function BattleStatus.AddBurn(state: State, amount: number, ignore: number?): number
+	if state.DotImmune and amount > 0 then
+		return state.Burn
+	end
 	state.Burn = math.min(BattleStatus.BURN_MAX_STACK, math.max(0, state.Burn + math.floor(amount)))
 	if ignore and ignore > 0 then
 		state.BurnIgnore = ignore
@@ -239,6 +253,9 @@ end
 
 -- 기름은 남은 턴으로 관리한다. 여러 번 걸면 더 긴 쪽이 남는다.
 function BattleStatus.AddOil(state: State, turns: number): number
+	if state.DotImmune and turns > 0 then
+		return state.Oil
+	end
 	state.Oil = math.max(state.Oil, math.floor(turns))
 	return state.Oil
 end

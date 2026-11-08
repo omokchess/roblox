@@ -909,7 +909,11 @@ function CombatDirector:_showNumbers(play: any)
 					label = string.format("%d  기믹 −%d%%", dmg, math.floor(result.Gimmick * 100 + 0.5))
 				end
 				local color = if enemy then Color3.fromRGB(255, 244, 214) else Color3.fromRGB(255, 90, 80)
-				if h.Grade and GRADE_TEXT[h.Grade] and dmg <= 0 then
+				if h.Note and dmg <= 0 and h.Grade ~= "Success" then
+					-- 피해 없는 기술(칼리스토 고찰·던지기): 0 대신 효과 이름
+					label = h.Note
+					color = Color3.fromRGB(255, 214, 130)
+				elseif h.Grade and GRADE_TEXT[h.Grade] and dmg <= 0 then
 					label = GRADE_TEXT[h.Grade]
 					color = Color3.fromRGB(150, 230, 255)
 				elseif h.Grade == "Partial" then

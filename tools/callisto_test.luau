@@ -751,7 +751,8 @@ do
 			GridBattle.ResolveSkill(s4, 1, "Success", rng)
 			check(s4.Callisto.Struck and GridBattle.Snapshot(s4).Callisto.Gimmick.Met, "칼리스토를 스킬로 적중하면 충족")
 			GridBattle.ResolveDodge(s4, boss(s4).Id, "Success", 1)
-			check(math.abs((lastGimmick(s4) or 0) - 0.6) < 1e-6 and stack(GridBattle.Ally(s4), ClassResources.SEONGWI) == 0, "맞받아치기 −60% · 성위 없음")
+			-- 2026-11-08 피해 2배로 정수 반올림 오차가 커져(4/7) 허용 오차 0.05
+			check(math.abs((lastGimmick(s4) or 0) - 0.6) < 0.05 and stack(GridBattle.Ally(s4), ClassResources.SEONGWI) == 0, "맞받아치기 −60% · 성위 없음")
 		end
 		-- 인위적 별자리 로프 기대기(3페이즈): 열 1 또는 6 −50%
 		local s5 = toPage3()
@@ -1072,6 +1073,66 @@ do
 	end
 	check(seenShape >= 3, "1페이즈 예고에서 모양 기술이 나온다 — " .. seenShape)
 	print("14 십자 3 + 원래 모양 9 유도기 OK")
+end
+
+--=== 15. 2026-11-08: 보호막 상한 50 · 칼리스토 피해 2배 · 2페이즈 지속 피해 면역(융해 제외) · 피해 없는 기술 효과 글 ===--
+do
+	-- 보호막: 모든 출처가 AddShield 로 들어온다 — 합이 50 을 넘지 않고 넘친 몫은 버린다
+	local st = BattleStatus.New()
+	BattleStatus.AddShield(st, 40)
+	BattleStatus.AddShield(st, 30)
+	check(st.Shield == BattleStatus.SHIELD_CAP and BattleStatus.SHIELD_CAP == 50, "보호막 합은 50 에서 멈춘다 — " .. st.Shield)
+	BattleStatus.AddShield(st, -10)
+	check(st.Shield == 40, "깎은 뒤엔 다시 더할 수 있다 — " .. st.Shield)
+
+	-- 피해 2배: 같은 조건(트로히아 Fail)에서 배율만 2 → 1 로 돌려 비교한다
+	local function trohiaHit(mult: number): number
+		local s = battle()
+		s.Callisto.PowerScale = mult
+		local tb = boss(s)
+		tb.Plans = { { SkillId = "CallistoTrohia", Cells = { { 1, 2 } } } }
+		tb.Plan = tb.Plans[1]
+		s.Planned = { tb.Id }
+		local a = GridBattle.Ally(s)
+		local before = a.Health
+		GridBattle.ResolveDodge(s, tb.Id, "Fail", 1)
+		return before - a.Health
+	end
+	check(battle().Callisto.PowerScale == 2, "편성 배율 1 → 칼리스토 PowerScale 2")
+	local one, two = trohiaHit(1), trohiaHit(2)
+	check(one > 0 and math.abs(two - one * 2) <= 1, string.format("칼리스토 피해 2배 — %d → %d", one, two))
+
+	-- 피해 없는 기술(파라티리시): 사건 Hits 에 0 대신 효과 글
+	local s = battle()
+	playTurn(s)
+	local hit = s.Events[#s.Events].Hits[1][1]
+	check(hit.Damage == 0 and hit.Note == "[고찰]", "피해 없는 기술은 Note — " .. tostring(hit.Note))
+	check(trohiaHit(2) > 0, "피해 있는 기술은 Note 없음 전제")
+
+	-- 2페이즈 지속 피해 면역: 1페이즈엔 걸리고, 2페이즈로 넘어가면 지워지고 새로 안 걸린다. 융해는 통한다
+	local p = battle()
+	local b = boss(p)
+	BattleStatus.AddBleed(b.Status, 3)
+	BattleStatus.AddBurn(b.Status, 4)
+	BattleStatus.AddPoison(b.Status, 5)
+	BattleStatus.AddOil(b.Status, 2)
+	check(b.Status.Bleed == 3 and b.Status.Burn == 4 and b.Status.Poison == 5 and b.Status.Oil == 2, "1페이즈엔 지속 피해가 걸린다")
+	GridBattle.DebugHitPart(p, b.Id, 999999)
+	check(p.Callisto.Page == 2, "2페이즈로")
+	check(b.Status.Bleed == 0 and b.Status.Burn == 0 and b.Status.Poison == 0 and b.Status.Oil == 0, "2페이즈가 되면 지속 피해를 지운다")
+	BattleStatus.AddBleed(b.Status, 3)
+	BattleStatus.AddBurn(b.Status, 4)
+	BattleStatus.AddPoison(b.Status, 5)
+	BattleStatus.AddOil(b.Status, 2)
+	check(b.Status.Bleed == 0 and b.Status.Burn == 0 and b.Status.Poison == 0 and b.Status.Oil == 0, "2페이즈엔 새로 걸리지도 않는다")
+	local hp = b.Health
+	BattleStatus.AddStack(b.Status, ClassResources.MELT, 2)
+	GridBattle.EndTurn(p)
+	check(hp - b.Health == 6 and b.Status.Burn == 0, string.format("융해 2 → 화상 6 × 2 ÷ 2 = 6 피해, 화상은 안 남는다 — %d, 화상 %d", hp - b.Health, b.Status.Burn))
+	-- 하지만 아군에겐 그대로 걸린다
+	BattleStatus.AddBurn(GridBattle.Ally(p).Status, 4)
+	check(GridBattle.Ally(p).Status.Burn == 4, "아군은 지속 피해를 받는다")
+	print("15 보호막 상한 · 피해 2배 · 지속 피해 면역 · 효과 글 OK")
 end
 
 print("칼리스토 규칙: 모두 통과")

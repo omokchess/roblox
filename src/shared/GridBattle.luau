@@ -778,6 +778,9 @@ local function rollVariant(state: State)
 	pushLog(state, string.format("판 변주 — [%s] %s", v.Name, v.Text))
 end
 
+-- 칼리스토가 주는 모든 피해 배율(2026-11-08 사용자: "긴장감이 없다" — 2배). 체력 배율은 그대로. callistoBase·알카이드·두베 …가 곱하는 PowerScale 에 처음부터 들어간다
+local CALLISTO_DAMAGE_MULT = 2
+
 local function spawnBoss(state: State, def: EnemyDefinitions.EnemyDefinition, healthScale: number, powerScale: number)
 	local boss: BossState = {
 		Id = def.Id,
@@ -1818,7 +1821,7 @@ function GridBattle.NewParty(floor: number, members: { PartyMember }, encounter:
 				Field = 0,
 				Opened = false,
 				Cooldowns = {},
-				PowerScale = powerScale,
+				PowerScale = powerScale * CALLISTO_DAMAGE_MULT,
 				HealthScale = healthScale,
 				StarFrom = {},
 				Dipper = false,
@@ -2198,6 +2201,11 @@ local function callistoNextPage(state: State, unit: Unit, c: CallistoState)
 	BattleStatus.SpendAll(unit.Status, ClassResources.SEVEN)
 	BattleStatus.SpendAll(unit.Status, ClassResources.BLINK)
 	c.Page = nextPage
+	-- 2026-11-08 사용자: 2페이즈부터 [융해] 말고 모든 지속 피해 면역 — 걸린 것은 지우고 새로 걸리지도 않는다
+	unit.Status.DotImmune = true
+	unit.Status.Bleed, unit.Status.Poison, unit.Status.Burn, unit.Status.Oil = 0, 0, 0, 0
+	BattleStatus.SpendAll(unit.Status, ClassResources.TETANUS)
+	pushLog(state, string.format("%s — 지속 피해 면역([융해] 제외)", unit.Name))
 	c.Cycle, c.Slot, c.Opened, c.Cooldowns = 1, 1, false, {}
 	c.PageTurns, c.UltUsed, c.UltNext, c.Basics, c.Mix = 0, false, nil, 0, 0
 	local health = math.max(1, math.floor(page.Health * c.HealthScale))
@@ -3550,6 +3558,13 @@ local CALLISTO_FORM: { [string]: string } = {
 	CallistoKenos = "All",
 }
 GridBattle.CALLISTO_FORM = CALLISTO_FORM
+
+-- 피해 없는 기술에 맞은 유닛에게 "0" 대신 띄울 효과 글(2026-11-08 사용자: 0 이 뜨는 게 이상하다). 사건 Hits 의 Note 로 간다
+local CALLISTO_NOTE: { [string]: string } = {
+	CallistoPhoto = "[고찰]",
+	CallistoSymberasma = "던짐",
+	CallistoArktos = "[뭇별]",
+}
 --[[
 	2026-11-07 사용자: "전체 범위를 가진 스킬들중 전체기가 아니어도 될 것 같은걸 각각 십자, X자 범위로 해서 유도기로 만들어줘".
 	Seek 유도기 가운데 모양이 있는 것: 쫓는 대상 칸 기준 모양(십자 3개 / 줄·열·3×3·단일 9개, 판 밖은 잘림). 대상이 움직이면 모양도 따라가고
@@ -4985,7 +5000,14 @@ local function resolveDodgeBound(
 		Target = ally.Id,
 		TargetId = ally.Id,
 		Grade = grade,
-		Hits = { { { Id = ally.Id, Damage = taken, Grade = grade, Killed = not ally.Alive } } },
+		Hits = { { {
+			Id = ally.Id,
+			Damage = taken,
+			Grade = grade,
+			Killed = not ally.Alive,
+			-- 기술 자체가 피해 없음(보호막·회피로 0 이 된 것이 아님)이면 효과 글
+			Note = if callisto and base == 0 and not fixed and grade ~= "Success" then CALLISTO_NOTE[skill.Id] else nil,
+		} } },
 		Gimmick = gimmickCut,
 		Reflect = reflected + parryBack,
 		ReflectKilled = not enemy.Alive,
@@ -5277,6 +5299,9 @@ function GridBattle.EndTurn(state: State)
 	end
 	for _, entry in melting do
 		local unit, melt = entry.Unit, entry.Melt
+		-- 칼리스토 2페이즈~는 지속 피해 면역이지만 융해만은 통한다 — 면역을 잠깐 풀어 화상을 얹고, 터뜨린 뒤 화상은 비운다
+		local immune = unit.Status.DotImmune
+		unit.Status.DotImmune = nil
 		BattleStatus.AddBurn(unit.Status, melt * 3)
 		-- 2026-11-06 사용자: (대상의 화상 수치 × 융해 수치) ÷ 2, 융해 1당 최대 100. 화상은 이번에 얹은 melt × 3 까지 센다
 		local burst = BattleStatus.MeltDamage(unit.Status.Burn, melt) * (if unit.Part then 1 - BOSS_DOT_CUT else 1)
@@ -5286,6 +5311,9 @@ function GridBattle.EndTurn(state: State)
 			burst = math.min(burst, math.max(0, unit.MaxHealth * meltCap - (dotSpent[unit.Id] or 0)))
 		end
 		local dealt = damageUnit(state, unit, burst, "True", false)
+		if immune then
+			unit.Status.DotImmune, unit.Status.Burn, unit.Status.BurnIgnore = immune, 0, nil
+		end
 		pushLog(state, string.format("%s — 융해 %d 폭발 (%d 피해 · 화상 +%d)", unit.Name, melt, dealt, melt * 3))
 		fireAll(state, "MeltBurst", { Target = unit, Melt = melt, Damage = dealt })
 	end

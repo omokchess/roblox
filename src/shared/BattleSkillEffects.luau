@@ -1436,18 +1436,39 @@ function BattleSkillEffects.AddMelt(status: BattleStatus.State, amount: number, 
 	return BattleStatus.Stack(status, R.MELT) - before
 end
 
--- 적중한 적마다 [화상]·[융해]. 태우기 위한 별 같은 카드가 `AttunerBurnBonus`·`AttunerMeltBonus` 로 더한다
-local function scorch(ctx: Context, burn: number, melt: number)
-	burn += math.floor(ctx.Query("AttunerBurnBonus", 0))
+--[[
+	대상 [융해] 비례 피해(2026-11-08 사용자: "조율자 깡딜러 … 대상 융해 비례 피해량 증가"). 피해를 주는 조율자 기술 전부의 스킬 피해 증가 칸(TargetBonus)에 대상의 [융해] 1당 +MELT_DAMAGE_PER_STACK(최대 MELT_DAMAGE_CAP).
+	[융해]는 턴 끝에 터져 사라지므로(GridBattle 턴 끝) 앞 턴에서 쌓아 둘 수 없다 → 융해를 거는 기술은 **피해 계산 전(Before)** 에 건다(전엔 적중 뒤). 그래야 같은 스킬의 타격이 자기가 건 [융해]를 먹는다.
+	카드가 [융해]를 미리 얹었거나 아군이 앞서 걸었으면 그만큼 더 센 비례 피해가 된다. 판 전체기는 대상마다 그 대상의 [융해]로 센다.
+]]
+BattleSkillEffects.MELT_DAMAGE_PER_STACK = 0.15 -- 시뮬 근거: tools/attuner_party_sim.luau (0.1 → 0.15 → 0.2 비교, 보고 참조)
+BattleSkillEffects.MELT_DAMAGE_CAP = 3 -- 융해 상한 20 에서 딱 닿는 값(카드로 24 까지 늘려도 +300%)
+
+function BattleSkillEffects.MeltBonus(melt: number): number
+	return math.min(BattleSkillEffects.MELT_DAMAGE_CAP, BattleSkillEffects.MELT_DAMAGE_PER_STACK * math.max(0, melt))
+end
+
+local function meltBonus(ctx: Context, target: any): number
+	return BattleSkillEffects.MeltBonus(BattleStatus.Stack(ctx.StatusOf(target), R.MELT))
+end
+
+-- 맞는 적마다 [융해]를 건다(카드의 `AttunerMeltBonus` 가 더한다). 피해 계산 전에 불러 같은 스킬의 타격이 먹게 한다
+local function applyMelt(ctx: Context, melt: number)
 	melt += math.floor(ctx.Query("AttunerMeltBonus", 0))
 	local cap = math.floor(ctx.Query("MeltCap", ClassResources.Cap(R.MELT) or 20))
 	for _, target in ctx.Targets do
-		local status = ctx.StatusOf(target)
-		BattleStatus.AddBurn(status, burn)
-		BattleSkillEffects.AddMelt(status, melt, cap)
+		BattleSkillEffects.AddMelt(ctx.StatusOf(target), melt, cap)
+	end
+end
+
+-- 적중한 적마다 [화상]. 태우기 위한 별 같은 카드가 `AttunerBurnBonus` 로 더한다
+local function scorch(ctx: Context, burn: number)
+	burn += math.floor(ctx.Query("AttunerBurnBonus", 0))
+	for _, target in ctx.Targets do
+		BattleStatus.AddBurn(ctx.StatusOf(target), burn)
 	end
 	if #ctx.Targets > 0 then
-		ctx.Log(string.format("화상 %d · 융해 %d (%d기)", burn, melt, #ctx.Targets))
+		ctx.Log(string.format("화상 %d (%d기)", burn, #ctx.Targets))
 	end
 end
 
@@ -1467,10 +1488,12 @@ local attunerEffects: { [string]: Effect } = {
 			lightStar(ctx, "Megrez")
 			-- 메라크가 "이전 턴에 메그레즈를 썼는지" 본다
 			ctx.Ally.LastMegrezTurn = ctx.Turn
+			applyMelt(ctx, 1)
 			return 1
 		end,
+		TargetBonus = meltBonus,
 		After = function(ctx)
-			scorch(ctx, 3, 1)
+			scorch(ctx, 3)
 		end,
 	},
 	-- 메라크: 이전 턴에 메그레즈를 썼으면 칠성. 적중 시 화상 3, 융해 2.
@@ -1479,20 +1502,24 @@ local attunerEffects: { [string]: Effect } = {
 			if ctx.Turn and ctx.Ally.LastMegrezTurn == ctx.Turn - 1 then
 				lightStar(ctx, "Merak")
 			end
+			applyMelt(ctx, 2)
 			return 1
 		end,
+		TargetBonus = meltBonus,
 		After = function(ctx)
-			scorch(ctx, 3, 2)
+			scorch(ctx, 3)
 		end,
 	},
 	-- 알리오스: 사용 시 칠성. 적중 시 화상 5, 융해 5.
 	Alioth = {
 		Before = function(ctx)
 			lightStar(ctx, "Alioth")
+			applyMelt(ctx, 5)
 			return 1
 		end,
+		TargetBonus = meltBonus,
 		After = function(ctx)
-			scorch(ctx, 5, 5)
+			scorch(ctx, 5)
 		end,
 	},
 	--[[
@@ -1504,8 +1531,13 @@ local attunerEffects: { [string]: Effect } = {
 		(레이저 1씩 · 강타 10 — 질문 2 답, 뒤 타격일수록 세짐), 다 맞힌 뒤 대상의 화상을 전부 한 번 발동(화상 % 만큼 최대 체력 화염 피해, 화상은 남는다).
 	]]
 	Septentriones = {
+		Before = function(ctx)
+			applyMelt(ctx, 5)
+			return 1
+		end,
+		-- 화상 1당 +10%(최대 400%)에 2026-11-08 [융해] 비례 피해를 더한다(같은 칸 안 합)
 		TargetBonus = function(ctx, target)
-			return math.min(4, 0.1 * (ctx.StatusOf(target).Burn or 0))
+			return math.min(4, 0.1 * (ctx.StatusOf(target).Burn or 0)) + meltBonus(ctx, target)
 		end,
 		EachHit = function(ctx, target, hitIndex)
 			BattleStatus.AddBurn(ctx.StatusOf(target), SEPT_BURN[hitIndex] or 0)
@@ -1514,7 +1546,7 @@ local attunerEffects: { [string]: Effect } = {
 			if #ctx.Targets > 0 then
 				local cap = ctx.Query("SeptentrionesHealCap", 30)
 				local healed = ctx.Heal(ctx.Ally, math.min(cap, math.floor((ctx.TotalDealt or 0) / 100)))
-				scorch(ctx, 0, 5) -- 화상은 타격마다 걸었다(EachHit). 여기선 융해와 카드의 화상 보너스만
+				scorch(ctx, 0) -- 화상은 타격마다 걸었다(EachHit), 융해는 Before. 여기선 카드의 화상 보너스만
 				for _, target in ctx.Targets do
 					local burn = ctx.StatusOf(target).Burn or 0
 					if target.Alive and burn > 0 then
