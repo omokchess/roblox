@@ -140,6 +140,8 @@ function BattleClient.new(remotes: Folder, plazaUi: any?)
 	self.partySelected = nil :: string?
 	self.partyPress = nil :: any
 	self.partyHover = nil :: string?
+	self.partyClick = false
+	self.partyPickHover = nil :: string?
 	-- 유도를 붙일 유닛 Id(적을 고르는 중일 때)
 	self.partyPicking = nil :: string?
 	self.partyBusyShown = false
@@ -2266,6 +2268,8 @@ function BattleClient:_bindInput()
 			if self.partyMode then
 				local cell, id = self:_partyCursorCell()
 				self.partyPress = if cell then { Cell = cell, Id = id } else nil
+				-- 화면(GUI)이 먹지 않은 누름만 놓을 때 처리한다 — 유도 단추를 누른 그 클릭의 놓음이 적 고르기 모드를 바로 취소하던 것을 막는다
+				self.partyClick = true
 				return
 			end
 			-- 연출(스킬·적 공격) 중에는 집어 들지 않는다
@@ -2775,16 +2779,21 @@ end
 function BattleClient:_partyRelease()
 	local press = self.partyPress
 	self.partyPress = nil
-	if not self.snapshot then
+	local clicked = self.partyClick
+	self.partyClick = false
+	if not self.snapshot or not clicked then
 		return
 	end
-	-- 유도할 적 고르기 중이면 이 클릭은 적 고르기다(적이 아니면 취소)
+	-- 유도할 적 고르기 중이면 이 클릭은 적 고르기다: 적이 선 칸이면 붙이고, 빈 적 칸이면 모드 유지, 그 밖(아군 칸·다른 곳)은 취소
 	if self.partyPicking then
-		local enemyId = self:_enemyUnderCursor()
+		local enemyId, overEnemyTile = self:_enemyUnderCursor()
 		if enemyId then
 			self:_partyPickEnemy(enemyId)
+		elseif overEnemyTile then
+			self.hud:SetLog("적이 선 칸을 고르세요")
 		else
 			self.partyPicking = nil
+			self.hud:SetLog("유도 고르기를 취소했다")
 			self:_refreshParty()
 			self:_paintTiles()
 		end
@@ -2812,10 +2821,10 @@ function BattleClient:_partyRelease()
 end
 
 -- 커서 아래 적: 적 몸(광선) → 적 칸 순서로 찾는다. 돌려주는 값: 적 Id
-function BattleClient:_enemyUnderCursor(): string?
+function BattleClient:_enemyUnderCursor(): (string?, boolean)
 	local director, camera, snapshot = self.director, workspace.CurrentCamera, self.snapshot
 	if not director or not camera or not snapshot or not self.tiles then
-		return nil
+		return nil, false
 	end
 	local location = UserInputService:GetMouseLocation()
 	local ray = camera:ViewportPointToRay(location.X, location.Y)
@@ -2838,7 +2847,7 @@ function BattleClient:_enemyUnderCursor(): string?
 		local node: Instance? = hit and hit.Instance
 		while node do
 			if idOf[node] then
-				return idOf[node]
+				return idOf[node], true
 			end
 			node = node.Parent
 		end
@@ -2860,14 +2869,15 @@ function BattleClient:_enemyUnderCursor(): string?
 				if unit.Side == "Enemy" and unit.Alive and not unit.Twin and unit.GridSide ~= "Ally" then
 					for _, c in unit.Cells or { { unit.X, unit.Y } } do
 						if c[1] == tonumber(x) and c[2] == tonumber(y) then
-							return id
+							return id, true
 						end
 					end
 				end
 			end
+			return nil, true -- 빈 적 칸
 		end
 	end
-	return nil
+	return nil, false
 end
 
 -- 유도를 붙일 유닛(partyPicking)에 고른 적을 대상으로 붙인다
@@ -3295,6 +3305,14 @@ function BattleClient:_paintPartyTiles()
 		end
 	end
 	local picking = self.partyPicking ~= nil
+	-- 적 고르기 모드에서 커서 아래 적이 차지한 칸(금색 미리 칠하기)
+	local pickCells: { [string]: boolean } = {}
+	local hoverEnemy = if picking and self.partyPickHover then snapshot.Units[self.partyPickHover] else nil
+	if hoverEnemy and hoverEnemy.X and hoverEnemy.Y then
+		for _, c in hoverEnemy.Cells or { { hoverEnemy.X, hoverEnemy.Y } } do
+			pickCells[c[1] .. "," .. c[2]] = true
+		end
+	end
 	if self.director then
 		for id, unit in snapshot.Units do
 			local model = self.director:Model(id)
@@ -3377,7 +3395,9 @@ function BattleClient:_paintPartyTiles()
 			BattleStage.OrderMark(ally, n, id ~= nil and acting == id, actingIndex ~= nil and n ~= nil and n < actingIndex or acting == "Enemy")
 
 			local foe = self.tiles.Enemy[y][x]
-			if enemyRange[key] then
+			if pickCells[key] then
+				BattleStage.Paint(foe, TILE_SELECT, true)
+			elseif enemyRange[key] then
 				BattleStage.Paint(foe, if occupied[key] and hitIds[occupied[key]] then TILE_RANGE_HIT else TILE_RANGE, true)
 			else
 				BattleStage.Paint(foe, if occupied[key] then TILE_OCCUPIED else TILE_IDLE, occupied[key] ~= nil)
@@ -3503,6 +3523,17 @@ function BattleClient:_pumpParty()
 		return
 	end
 	self:_hideFallenAvatar()
+	-- 적 고르기 모드: 커서 아래 적을 금색으로 미리 칠한다(바뀔 때만 다시 그림)
+	if self.partyPicking then
+		local hoverId = self:_enemyUnderCursor()
+		if hoverId ~= self.partyPickHover then
+			self.partyPickHover = hoverId
+			self:_paintTiles()
+		end
+	elseif self.partyPickHover then
+		self.partyPickHover = nil
+		self:_paintTiles()
+	end
 	-- 스탠딩을 못 만들었으면(무대 인형이 아직 없거나 복제 실패) 0.5초마다 다시 시도
 	if self.partyHud and self.partyHud:NeedsStand() and os.clock() >= (self.standRetryAt or 0) then
 		self.standRetryAt = os.clock() + 0.5

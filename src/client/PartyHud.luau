@@ -436,8 +436,8 @@ function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, 
 	local selMember = if selected then members[selected] else nil
 	local selUnit = if selected then units[selected] else nil
 	local skills = if selMember then selMember.Skills else {}
-	-- 행동 목록(스킬 수, 최소 4칸) + 맨 끝 [유도] 칸
-	local rightW = (math.max(math.min(#skills, MAX_SLOTS), 4) + 1) * (SLOT_W + SLOT_GAP) - SLOT_GAP
+	-- 행동 목록(스킬 수) — 아래 줄(유도 칩·유도 단추·안내·턴 시작)이 들어가게 최소 폭 640
+	local rightW = math.max(math.min(#skills, MAX_SLOTS) * (SLOT_W + SLOT_GAP) - SLOT_GAP, 640)
 	local width = LEFT_W + 14 + rightW
 	self.panel.Size = UDim2.fromOffset(width, PANEL_H)
 	self:_rescale(width)
@@ -576,35 +576,38 @@ function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, 
 		end
 	end
 
-	-- [유도] 칸: 행동 목록 맨 오른쪽에 늘 있다(유닛을 안 골랐으면 흐리게). 누르면 '적 고르기' → 적을 누르면 붙는다. 붙은 뒤 다시 누르면 뗀다
+	-- 아래 줄(원래 자리): [유도 칩 n/3] · [유도 붙이기/떼기] · 안내 · [턴 시작]. 유닛이 없거나 칩이 없어도 흐리게 늘 보인다.
+	-- 누르면 '적 고르기' 모드 — 그동안 이 단추가 금색으로 밝아지고, 적 진형의 칸을 누르면 그 적에게 붙는다. 붙은 유닛이면 '유도 떼기 → 적 이름'
 	local left2, per = party.HomingLeft or 0, party.HomingPerTurn or 3
 	local attached = selUnit ~= nil and selUnit.Homing == true
 	local picking = ui.Picking ~= nil and ui.Picking == selected
 	local usable = selUnit ~= nil and (attached or picking or left2 > 0)
-	local homingX = (math.max(math.min(#skills, MAX_SLOTS), 4)) * (SLOT_W + SLOT_GAP)
+	local chips = make("Frame", { Name = "HomingChips", Position = UDim2.fromOffset(0, SLOT_H + 20), Size = UDim2.fromOffset(130, 52), BackgroundColor3 = INK, BackgroundTransparency = 0.06, BorderSizePixel = 0 }, right)
+	stroke(chips, BONE, 0.7)
+	label(chips, string.format("유도 칩  %d / %d", left2, per), UDim2.fromOffset(8, 3), UDim2.new(1, -16, 0, 14), { TextSize = 11, TextColor3 = BODY })
+	for chip = 1, per do
+		label(chips, if chip <= left2 then "◆" else "◇", UDim2.fromOffset(8 + (chip - 1) * 38, 18), UDim2.fromOffset(34, 30), { Font = Enum.Font.GothamBlack, TextSize = 26, TextColor3 = if chip <= left2 then GOLD else MUTED, TextXAlignment = Enum.TextXAlignment.Center })
+	end
+	local targetName = if attached and selUnit.HomingTarget and units[selUnit.HomingTarget] then units[selUnit.HomingTarget].Name else nil
 	local homing = make("TextButton", {
 		Name = "HomingButton",
-		Position = UDim2.fromOffset(homingX, if attached or picking then 0 else 8),
-		Size = UDim2.fromOffset(SLOT_W, SLOT_H),
+		Position = UDim2.fromOffset(138, SLOT_H + 20),
+		Size = UDim2.fromOffset(200, 52),
 		AutoButtonColor = false,
-		BackgroundColor3 = if picking then Color3.fromRGB(70, 52, 16) elseif attached then Color3.fromRGB(52, 40, 18) else INK,
-		BackgroundTransparency = 0.06,
+		BackgroundColor3 = if picking then Color3.fromRGB(96, 72, 18) elseif attached then Color3.fromRGB(52, 40, 18) else INK,
+		BackgroundTransparency = if picking then 0 else 0.06,
 		BorderSizePixel = 0,
-		Text = "",
-	}, slotRow)
-	stroke(homing, GOLD, if picking then 0 elseif usable then 0.3 else 0.8, if picking then 2 else 1)
-	make("Frame", { Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = GOLD, BorderSizePixel = 0 }, homing)
-	label(homing, "유도", UDim2.fromOffset(8, 6), UDim2.new(1, -16, 0, 18), { Font = Enum.Font.GothamBlack, TextSize = 15, TextColor3 = if usable then GOLD else MUTED })
-	local targetName = if attached and selUnit.HomingTarget and units[selUnit.HomingTarget] then units[selUnit.HomingTarget].Name else nil
-	local homingText = if selUnit == nil then "유닛을 고른다"
-		elseif picking then "적을 고른다 (Esc 취소)"
-		elseif attached then (if targetName then "→ " .. targetName else "→ 자동") .. " · 누르면 뗀다"
-		elseif left2 > 0 then "누르고 적을 고른다"
-		else "칩을 다 썼다"
-	label(homing, homingText, UDim2.fromOffset(8, 24), UDim2.new(1, -16, 0, 30), { TextSize = 11, TextWrapped = true, TextColor3 = if usable then BODY else MUTED, TextYAlignment = Enum.TextYAlignment.Top })
-	for chip = 1, per do
-		label(homing, if chip <= left2 then "◆" else "◇", UDim2.new(0, 8 + (chip - 1) * 22, 1, -26), UDim2.fromOffset(22, 22), { Font = Enum.Font.GothamBlack, TextSize = 18, TextColor3 = if chip <= left2 then GOLD else MUTED, TextXAlignment = Enum.TextXAlignment.Center })
-	end
+		Text = if selUnit == nil then "유닛을 고르면 유도를 붙일 수 있다"
+			elseif picking then "적을 고르세요 (Esc 취소)"
+			elseif attached then (if targetName then "유도 떼기 → " .. targetName else "유도 떼기")
+			elseif left2 > 0 then string.format("고른 유닛에 유도 붙이기 (남은 칩 %d)", left2)
+			else "유도 칩을 다 썼다",
+		TextColor3 = if picking then Color3.fromRGB(255, 240, 190) elseif usable then (if attached then GOLD else BONE) else MUTED,
+		Font = Enum.Font.GothamBold,
+		TextSize = 14,
+		TextWrapped = true,
+	}, right)
+	stroke(homing, GOLD, if picking then 0 elseif usable then 0.35 else 0.85, if picking then 3 else 1)
 	onClick(self, homing, function()
 		if not selected then
 			return
@@ -619,7 +622,7 @@ function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, 
 	end)
 
 	-- 아래 줄: 안내 · 턴 시작
-	label(right, "칸·유닛을 눌러 고르기 · 끌어서 옮기기/맞바꾸기 · 스킬에 마우스를 올리면 설명과 범위 미리보기", UDim2.fromOffset(0, SLOT_H + 24), UDim2.new(1, -214, 0, 44), { TextSize = 11, TextColor3 = MUTED, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
+	label(right, "칸·유닛을 눌러 고르기 · 끌어서 옮기기/맞바꾸기 · 스킬에 마우스를 올리면 설명과 범위 미리보기", UDim2.fromOffset(348, SLOT_H + 24), UDim2.new(1, -348 - 214, 0, 44), { TextSize = 11, TextColor3 = MUTED, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
 	local begin = make("TextButton", {
 		Name = "BeginTurn",
 		AnchorPoint = Vector2.new(1, 0),

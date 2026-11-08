@@ -1026,6 +1026,7 @@ do
 				self._partyCursorCell = function()
 					return { X = 5, Y = 1 }, nil
 				end
+				self.partyClick = true -- InputBegan 이 GUI 에 안 먹힌 누름
 				self:_partyRelease()
 				assert(#sent == 1 and sent[1].Kind == "Place" and sent[1].Id == "ally2" and sent[1].X == 5 and sent[1].Y == 1, "끌어 옮김이 Place 로 안 감")
 				assert(GridBattle.PlaceUnit(state, "ally2", 5, 1), "빈 칸으로 옮기기")
@@ -1086,7 +1087,27 @@ do
 				assert(self.partyPicking == target, "유도 누름이 적 고르기로 안 감")
 				assert(self.partyHud.clicks["HomingButton"], "적 고르기 중에도 유도 칸이 보여야 한다")
 				local foe = GridBattle.AliveEnemies(state)[1].Id
-				self:_partyPickEnemy(foe)
+				-- 가짜 입력: 빈 적 칸 클릭 = 모드 유지(명령 없음) → 아군 칸 등 다른 곳 클릭 = 취소 → 다시 모드 → 적이 선 칸 클릭 = Homing(TargetId)
+				local overId, overTile = nil, true
+				self._enemyUnderCursor = function()
+					return overId, overTile
+				end
+				self.partyClick = true
+				self:_partyRelease()
+				assert(self.partyPicking == target and #sent == 0, "빈 적 칸 클릭은 모드를 유지해야 한다")
+				overTile = false
+				self.partyClick = true
+				self:_partyRelease()
+				assert(self.partyPicking == nil and #sent == 0, "적 진형 밖 클릭은 모드를 취소해야 한다")
+				self.partyHud.clicks["HomingButton"]()
+				assert(self.partyPicking == target, "다시 유도 모드")
+				-- GUI 가 먹은 누름(유도 단추를 누른 그 클릭의 놓음)은 모드를 건드리지 않는다
+				self.partyClick = false
+				self:_partyRelease()
+				assert(self.partyPicking == target, "단추 클릭의 놓음이 모드를 취소하면 안 된다")
+				overId, overTile = foe, true
+				self.partyClick = true
+				self:_partyRelease()
 				assert(#sent == 1 and sent[1].Kind == "Homing" and sent[1].Id == target and sent[1].On == true and sent[1].TargetId == foe, "적을 고르면 Homing(TargetId) 이 가야 한다")
 				assert(GridBattle.SetHoming(state, target, true, foe))
 			end
