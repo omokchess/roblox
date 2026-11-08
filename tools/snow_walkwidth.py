@@ -25,7 +25,7 @@ A = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
 DEC = {c: i for i, c in enumerate(A)}
 STEP = 1.4       # 한 칸 사이 오를 수 있는 높이(공장 계단 한 단 1.3)
 NEED = 10.0      # 두 사람 + 여유
-R = NEED / 2
+R = NEED / 2 - 0.5   # 칸 n 개가 비면 실제 틈은 n 이상 — 벽 옆 칸 d=0.5 이므로 n 칸 띠 가운데 d = n/2 - 0.5 (2026-11-08 기물군 회랑 10 칸이 좁게 나오던 것)
 GROUND_TOP = 66.0  # 이보다 낮으면 땅 층(마을 땅 59.8 + 계단·턱)
 
 
@@ -207,8 +207,8 @@ def main():
         span = math.hypot(max(xs) - min(xs), max(zs) - min(zs))
         if span < 6:
             continue
-        w = 2 * max(d[i] for i in g)
-        if w <= 2.0:        # 벽 모서리 테두리·집 사이 틈(한 칸) — 길이 아니다
+        w = 2 * (max(d[i] for i in g) + 0.5)   # 빈 칸 수 = 폭(아래 끝)
+        if w <= 3.0:        # 벽 모서리 테두리·집 사이 틈(한 칸) — 길이 아니다
             cracks[0] += 1
             continue
         cx, cz = X0 + (min(xs) + max(xs)) / 2 + 0.5, Z0 + (min(zs) + max(zs)) / 2 + 0.5
@@ -246,7 +246,7 @@ def main():
         for (ix, iz), i in top.items():
             if narrow[i]:
                 if lab[i] not in gwid:
-                    gwid[lab[i]] = 2 * max(d[j] for j in groups[lab[i]])
+                    gwid[lab[i]] = 2 * (max(d[j] for j in groups[lab[i]]) + 0.5)
                 col = (225, 55, 50) if gwid[lab[i]] < 6 else (245, 150, 40)
             elif upper:
                 t = min(1.0, max(0.0, (hs[i][2] - 62) / 30))
