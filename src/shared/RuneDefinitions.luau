@@ -102,9 +102,9 @@ local affixes: { Affix } = {
 	{
 		Id = "Swift",
 		Name = "날랜",
-		Description = "패링·회피 타이밍 +5%",
+		Description = "자동 회피·패링 확률 +10%",
 		HasRisk = false,
-		Modifiers = { ParryWindow = 1.05, DodgeWindow = 1.05 },
+		Modifiers = { AutoDodge = 1.10 },
 	},
 	{
 		Id = "Devout",

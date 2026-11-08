@@ -10,8 +10,14 @@
 	의존(검사 함수·카드 조회·예시)을 `new` 에 넣어 받는다. 실제 연결은 `PartyPresetStore.Roblox()` 와 init.server.luau.
 ]]
 
-export type Unit =
-	{ ClassId: string, X: number, Y: number, Cards: { { CardId: string, Level: number } }, Level: number? }
+export type Unit = {
+	ClassId: string,
+	X: number,
+	Y: number,
+	Cards: { { CardId: string, Level: number } },
+	Level: number?,
+	Stats: { [string]: number }?,
+}
 export type Preset = { Name: string, Units: { Unit } }
 export type Backend = { Get: (key: string) -> any, Set: (key: string, value: any) -> () }
 export type CardInfo = { ClassId: string, MaxLevel: number }
@@ -21,6 +27,9 @@ export type Deps = {
 	Examples: () -> { { Name: string } },
 	Backend: Backend?,
 	MaxUnitLevel: number?,
+	-- 메인 스탯 Id 목록 · 레벨이 주는 스탯 포인트 총량(없으면 Stats 검사를 건너뛴다)
+	StatIds: { string }?,
+	TotalPoints: ((level: number) -> number)?,
 }
 
 local PartyPresetStore = {}
@@ -53,6 +62,30 @@ function PartyPresetStore.Roblox(): Backend?
 		Set = function(key: string, value: any)
 			store:SetAsync(key, value)
 		end,
+	}
+end
+
+-- 실제 서버가 쓰는 의존(검사 함수·카드 조회·예시·스탯 규칙). init.server 와 BattleService 가 같이 쓴다. 필요할 때 부르는 함수라 lune 시험은 안 부른다
+function PartyPresetStore.RealDeps(backend: Backend?): Deps
+	local shared = (game :: any):GetService("ReplicatedStorage").Shared
+	local AbilityCardDefinitions = require(shared.AbilityCardDefinitions)
+	local PartyDefinitions = require(shared.PartyDefinitions)
+	local ProgressionDefinitions = require(shared.ProgressionDefinitions)
+	local StatDefinitions = require(shared.StatDefinitions)
+	return {
+		Validate = PartyDefinitions.Validate,
+		Card = function(cardId: string)
+			local card = AbilityCardDefinitions.Get(cardId)
+			if not card then
+				return nil
+			end
+			return { ClassId = card.ClassId, MaxLevel = AbilityCardDefinitions.MaxLevelFor(card) }
+		end,
+		Examples = PartyDefinitions.Examples,
+		Backend = backend,
+		MaxUnitLevel = 60,
+		StatIds = StatDefinitions.Order,
+		TotalPoints = ProgressionDefinitions.TotalStatPoints,
 	}
 end
 
@@ -107,11 +140,24 @@ function PartyPresetStore:_reply(userId: number, errorText: string?): { [string]
 	}
 end
 
--- 요청 유닛을 검사하고 깨끗한 사본을 돌려준다. 실패하면 nil, 사유(한국어)
-function PartyPresetStore:_clean(rawUnits: any): ({ Unit }?, string?)
+--[[
+	파티 유닛 검사 — 프리셋 저장(Save)과 서버 StartParty(BattleService._buildParty)가 **같은 이 함수**를 쓴다.
+	깨끗한 사본을 돌려준다. 실패하면 nil, 사유(한국어).
+	  유닛 모양 · 유닛 레벨(1~MaxUnitLevel 정수) · 카드(있는 Id · 그 직업 카드 · 1~최대 레벨 정수 · 중복 없음) ·
+	  Stats(메인 스탯 Id만 · 0 이상 정수 · 합 ≤ 실제 레벨이 주는 포인트) · 구성(Validate: 코스트·같은 직업·칸)
+	opts.LevelBonus   편성 레벨. 실제 레벨 = 유닛 레벨 + LevelBonus (포인트 한도에 쓴다)
+	opts.DefaultLevel 유닛에 Level 이 없을 때의 기준 레벨(없으면 1)
+]]
+function PartyPresetStore.CleanUnits(
+	deps: Deps,
+	rawUnits: any,
+	opts: { LevelBonus: number?, DefaultLevel: number? }?
+): ({ Unit }?, string?)
 	if type(rawUnits) ~= "table" then
 		return nil, "유닛 목록이 없습니다."
 	end
+	local maxLevel = deps.MaxUnitLevel or 60
+	local bonus = if opts and opts.LevelBonus then opts.LevelBonus else 0
 	local units: { Unit } = {}
 	for _, raw in rawUnits do
 		if
@@ -124,7 +170,6 @@ function PartyPresetStore:_clean(rawUnits: any): ({ Unit }?, string?)
 		end
 		local level: number? = nil
 		if raw.Level ~= nil then
-			local maxLevel = self.Deps.MaxUnitLevel or 60
 			if type(raw.Level) ~= "number" or raw.Level % 1 ~= 0 or raw.Level < 1 or raw.Level > maxLevel then
 				return nil, string.format("유닛 레벨은 1~%d 정수여야 합니다 (%s).", maxLevel, raw.ClassId)
 			end
@@ -140,7 +185,7 @@ function PartyPresetStore:_clean(rawUnits: any): ({ Unit }?, string?)
 			if type(card) ~= "table" or type(card.CardId) ~= "string" or type(card.Level) ~= "number" then
 				return nil, "카드 모양이 잘못됐습니다."
 			end
-			local info = self.Deps.Card(card.CardId)
+			local info = deps.Card(card.CardId)
 			if not info then
 				return nil, string.format("없는 카드입니다 (%s).", card.CardId)
 			end
@@ -160,9 +205,51 @@ function PartyPresetStore:_clean(rawUnits: any): ({ Unit }?, string?)
 		if #cards > MAX_CARDS_PER_UNIT then
 			return nil, "카드가 너무 많습니다."
 		end
-		table.insert(units, { ClassId = raw.ClassId, X = raw.X, Y = raw.Y, Cards = cards, Level = level })
+
+		local stats: { [string]: number }? = nil
+		if raw.Stats ~= nil then
+			if type(raw.Stats) ~= "table" then
+				return nil, "스탯 모양이 잘못됐습니다."
+			end
+			local allowed: { [string]: boolean } = {}
+			for _, id in deps.StatIds or {} do
+				allowed[id] = true
+			end
+			local spent = 0
+			stats = {}
+			for id, points in raw.Stats do
+				if type(id) ~= "string" or (deps.StatIds and not allowed[id]) then
+					return nil, string.format("알 수 없는 스탯입니다 (%s).", tostring(id))
+				end
+				if type(points) ~= "number" or points % 1 ~= 0 or points < 0 then
+					return nil, string.format("스탯 포인트는 0 이상 정수여야 합니다 (%s).", id)
+				end
+				if points > 0 then
+					(stats :: any)[id] = points
+				end
+				spent += points
+			end
+			if deps.TotalPoints then
+				local actual = math.min(maxLevel, (level or (opts and opts.DefaultLevel) or 1) + bonus)
+				local total = deps.TotalPoints(actual)
+				if spent > total then
+					return nil,
+						string.format(
+							"스탯 포인트가 레벨이 주는 양을 넘었습니다 (%s: %d/%d, 레벨 %d).",
+							raw.ClassId,
+							spent,
+							total,
+							actual
+						)
+				end
+			end
+		end
+		table.insert(
+			units,
+			{ ClassId = raw.ClassId, X = raw.X, Y = raw.Y, Cards = cards, Level = level, Stats = stats }
+		)
 	end
-	local ok, reason = self.Deps.Validate(units)
+	local ok, reason = deps.Validate(units)
 	if not ok then
 		return nil, reason or "파티 구성이 맞지 않습니다."
 	end
@@ -175,7 +262,7 @@ end
 	request = { Op = "List" | "Save" | "Delete", Name?, Units? }
 	응답    = { Presets, Examples, Persistent, Error? } — 실패해도 현재 목록은 같이 준다.
 ]]
-function PartyPresetStore:Handle(userId: number, request: any): { [string]: any }
+function PartyPresetStore:Handle(userId: number, request: any, levelBonus: number?): { [string]: any }
 	if type(request) ~= "table" then
 		return self:_reply(userId, "요청이 잘못됐습니다.")
 	end
@@ -215,7 +302,7 @@ function PartyPresetStore:Handle(userId: number, request: any): { [string]: any 
 				return self:_reply(userId, "예시 프리셋과 같은 이름으로는 저장할 수 없습니다.")
 			end
 		end
-		local units, reason = self:_clean(request.Units)
+		local units, reason = PartyPresetStore.CleanUnits(self.Deps, request.Units, { LevelBonus = levelBonus })
 		if not units then
 			return self:_reply(userId, reason)
 		end

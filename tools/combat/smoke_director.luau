@@ -935,6 +935,12 @@ do
 				self.partyHover = skillId
 				self:_paintTiles()
 			end,
+			TipSkill = function() end,
+			TipEffect = function() end,
+			HomingPick = function(id)
+				self.partyPicking = id
+				self:_refreshParty()
+			end,
 		})
 		self.partyHud:SetActive(true)
 		director.OnDamage = function(id: string, dmg: number)
@@ -1069,10 +1075,21 @@ do
 			self.partyHud.hovers["Slot1"](false)
 			assert(self.partyHover == nil, "마우스 뗌이 미리보기를 안 지움")
 			local wasHoming = state.Units[target].Homing == true
+			-- 유도 칸은 늘 보인다. 붙어 있으면 누르면 떼고, 아니면 '적 고르기' → 적을 누르면 대상 적과 함께 붙는다
+			assert(self.partyHud.clicks["HomingButton"], "유도 칸이 안 보임")
 			table.clear(sent)
 			self.partyHud.clicks["HomingButton"]()
-			assert(#sent == 1 and sent[1].Kind == "Homing" and sent[1].Id == target and sent[1].On == not wasHoming, string.format("유도 붙이기/떼기가 Homing 으로 안 감 (턴 %d, 보냄 %d, 남은 칩 %d, 붙음 %s, 고름 %s, 편집 %s)", turn, #sent, GridBattle.HomingLeft(state), tostring(wasHoming), tostring(self.partySelected), tostring(self:_partyCanEdit())))
-			assert(GridBattle.SetHoming(state, target, not wasHoming))
+			if wasHoming then
+				assert(#sent == 1 and sent[1].Kind == "Homing" and sent[1].Id == target and sent[1].On == false, "유도 떼기가 Homing 으로 안 감")
+				assert(GridBattle.SetHoming(state, target, false))
+			else
+				assert(self.partyPicking == target, "유도 누름이 적 고르기로 안 감")
+				assert(self.partyHud.clicks["HomingButton"], "적 고르기 중에도 유도 칸이 보여야 한다")
+				local foe = GridBattle.AliveEnemies(state)[1].Id
+				self:_partyPickEnemy(foe)
+				assert(#sent == 1 and sent[1].Kind == "Homing" and sent[1].Id == target and sent[1].On == true and sent[1].TargetId == foe, "적을 고르면 Homing(TargetId) 이 가야 한다")
+				assert(GridBattle.SetHoming(state, target, true, foe))
+			end
 			assert(GridBattle.SetHoming(state, "player", turn % 2 == 1))
 			publish()
 			drain("준비 2 " .. turn)

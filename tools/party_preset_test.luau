@@ -10,6 +10,8 @@ local loadShared = require("./lune_env")
 loadShared("AbilityCards/init").Register()
 local AbilityCardDefinitions = loadShared("AbilityCardDefinitions")
 local PartyDefinitions = loadShared("PartyDefinitions")
+local ProgressionDefinitions = loadShared("ProgressionDefinitions")
+local StatDefinitions = loadShared("StatDefinitions")
 
 local Store = luau.load(fs.readFile("src/server/PartyPresetStore.luau"), { debugName = "PartyPresetStore" })()
 
@@ -32,6 +34,8 @@ local function deps(backend: any)
 		Examples = PartyDefinitions.Examples,
 		Backend = backend,
 		MaxUnitLevel = 60,
+		StatIds = StatDefinitions.Order,
+		TotalPoints = ProgressionDefinitions.TotalStatPoints,
 	}
 end
 
@@ -149,6 +153,36 @@ do
 	}
 	reply = Store.new(deps(readFails)):Handle(9, { Op = "Save", Name = "z", Units = exampleUnits(1) })
 	check(reply.Error == nil and reply.Persistent == false and #reply.Presets == 1, "읽기 실패 → 메모리 전용")
+end
+
+-- 6) 스탯 분배: 레벨이 주는 포인트(레벨당 3) 이내 · 메인 스탯만 · 음수·소수 금지 · 편성 레벨이 한도를 늘린다
+do
+	local store = Store.new(deps(nil))
+	local function withStats(level: number?, stats: any): any
+		local units = exampleUnits(1)
+		units[1].Level = level
+		units[1].Stats = stats
+		return units
+	end
+	local ids = StatDefinitions.Order
+	local function save(units: any, bonus: number?): any
+		return store:Handle(1, { Op = "Save", Name = "스탯", Units = units }, bonus)
+	end
+	check(save(withStats(11, { [ids[1]] = 30 })).Error == nil, "레벨 11 = 포인트 30, 30 은 허용")
+	check(save(withStats(11, { [ids[1]] = 31 })).Error ~= nil, "레벨 11 에 31 은 거절")
+	check(save(withStats(11, { [ids[1]] = 20, [ids[2]] = 11 })).Error ~= nil, "스탯 합이 넘으면 거절")
+	check(save(withStats(11, { [ids[1]] = 31 }), 1).Error == nil, "편성 레벨 +1 이면 레벨 12 = 33점이라 31 허용")
+	check(save(withStats(11, { [ids[1]] = -1 })).Error ~= nil, "음수 거절")
+	check(save(withStats(11, { [ids[1]] = 1.5 })).Error ~= nil, "소수 거절")
+	check(save(withStats(11, { Dodge = 3 })).Error ~= nil, "없는 스탯 거절")
+	check(save(withStats(1, { [ids[1]] = 1 })).Error ~= nil, "레벨 1 은 포인트 0")
+	check(save(withStats(nil, "x")).Error ~= nil, "Stats 가 표 아님")
+	local ok = save(withStats(15, { [ids[1]] = 10, [ids[3]] = 0 }))
+	check(ok.Error == nil and ok.Presets[1].Units[1].Stats[ids[1]] == 10 and ok.Presets[1].Units[1].Stats[ids[3]] == nil, "0 점은 저장 안 하고 값은 그대로 저장")
+	-- BattleService.StartParty 도 쓰는 같은 검사 함수
+	local units, why = Store.CleanUnits(deps(nil), exampleUnits(2), { LevelBonus = 3, DefaultLevel = 5 })
+	check(units and #units == 5, "CleanUnits 가 예시를 통과시킨다: " .. tostring(why))
+	check(select(1, Store.CleanUnits(deps(nil), withStats(nil, { [ids[1]] = 7 }), { DefaultLevel = 3 })) == nil, "Level 없으면 DefaultLevel(3 → 6점) 기준으로 7점 거절")
 end
 
 print("party_preset_test 통과")

@@ -39,14 +39,16 @@ local PER_POINT = {
 	},
 	Agility = {
 		PhysicalDamage = 0.03, -- 물리 대미지 +3%
-		ParryWindow = 0.03, -- 회피 시간 +3%
-		DodgeWindow = 0.03, -- 회피 타이밍 +3%
+		-- 2026-11-08 '회피 시간'(QTE 입력 시간) 삭제 → 자동 회피(결투사는 자동 패링) 확률. 다른 자동 패링 확률과 합쳐 최대 50%(GridBattle.AUTO_PARRY_CAP).
+		-- 근거: 옛 회피 시간 +10% ≈ 회피 성공률 +5%p 라 3% ≈ 1.5%p/점이었지만 상한 50% 를 나눠 쓰므로 0.3%p/점(최대치 100점 = 30%p)
+		AutoDodge = 0.003,
 		MoveSpeed = 0.01, -- 이동속도 (사양에 수치 없음 → 1%로 잠정)
 		BuffTaken = 0.03, -- 받는 버프 효율 +3%
 	},
 	Vitality = {
 		MaxHealth = 4, -- 체력 +4
-		ParryWindow = 0.01, -- 회피 시간 +1%
+		-- 2026-11-08 '회피 시간' 삭제 → 받는 피해 감소(최대 20%). 옛 1% 시간 ≈ 0.5%p 회피율의 몫을 0.1%/점로(100점 = 10%)
+		DamageTaken = -0.001,
 		HealTaken = 0.01, -- 받는 회복량 +1%
 	},
 	Luck = {
@@ -80,12 +82,12 @@ local definitions: { StatDefinition } = {
 	{
 		Id = "Agility",
 		Name = "민첩",
-		Description = "근접 피해량 3%, 회피 시간·회피 타이밍 3%, 이동속도, 받는 버프 효율 3%",
+		Description = "근접 피해량 3%, 자동 회피(결투사는 자동 패링) 확률 0.3%, 이동속도, 받는 버프 효율 3%",
 	},
 	{
 		Id = "Vitality",
 		Name = "체력",
-		Description = "체력 4, 회피 시간 1%, 받는 회복량 1%",
+		Description = "체력 4, 받는 피해량 0.1% 감소(최대 20%), 받는 회복량 1%",
 	},
 	{
 		Id = "Luck",

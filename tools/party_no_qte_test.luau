@@ -1,7 +1,7 @@
 --[[
 	party_no_qte_test.luau — 파티 전투 QTE 삭제(2026-11-08)로 바꾼 카드·패시브가 실제로 도는지 본다.
 	  lune run tools/party_no_qte_test.luau
-	결투사 기본 패링 확률 · 광전사 자랑(같은 행 아군) · 펄서 수렴([감극] 연계) · 청의 검사 거짓 틈(도발한 턴에 맞기). 실패하면 오류로 끝난다.
+	결투사 기본 패링 확률 · 광전사 자랑(같은 행이나 열의 아군) · 자동 패링 확률 상한 50% · 체력 스탯 피해 감소 · 펄서 수렴([감극] 연계) · 청의 검사 거짓 틈(도발한 턴에 맞기). 실패하면 오류로 끝난다.
 ]]
 local loadShared = require("./lune_env")
 
@@ -100,7 +100,27 @@ do
 		return before - unit.Health
 	end
 	check(lost(2) >= 1, "같은 행에 아군이 있으면 자해")
-	check(lost(1) == 0, "다른 행이면 자해 없음")
+	check(lost(1) == 0, "다른 행·다른 열이면 자해 없음")
+	-- 2026-11-08 Q13: 같은 행이나 같은 열 — 자기(3,2)와 같은 열(x=3)의 다른 행(y=3)
+	local function lostAt(x: number, y: number): number
+		local state = party({
+			member("Berserker", 3, 2, { { CardId = "Berserker_C_UnstoppingArm", Level = 1 } }),
+			member("Pulsar", x, y),
+		})
+		local unit = state.Units.player
+		local before = unit.Health
+		GridBattle.BeginTurn(state)
+		while GridBattle.NextActor(state) do
+			local id = GridBattle.NextActor(state) :: string
+			GridBattle.ResolveUnitSkill(state, id, noCrit)
+			if id == "player" then
+				break
+			end
+		end
+		return before - unit.Health
+	end
+	check(lostAt(3, 3) >= 1, "같은 열에 아군이 있으면 자해")
+	check(lostAt(4, 3) == 0, "행도 열도 다르면 자해 없음")
 end
 
 -- 3) 펄서 수렴: 대상에게 이미 [감극]이 있으면 피해 +20%·[감극] 1 더
@@ -154,6 +174,50 @@ do
 		GridBattle.EndTurn(state)
 	end
 	check(resets >= 1 and resets <= 12, "거짓 틈이 가끔은 터진다, 터진 횟수 " .. resets)
+end
+
+-- 5) 자동 패링 확률 상한 50%(2026-11-08 Q13): 보정값 +100% 와 민첩 스탯을 얹어도 절반만 터진다. 광전사(회피 직업)로 센다
+do
+	check(GridBattle.AUTO_PARRY_CAP == 0.5, "상한 상수 0.5")
+	local function parryRate(agility: number, vitality: number): (number, number)
+		local state = party({
+			{ ClassId = "Berserker", X = 3, Y = 1, Cards = {}, Name = "b", Health = 1000000, Power = 10, Stamina = 999, Stats = { Agility = agility, Vitality = vitality } },
+		})
+		local me = GridBattle.Ally(state)
+		BattleStatus.AddModifier(me.Status, "AutoParry", 1, -1, "시험")
+		local parried, hit, lostTotal = 0, 0, 0
+		for _ = 1, 400 do
+			if state.Outcome ~= "Ongoing" then
+				break
+			end
+			state.Log = {}
+			local before = me.Health
+			GridBattle.EnemyPlan(state, rng)
+			GridBattle.BeginTurn(state)
+			GridBattle.ResolveEnemyPhase(state, rng)
+			local got = false
+			for _, line in state.Log do
+				if line == "자동 패링" then
+					parried += 1
+					got = true
+				end
+			end
+			if not got and me.Health < before then
+				hit += 1
+				lostTotal += before - me.Health
+			end
+			GridBattle.EndTurn(state)
+			me.Health = 1000000
+		end
+		return parried / math.max(1, parried + hit), lostTotal / math.max(1, hit)
+	end
+	local rate, avgHit = parryRate(0, 0)
+	check(rate > 0.38 and rate < 0.62, "보정값 100% 여도 자동 패링은 약 50%, 실제 " .. rate)
+	local rateAgi = parryRate(100, 0)
+	check(rateAgi > 0.38 and rateAgi < 0.62, "민첩 100 을 얹어도 약 50%, 실제 " .. rateAgi)
+	-- 체력 스탯: 받는 피해 감소(점당 0.1%, 최대 20%) — 같은 씨앗 같은 공격이면 맞는 한 방이 그만큼 줄어든다
+	local _, hitVit = parryRate(0, 100)
+	check(hitVit < avgHit * 0.97 and hitVit > avgHit * 0.8, "체력 100 이면 맞는 피해 약 −10%, 실제 " .. hitVit .. " / " .. avgHit)
 end
 
 print("party_no_qte_test 통과")

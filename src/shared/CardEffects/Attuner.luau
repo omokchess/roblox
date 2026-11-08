@@ -208,12 +208,8 @@ M.Attuner_Phecda = {
 		if info.Skill and info.Skill.Unavoidable then
 			return false
 		end
-		if H.Rng(c) < Q(c.Rt, "PhecdaEvade", 0.2) then
-			info.Grade = "Success"
-			info.Auto = true
-			H.Log(c, "자동 회피")
-			return true
-		end
+		-- 2026-11-08: 따로 굴리지 않고 엔진의 자동 패링·회피 확률에 더한다 — 다른 자동 회피와 합쳐 최대 50%(GridBattle.AUTO_PARRY_CAP)
+		info.AutoParry += Q(c.Rt, "PhecdaEvade", 0.2)
 		return false
 	end,
 	Defend = function(c: Card, info: any)

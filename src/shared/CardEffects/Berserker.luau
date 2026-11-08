@@ -549,10 +549,11 @@ M.Berserker_C_DeathWish = {
 }
 
 --[[
-	자랑: 스킬을 쓴 뒤 **같은 행에 다른 아군이 있으면** 자해 {1}. 죽지 않고, 재기·불굴도 켜지지 않는다.
+	자랑: 스킬을 쓴 뒤 **같은 행이나 같은 열에 다른 아군이 있으면** 자해 {1}. 죽지 않고, 재기·불굴도 켜지지 않는다.
 	다혈질이 [분노]로 바꾼다 — 사실상 "구경꾼이 있으면 분노".
-	2026-11-08 QTE 삭제 — 옛 '스킬·패링 QTE 성공 시 자해'(성공률 약 60%). 파티 전투 배치 조건으로 바꿨다: 같은 행에 아군이 서 있어야 폼이 난다.
-	Party 카드(솔로는 같은 행 아군이 없어 켜지지 않는다). 자리는 스킬을 쓴 시점에 본다.
+	2026-11-08 사용자 Q13: "같은 행과 열에 다른 아군이 있으면 자해" — 해석: 자기 행 또는 자기 열 중 하나라도(Y 같음 또는 X 같음). 십자 범위라 구경꾼이 더 쉽게 생긴다.
+	2026-11-08 QTE 삭제 — 옛 '스킬·패링 QTE 성공 시 자해'(성공률 약 60%). 파티 전투 배치 조건으로 바꿨다: 같은 행(2판: 또는 열)에 아군이 서 있어야 폼이 난다.
+	Party 카드(솔로는 같은 행·열 아군이 없어 켜지지 않는다). 자리는 스킬을 쓴 시점에 본다.
 ]]
 local function boast(c: Card)
 	local me = H.Ally(c)
@@ -563,7 +564,7 @@ local function boast(c: Card)
 	local watched = false
 	for _, ally in H.Allies(c) do
 		local cell = if ally.Id ~= me.Id then H.Cell(c, ally) else nil
-		if cell and cell.Y == mine.Y then
+		if cell and (cell.Y == mine.Y or cell.X == mine.X) then
 			watched = true
 			break
 		end

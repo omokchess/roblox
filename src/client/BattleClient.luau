@@ -140,6 +140,8 @@ function BattleClient.new(remotes: Folder, plazaUi: any?)
 	self.partySelected = nil :: string?
 	self.partyPress = nil :: any
 	self.partyHover = nil :: string?
+	-- 유도를 붙일 유닛 Id(적을 고르는 중일 때)
+	self.partyPicking = nil :: string?
 	self.partyBusyShown = false
 	self.dolls = {} :: { [string]: Model }
 
@@ -235,6 +237,31 @@ function BattleClient:_buildUi()
 			end,
 			Hover = function(skillId: string?)
 				self.partyHover = skillId
+				self:_paintTiles()
+			end,
+			-- 솔로 스킬 바와 같은 설명 말풍선(BattleHud.ShowSkillTip / ShowEffectTip)
+			TipSkill = function(skill: any?, anchor: GuiObject?)
+				if skill and anchor then
+					self.hud:ShowSkillTip(skill, anchor, "party")
+				else
+					self.hud:HideSkillTipSoon("party")
+				end
+			end,
+			TipEffect = function(effect: any?, anchor: GuiObject?)
+				if effect and anchor then
+					self.hud:ShowEffectTip(effect, anchor)
+				else
+					self.hud:HideEffectTip()
+				end
+			end,
+			-- 유도 칸: 유닛을 주면 '적 고르기'(적을 누르면 붙는다), nil 이면 취소
+			HomingPick = function(id: string?)
+				if id and not self:_partyCanEdit() then
+					return
+				end
+				self.partyPicking = id
+				self.hud:SetLog(if id then "유도할 적을 누른다 (Esc 취소)" else "유도 고르기를 취소했다")
+				self:_refreshParty()
 				self:_paintTiles()
 			end,
 		})
@@ -1332,6 +1359,7 @@ function BattleClient:_setupBattle()
 	self.partySelected = nil
 	self.partyPress = nil
 	self.partyHover = nil
+	self.partyPicking = nil
 	self.partyBusyShown = false
 	self.dolls = {}
 	self.hud:SetPartyMode(self.partyMode == true)
@@ -2217,7 +2245,7 @@ function BattleClient:_bindInput()
 		-- 보스 정보 창: 부위를 누르면 연다(연출 중에도 — 아군 칸 위를 누른 건 드래그라 빼고),
 		-- 열린 채 창 밖을 누르면 닫고 그 누름은 평소대로(드래그) 쓴다
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			local part = if self:_tileUnderCursor() then nil else self:_bossPartUnderCursor()
+			local part = if self.partyPicking or self:_tileUnderCursor() then nil else self:_bossPartUnderCursor()
 			if part == "Callisto" then
 				self.hud:ShowCallistoInfo(self.snapshot)
 				return
@@ -2383,6 +2411,13 @@ function BattleClient:_bindInput()
 			end
 			-- 파티 전투: 1~6 은 고른 유닛의 스킬. Space·QTE 는 없다
 			if self.partyMode then
+				if input.KeyCode == Enum.KeyCode.Escape and self.partyPicking then
+					self.partyPicking = nil
+					self.hud:SetLog("유도 고르기를 취소했다")
+					self:_refreshParty()
+					self:_paintTiles()
+					return
+				end
 				self:_partyHotkey(input)
 				return
 			end
@@ -2463,9 +2498,7 @@ function BattleClient:_startQte(role: QteDefinitions.Role)
 			return rng:NextNumber()
 		end, os.clock() * 1000, "tower", false)
 	end
-	-- 회피 시간(카드·집중·스탯): 방향 회피 입력 시간을 늘린다(최대 +100%)
-	local extra = if role == "Dodge" then math.clamp((self.snapshot and self.snapshot.AllyParryWindow) or 0, 0, 1) else 0
-	self.qte.DurationMs = math.floor(self.qte.DurationMs * (1 + extra))
+	-- 2026-11-08 '회피 시간' 스탯 삭제 — 회피 QTE 입력 시간은 고정 기본값
 	-- 결투사: 실수 몇 개를 더 성공으로 본다(간파·집중 최대·연계)
 	self.qte.Forgive = if role == "Dodge" then math.max(0, (self.snapshot and self.snapshot.AllyParryForgive) or 0) else 0
 	self.qteStart = os.clock()
@@ -2742,7 +2775,22 @@ end
 function BattleClient:_partyRelease()
 	local press = self.partyPress
 	self.partyPress = nil
-	if not press or not self.snapshot then
+	if not self.snapshot then
+		return
+	end
+	-- 유도할 적 고르기 중이면 이 클릭은 적 고르기다(적이 아니면 취소)
+	if self.partyPicking then
+		local enemyId = self:_enemyUnderCursor()
+		if enemyId then
+			self:_partyPickEnemy(enemyId)
+		else
+			self.partyPicking = nil
+			self:_refreshParty()
+			self:_paintTiles()
+		end
+		return
+	end
+	if not press then
 		return
 	end
 	local cell, id = self:_partyCursorCell()
@@ -2758,6 +2806,76 @@ function BattleClient:_partyRelease()
 		elseif self.partySelected then
 			self:_partySend({ Kind = "Place", Id = self.partySelected, X = cell.X, Y = cell.Y })
 		end
+	end
+	self:_refreshParty()
+	self:_paintTiles()
+end
+
+-- 커서 아래 적: 적 몸(광선) → 적 칸 순서로 찾는다. 돌려주는 값: 적 Id
+function BattleClient:_enemyUnderCursor(): string?
+	local director, camera, snapshot = self.director, workspace.CurrentCamera, self.snapshot
+	if not director or not camera or not snapshot or not self.tiles then
+		return nil
+	end
+	local location = UserInputService:GetMouseLocation()
+	local ray = camera:ViewportPointToRay(location.X, location.Y)
+	local models: { Instance } = {}
+	local idOf: { [Instance]: string } = {}
+	for id, unit in snapshot.Units do
+		if unit.Side == "Enemy" and unit.Alive and not unit.Twin then
+			local model = director:Model(id)
+			if model and model.Parent then
+				table.insert(models, model)
+				idOf[model] = id
+			end
+		end
+	end
+	if #models > 0 then
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Include
+		params.FilterDescendantsInstances = models
+		local hit = workspace:Raycast(ray.Origin, ray.Direction * 900, params)
+		local node: Instance? = hit and hit.Instance
+		while node do
+			if idOf[node] then
+				return idOf[node]
+			end
+			node = node.Parent
+		end
+	end
+	local list: { Instance } = {}
+	for y = 1, GRID_HEIGHT do
+		for x = 1, GRID_WIDTH do
+			table.insert(list, self.tiles.Enemy[y][x])
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = list
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * 900, params)
+	if hit then
+		local side, x, y = hit.Instance.Name:match("^Tile_(%a+)_(%d+)_(%d+)$")
+		if side == "Enemy" then
+			for id, unit in snapshot.Units do
+				if unit.Side == "Enemy" and unit.Alive and not unit.Twin and unit.GridSide ~= "Ally" then
+					for _, c in unit.Cells or { { unit.X, unit.Y } } do
+						if c[1] == tonumber(x) and c[2] == tonumber(y) then
+							return id
+						end
+					end
+				end
+			end
+		end
+	end
+	return nil
+end
+
+-- 유도를 붙일 유닛(partyPicking)에 고른 적을 대상으로 붙인다
+function BattleClient:_partyPickEnemy(enemyId: string)
+	local unitId = self.partyPicking
+	self.partyPicking = nil
+	if unitId and self:_partyCanEdit() then
+		self:_partySend({ Kind = "Homing", Id = unitId, On = true, TargetId = enemyId })
 	end
 	self:_refreshParty()
 	self:_paintTiles()
@@ -2846,9 +2964,24 @@ function BattleClient:_refreshParty()
 			Stand = if selected and self.director then self.director:Model(selected) else nil,
 			Effects = effects,
 			Threatened = threatened,
+			Picking = self.partyPicking,
 		})
 	end
 	self:_updatePartyInfo()
+end
+
+-- 이번 턴 추적 공격이 노리는 아군 Id 표({ [id] = true }) — 예고 때 정한 Plan.TargetId('노림')
+function BattleClient:_aimedIds(snapshot: any): { [string]: boolean }
+	local aimed: { [string]: boolean } = {}
+	for _, enemyId in snapshot.Planned or {} do
+		local unit = snapshot.Units[enemyId]
+		for _, plan in (unit and (unit.Plans or (unit.Plan and { unit.Plan }))) or {} do
+			if plan.Seek and plan.TargetId then
+				aimed[plan.TargetId] = true
+			end
+		end
+	end
+	return aimed
 end
 
 -- 유닛 머리 아래 이름·체력(보이는 체력 — 피해 숫자가 뜨는 순간 줄어든다)
@@ -2857,6 +2990,7 @@ function BattleClient:_updatePartyInfo()
 	if not self.partyMode or not snapshot or not director then
 		return
 	end
+	local aimed = self:_aimedIds(snapshot)
 	for id, unit in snapshot.Units do
 		if unit.Side ~= "Ally" or not unit.ClassId then
 			continue
@@ -2870,7 +3004,7 @@ function BattleClient:_updatePartyInfo()
 		if not gui then
 			local made = make("BillboardGui", {
 				Name = "PartyInfo",
-				Size = UDim2.fromOffset(112, 18),
+				Size = UDim2.fromOffset(140, 18),
 				StudsOffset = Vector3.new(0, -3.8, 0),
 				AlwaysOnTop = true,
 				Active = false,
@@ -2893,7 +3027,8 @@ function BattleClient:_updatePartyInfo()
 		;(gui :: BillboardGui).StudsOffset = Vector3.new(0, -3.8 - (if (unit.X or 0) % 2 == 0 then 1.7 else 0), 0)
 		local text = (gui :: BillboardGui):FindFirstChild("Text") :: TextLabel
 		local shown = (self.hpShown and self.hpShown[id]) or unit.Health
-		text.Text = string.format("%s  %d/%d", unit.Name, math.ceil(shown), unit.MaxHealth)
+		text.Text = string.format("%s%s  %d/%d", if aimed[id] then "노림 ▶ " else "", unit.Name, math.ceil(shown), unit.MaxHealth)
+		text.TextColor3 = if aimed[id] then Color3.fromRGB(255, 120, 110) elseif PartyHud then PartyHud.ClassColor(unit.ClassId) else Color3.new(1, 1, 1)
 		;(gui :: BillboardGui).Enabled = unit.Alive
 	end
 end
@@ -3056,7 +3191,11 @@ function BattleClient:_partyThreatKeys(snapshot: any, grid: BattleGrid.Grid): { 
 		end
 		local plan = (unit.Plans and unit.Plans[seen[enemyId]]) or (seen[enemyId] == 1 and unit.Plan) or nil
 		local cells: { { number } } = {}
-		if plan then
+		local fromEngine = snapshot.ThreatCells and snapshot.ThreatCells[enemyId] and snapshot.ThreatCells[enemyId][seen[enemyId]]
+		if fromEngine then
+			-- 판정과 같은 함수가 계산한 '지금 맞히는 칸'(GridBattle.PlanThreatCells) — 추적 공격은 대상이 옮긴 칸을 따라온다
+			cells = fromEngine
+		elseif plan then
 			local skill = BattleSkills.ById(plan.SkillId)
 			local damaging = skill ~= nil and ((skill.Damage or 0) > 0 or skill.HpRatio ~= nil or skill.Inflicts == true) and not plan.Canceled
 			if damaging then
@@ -3147,7 +3286,15 @@ function BattleClient:_paintPartyTiles()
 		end
 	end
 
-	-- 유닛 윤곽: 아군 청백(고른 유닛은 금색), 미리보기에 맞는 적은 붉은 윤곽
+	-- 유닛 윤곽: 아군 청백(고른 유닛은 금색, 적이 노리는 유닛은 붉게), 미리보기에 맞는 적은 붉은 윤곽(유도 대상·고르는 중이면 금색)
+	local aimed = self:_aimedIds(snapshot)
+	local homed: { [string]: boolean } = {}
+	for _, u in snapshot.Units do
+		if u.Side == "Ally" and u.HomingTarget then
+			homed[u.HomingTarget] = true
+		end
+	end
+	local picking = self.partyPicking ~= nil
 	if self.director then
 		for id, unit in snapshot.Units do
 			local model = self.director:Model(id)
@@ -3170,11 +3317,12 @@ function BattleClient:_paintPartyTiles()
 			local unitMark = ring :: Highlight
 			if unit.Side ~= "Enemy" then
 				unitMark.Enabled = unit.Alive
-				unitMark.OutlineColor = if id == selected then TILE_SELECT else Color3.fromRGB(235, 245, 255)
+				unitMark.OutlineColor = if aimed[id] then Color3.fromRGB(255, 90, 80) elseif id == selected then TILE_SELECT else Color3.fromRGB(235, 245, 255)
 				continue
 			end
-			local want = unit.Alive and hitIds[id] == true
+			local want = unit.Alive and hitIds[id] == true and not picking
 			unitMark.Enabled = unit.Alive and not want
+			unitMark.OutlineColor = if homed[id] or picking then TILE_SELECT else Color3.fromRGB(255, 90, 80)
 			local mark = model:FindFirstChild("TargetMark") :: Highlight?
 			if want and not mark then
 				local h = Instance.new("Highlight")

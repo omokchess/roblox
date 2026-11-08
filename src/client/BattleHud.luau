@@ -601,10 +601,14 @@ end
 
 function BattleHud:_showEffect(id: string, icon: GuiObject)
 	local e = self.effects and self.effects[id]
-	if not e then
-		return
+	if e then
+		self:ShowEffectTip(e, icon)
 	end
-	self.effectShown = id
+end
+
+-- 효과(상태이상·자원) 설명 말풍선. 솔로 효과 줄과 파티 아래 창이 같이 쓴다
+function BattleHud:ShowEffectTip(e: any, icon: GuiObject)
+	self.effectShown = e.Id
 	self.effectPopStroke.Color = e.Color
 	self.effectPopName.Text = string.format(
 		'<font color="%s">%s</font>%s',
@@ -618,6 +622,15 @@ function BattleHud:_showEffect(id: string, icon: GuiObject)
 	local x = math.clamp(icon.AbsolutePosition.X, 12, view.X - 12 - 300 * self.scale)
 	self.effectPop.Position = UDim2.fromOffset(x, icon.AbsolutePosition.Y - 8)
 	self.effectPop.Visible = true
+end
+
+function BattleHud:HideEffectTip()
+	self.effectShown = nil
+	self.effectPop.Visible = false
+end
+
+function BattleHud:HideSkillTipSoon(key: any)
+	self:_hideTipSoon(key)
 end
 
 function BattleHud:_hideEffect(id: string)
@@ -1425,12 +1438,21 @@ local function statPart(label: string, value: string, color: Color3?): string
 end
 
 function BattleHud:_showTip(index: number)
-	local skill = self.skills[index]
 	local slot = self.slots[index]
-	if not skill or not slot then
+	if slot then
+		self:ShowSkillTip(self.skills[index], slot.Button, index)
+	end
+end
+
+--[[
+	스킬 설명 말풍선을 anchor(스킬 칸) 위에 띄운다. 솔로 스킬 바와 파티 아래 창(PartyHud)이 같이 쓴다.
+	key = 어느 칸의 말풍선인지(솔로는 슬롯 번호) — _hideTipSoon(key) 가 같은 칸일 때만 닫는다.
+]]
+function BattleHud:ShowSkillTip(skill: any, anchor: GuiObject, key: any)
+	if not skill or not anchor then
 		return
 	end
-	self.tipFor = index
+	self.tipFor = key
 	self.hideToken = nil
 	local kind = KIND[skill.Kind] or KIND.Class
 
@@ -1531,9 +1553,9 @@ function BattleHud:_showTip(index: number)
 	local camera = workspace.CurrentCamera
 	local view = if camera then camera.ViewportSize else Vector2.new(1280, 720)
 	local s = self.scale
-	local slotTop = slot.Button.AbsolutePosition.Y
+	local slotTop = anchor.AbsolutePosition.Y
 	local bottom = view.Y - slotTop + 14
-	local x = slot.Button.AbsolutePosition.X + slot.Button.AbsoluteSize.X / 2 - TIP_W * s / 2
+	local x = anchor.AbsolutePosition.X + anchor.AbsoluteSize.X / 2 - TIP_W * s / 2
 	x = math.clamp(x, 12, view.X - 12 - TIP_W * s)
 	self.tipMax = math.max(120, (slotTop - 14 - 70) / s - 64 - 26)
 	self.tip.Position = UDim2.new(0, x, 1, -bottom)
@@ -1555,7 +1577,7 @@ function BattleHud:_hideTip()
 end
 
 -- 슬롯에서 말풍선으로 마우스를 옮기는 틈(스크롤하려고)엔 닫지 않는다
-function BattleHud:_hideTipSoon(index: number?)
+function BattleHud:_hideTipSoon(index: any)
 	local token = {}
 	self.hideToken = token
 	task.delay(0.15, function()

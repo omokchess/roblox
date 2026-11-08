@@ -74,7 +74,7 @@ local KITS: { [string]: ClassKit } = {
 				Id = "Duelist_Read",
 				Name = "간파",
 				Description = "- 막기의 [받는 피해량] 감소 효과가 절반이 된다.\n"
-					.. "- 패링 확률 +10%",
+					.. "- 패링 확률 +10%(자동 패링 확률은 전부 합쳐 최대 50%)",
 			},
 			{
 				Id = "Duelist_Situation",
@@ -308,7 +308,7 @@ local KITS: { [string]: ClassKit } = {
 			{
 				Id = "Attuner_Phecda",
 				Name = "페크다",
-				Description = "- 자신을 포함한 모든 아군에게 자동 회피 확률 20%.\n"
+				Description = "- 자신을 포함한 모든 아군에게 자동 회피 확률 20%(자동 패링·회피 확률은 전부 합쳐 최대 50%).\n"
 					.. "- 자동 회피로 피한 아군이 있으면 [칠성] 1 획득(`셉텐트리오네스` 전까지 이 효과로 1번).",
 			},
 			{

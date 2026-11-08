@@ -47,7 +47,7 @@ local CombatMotions = require(ReplicatedStorage.Shared.Combat.CombatMotions)
 local EnemyDefinitions = require(ReplicatedStorage.Shared.EnemyDefinitions)
 local GridBattle = require(ReplicatedStorage.Shared.GridBattle)
 local GroggyGauge = require(ReplicatedStorage.Shared.GroggyGauge)
-local PartyDefinitions = require(ReplicatedStorage.Shared.PartyDefinitions)
+local PartyPresetStore = require(script.Parent.PartyPresetStore)
 local SlimeMotions = require(ReplicatedStorage.Shared.Combat.Motions.Slime)
 local PlayerProfile = require(ReplicatedStorage.Shared.PlayerProfile)
 local ProgressionDefinitions = require(ReplicatedStorage.Shared.ProgressionDefinitions)
@@ -101,6 +101,8 @@ export type Session = {
 	-- 파티 전투(2026-11-08): 이 전투가 파티 세션인가 · 턴 시작 뒤 서버가 순서대로 해소하는 중인가
 	PartyMode: boolean?,
 	Turning: boolean?,
+	-- 편성 레벨(디버그 세션 값, 저장하지 않는다): 파티 유닛의 실제 레벨 = 유닛 레벨 + 이 값. 파티 승리마다 +1
+	PartyLevel: number,
 	-- 파티 명령이 거절된 까닭(다음 스냅샷에 실어 화면 기록 줄에 띄운다)
 	Notice: string?,
 }
@@ -177,6 +179,11 @@ function BattleService:CanDebug(player: Player): boolean
 		return true
 	end
 	return game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId
+end
+
+-- 이 사람의 편성 레벨(프리셋 저장 검사가 스탯 포인트 한도에 쓴다)
+function BattleService:PartyLevelOf(player: Player): number
+	return self:_session(player).PartyLevel
 end
 
 --=== 하늘 전장 ===--
@@ -315,6 +322,7 @@ function BattleService:_session(player: Player): Session
 			BattleSeq = 0,
 			PartyMode = false,
 			Turning = false,
+			PartyLevel = 0,
 		}
 		session.Run.Active = true
 		self.Sessions[player] = session
@@ -434,6 +442,7 @@ function BattleService:_publish(player: Player, message: string?)
 		Level = session.Level,
 		MaxLevel = MAX_LEVEL,
 		Points = session.Points,
+		PartyLevel = session.PartyLevel,
 		Stats = session.Stats.Main,
 		MaxHealth = ProgressionDefinitions.MaxHealthWithStats(session.Level, session.Stats),
 		Power = if config.WeaponPower > 0 then config.WeaponPower else class.BasicPower,
@@ -781,8 +790,9 @@ function BattleService:_grantVictory(player: Player)
 	local session = self:_session(player)
 	local run = session.Run
 	session.Wins += 1
-	-- 파티 승리: 솔로 빌드의 레벨·스탯 포인트·카드 제시(LevelUpUi)는 올리지 않는다. 승수만 센다.
+	-- 파티 승리: 솔로 빌드의 레벨·스탯 포인트·카드 제시(LevelUpUi)는 올리지 않는다. 승수를 세고 편성 레벨 +1.
 	if session.PartyMode and session.Battle then
+		session.PartyLevel = math.min(MAX_LEVEL - 1, session.PartyLevel + 1)
 		return
 	end
 	local gained = ProgressionDefinitions.LevelGainForFloor(session.Wins)
@@ -807,9 +817,14 @@ function BattleService:_settle(player: Player): boolean
 		-- 마지막 일격을 그릴 수 있게 끝나기 직전 상태를 먼저 보낸다
 		self:_publishBattle(player)
 		local party = session.PartyMode
+		local partyFrom = session.PartyLevel
 		self:_grantVictory(player)
 		self:_closeBattle(player, RETURN_DELAY)
-		self:_publish(player, string.format("%s — %d승", if party then "파티 승리" else "승리", session.Wins))
+		if party then
+			self:_publish(player, string.format("파티 승리 — %d승 · 편성 레벨 %d → %d", session.Wins, partyFrom, session.PartyLevel))
+		else
+			self:_publish(player, string.format("승리 — %d승", session.Wins))
+		end
 		return true
 	elseif battle.Outcome == "Defeat" then
 		self:_publishBattle(player)
@@ -888,7 +903,6 @@ end
 	ResolveEnemyPhase → EndTurn → EnemyPlan → 준비 단계 스냅샷. QTE 는 없다(등급은 엔진이 정한다).
 	연출 길이는 모션 Duration 으로 어림한다. 클라이언트는 연출을 대기열로 받아 겹치지 않게 틀므로 어림이 틀려도 순서는 지켜진다.
 ]]
-local MAX_UNIT_STAT = 999
 local MIN_ACTION_SECONDS = 0.35
 local ACTION_PAD = 0.7
 local MAX_ACTION_SECONDS = 8
@@ -900,7 +914,6 @@ function BattleService:_buildParty(player: Player, party: any): ({ GridBattle.Pa
 		return nil, "파티 정보가 없습니다."
 	end
 	local members: { GridBattle.PartyMember } = {}
-	local check: { PartyDefinitions.Member } = {}
 	for _, unit in party.Units do
 		if typeof(unit) ~= "table" or type(unit.ClassId) ~= "string" or not CharacterDefinitions.IsValid(unit.ClassId) then
 			return nil, string.format("알 수 없는 직업입니다 (%s).", tostring(if typeof(unit) == "table" then unit.ClassId else unit))
@@ -909,43 +922,35 @@ function BattleService:_buildParty(player: Player, party: any): ({ GridBattle.Pa
 		if class.Conditional and not self:CanDebug(player) then
 			return nil, string.format("%s — 아직 얻지 못한 직업입니다(조건부 획득).", class.Name)
 		end
-		local x, y = tonumber(unit.X), tonumber(unit.Y)
-		if not x or not y then
-			return nil, string.format("칸이 숫자가 아닙니다 (%s).", unit.ClassId)
-		end
-		table.insert(check, { ClassId = unit.ClassId, X = x, Y = y })
-
-		-- 레벨 · 스탯: 유닛이 정했으면 그것, 아니면 세션(F2 성장 탭) 것
-		local level = math.floor(clampNumber(unit.Level, 1, MAX_LEVEL, session.Level))
-		local block = session.Stats
-		if typeof(unit.Stats) == "table" then
-			block = StatDefinitions.NewBlock()
-			for _, id in StatDefinitions.Order do
-				block.Main[id] = math.floor(clampNumber(unit.Stats[id], 0, MAX_UNIT_STAT, 0))
-			end
+	end
+	-- 카드·레벨·스탯 검사는 프리셋 저장과 같은 함수 하나(PartyPresetStore.CleanUnits)
+	local deps = PartyPresetStore.RealDeps(nil)
+	deps.MaxUnitLevel = MAX_LEVEL
+	local clean, why = PartyPresetStore.CleanUnits(deps, party.Units, { LevelBonus = session.PartyLevel, DefaultLevel = session.Level })
+	if not clean then
+		return nil, why
+	end
+	for _, unit in clean do
+		local class = CharacterDefinitions.Get(unit.ClassId)
+		-- 실제 레벨 = 유닛 레벨(없으면 세션 레벨) + 편성 레벨. 스탯은 유닛이 정한 것만(없으면 0 — 자동 분배 없음)
+		local level = math.min(MAX_LEVEL, (unit.Level or session.Level) + session.PartyLevel)
+		local block = StatDefinitions.NewBlock()
+		for id, points in unit.Stats or {} do
+			block.Main[id :: any] = points
 		end
 		local stats = {}
 		for _, id in StatDefinitions.Order do
 			stats[id] = StatDefinitions.TotalValue(block, id)
 		end
-
 		local cards: { CardEffects.Owned } = {}
-		for _, entry in if typeof(unit.Cards) == "table" then unit.Cards else {} do
-			local card = if typeof(entry) == "table" then AbilityCardDefinitions.Get(tostring(entry.CardId)) else nil
-			if not card or card.ClassId ~= unit.ClassId then
-				return nil, string.format("%s — 이 직업의 카드가 아닙니다 (%s).", class.Name, tostring(if typeof(entry) == "table" then entry.CardId else entry))
-			end
-			table.insert(cards, {
-				CardId = card.Id,
-				Grade = card.Grade,
-				Level = math.floor(clampNumber(entry.Level, 1, AbilityCardDefinitions.MaxLevelFor(card), 1)),
-			})
+		for _, entry in unit.Cards do
+			local card = AbilityCardDefinitions.Get(entry.CardId) :: AbilityCardDefinitions.AbilityCard
+			table.insert(cards, { CardId = card.Id, Grade = card.Grade, Level = entry.Level })
 		end
-
 		table.insert(members, {
 			ClassId = unit.ClassId,
-			X = x,
-			Y = y,
+			X = unit.X,
+			Y = unit.Y,
 			Cards = cards,
 			Name = class.Name,
 			Health = ProgressionDefinitions.MaxHealthWithStats(level, block),
@@ -953,10 +958,6 @@ function BattleService:_buildParty(player: Player, party: any): ({ GridBattle.Pa
 			Stats = stats,
 			Faith = StatDefinitions.TotalValue(block, "Faith"),
 		})
-	end
-	local ok, why = PartyDefinitions.Validate(check)
-	if not ok then
-		return nil, why
 	end
 	return members, nil
 end
@@ -1120,7 +1121,7 @@ function BattleService:_handlePartyAction(player: Player, session: Session, batt
 	elseif kind == "Choose" then
 		ok, why = GridBattle.SetUnitSkill(battle, id, if type(request.SkillId) == "string" then request.SkillId else nil)
 	elseif kind == "Homing" then
-		ok, why = GridBattle.SetHoming(battle, id, request.On == true)
+		ok, why = GridBattle.SetHoming(battle, id, request.On == true, if type(request.TargetId) == "string" then request.TargetId else nil)
 	else
 		return
 	end
@@ -1415,6 +1416,9 @@ function BattleService:HandleAction(player: Player, request: any)
 			self:_queueThreats(player)
 		end
 		return
+	elseif kind == "SetPartyLevel" then
+		session.PartyLevel = math.floor(clampNumber(request.Value, 0, MAX_LEVEL - 1, session.PartyLevel))
+		message = string.format("편성 레벨 %d (다음 파티 전투부터)", session.PartyLevel)
 	elseif kind == "SetLevel" then
 		local level = math.floor(clampNumber(request.Level, 1, MAX_LEVEL, session.Level))
 		session.Level = level

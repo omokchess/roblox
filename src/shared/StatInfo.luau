@@ -4,8 +4,8 @@
 	영향 받는 직업도 보이게"). 디버그 패널 성장 탭·레벨업 화면의 스탯 줄 툴팁(client/StatTooltip)이 쓴다.
 
 	효과: 점당 수치는 StatDefinitions.PerPoint 그대로. Live = 지금 격자 전투에 실제로 들어가는가(GridBattle·BattleService 를 보고 적음 —
-	  들어가는 곳: 근접 스킬 피해(힘 5% · 민첩 3%) · 원거리 스킬 피해(지력 7%) · 최대 체력(힘 1 · 체력 4) · 회피 시간(민첩 3% · 체력 1%,
-	  AllyParryWindow) · 치명타(운 0.7% · 1.2%) · 전투 시작 신앙심(신앙심 = ally.Faith). 나머지(드랍률·이동속도·받는 버프 효율 …)는 아직 설명뿐.
+	  들어가는 곳: 근접 스킬 피해(힘 5% · 민첩 3%) · 원거리 스킬 피해(지력 7%) · 최대 체력(힘 1 · 체력 4) · 자동 회피·패링 확률(민첩 0.3% · 운 0.05%, 다른 자동 패링과 합쳐 최대 50%)
+	  · 받는 피해 감소(체력 0.1%, 최대 20%) · 치명타(운 0.7% · 1.2%) · 전투 시작 신앙심(신앙심 = ally.Faith). 나머지(드랍률·이동속도·받는 버프 효율 …)는 아직 설명뿐.
 	  새로 이으면 여기 Live 를 고칠 것.
 	직업: 스킬 데이터(BattleSkills — 피해 있는 스킬의 사거리)와 글(스킬·패시브·카드에 "신앙심")에서 센다 — 직업·카드가 바뀌어도 따라간다.
 	  근접(Ranged 가 아닌) 피해 스킬 → 힘·민첩 / 원거리 → 지력 / 모두 → 체력·운 / 신앙심을 쓰는 글 → 신앙심.
@@ -36,21 +36,20 @@ local EFFECTS: { [string]: { { Key: string, Label: string, Live: boolean } } } =
 	},
 	Agility = {
 		{ Key = "PhysicalDamage", Label = "근접 스킬 피해", Live = true },
-		{ Key = "ParryWindow", Label = "회피 시간(QTE 입력 시간)", Live = true },
-		{ Key = "DodgeWindow", Label = "회피 타이밍", Live = false },
+		{ Key = "AutoDodge", Label = "자동 회피·패링 확률", Live = true },
 		{ Key = "MoveSpeed", Label = "이동속도", Live = false },
 		{ Key = "BuffTaken", Label = "받는 버프 효율", Live = false },
 	},
 	Vitality = {
 		{ Key = "MaxHealth", Label = "최대 체력", Live = true },
-		{ Key = "ParryWindow", Label = "회피 시간(QTE 입력 시간)", Live = true },
+		{ Key = "DamageTaken", Label = "받는 피해량", Live = true },
 		{ Key = "HealTaken", Label = "받는 회복량", Live = false },
 	},
 	Luck = {
 		{ Key = "CritChance", Label = "치명타 확률", Live = true },
 		{ Key = "CritDamage", Label = "치명타 피해", Live = true },
 		{ Key = "DropRate", Label = "드랍률", Live = false },
-		{ Key = "AutoDodge", Label = "자동 회피 확률", Live = false },
+		{ Key = "AutoDodge", Label = "자동 회피·패링 확률", Live = true },
 	},
 	Faith = {
 		{ Key = "", Label = "전투 시작 신앙심", Live = true },
@@ -178,11 +177,11 @@ function StatInfo.Everyone(statId: string): string?
 	if statId == "Strength" then
 		return "최대 체력은 모든 직업"
 	elseif statId == "Agility" then
-		return "회피 시간은 모든 직업"
+		return "자동 회피·패링 확률은 모든 직업"
 	elseif statId == "Vitality" then
-		return "모든 직업 — 최대 체력 · 회피 시간"
+		return "모든 직업 — 최대 체력 · 받는 피해 감소"
 	elseif statId == "Luck" then
-		return "모든 직업 — 치명타(조율자도)"
+		return "모든 직업 — 치명타(조율자도) · 자동 회피·패링 확률"
 	end
 	return nil
 end

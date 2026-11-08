@@ -1424,22 +1424,38 @@ local function runParty()
 	expect(results[1].Target == "ally2" and results[2].Target == "player", "victims are hit in action order (row, then screen-left first)")
 	expect(gs.Units.player.Health > hs.Units.player.Health, "a guarding unit takes less damage than the same unit without guard")
 
-	--=== 추적(Seek) 대상: 도발 최대 → 아니면 rng. 예고 때 정해 TargetId 로 ===--
+	--=== 추적(Seek) 대상: 무작위 + 도발 가로채기(2026-11-08 사용자 답 Q8). 예고 때 정해 TargetId 로 ===--
+	-- 가로챌 확률% = ([도발] × 10) × (1 − 원래 대상의 현재 체력 ÷ 최대 체력). 산 아군은 Id 순(ally2, ally3, player)으로 세어 rng 로 원래 대상을 뽑는다
 	local function callistoParty(): any
 		return party({ member("Pulsar", 1, 1), member("WallMason", 2, 2), member("WallBreaker", 3, 3) }, { "Callisto" }, nil)
 	end
+	local function fixed(value: number): () -> number
+		return function()
+			return value
+		end
+	end
+	-- 체력이 가득 찬 원래 대상(player)은 도발이 있어도 가로채이지 않는다(확률 0)
 	local seekState = callistoParty()
-	GridBattle.AddTaunt(seekState, "ally2", 3)
-	GridBattle.AddTaunt(seekState, "ally1", 0)
-	GridBattle.EnemyPlan(seekState, rng)
+	GridBattle.AddTaunt(seekState, "ally3", 10)
+	GridBattle.EnemyPlan(seekState, fixed(0.99))
 	local callisto = seekState.Units[seekState.Callisto.UnitId]
-	expect(callisto.Plan ~= nil and callisto.Plan.TargetId == "ally2", "a seek attack must aim at the unit with the most taunt")
-	expect(callisto.Plan.Target == "ally2", "the old Target field mirrors TargetId")
+	expect(callisto.Plan ~= nil and callisto.Plan.TargetId == "player", "a full-health intended target is never intercepted by taunt")
+	expect(callisto.Plan.Target == "player", "the old Target field mirrors TargetId")
+	-- 원래 대상(ally2)이 체력 40% 면 도발 10(100%) × 0.6 = 60% — rng 0 은 가로챈다
 	local seekState2 = callistoParty()
-	GridBattle.AddTaunt(seekState2, "ally2", 3)
-	GridBattle.AddTaunt(seekState2, "ally3", 5)
-	GridBattle.EnemyPlan(seekState2, rng)
-	expect(seekState2.Units[seekState2.Callisto.UnitId].Plan.TargetId == "ally3", "the larger taunt wins")
+	GridBattle.AddTaunt(seekState2, "ally3", 10)
+	seekState2.Units.ally2.Health = math.floor(seekState2.Units.ally2.MaxHealth * 0.4)
+	GridBattle.EnemyPlan(seekState2, fixed(0))
+	expect(seekState2.Units[seekState2.Callisto.UnitId].Plan.TargetId == "ally3", "taunt intercepts a wounded intended target")
+	local seekStateMiss = callistoParty()
+	GridBattle.AddTaunt(seekStateMiss, "ally3", 10)
+	seekStateMiss.Units.ally2.Health = math.floor(seekStateMiss.Units.ally2.MaxHealth * 0.4)
+	local missRng = 0
+	GridBattle.EnemyPlan(seekStateMiss, function()
+		missRng += 1
+		return if missRng == 1 then 0 else 0.9 -- 첫 값 = 원래 대상 뽑기(ally2), 둘째 값 = 가로채기 굴림(0.9 ≥ 0.6 이라 실패)
+	end)
+	expect(seekStateMiss.Units[seekStateMiss.Callisto.UnitId].Plan.TargetId == "ally2", "a failed taunt roll keeps the intended target")
 	local seekState3 = callistoParty()
 	GridBattle.EnemyPlan(seekState3, rng)
 	local pick = seekState3.Units[seekState3.Callisto.UnitId].Plan.TargetId
@@ -1506,6 +1522,121 @@ local function runParty()
 end
 
 --[[
+	파티 예고 = 실제(2026-11-08 사용자 Studio 피드백: "공격범위랑 다른 위치를 때려"). 원인: 추적(Seek) 예고의 Plan.Cells 는 예고 때 대상이 선 칸 둘레로
+	한 번 계산된 값인데, 맞는 판정(EnemyThreatensAlly)은 해소 때 대상의 **지금 칸** 둘레로 다시 셈한다. 준비 단계에서 대상이 칸을 옮기면 화면 예고만 옛 칸에 남았다.
+	이제 둘 다 PlanThreatCells 하나를 쓴다. 또 유도에 적을 골라 붙이는 규칙(SetHoming 의 targetEnemyId)도 여기서 본다.
+]]
+local function runPartyThreat()
+	local BattleGrid = require(ReplicatedStorage.Shared.BattleGrid)
+	local seed = 5
+	local function rng(): number
+		seed = (seed * 48271) % 2147483647
+		return seed / 2147483647
+	end
+	local function member(classId: string, x: number, y: number): any
+		return { ClassId = classId, X = x, Y = y, Cards = {}, Name = classId, Health = 5000, Power = 10, Stamina = 999 }
+	end
+	local function hasCell(cells: { { number } }, x: number, y: number): boolean
+		for _, c in cells do
+			if c[1] == x and c[2] == y then
+				return true
+			end
+		end
+		return false
+	end
+
+	--=== 1) 추적 예고: 대상이 준비 단계에서 옮겨도 화면 예고 칸 == 실제로 맞는 칸 ===--
+	local state = GridBattle.NewParty(1, { member("Pulsar", 1, 1), member("WallMason", 2, 2), member("WallBreaker", 3, 3) }, {
+		Name = "예고 시험",
+		Enemies = { "Callisto" },
+		HealthScale = 1000,
+		PowerScale = 1,
+	})
+	GridBattle.EnemyPlan(state, rng)
+	local boss = state.Units[state.Callisto.UnitId]
+	local plan = boss.Plan
+	expect(plan ~= nil and plan.Seek == true and plan.Shape ~= nil and plan.TargetId ~= nil, "turn 1 is a shaped seek attack with a target unit")
+	local targetId = plan.TargetId :: string
+	local before = GridBattle.PlanThreatCells(state, boss, 1)
+	local from = BattleGrid.CellOf(state.Grid, targetId) :: any
+	expect(hasCell(before, from.X, from.Y), "the telegraph covers the targeted unit where it stands")
+	-- 대상이 빈 칸으로 옮기면 예고도 따라간다
+	local moveTo: { number } = { 6, 1 }
+	if from.X == 6 and from.Y == 1 then
+		moveTo = { 6, 3 }
+	end
+	local placed, why = GridBattle.PlaceUnit(state, targetId, moveTo[1], moveTo[2])
+	expect(placed, "the targeted unit must be movable in the prepare phase: " .. tostring(why))
+	local after = GridBattle.PlanThreatCells(state, boss, 1)
+	expect(hasCell(after, moveTo[1], moveTo[2]), "the telegraph must follow the targeted unit to its new cell")
+	-- 판정 == 화면: 모든 아군에 대해 EnemyThreatensAlly 와 칸 목록이 같다
+	local snapshot = GridBattle.Snapshot(state)
+	local shown = snapshot.ThreatCells[boss.Id][1]
+	expect(#shown == #after, "the snapshot carries the same cells as the engine")
+	for _, ally in GridBattle.Allies(state) do
+		local cell = BattleGrid.CellOf(state.Grid, ally.Id) :: any
+		expect(GridBattle.EnemyThreatensAlly(state, boss, 1, ally.Id) == hasCell(shown, cell.X, cell.Y), "the shown telegraph must equal who is really hit (" .. ally.Id .. ")")
+	end
+	GridBattle.BeginTurn(state)
+	local results = GridBattle.ResolveEnemyPhase(state, rng)
+	expect(#results >= 1, "the targeted unit stands in its own telegraph and must be hit")
+	for _, r in results do
+		local cell = BattleGrid.CellOf(state.Grid, r.Target) :: any
+		expect(hasCell(shown, cell.X, cell.Y), "every hit unit stood on a telegraphed cell")
+	end
+
+	--=== 2) 예고 없는 적(슬라임)은 모양 고정: 화면 칸 == 맞는 유닛 ===--
+	local slime = GridBattle.NewParty(1, { member("Pulsar", 4, 1), member("WallMason", 4, 2), member("WallBreaker", 4, 3) }, {
+		Name = "슬라임 예고",
+		Enemies = { "Slime", "Slime" },
+		Cells = { { 1, 1 }, { 1, 3 } },
+		HealthScale = 1000,
+		PowerScale = 1,
+	})
+	GridBattle.EnemyPlan(slime, rng)
+	local slimeSnap = GridBattle.Snapshot(slime)
+	for _, enemyId in slime.Planned do
+		local enemy = slime.Units[enemyId]
+		local cells = slimeSnap.ThreatCells[enemyId][1]
+		for _, ally in GridBattle.Allies(slime) do
+			local cell = BattleGrid.CellOf(slime.Grid, ally.Id) :: any
+			expect(GridBattle.EnemyThreatensAlly(slime, enemy, 1, ally.Id) == hasCell(cells, cell.X, cell.Y), "slime telegraph equals who is hit")
+		end
+	end
+
+	--=== 3) 유도: 적을 골라 붙이면 그 적이 선 행을 겨눈다 ===--
+	local homing = GridBattle.NewParty(1, { member("Berserker", 6, 2) }, {
+		Name = "유도 시험",
+		Enemies = { "Slime", "Slime" },
+		Cells = { { 1, 1 }, { 1, 3 } },
+		HealthScale = 1000,
+		PowerScale = 1,
+	})
+	local foeBottom = "enemy2"
+	expect(not GridBattle.SetHoming(homing, "player", true, "nobody"), "a homing target must be a living enemy")
+	expect(GridBattle.AimLane(homing, "player", true) == 1, "without a chosen enemy the old rule looks up first (own row empty)")
+	expect(GridBattle.SetHoming(homing, "player", true, foeBottom))
+	expect(GridBattle.AimLane(homing, "player") == 3, "a chosen enemy decides the row")
+	expect(GridBattle.PreviewCells(homing, "player", nil).Lane == 3, "the preview follows the chosen enemy")
+	expect(GridBattle.Snapshot(homing).Units.player.HomingTarget == foeBottom, "the snapshot names the homing target")
+	-- 자기 행에 적이 있어도 고른 적의 행
+	GridBattle.SetHoming(homing, "player", false)
+	local near = GridBattle.NewParty(1, { member("Berserker", 6, 1) }, { Name = "유도 시험 2", Enemies = { "Slime", "Slime" }, Cells = { { 1, 1 }, { 1, 3 } }, HealthScale = 1000, PowerScale = 1 })
+	expect(GridBattle.AimLane(near, "player", true) == 1, "own row first without a target")
+	expect(GridBattle.SetHoming(near, "player", true, "enemy2") and GridBattle.AimLane(near, "player") == 3, "the chosen enemy's row wins over a nearer own row")
+	-- 고른 적이 쓰러지면 옛 규칙
+	GridBattle.DebugSetHealth(near, "enemy2", 0)
+	expect(GridBattle.AimLane(near, "player") == 1, "a fallen target falls back to the old rule")
+	local keep = GridBattle.NewParty(1, { member("Berserker", 6, 2) }, { Name = "유도 시험 3", Enemies = { "Slime" }, Cells = { { 1, 3 } }, HealthScale = 1000, PowerScale = 1 })
+	GridBattle.SetHoming(keep, "player", true, "enemy1")
+	GridBattle.BeginTurn(keep)
+	GridBattle.ResolveUnitSkill(keep, "player", rng)
+	GridBattle.ResolveEnemyPhase(keep, rng)
+	GridBattle.EndTurn(keep)
+	expect(keep.Units.player.Homing == false and keep.Units.player.HomingTarget == nil, "homing and its target reset every turn")
+end
+
+--[[
 	파티 전투 처치 귀속(2026-11-08): 조작 중인 유닛이 없을 때(턴 끝 지속 피해·반사 등) 적이 쓰러지면
 	그 적에게 지속 피해를 건 유닛만 [처치하면] 효과를 받는다. 건 유닛을 모르면 아무도 받지 않는다. 솔로는 그대로 모두(하나).
 ]]
@@ -1558,6 +1689,23 @@ local function runPartyKillCredit()
 	before = herbs(state)
 	GridBattle.DebugHitPart(state, enemy.Id, 1e9)
 	expect(herbs(state) == before, "an unattributed kill must not trigger on-kill cards")
+
+	-- 4) 디버그 체력 0(처치)도 같은 규칙: 주인이 있으면 그에게만, 없으면 아무에게도
+	state, enemy = setup()
+	enemy.DotOwner = "ally2"
+	before = herbs(state)
+	GridBattle.DebugSetHealth(state, enemy.Id, 0)
+	expect(not enemy.Alive and herbs(state) > before, "a debug kill must credit only the damage-over-time owner")
+	state, enemy = setup()
+	enemy.DotOwner = "player"
+	before = herbs(state)
+	GridBattle.DebugSetHealth(state, enemy.Id, 0)
+	expect(herbs(state) == before, "a debug kill owned by another unit must not trigger this unit's card")
+	state, enemy = setup()
+	enemy.DotOwner = nil
+	before = herbs(state)
+	GridBattle.DebugSetHealth(state, enemy.Id, 0)
+	expect(herbs(state) == before, "an unattributed debug kill must credit nobody")
 end
 
 function PrototypeTests.RunSystems()
@@ -2797,6 +2945,7 @@ function PrototypeTests.RunSystems()
 		runStatusAndSkillEffects()
 		runParty()
 		runPartyKillCredit()
+		runPartyThreat()
 	end
 
 	--=== 직업별 스킬 ===--

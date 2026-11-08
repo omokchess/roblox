@@ -34,6 +34,7 @@ local STEEL = Color3.fromRGB(128, 160, 196)
 local RED = Color3.fromRGB(238, 72, 64)
 
 local SLOT_W, SLOT_H, SLOT_GAP = 106, 84, 6
+local MAX_SLOTS = 7
 local LEFT_W = 330
 local CARD_W, CARD_H = 116, 48
 local INK_2 = Color3.fromRGB(28, 26, 31)
@@ -217,6 +218,11 @@ export type Callbacks = {
 	Begin: () -> (),
 	-- 스킬에 마우스를 올리면 그 스킬 범위를 격자에 미리 보여 준다(떼면 nil)
 	Hover: (skillId: string?) -> (),
+	-- 솔로 HUD 의 설명 말풍선을 그대로 띄우고 거둔다(BattleHud.ShowSkillTip / ShowEffectTip)
+	TipSkill: (skill: any?, anchor: GuiObject?) -> (),
+	TipEffect: (effect: any?, anchor: GuiObject?) -> (),
+	-- 유도 칸: id 를 주면 '적 고르기' 상태로, nil 이면 취소
+	HomingPick: (id: string?) -> (),
 }
 
 function PartyHud.new(gui: ScreenGui, callbacks: Callbacks)
@@ -324,7 +330,7 @@ end
 	스냅샷이 올 때마다(그리고 고른 유닛이 바뀔 때마다) 다시 그린다.
 	ui = { Selected = 고른 유닛 Id?, Busy = 연출 중인가, Acting = 지금 행동하는 유닛 Id | "Enemy" | nil, Miss = { [유닛 Id] = 빗나감 } }
 ]]
-function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, Acting: string?, Miss: { [string]: boolean }, Stand: Model?, Threatened: { [string]: boolean }?, Effects: { any }? })
+function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, Acting: string?, Miss: { [string]: boolean }, Stand: Model?, Threatened: { [string]: boolean }?, Effects: { any }?, Picking: string? })
 	self:_clear()
 	self.standFailed = false
 	if not self.active or not snapshot or not snapshot.Party then
@@ -371,7 +377,8 @@ function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, 
 		if ui.Miss[id] then
 			sub, subColor = "빗나감", RED
 		elseif unit and unit.Homing then
-			sub, subColor = "유도 " .. (if unit.AimY and unit.Y and unit.AimY < unit.Y then "▲" elseif unit.AimY and unit.Y and unit.AimY > unit.Y then "▼" else "·"), GOLD
+			local foe = if unit.HomingTarget then units[unit.HomingTarget] else nil
+			sub, subColor = "유도 → " .. (if foe then foe.Name else (if unit.AimY and unit.Y and unit.AimY < unit.Y then "▲" elseif unit.AimY and unit.Y and unit.AimY > unit.Y then "▼" else "·")), GOLD
 		elseif unit then
 			sub = string.format("체력 %d/%d", math.ceil(unit.Health), unit.MaxHealth)
 		end
@@ -429,8 +436,8 @@ function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, 
 	local selMember = if selected then members[selected] else nil
 	local selUnit = if selected then units[selected] else nil
 	local skills = if selMember then selMember.Skills else {}
-	local rightW = math.max(#skills, 4) * (SLOT_W + SLOT_GAP) - SLOT_GAP
-	rightW = math.min(rightW, 7 * (SLOT_W + SLOT_GAP) - SLOT_GAP)
+	-- 행동 목록(스킬 수, 최소 4칸) + 맨 끝 [유도] 칸
+	local rightW = (math.max(math.min(#skills, MAX_SLOTS), 4) + 1) * (SLOT_W + SLOT_GAP) - SLOT_GAP
 	local width = LEFT_W + 14 + rightW
 	self.panel.Size = UDim2.fromOffset(width, PANEL_H)
 	self:_rescale(width)
@@ -489,7 +496,7 @@ function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, 
 			table.insert(effects, { Id = "Taunt", Name = "도발", Glyph = "도", Color = GOLD, Count = selUnit.Taunt, Desc = describe("도발") })
 		end
 		if selUnit.Homing then
-			table.insert(effects, { Id = "HomingMark", Name = "유도", Glyph = "유", Color = GOLD, Desc = "자기 행에 적이 없으면 위 행, 그래도 없으면 아래 행을 겨눈다." })
+			table.insert(effects, { Id = "HomingMark", Name = "유도", Glyph = "유", Color = GOLD, Desc = "고른 적이 선 행을 겨눈다. 그 적이 차례 전에 쓰러지면 자기 행 → 위 → 아래 행 순으로 겨눈다." })
 		end
 		if ui.Threatened and ui.Threatened[selected :: string] then
 			table.insert(effects, { Id = "ThreatMark", Name = "예고 칸", Glyph = "危", Color = RED, Desc = "적의 공격이 이 칸에 온다. 가드를 고르면 받는 피해가 절반이 된다." })
@@ -503,23 +510,23 @@ function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, 
 			end
 			local icon = BattleHud.EffectIcon(chipRow, e, slot)
 			icon.Position = UDim2.fromOffset(((slot - 1) % perRow) * 42, ((slot - 1) // perRow) * 42)
-			local tip = string.format("%s%s — %s", e.Name, if e.Count then " " .. tostring(e.Count) else "", e.Desc or "")
-			onHover(self, icon, tip)
-		end
-		-- 설명 줄(마우스를 올린 칩)
-		self.tipLabel = label(left, "", UDim2.fromOffset(x0, 152), UDim2.new(1, -x0 - 6, 0, 34), { TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd, TextSize = 11, TextColor3 = BODY, TextYAlignment = Enum.TextYAlignment.Top, Name = "ChipTip" })
-		if ui.Threatened and ui.Threatened[selected :: string] then
-			self.tipLabel.Text = "예고 칸에 서 있다 — 가드를 고르면 맞을 때 절반."
+			-- 솔로 효과 줄과 같은 설명 말풍선
+			onHover(self, icon, nil, function(on: boolean)
+				self.callbacks.TipEffect(if on then e else nil, icon)
+			end)
 		end
 	end
 
-	-- 오른쪽 칸
+	-- 오른쪽 칸: 행동 목록(스킬·가드·호흡) + 맨 끝에 늘 보이는 [유도] 칸
 	local right = make("Frame", { Name = "Right", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(rightW, PANEL_H), BackgroundTransparency = 1 }, self.panel)
 	table.insert(self.shown, right)
 	local slotRow = make("Frame", { Name = "Slots", Size = UDim2.new(1, 0, 0, SLOT_H + 10), BackgroundTransparency = 1 }, right)
 	if selMember and selUnit then
 		local basicId = if snapshot.Preview and snapshot.Preview[selected :: string] then snapshot.Preview[selected :: string].SkillId else nil
 		for index, skill in skills do
+			if index > MAX_SLOTS then
+				break
+			end
 			local chosen = selUnit.Chosen == skill.Id
 			local cooldown = skill.CooldownLeft or 0
 			local lacking = (skill.StaminaCost or 0) > (selMember.Stamina or 0)
@@ -561,43 +568,58 @@ function PartyHud:Update(snapshot: any, ui: { Selected: string?, Busy: boolean, 
 				-- 이미 고른 스킬을 다시 누르면 고름을 지운다(기본 공격)
 				self.callbacks.Choose(selected :: string, if chosen then nil else skillId)
 			end)
+			-- 마우스를 올리면: 격자에 범위 미리보기 + 솔로 스킬 바와 같은 설명창
 			onHover(self, slot, nil, function(on: boolean)
 				self.callbacks.Hover(if on then skillId else nil)
+				self.callbacks.TipSkill(if on then skill else nil, slot)
 			end)
 		end
 	end
 
-	-- 아래 줄: 유도 칩 · 유도 붙이기/떼기 · 턴 시작
+	-- [유도] 칸: 행동 목록 맨 오른쪽에 늘 있다(유닛을 안 골랐으면 흐리게). 누르면 '적 고르기' → 적을 누르면 붙는다. 붙은 뒤 다시 누르면 뗀다
 	local left2, per = party.HomingLeft or 0, party.HomingPerTurn or 3
-	local chips = make("Frame", { Position = UDim2.fromOffset(0, SLOT_H + 20), Size = UDim2.fromOffset(130, 52), BackgroundColor3 = INK, BackgroundTransparency = 0.06, BorderSizePixel = 0 }, right)
-	stroke(chips, BONE, 0.7)
-	label(chips, string.format("유도 칩  %d / %d", left2, per), UDim2.fromOffset(8, 3), UDim2.new(1, -16, 0, 14), { TextSize = 11, TextColor3 = BODY })
-	for chip = 1, per do
-		label(chips, if chip <= left2 then "◆" else "◇", UDim2.fromOffset(8 + (chip - 1) * 38, 18), UDim2.fromOffset(34, 30), { Font = Enum.Font.GothamBlack, TextSize = 26, TextColor3 = if chip <= left2 then GOLD else MUTED, TextXAlignment = Enum.TextXAlignment.Center })
-	end
 	local attached = selUnit ~= nil and selUnit.Homing == true
-	local usable = selUnit ~= nil and (attached or left2 > 0)
+	local picking = ui.Picking ~= nil and ui.Picking == selected
+	local usable = selUnit ~= nil and (attached or picking or left2 > 0)
+	local homingX = (math.max(math.min(#skills, MAX_SLOTS), 4)) * (SLOT_W + SLOT_GAP)
 	local homing = make("TextButton", {
 		Name = "HomingButton",
-		Position = UDim2.fromOffset(138, SLOT_H + 20),
-		Size = UDim2.fromOffset(200, 52),
+		Position = UDim2.fromOffset(homingX, if attached or picking then 0 else 8),
+		Size = UDim2.fromOffset(SLOT_W, SLOT_H),
 		AutoButtonColor = false,
-		BackgroundColor3 = if attached then Color3.fromRGB(52, 40, 18) else INK,
+		BackgroundColor3 = if picking then Color3.fromRGB(70, 52, 16) elseif attached then Color3.fromRGB(52, 40, 18) else INK,
 		BackgroundTransparency = 0.06,
 		BorderSizePixel = 0,
-		Text = if selUnit == nil then "유닛을 고르면 유도를 붙일 수 있다" elseif attached then string.format("유도 떼기  (남은 칩 %d)", left2) elseif left2 > 0 then string.format("유도 붙이기  (남은 칩 %d)", left2) else "유도 칩을 다 썼다",
-		TextColor3 = if usable then (if attached then GOLD else BONE) else MUTED,
-		Font = Enum.Font.GothamBold,
-		TextSize = 14,
-		TextWrapped = true,
-	}, right)
-	stroke(homing, GOLD, if usable then 0.35 else 0.85)
+		Text = "",
+	}, slotRow)
+	stroke(homing, GOLD, if picking then 0 elseif usable then 0.3 else 0.8, if picking then 2 else 1)
+	make("Frame", { Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = GOLD, BorderSizePixel = 0 }, homing)
+	label(homing, "유도", UDim2.fromOffset(8, 6), UDim2.new(1, -16, 0, 18), { Font = Enum.Font.GothamBlack, TextSize = 15, TextColor3 = if usable then GOLD else MUTED })
+	local targetName = if attached and selUnit.HomingTarget and units[selUnit.HomingTarget] then units[selUnit.HomingTarget].Name else nil
+	local homingText = if selUnit == nil then "유닛을 고른다"
+		elseif picking then "적을 고른다 (Esc 취소)"
+		elseif attached then (if targetName then "→ " .. targetName else "→ 자동") .. " · 누르면 뗀다"
+		elseif left2 > 0 then "누르고 적을 고른다"
+		else "칩을 다 썼다"
+	label(homing, homingText, UDim2.fromOffset(8, 24), UDim2.new(1, -16, 0, 30), { TextSize = 11, TextWrapped = true, TextColor3 = if usable then BODY else MUTED, TextYAlignment = Enum.TextYAlignment.Top })
+	for chip = 1, per do
+		label(homing, if chip <= left2 then "◆" else "◇", UDim2.new(0, 8 + (chip - 1) * 22, 1, -26), UDim2.fromOffset(22, 22), { Font = Enum.Font.GothamBlack, TextSize = 18, TextColor3 = if chip <= left2 then GOLD else MUTED, TextXAlignment = Enum.TextXAlignment.Center })
+	end
 	onClick(self, homing, function()
-		if selected and usable then
-			self.callbacks.Homing(selected, not attached)
+		if not selected then
+			return
+		end
+		if picking then
+			self.callbacks.HomingPick(nil)
+		elseif attached then
+			self.callbacks.Homing(selected, false)
+		elseif left2 > 0 then
+			self.callbacks.HomingPick(selected)
 		end
 	end)
-	label(right, "칸을 눌러 유닛 고르기 · 끌어서 옮기기/맞바꾸기 · 스킬에 마우스를 올리면 범위 미리보기", UDim2.fromOffset(348, SLOT_H + 24), UDim2.new(1, -348 - 214, 0, 44), { TextSize = 11, TextColor3 = MUTED, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
+
+	-- 아래 줄: 안내 · 턴 시작
+	label(right, "칸·유닛을 눌러 고르기 · 끌어서 옮기기/맞바꾸기 · 스킬에 마우스를 올리면 설명과 범위 미리보기", UDim2.fromOffset(0, SLOT_H + 24), UDim2.new(1, -214, 0, 44), { TextSize = 11, TextColor3 = MUTED, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
 	local begin = make("TextButton", {
 		Name = "BeginTurn",
 		AnchorPoint = Vector2.new(1, 0),

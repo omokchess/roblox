@@ -113,6 +113,8 @@ export type Unit = {
 	Stats: { [string]: number }?,
 	Runtime: any?,
 	Homing: boolean?,
+	-- 유도가 겨누는 적 Id(없으면 옛 규칙: 자기 행 → 위 → 아래). 2026-11-08 사용자: "유도 고르고 적을 선택하게"
+	HomingTarget: string?,
 	Chosen: string?,
 	-- 이 적의 지속 피해(출혈·독·화상·융해)를 마지막으로 늘린 아군 유닛 Id. 도트로 쓰러뜨리면 그 유닛만 처치 훅을 받는다
 	DotOwner: string?,
@@ -647,6 +649,15 @@ local LOCK_IMMUNE_TURNS = 3
 -- 결투사 패리: 받는 피해 10%, 나머지 90% 를 되돌린다
 local PARRY_KEEP, PARRY_REFLECT = 0.1, 0.9
 GridBattle.PARRY_KEEP, GridBattle.PARRY_REFLECT = PARRY_KEEP, PARRY_REFLECT
+--[[
+	자동 패링(회피) 확률 상한(2026-11-08 사용자 Q13): "전체 자동 패리 확률을 50%로 캡". 한 번의 피격 판정에서 보정값 AutoParry + 카드(info.AutoParry)
+	+ 스탯(민첩·운의 AutoDodge)을 합친 값이 이 위로 못 간다. 「네 번의 준비, 한 번의 반격」 확정 패링·집중 4 자동 패링(확률 아님)은 상관없다.
+]]
+local AUTO_PARRY_CAP = 0.5
+GridBattle.AUTO_PARRY_CAP = AUTO_PARRY_CAP
+-- 스탯 한 점당 자동 회피·패링 확률(StatDefinitions.PerPoint 의 AutoDodge: 민첩 0.3% · 운 0.05%) / 체력 한 점당 받는 피해 감소와 그 상한
+local AGILITY_AUTO_DODGE, LUCK_AUTO_DODGE = 0.003, 0.0005
+local VITALITY_TAKEN_CUT, VITALITY_TAKEN_CAP = 0.001, 0.2
 -- 이 공격을 QTE 없이 그대로 맞는가(결투사는 회피 불가 공격도 패리할 수 있다)
 function GridBattle.IsUnavoidable(state: any, skill: any): boolean
 	return skill.Unavoidable == true and state.AllyClassId ~= "Duelist"
@@ -1000,24 +1011,31 @@ local function enabledAllyCells(state: State): { { number } }
 end
 
 --[[
-	추적(Seek)·대상 기준 공격의 대상 아군(2026-11-08 파티): 도발 스택이 가장 큰 유닛(같으면 Id 순), 없으면 rng 로 산 유닛 하나.
-	산 아군이 하나뿐이면 rng 를 쓰지 않는다(솔로 재현). 예고 때 정해 Plan.TargetId 에 적는다.
+	추적(Seek)·대상 기준 공격의 대상 아군(2026-11-08 파티, 사용자 답 Q8): 살아 있는 아군 중 무작위로 원래 대상을 뽑고,
+	[도발]이 있는 다른 아군(가장 높은 쪽, 같으면 Id 순)이 확률로 가로챈다.
+	  가로챌 확률% = ([도발] × 10) × (1 − 원래 대상의 현재 체력 ÷ 최대 체력)
+	예고 때 한 번만 정해 Plan.TargetId 에 적는다(해소 때 다시 굴리지 않는다). 산 아군이 하나뿐이면 rng 를 쓰지 않는다(솔로 재현).
 ]]
 local function pickTarget(state: State, rng: () -> number): Unit?
 	local list = allyUnits(state)
 	if #list <= 1 then
 		return list[1]
 	end
+	local intended = list[math.floor(rng() * #list) + 1]
 	local best: Unit? = nil
 	for _, u in list do
-		if u.Taunt > 0 and (not best or u.Taunt > best.Taunt) then
+		if u ~= intended and u.Taunt > 0 and (not best or u.Taunt > best.Taunt) then
 			best = u
 		end
 	end
 	if best then
-		return best
+		local chance = math.clamp(best.Taunt * 10 / 100, 0, 1) * (1 - math.clamp(intended.Health / math.max(intended.MaxHealth, 1), 0, 1))
+		if rng() < chance then
+			pushLog(state, string.format("%s 도발 — %s 대신 노려진다", best.Name, intended.Name))
+			return best
+		end
 	end
-	return list[math.floor(rng() * #list) + 1]
+	return intended
 end
 
 -- pool 에서 조건에 맞는 칸 하나를 무작위로 뽑아 빼낸다
@@ -2207,6 +2225,26 @@ end
 	canKill이 false면 체력 1에서 멈춘다. `상태이상.md`가 출혈·독·화상에 대해
 	"이 효과로 사망할 수 없다"고 못박았고, 연금술사 자해도 같은 규칙을 쓴다.
 ]]
+--[[
+	적이 쓰러졌을 때 카드의 `적을 처치하면` 효과를 받는 쪽(디버그 처치·체력 0 도 같은 규칙).
+	조작 중인 유닛이 있으면 그 유닛. 솔로(아군 1)는 그 하나. 파티에서 조작 중 유닛이 없으면(턴 끝·반사·디버그 …)
+	그 적에게 지속 피해를 마지막으로 건 유닛(DotOwner)에게만, 모르면 아무에게도 주지 않는다.
+]]
+local function creditKill(state: State, unit: Unit)
+	if state.BindDepth > 0 then
+		fire(state, "Kill", { Target = unit })
+	elseif #allyUnits(state) <= 1 then
+		fireAll(state, "Kill", { Target = unit })
+	else
+		local owner = state.Units[unit.DotOwner or ""]
+		if owner and owner.Alive then
+			withUnit(state, owner.Id, function()
+				fire(state, "Kill", { Target = unit })
+			end)
+		end
+	end
+end
+
 local function damageUnit(
 	state: State,
 	unit: Unit,
@@ -2292,19 +2330,7 @@ local function damageUnit(
 		pushLog(state, string.format("%s 쓰러짐", unit.Name))
 		-- 카드의 `적을 처치하면` 효과.
 		if unit.Side == "Enemy" then
-			if state.BindDepth > 0 then
-				fire(state, "Kill", { Target = unit })
-			elseif #allyUnits(state) <= 1 then
-				fireAll(state, "Kill", { Target = unit })
-			else
-				-- 파티: 조작 중인 유닛이 없으면(턴 끝 지속 피해·반사 등) 그 적에게 지속 피해를 건 유닛에게만. 모르면 아무에게도 안 준다
-				local owner = state.Units[unit.DotOwner or ""]
-				if owner and owner.Alive then
-					withUnit(state, owner.Id, function()
-						fire(state, "Kill", { Target = unit })
-					end)
-				end
-			end
+			creditKill(state, unit)
 		end
 		if unit.DefId == "Alcor" then
 			removeAlcorTwin(state)
@@ -2465,11 +2491,7 @@ function GridBattle.DebugSetHealth(state: State, unitId: string, value: number)
 		BattleGrid.Remove(state.Grid, unit.Id)
 		pushLog(state, string.format("[디버그] %s 쓰러짐", unit.Name))
 		if unit.Side == "Enemy" then
-			if state.BindDepth > 0 then
-				fire(state, "Kill", { Target = unit })
-			else
-				fireAll(state, "Kill", { Target = unit })
-			end
+			creditKill(state, unit)
 		end
 		if unit.DefId == "Alcor" then
 			removeAlcorTwin(state)
@@ -2535,8 +2557,19 @@ local function laneHasEnemy(state: State, y: number): boolean
 	return BattleGrid.FirstOccupiedColumn(state.Grid, "Enemy", y) ~= nil
 end
 
-local function homingLane(state: State, y: number, homing: boolean?): number
-	if not homing or laneHasEnemy(state, y) then
+local function homingLane(state: State, y: number, homing: boolean?, targetId: string?): number
+	if not homing then
+		return y
+	end
+	-- 고른 적이 살아 있으면 그 적이 선 행(자기 행에 적이 있어도, 행 거리 제한 없음). 쓰러졌으면 옛 규칙
+	local target = if targetId then state.Units[targetId] else nil
+	if target and target.Alive and target.Side == "Enemy" then
+		local at = BattleGrid.CellOf(state.Grid, target.Id)
+		if at then
+			return at.Y
+		end
+	end
+	if laneHasEnemy(state, y) then
 		return y
 	end
 	if y > 1 and laneHasEnemy(state, y - 1) then
@@ -2549,11 +2582,11 @@ local function homingLane(state: State, y: number, homing: boolean?): number
 end
 
 -- 이 모양(모션)이 겨눌 행. 아군을 겨누는 모양(TargetSide Ally)은 유도와 상관없이 자기 행
-local function aimLane(state: State, y: number, shape: BattleGrid.Shape, homing: boolean?): number
+local function aimLane(state: State, y: number, shape: BattleGrid.Shape, homing: boolean?, targetId: string?): number
 	if shape.TargetSide == "Ally" then
 		return y
 	end
-	return homingLane(state, y, homing)
+	return homingLane(state, y, homing, targetId)
 end
 
 -- 공개: 유닛 id 가 (homing 생략 = 그 유닛의 지금 유도 여부) 쏠 때 겨누는 행
@@ -2565,7 +2598,7 @@ function GridBattle.AimLane(state: State, id: string, homing: boolean?): number?
 	if homing == nil then
 		homing = unit.Homing == true
 	end
-	return homingLane(state, cell.Y, homing)
+	return homingLane(state, cell.Y, homing, unit.HomingTarget)
 end
 
 function GridBattle.ResolveSkill(
@@ -2676,7 +2709,7 @@ function GridBattle.ResolveSkill(
 	local seenUnit: { [string]: boolean } = {}
 	local homing = ally.Homing == true
 	for _, shape in BattleSkills.AllShapes(skill) do
-		local targets = BattleSkills.Targets(state.Grid, "Ally", aimLane(state, cell.Y, shape, homing), shape, growCount, cell.X)
+		local targets = BattleSkills.Targets(state.Grid, "Ally", aimLane(state, cell.Y, shape, homing, ally.HomingTarget), shape, growCount, cell.X)
 		local aliveHits: { Unit } = {}
 		for _, targetId in targets do
 			local target = state.Units[targetId]
@@ -2697,7 +2730,7 @@ function GridBattle.ResolveSkill(
 	if skill.MaxTargets and #hitUnits > skill.MaxTargets then
 		table.sort(hitUnits, function(a, b)
 			local ca, cb = BattleGrid.CellOf(state.Grid, a.Id), BattleGrid.CellOf(state.Grid, b.Id)
-			local aimY = homingLane(state, cell.Y, homing)
+			local aimY = homingLane(state, cell.Y, homing, ally.HomingTarget)
 			local ka = if ca then ca.X * 10 + math.abs(ca.Y - aimY) else 999
 			local kb = if cb then cb.X * 10 + math.abs(cb.Y - aimY) else 999
 			if ka ~= kb then
@@ -3207,7 +3240,7 @@ function GridBattle.HomingLeft(state: State): number
 end
 
 -- 유도를 붙이거나 뗀다. 매 턴 HOMING_PER_TURN 개, 다음 턴 초기화(EndTurn)
-function GridBattle.SetHoming(state: State, id: string, on: boolean): (boolean, string?)
+function GridBattle.SetHoming(state: State, id: string, on: boolean, targetEnemyId: string?): (boolean, string?)
 	local err = prepareError(state)
 	if err then
 		return false, err
@@ -3219,7 +3252,14 @@ function GridBattle.SetHoming(state: State, id: string, on: boolean): (boolean, 
 	if on and not unit.Homing and GridBattle.HomingLeft(state) <= 0 then
 		return false, string.format("이번 턴 유도 %d개를 모두 썼습니다.", PartyDefinitions.HOMING_PER_TURN)
 	end
+	if on and targetEnemyId ~= nil then
+		local target = state.Units[targetEnemyId]
+		if not target or target.Side ~= "Enemy" or not target.Alive or target.Twin then
+			return false, "유도로 고를 수 없는 적입니다."
+		end
+	end
 	unit.Homing = on
+	unit.HomingTarget = if on then targetEnemyId else nil
 	return true, nil
 end
 
@@ -3418,7 +3458,7 @@ function GridBattle.PreviewCells(state: State, id: string, skillId: string?, hom
 		local motions = {}
 		local lane = cell.Y
 		for index, shape in BattleSkills.AllShapes(skill) do
-			local shapeLane = aimLane(state, cell.Y, shape, on)
+			local shapeLane = aimLane(state, cell.Y, shape, on, unit.HomingTarget)
 			if index == 1 then
 				lane = shapeLane
 			end
@@ -4538,6 +4578,61 @@ end
 	플레이어가 이동한 **뒤에** 부른다. 예고된 라인에서 비켜섰으면 그 공격은
 	여기서 빠진다 — 그게 위치로 피한다는 뜻이다.
 ]]
+--[[
+	이 예고가 **지금** 맞히는 아군 칸 {x, y} 목록. 판정(EnemyThreatensAlly)과 화면(Snapshot.ThreatCells)이 이 함수 하나를 같이 쓴다.
+	  추적(Seek)  예고 때 정한 대상 아군(Plan.TargetId — 별 칸이면 다른 아군)을 따라간다: 모양이 있으면 그 아군이 선 지금 칸 둘레, 없으면 그 한 칸.
+              준비 단계에서 대상이 칸을 옮기면 예고 칸도 같이 옮겨 간다(예전엔 예고 때 칸이 화면에 남아 맞는 칸과 어긋났다).
+	  그 밖       예고 칸 고정(파티면 별 칸 위는 빠지고, 파워밤은 로프 열 제외)
+	  예고 없음   적 스킬 모양을 그 적의 행 기준으로
+]]
+function GridBattle.PlanThreatCells(state: State, enemy: Unit, index: number?): { { number } }
+	local out: { { number } } = {}
+	local cell = BattleGrid.CellOf(state.Grid, enemy.Id)
+	if not cell then
+		return out
+	end
+	local width, height = state.Grid.Width, state.Grid.Height
+	local plan = planAt(enemy, index)
+	if plan then
+		local foeSkill = GridBattle.EnemySkill(enemy, index)
+		if plan.Canceled or (foeSkill.Damage <= 0 and not foeSkill.HpRatio and not foeSkill.Inflicts) then
+			return out
+		end
+		if plan.Seek then
+			local center = BattleGrid.CellOf(state.Grid, callistoSeek(state, plan))
+			if not center then
+				return out
+			end
+			if plan.Shape then
+				return shapeCells(plan.Shape, center.X, center.Y, width, height)
+			end
+			table.insert(out, { center.X, center.Y })
+			return out
+		end
+		local lure = state.Callisto and state.Callisto.Lure
+		local sheltered = plan.Shelter and #GridBattle.Allies(state) > 1 and lure ~= nil
+		for _, c in plan.Cells do
+			local skip = (sheltered and hasCell(lure :: any, c[1], c[2])) or (plan.SkillId == "CallistoKenosBomb" and (c[1] == 1 or c[1] == width))
+			if not skip then
+				table.insert(out, { c[1], c[2] })
+			end
+		end
+		return out
+	end
+	local skill = GridBattle.EnemySkill(enemy)
+	local growCount = skill.GrowResource
+			and BattleSkills.GrowCount(skill, BattleStatus.Stack(enemy.Status, skill.GrowResource))
+		or 0
+	for _, shape in BattleSkills.AllShapes(skill) do
+		for _, c in BattleSkills.Cells(state.Grid, "Enemy", cell.Y, shape, growCount, cell.X) do
+			if c.Side ~= "Enemy" then
+				table.insert(out, { c.X, c.Y })
+			end
+		end
+	end
+	return out
+end
+
 -- 이 예고가 닿는 아군 Id 목록(파티: 예고 칸에 선 유닛 전부). 솔로는 0~1개
 function GridBattle.ThreatenedAllies(state: State, enemy: Unit, index: number?): { string }
 	local hit: { string } = {}
@@ -4597,26 +4692,8 @@ function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?
 		if not here or plan.Canceled or (foeSkill.Damage <= 0 and not foeSkill.HpRatio and not foeSkill.Inflicts) then
 			return false
 		end
-		-- 칼리스토 추적: 어디 서 있든 찾아간 아군이면 맞는다
-		if plan.Seek then
-			local seekId = callistoSeek(state, plan)
-			-- 십자/X 유도기: 쫓는 대상 칸이 중심, 그 모양 안에 선 아군이면 맞는다
-			local center = if plan.Shape then BattleGrid.CellOf(state.Grid, seekId) else nil
-			if center then
-				return hasCell(shapeCells(plan.Shape, center.X, center.Y, state.Grid.Width, state.Grid.Height), here.X, here.Y)
-			end
-			return seekId == victim
-		end
-		-- 판 전체·행열(질문 3-A · 4): 파티면 별 칸 위 사람은 빠진다(솔로는 별 위에서도 맞고 회복·가호를 받는다)
-		if plan.Shelter and #GridBattle.Allies(state) > 1 and state.Callisto and state.Callisto.Lure
-			and hasCell(state.Callisto.Lure, here.X, here.Y) then
-			return false
-		end
-		-- 파워밤은 다이브에 맞은 대상에게만(로프 위면 다이브가 막혀 파워밤 없음)
-		if plan.SkillId == "CallistoKenosBomb" and (here.X == 1 or here.X == state.Grid.Width) then
-			return false
-		end
-		for _, c in plan.Cells do
+		-- 맞는 칸은 PlanThreatCells 가 정한다(화면 예고와 같은 함수)
+		for _, c in GridBattle.PlanThreatCells(state, enemy, index) do
 			if c[1] == here.X and c[2] == here.Y then
 				return true
 			end
@@ -4704,6 +4781,8 @@ local function resolveDodgeBound(
 		Grade = grade,
 		Mult = 1,
 		AutoParry = BattleStatus.Total(ally.Status, "AutoParry"),
+		-- 체력 스탯: 받는 피해 감소(옛 '회피 시간' 몫을 바꿈, 2026-11-08)
+		StatMult = 1 - math.min((state.AllyStats.Vitality or 0) * VITALITY_TAKEN_CUT, VITALITY_TAKEN_CAP),
 		-- 결투사: 궁극기·패링 불가(가드만 되는) 스킬인가 — 확정 패링·집중 자동 패링이 건너뛴다. Forced = 강제 결투 응수로 나간 공격
 		Unparryable = skill.GuardOnly == true or skill.BossKind == "Ultimate" or skill.HpRatio ~= nil,
 		Forced = forceSkill ~= nil,
@@ -4739,7 +4818,12 @@ local function resolveDodgeBound(
 		grade = "Fail"
 		autoParried = false
 	else
-		if grade ~= "Success" and before.AutoParry > 0 and nextRandom(state) < before.AutoParry then
+		-- 합친 자동 패링 확률(보정값 + 카드 + 민첩·운 스탯)은 최대 AUTO_PARRY_CAP
+		local autoChance = math.min(
+			before.AutoParry + (state.AllyStats.Agility or 0) * AGILITY_AUTO_DODGE + (state.AllyStats.Luck or 0) * LUCK_AUTO_DODGE,
+			AUTO_PARRY_CAP
+		)
+		if grade ~= "Success" and autoChance > 0 and nextRandom(state) < autoChance then
 			grade = "Success"
 			autoParried = true
 			forceParry = true
@@ -4758,7 +4842,7 @@ local function resolveDodgeBound(
 		end
 	end
 	local parried = parryOnly and grade == "Success"
-	local multiplier = (if parried then PARRY_KEEP else QteDefinitions.Multiplier("Dodge", grade)) * math.max(0, before.Mult)
+	local multiplier = (if parried then PARRY_KEEP else QteDefinitions.Multiplier("Dodge", grade)) * math.max(0, before.Mult) * before.StatMult
 	-- 칼리스토 추적 기믹(2026-11-06 사용자 답 Q3) · 피니셔 로프: 가드·별빛 가호와 곱하되 받는 피해는 원래의 GIMMICK_MIN_TAKEN 밑으로 안 내려간다
 	local gimmickCut: number? = nil
 	local foeCallisto = callistoOf(state, enemy)
@@ -5244,7 +5328,7 @@ function GridBattle.EndTurn(state: State)
 		withUnit(state, a.Id, function()
 			state.Acted, state.Attacked, state.Moved = false, false, false
 			CardEffects.NewTurn(state.Runtime)
-			a.Homing, a.Chosen = false, nil
+			a.Homing, a.Chosen, a.HomingTarget = false, nil, nil
 			if a.Alive then
 				fire(state, "TurnStart", state.Turn)
 				if watches[a.Id] then
@@ -5418,7 +5502,8 @@ function GridBattle.Snapshot(state: State): any
 			ClassId = if unit.Side == "Ally" and not unit.Twin then unit.ClassId else nil,
 			Homing = if unit.Side == "Ally" and not unit.Twin then unit.Homing == true else nil,
 			Chosen = unit.Chosen,
-			AimY = if unit.Side == "Ally" and not unit.Twin and cell then homingLane(state, cell.Y, unit.Homing) else nil,
+			AimY = if unit.Side == "Ally" and not unit.Twin and cell then homingLane(state, cell.Y, unit.Homing, unit.HomingTarget) else nil,
+			HomingTarget = if unit.Side == "Ally" and not unit.Twin and unit.Homing then unit.HomingTarget else nil,
 		}
 	end
 	-- 칼리스토전: 페이즈·장판·박자(체력바·정보 창)
@@ -5518,15 +5603,8 @@ function GridBattle.Snapshot(state: State): any
 		-- 아군 그로기(회피 실패로 찬다. 가득 차면 다음 턴을 쉰다)
 		AllyGroggy = ally.Groggy.Value,
 		AllyStunned = GroggyGauge.IsStunned(ally.Groggy),
-		--[[
-			회피 시간(비율). 방향 회피 QTE 의 입력 시간을 이만큼 늘린다(클라이언트, 최대 +100%).
-			보정값 ParryWindow + 민첩 3%/점 + 체력 1%/점(사양 `### 스탯`).
-		]]
 		-- 패링 QTE 에서 실수를 이만큼 더 성공으로 본다(결투사 간파·집중 최대·연계). 클라이언트가 QteDefinitions.Judge 에 넣는다
 		AllyParryForgive = math.floor(BattleStatus.Total(ally.Status, "ParryForgive")),
-		AllyParryWindow = BattleStatus.Total(ally.Status, "ParryWindow")
-			+ (state.AllyStats.Agility or 0) * 0.03
-			+ (state.AllyStats.Vitality or 0) * 0.01,
 		--[[
 			공격을 예고한 적들. 클라이언트가 이걸로 위협 칸을 칠한다.
 
@@ -5535,6 +5613,20 @@ function GridBattle.Snapshot(state: State): any
 			행동 불가인 적의 공격까지 표시됐다.
 		]]
 		Planned = table.clone(state.Planned),
+		-- 예고마다 지금 맞히는 칸 { [적 Id] = { [몇 번째 계획] = { {x, y} … } } } — 화면은 이걸 그대로 칠한다(판정과 같은 PlanThreatCells)
+		ThreatCells = (function()
+			local byEnemy: { [string]: { [number]: { { number } } } } = {}
+			local seen: { [string]: number } = {}
+			for _, enemyId in state.Planned do
+				seen[enemyId] = (seen[enemyId] or 0) + 1
+				local enemy = state.Units[enemyId]
+				if enemy and enemy.Alive then
+					byEnemy[enemyId] = byEnemy[enemyId] or {}
+					byEnemy[enemyId][seen[enemyId]] = GridBattle.PlanThreatCells(state, enemy, seen[enemyId])
+				end
+			end
+			return byEnemy
+		end)(),
 		-- 보스전 판: 지워진 아군 칸 {X, Y, Turns}, 버프/버그 칸 {X, Y, Kind}, 지금 선 칸의 효과
 		Boss = if state.Boss then bossSnapshot(state) else nil,
 		Callisto = callistoView,

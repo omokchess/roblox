@@ -42,6 +42,7 @@ local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
 local Keywords = require(ReplicatedStorage.Shared.Keywords)
 local PartyBalance = require(ReplicatedStorage.Shared.PartyBalance)
 local PartyDefinitions = require(ReplicatedStorage.Shared.PartyDefinitions)
+local ProgressionDefinitions = require(ReplicatedStorage.Shared.ProgressionDefinitions)
 local StatDefinitions = require(ReplicatedStorage.Shared.StatDefinitions)
 
 local BattleStore = require(script.Parent.BattleStore)
@@ -1286,10 +1287,10 @@ end
 
 -- 카드: 실제 카드 모양 + 지금/다음 값 칠한 효과 + 레벨별 수치 + 키워드 풀이 + 배타·파티
 -- 스탯: 효과(1점당 → 지금)와 영향 받는 직업(Shared.StatInfo — 그리는 건 StatTooltip)
-function DebugBattlePanel:_showStat(statId: string, points: number)
+function DebugBattlePanel:_showStat(statId: string, points: number, classId: string?)
 	local body = self:_sideReset()
 	local box = tile(body, 1, GOLD)
-	StatTooltip.Fill(box, statId, points, self.state and self.state.Config.ClassId)
+	StatTooltip.Fill(box, statId, points, classId or (self.state and self.state.Config.ClassId))
 end
 
 function DebugBattlePanel:_showCard(entry: any, level: number, maxLevel: number)
@@ -1386,7 +1387,21 @@ local function copyUnit(unit: any): any
 	for _, card in unit.Cards or {} do
 		table.insert(cards, { CardId = card.CardId, Level = card.Level })
 	end
-	return { ClassId = unit.ClassId, X = unit.X, Y = unit.Y, Level = unit.Level or DEFAULT_UNIT_LEVEL, Cards = cards }
+	local stats = {}
+	for id, points in unit.Stats or {} do
+		if points > 0 then
+			stats[id] = points
+		end
+	end
+	return { ClassId = unit.ClassId, X = unit.X, Y = unit.Y, Level = unit.Level or DEFAULT_UNIT_LEVEL, Cards = cards, Stats = stats }
+end
+
+local function spentStats(unit: any): number
+	local total = 0
+	for _, points in unit.Stats or {} do
+		total += points
+	end
+	return total
 end
 
 local function copyUnits(units: { any }): { any }
@@ -1445,9 +1460,37 @@ function DebugBattlePanel:_buildParty()
 		TextSize = 16,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, win)
+	-- 편성 레벨(디버그): 실제 유닛 레벨 = 유닛 레벨 + 편성 레벨. 파티 승리마다 +1
+	pw.PartyLevel = make("TextLabel", {
+		Size = UDim2.fromOffset(118, 26),
+		Position = UDim2.fromOffset(346, 10),
+		BackgroundTransparency = 1,
+		Text = "",
+		RichText = true,
+		TextColor3 = TEXT,
+		Font = Enum.Font.GothamBold,
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, win)
+	for index, step in { -1, 1 } do
+		local b = make("TextButton", {
+			Size = UDim2.fromOffset(26, 26),
+			Position = UDim2.fromOffset(466 + (index - 1) * 30, 10),
+			BackgroundColor3 = C(44, 48, 62),
+			BorderSizePixel = 0,
+			Text = if step < 0 then "−" else "+",
+			TextColor3 = TEXT,
+			Font = Enum.Font.GothamBold,
+			TextSize = 16,
+		}, win)
+		make("UICorner", { CornerRadius = UDim.new(0, 6) }, b)
+		b.Activated:Connect(function()
+			send({ Kind = "SetPartyLevel", Value = math.max(0, (self.state and self.state.PartyLevel or 0) + step) })
+		end)
+	end
 	pw.Reason = make("TextLabel", {
-		Size = UDim2.new(1, -400, 0, 26),
-		Position = UDim2.fromOffset(350, 10),
+		Size = UDim2.new(1, -560, 0, 26),
+		Position = UDim2.fromOffset(520, 10),
 		BackgroundTransparency = 1,
 		Text = "",
 		RichText = true,
@@ -1826,6 +1869,7 @@ function DebugBattlePanel:_partyRefresh()
 		return
 	end
 	local pw, p = self.pw, self.party
+	local state = self.state
 	self.partyHover = {}
 	self.hoverGui = nil
 	self.hoverPaint = nil
@@ -1833,6 +1877,14 @@ function DebugBattlePanel:_partyRefresh()
 	local total = partyCost(p.Units)
 	local ok, reason = PartyDefinitions.Validate(p.Units)
 	p.Valid = ok
+	pw.PartyLevel.Text = string.format('편성 레벨 <font color="rgb(255,205,90)">%d</font>', state.PartyLevel or 0)
+	-- 레벨이 줄어 포인트가 모자라진 유닛은 스탯을 되돌린다
+	for _, unit in p.Units do
+		if spentStats(unit) > ProgressionDefinitions.TotalStatPoints(math.min(state.MaxLevel or 60, unit.Level + (state.PartyLevel or 0))) then
+			unit.Stats = {}
+			p.Msg = "레벨이 줄어 포인트가 모자라 스탯을 되돌렸습니다."
+		end
+	end
 	pw.Cost.Text = string.format('코스트 <font color="%s">%d</font> / %d', if total > PartyDefinitions.COST_LIMIT then RED_TEXT else "rgb(255,205,90)", total, PartyDefinitions.COST_LIMIT)
 	pw.Reason.Text = if ok then "" elseif #p.Units == 0 then dim(reason or "") else string.format('<font color="%s">%s</font>', RED_TEXT, reason or "")
 	pw.Start.BackgroundColor3 = if ok then BAD else C(70, 60, 64)
@@ -2014,10 +2066,62 @@ function DebugBattlePanel:_partyEditor()
 		TextXAlignment = Enum.TextXAlignment.Left,
 		LayoutOrder = nextOrder(),
 	}, editor)
+	local bonus = self.state.PartyLevel or 0
+	local levelCap = self.state.MaxLevel or 60
 	stepRow(editor, nextOrder(), "유닛 레벨", tostring(unit.Level), { { -5, "−5" }, { -1, "−1" }, { 1, "+1" }, { 5, "+5" } }, function(step)
-		unit.Level = math.clamp(unit.Level + step, 1, self.state.MaxLevel or 60)
+		unit.Level = math.clamp(unit.Level + step, 1, levelCap)
 		self:_partyRefresh()
 	end)
+	local actual = math.min(levelCap, unit.Level + bonus)
+	local total = ProgressionDefinitions.TotalStatPoints(actual)
+	local left = total - spentStats(unit)
+	make("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 20),
+		BackgroundTransparency = 1,
+		Text = string.format('실제 레벨 <font color="rgb(255,205,90)"><b>%d</b></font> %s  ·  남은 스탯 포인트 <font color="%s"><b>%d</b></font> / %d', actual, dim(string.format("(유닛 %d + 편성 %d)", unit.Level, bonus)), if left < 0 then RED_TEXT else "rgb(255,205,90)", left, total),
+		RichText = true,
+		TextColor3 = TEXT,
+		Font = Enum.Font.Gotham,
+		TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = nextOrder(),
+	}, editor)
+	unit.Stats = unit.Stats or {}
+	for _, statId in StatDefinitions.Order do
+		local definition = StatDefinitions.Get(statId)
+		local points = unit.Stats[statId] or 0
+		local line = row(editor, nextOrder(), 28)
+		line.BackgroundColor3 = C(70, 58, 112)
+		make("UICorner", { CornerRadius = UDim.new(0, 5) }, line)
+		local lit = make("UIStroke", { Color = GOLD, Thickness = 1.5, Enabled = false }, line)
+		label(line, if definition then definition.Name else statId, 90, 1, TEXT)
+		label(line, tostring(points), 40, 2, GOLD, Enum.TextXAlignment.Center)
+		for index, step in { -5, -1, 1, 5 } do
+			button(line, if step > 0 then "+" .. step else "−" .. -step, 42, nil, function()
+				local now = unit.Stats[statId] or 0
+				local room = ProgressionDefinitions.TotalStatPoints(math.min(levelCap, unit.Level + bonus)) - spentStats(unit)
+				local change = if step > 0 then math.min(step, math.max(room, 0)) else -math.min(-step, now)
+				unit.Stats[statId] = if now + change > 0 then now + change else nil
+				self:_partyRefresh()
+			end, 2 + index)
+		end
+		table.insert(self.partyHover, {
+			Gui = line,
+			Area = editor,
+			Key = string.format("stat:%s:%d", statId, points),
+			Show = function()
+				self:_showStat(statId, points, unit.ClassId)
+			end,
+			Paint = function(on: boolean)
+				line.BackgroundTransparency = if on then 0.2 else 1
+				lit.Enabled = on
+			end,
+		})
+	end
+	button(row(editor, nextOrder(), 28), "스탯 되돌리기", 120, nil, function()
+		unit.Stats = {}
+		self:_partyRefresh()
+	end, 1)
 	local actions = row(editor, nextOrder(), 30)
 	button(actions, "무작위 카드", 96, C(60, 110, 70), function()
 		unit.Cards = randomCards(unit.ClassId)

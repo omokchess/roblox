@@ -376,8 +376,8 @@ local cards: { Card } = {
 	{
 		Id = "Pulsar_C_FixedAim",
 		Art = "Pulsar_C_FixedAim",
-		Name = "고정 조준",
-		Description = "`수렴`의 [감극] 보너스(피해량 증가·[감극] 1 추가)를 [감극]이 없는 대상에게도 {15}% 확률로 받는다.",
+		Name = "수렴 강화",
+		Description = "`수렴`이 [감극]이 없는 대상에게도 {15}% 확률로 [감극] 보너스(피해량 증가·[감극] 1 추가)를 받는다.",
 		Levels = { { 15, 20, 25, 30, 35, 40 } },
 		Grade = "Common",
 		ClassId = CLASS_ID,
