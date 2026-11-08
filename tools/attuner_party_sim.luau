@@ -16,12 +16,12 @@ local args = process.args
 local foe = args[1] or "slime"
 local turns = tonumber(args[2]) or 12
 local VERBOSE = args[3] == "v"
--- 시험용: 넷째 인자 = 융해 1당 피해 증가(비율), 다섯째 = 상한
+-- 시험용: 넷째 인자 = 융해 1당 피해 증가 배수(기술별 비율 5·10·15·20% 에 곱한다 — 2026-11-08 사용자 지정 비율)
 if tonumber(args[4]) then
-	BattleSkillEffects.MELT_DAMAGE_PER_STACK = tonumber(args[4]) :: number
-end
-if tonumber(args[5]) then
-	BattleSkillEffects.MELT_DAMAGE_CAP = tonumber(args[5]) :: number
+	local k = tonumber(args[4]) :: number
+	for id, rate in BattleSkillEffects.MELT_DAMAGE_PER_STACK do
+		BattleSkillEffects.MELT_DAMAGE_PER_STACK[id] = rate * k
+	end
 end
 
 local function enemyHp(state: any): number

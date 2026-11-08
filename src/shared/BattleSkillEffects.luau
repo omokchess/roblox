@@ -1441,15 +1441,20 @@ end
 	[융해]는 턴 끝에 터져 사라지므로(GridBattle 턴 끝) 앞 턴에서 쌓아 둘 수 없다 → 융해를 거는 기술은 **피해 계산 전(Before)** 에 건다(전엔 적중 뒤). 그래야 같은 스킬의 타격이 자기가 건 [융해]를 먹는다.
 	카드가 [융해]를 미리 얹었거나 아군이 앞서 걸었으면 그만큼 더 센 비례 피해가 된다. 판 전체기는 대상마다 그 대상의 [융해]로 센다.
 ]]
-BattleSkillEffects.MELT_DAMAGE_PER_STACK = 0.15 -- 시뮬 근거: tools/attuner_party_sim.luau (0.1 → 0.15 → 0.2 비교, 보고 참조)
-BattleSkillEffects.MELT_DAMAGE_CAP = 3 -- 융해 상한 20 에서 딱 닿는 값(카드로 24 까지 늘려도 +300%)
+-- 기술마다 융해 1당 비율이 다르다(2026-11-08 사용자: "1, 2, 3스킬마다 천천히 높아지게 … 5, 10, 15, 20(이건 셉텐트리오네스) 이래야 차별점이 보일듯").
+-- 상한 = 비율 × 융해 상한 20(메그레즈 100% · 메라크 200% · 알리오스 300% · 셉텐트리오네스 400%)
+BattleSkillEffects.MELT_DAMAGE_PER_STACK = { Megrez = 0.05, Merak = 0.10, Alioth = 0.15, Septentriones = 0.20 }
+BattleSkillEffects.MELT_DAMAGE_STACKS = 20
 
-function BattleSkillEffects.MeltBonus(melt: number): number
-	return math.min(BattleSkillEffects.MELT_DAMAGE_CAP, BattleSkillEffects.MELT_DAMAGE_PER_STACK * math.max(0, melt))
+function BattleSkillEffects.MeltBonus(melt: number, skillId: string): number
+	local per = BattleSkillEffects.MELT_DAMAGE_PER_STACK[skillId] or 0
+	return per * math.min(BattleSkillEffects.MELT_DAMAGE_STACKS, math.max(0, melt))
 end
 
-local function meltBonus(ctx: Context, target: any): number
-	return BattleSkillEffects.MeltBonus(BattleStatus.Stack(ctx.StatusOf(target), R.MELT))
+local function meltBonusFor(skillId: string): (ctx: Context, target: any) -> number
+	return function(ctx: Context, target: any): number
+		return BattleSkillEffects.MeltBonus(BattleStatus.Stack(ctx.StatusOf(target), R.MELT), skillId)
+	end
 end
 
 -- 맞는 적마다 [융해]를 건다(카드의 `AttunerMeltBonus` 가 더한다). 피해 계산 전에 불러 같은 스킬의 타격이 먹게 한다
@@ -1491,7 +1496,7 @@ local attunerEffects: { [string]: Effect } = {
 			applyMelt(ctx, 1)
 			return 1
 		end,
-		TargetBonus = meltBonus,
+		TargetBonus = meltBonusFor("Megrez"),
 		After = function(ctx)
 			scorch(ctx, 3)
 		end,
@@ -1505,7 +1510,7 @@ local attunerEffects: { [string]: Effect } = {
 			applyMelt(ctx, 2)
 			return 1
 		end,
-		TargetBonus = meltBonus,
+		TargetBonus = meltBonusFor("Merak"),
 		After = function(ctx)
 			scorch(ctx, 3)
 		end,
@@ -1517,7 +1522,7 @@ local attunerEffects: { [string]: Effect } = {
 			applyMelt(ctx, 5)
 			return 1
 		end,
-		TargetBonus = meltBonus,
+		TargetBonus = meltBonusFor("Alioth"),
 		After = function(ctx)
 			scorch(ctx, 5)
 		end,
@@ -1537,7 +1542,7 @@ local attunerEffects: { [string]: Effect } = {
 		end,
 		-- 화상 1당 +10%(최대 400%)에 2026-11-08 [융해] 비례 피해를 더한다(같은 칸 안 합)
 		TargetBonus = function(ctx, target)
-			return math.min(4, 0.1 * (ctx.StatusOf(target).Burn or 0)) + meltBonus(ctx, target)
+			return math.min(4, 0.1 * (ctx.StatusOf(target).Burn or 0)) + meltBonusFor("Septentriones")(ctx, target)
 		end,
 		EachHit = function(ctx, target, hitIndex)
 			BattleStatus.AddBurn(ctx.StatusOf(target), SEPT_BURN[hitIndex] or 0)

@@ -1,5 +1,5 @@
 --[[
-	attuner_melt_bonus_test.luau — 2026-11-08 조율자 깡딜러: 대상 [융해] 비례 피해 증가(+15%/스택, 최대 +300%)가 실제 피해에 들어가는지 본다.
+	attuner_melt_bonus_test.luau — 2026-11-08 조율자 깡딜러: 대상 [융해] 비례 피해 증가(기술마다 1당 메그레즈 5·메라크 10·알리오스 15·셉텐트리오네스 20%, 상한 = 비율×20)가 실제 피해에 들어가는지 본다.
 	  lune run tools/attuner_melt_bonus_test.luau
 	메그레즈를 대상 융해 0 · 3 · 19(스킬이 1 더 얹어 20) · 29(상한 넘김)에서 쏴 피해 비를 보고, 알리오스(판 전체)는 대상마다 다른 융해로 쏴 대상별로 다르게 들어가는지 본다.
 ]]
@@ -21,10 +21,14 @@ local function noCrit(): number
 	return 0.99
 end
 
-local PER, CAP = BattleSkillEffects.MELT_DAMAGE_PER_STACK, BattleSkillEffects.MELT_DAMAGE_CAP
-check(math.abs(BattleSkillEffects.MeltBonus(0)) < 1e-9, "융해 0 → 보너스 0")
-check(math.abs(BattleSkillEffects.MeltBonus(3) - 3 * PER) < 1e-9, "융해 3 → 3×" .. PER)
-check(math.abs(BattleSkillEffects.MeltBonus(20) - CAP) < 1e-9 and math.abs(BattleSkillEffects.MeltBonus(99) - CAP) < 1e-9, "상한 " .. CAP)
+local RATES = BattleSkillEffects.MELT_DAMAGE_PER_STACK
+check(RATES.Megrez == 0.05 and RATES.Merak == 0.10 and RATES.Alioth == 0.15 and RATES.Septentriones == 0.20, "기술마다 5·10·15·20%")
+local PER = RATES.Megrez
+local CAP = PER * BattleSkillEffects.MELT_DAMAGE_STACKS
+check(math.abs(BattleSkillEffects.MeltBonus(0, "Megrez")) < 1e-9, "융해 0 → 보너스 0")
+check(math.abs(BattleSkillEffects.MeltBonus(3, "Megrez") - 3 * PER) < 1e-9, "융해 3 → 3×" .. PER)
+check(math.abs(BattleSkillEffects.MeltBonus(20, "Megrez") - CAP) < 1e-9 and math.abs(BattleSkillEffects.MeltBonus(99, "Megrez") - CAP) < 1e-9, "상한 " .. CAP)
+check(math.abs(BattleSkillEffects.MeltBonus(20, "Septentriones") - 4) < 1e-9, "셉텐트리오네스 상한 400%")
 
 local function fresh(cells: { { number } }): any
 	return GridBattle.NewParty(1, {
@@ -44,10 +48,10 @@ local function megrez(preMelt: number): number
 	return before - enemy.Health
 end
 
-local d0 = megrez(0) -- 스킬이 1 얹어 +15%
-local d3 = megrez(3) -- 4 → +60%
-local d19 = megrez(19) -- 20 → +300%
-local d29 = megrez(29) -- 30 → 상한 +300%
+local d0 = megrez(0) -- 스킬이 1 얹어 +5%
+local d3 = megrez(3) -- 4 → +20%
+local d19 = megrez(19) -- 20 → +100%
+local d29 = megrez(29) -- 30 → 상한 +100%
 print("메그레즈 피해: 융해 0=" .. d0 .. " · 3=" .. d3 .. " · 19=" .. d19 .. " · 29=" .. d29)
 check(d0 > 0, "피해가 들어간다")
 check(math.abs(d3 / d0 - (1 + 4 * PER) / (1 + PER)) < 0.08, "융해 3 → 4 스택 비율 " .. d3 / d0)
@@ -67,6 +71,6 @@ do
 	local da, db = ha - a.Health, hb - b.Health
 	print("알리오스: 융해 0 대상=" .. da .. " · 융해 10 대상=" .. db)
 	check(da > 0 and db > da, "융해가 더 많은 대상이 더 많이 맞는다")
-	check(math.abs(db / da - (1 + 15 * PER) / (1 + 5 * PER)) < 0.08, "알리오스 대상별 비율 " .. db / da)
+	check(math.abs(db / da - (1 + 15 * RATES.Alioth) / (1 + 5 * RATES.Alioth)) < 0.08, "알리오스 대상별 비율 " .. db / da)
 end
 print("attuner_melt_bonus_test OK")
