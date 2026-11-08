@@ -4,10 +4,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local AbilityCardDefinitions = require(ReplicatedStorage.Shared.AbilityCardDefinitions)
 local AbilityCards = require(ReplicatedStorage.Shared.AbilityCards)
 local CharacterDefinitions = require(ReplicatedStorage.Shared.CharacterDefinitions)
 local Constants = require(ReplicatedStorage.Shared.Constants)
+local PartyDefinitions = require(ReplicatedStorage.Shared.PartyDefinitions)
 local PlayerProfile = require(ReplicatedStorage.Shared.PlayerProfile)
+local PartyPresetStore = require(script.PartyPresetStore)
 local MotionStorage = require(script.MotionStorage)
 local MotionValidator = require(script.MotionValidator)
 local PlazaService = require(script.PlazaService)
@@ -178,6 +181,35 @@ end)
 remoteFolder.GridAction.OnServerEvent:Connect(function(player, request)
 	battles:HandleGridAction(player, request)
 end)
+
+-- 파티 프리셋 저장(F2 '파티 편성' 창). 요청 {Op = List|Save|Delete, Name?, Units?} → {Presets, Examples, Persistent, Error?}
+local presetStore = PartyPresetStore.new({
+	Validate = PartyDefinitions.Validate,
+	Card = function(cardId: string)
+		local card = AbilityCardDefinitions.Get(cardId)
+		if not card then
+			return nil
+		end
+		return { ClassId = card.ClassId, MaxLevel = AbilityCardDefinitions.MaxLevelFor(card) }
+	end,
+	Examples = PartyDefinitions.Examples,
+	Backend = PartyPresetStore.Roblox(),
+	MaxUnitLevel = 60,
+})
+local presetRemote = remoteFolder:FindFirstChild("PartyPresets") or Instance.new("RemoteFunction")
+presetRemote.Name = "PartyPresets"
+presetRemote.Parent = remoteFolder
+;(presetRemote :: RemoteFunction).OnServerInvoke = function(player: Player, request: any)
+	if not battles:CanDebug(player) then
+		return { Presets = {}, Examples = PartyDefinitions.Examples(), Persistent = false, Error = "디버그 권한이 없습니다." }
+	end
+	local ok, reply = pcall(presetStore.Handle, presetStore, player.UserId, request)
+	if not ok then
+		warn("PartyPresets:", reply)
+		return { Presets = {}, Examples = PartyDefinitions.Examples(), Persistent = false, Error = "저장소 오류." }
+	end
+	return reply
+end
 
 local function onPlayerAdded(player: Player)
 	task.spawn(function()

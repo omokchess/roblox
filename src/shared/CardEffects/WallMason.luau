@@ -270,7 +270,7 @@ M.WallMason_R_BackRowAim = {
 	end,
 }
 
--- 버팀벽(2026-10-09 그로기 삭제로 변경): 벽이 있는 동안 방어에 실패해 맞는 피해 −{1}%
+-- 버팀벽(2026-10-09 그로기 삭제로 변경): 벽이 있는 동안 가드·패링 없이 맞는 피해 −{1}%(2026-11-08 글만 '방어에 실패해' → '가드를 쓰지 않고')
 M.WallMason_R_Buttress = {
 	BeforeTaken = function(c: Card, info: any)
 		if info.Grade == "Fail" and wallOf(H.Ally(c)) > 0 then
@@ -434,11 +434,12 @@ M.WallMason_C_QuickRite = {
 	end,
 }
 
--- 빗겨내기: 벽이 있을 때 회피하면 40% 확률로 벽 1(턴당 1회)(2026-10-28 리메 — 옛 벽이 있는 아군 자동 회피·패링 +3%)
+-- 빗겨내기: 벽이 있을 때 적의 공격을 받으면 24% 확률로 벽 1(턴당 1회)(2026-10-28 리메 — 옛 벽이 있는 아군 자동 회피·패링 +3%)
+-- 2026-11-08 QTE 삭제 — 옛 '회피하면 40%'. 벽의 자동 회피는 2%/스택이라 거의 안 켜졌다 → 받아내는 쪽으로. 확률은 성공률 약 60% 를 곱해 40→24(사다리 ×0.6)
 M.WallMason_C_Deflect = {
-	Defend = function(c: Card, info: any)
+	Defend = function(c: Card, _info: any)
 		local ally = H.Ally(c)
-		if info.Grade == "Success" and wallOf(ally) > 0 and H.Rng(c) < c.P(1) and H.PerTurn(c, "deflect", 1) then
+		if wallOf(ally) > 0 and H.Rng(c) < c.P(1) and H.PerTurn(c, "deflect", 1) then
 			wall(c, ally, 1)
 			return true
 		end

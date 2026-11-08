@@ -32,7 +32,7 @@ type View = {
 	Folder: Folder,
 	Layout: BattleArena.Layout,
 	Director: any,
-	Doll: Model?,
+	Dolls: { [string]: Model }, -- 아군 유닛 키(FIGHTER 또는 파티 유닛 Id) → 그 플레이어 인형
 	Hidden: { [Instance]: number },
 	LastEvent: number,
 	Queue: { any },
@@ -53,6 +53,11 @@ function BattleSpectator.SetHidden(on: boolean)
 		-- 혼자 확인용(SpectateSelf) 내 관전 화면은 감추지 않는다
 		view.Folder.Parent = if on and view.UserId ~= Players.LocalPlayer.UserId then nil else workspace
 	end
+end
+
+-- 서버 유닛 Id → 연출기 이름. 솔로의 "player" 는 늘 쓰던 FIGHTER, 파티의 다른 아군은 Id 그대로
+local function allyKey(id: string): string
+	return if id == "player" then FIGHTER else id
 end
 
 local function home(view: View, side: BattleGrid.Side, x: number, y: number): CFrame
@@ -157,8 +162,8 @@ end
 local function close(view: View)
 	views[view.UserId] = nil
 	view.Director:Destroy()
-	if view.Doll then
-		view.Doll:Destroy()
+	for _, doll in view.Dolls do
+		doll:Destroy()
 	end
 	view.Folder:Destroy()
 	unhide(view)
@@ -169,25 +174,40 @@ local function render(view: View)
 	local packet = view.Packet
 	local director = view.Director
 	local player = Players:GetPlayerByUserId(view.UserId)
-	local me = packet.Units.player
-	if me and me.X and me.Y then
-		local character = player and player.Character
-		if not view.Doll and character and character:FindFirstChild("HumanoidRootPart") then
-			view.Doll = makeDoll(character, view.Folder)
-			if view.Doll then
+	-- 아군 유닛마다 그 플레이어의 인형 하나(파티면 여럿 — 모습은 임시로 전부 플레이어 아바타). 솔로는 "player" 하나 = FIGHTER
+	local allyKeys: { [string]: boolean } = {}
+	local character = player and player.Character
+	if character and view.UserId ~= Players.LocalPlayer.UserId then
+		hide(view, character)
+	end
+	for id, me in packet.Units do
+		if me.Side ~= "Ally" or not me.X or not me.Y then
+			continue
+		end
+		local key = allyKey(id)
+		allyKeys[key] = true
+		if not me.Alive and key ~= FIGHTER then
+			local a = director.Actors[key]
+			if a and not a.Dying and not a.PendingDeath then
+				director:Kill(key)
+			end
+			continue
+		end
+		local doll = view.Dolls[key]
+		if not doll and character and character:FindFirstChild("HumanoidRootPart") then
+			doll = makeDoll(character, view.Folder)
+			if doll then
+				view.Dolls[key] = doll
 				local h = home(view, "Ally", me.X, me.Y)
-				director:AddHumanoid(FIGHTER, view.Doll, packet.ClassId or "Berserker", h)
-				director:SetHome(FIGHTER, h, true)
+				director:AddHumanoid(key, doll, me.ClassId or packet.ClassId or "Berserker", h)
+				director:SetHome(key, h, true)
 			end
 		end
-		if view.UserId ~= Players.LocalPlayer.UserId then
-			hide(view, character)
+		if director:Has(key) and not director:IsHeld(key) then
+			director:SetHome(key, home(view, "Ally", me.X, me.Y))
 		end
-		if director:Has(FIGHTER) and not director:IsHeld(FIGHTER) then
-			director:SetHome(FIGHTER, home(view, "Ally", me.X, me.Y))
-		end
-		-- 싸우는 사람 머리 위 체력(복제한 캐릭터의 표시는 지우고 관전용으로 새로)
-		local root = view.Doll and view.Doll:FindFirstChild("HumanoidRootPart")
+		-- 머리 위 체력(복제한 캐릭터의 표시는 지우고 관전용으로 새로)
+		local root = doll and doll:FindFirstChild("HumanoidRootPart")
 		if root then
 			local gui = root:FindFirstChild("SpectateHp") :: BillboardGui?
 			if not gui then
@@ -259,7 +279,7 @@ local function render(view: View)
 		end
 	end
 	for id in director.Actors do
-		if id ~= FIGHTER and not seen[id] then
+		if not allyKeys[id] and not seen[id] then
 			director:Remove(id)
 		end
 	end
@@ -287,7 +307,7 @@ local function open(packet: any): View?
 		Folder = folder,
 		Layout = layout,
 		Director = CombatDirector.new({ Quiet = true }),
-		Doll = nil,
+		Dolls = {},
 		Hidden = {},
 		LastEvent = 0,
 		Queue = {},
@@ -356,7 +376,7 @@ local function playEvent(view: View, ev: any)
 	for i, list in ev.Hits or {} do
 		groups[i] = {}
 		for _, hit in list do
-			table.insert(groups[i], hit.Id == "player" and FIGHTER or hit.Id)
+			table.insert(groups[i], allyKey(hit.Id))
 		end
 	end
 	local function remap(result: any): any
@@ -366,21 +386,20 @@ local function playEvent(view: View, ev: any)
 			copy.Hits[i] = {}
 			for _, hit in list do
 				local h = table.clone(hit)
-				if h.Id == "player" then
-					h.Id = FIGHTER
-				end
+				h.Id = allyKey(h.Id)
 				table.insert(copy.Hits[i], h)
 			end
 		end
 		return copy
 	end
-	if ev.Kind == "Skill" and director:Has(FIGHTER) then
-		local play = director:PlaySkill(FIGHTER, ev.SkillId, groups)
+	local actor = allyKey(ev.Actor or "player")
+	if ev.Kind == "Skill" and director:Has(actor) then
+		local play = director:PlaySkill(actor, ev.SkillId, groups)
 		if play then
 			play:SetResult(remap(ev))
 		end
 	elseif ev.Kind == "EnemyAttack" and director:Has(ev.Actor) then
-		local play = director:PlayEnemyAttack(ev.Actor, ev.SkillId or "SlimeTackle", FIGHTER, ev.Grade or "Fail")
+		local play = director:PlayEnemyAttack(ev.Actor, ev.SkillId or "SlimeTackle", allyKey(ev.TargetId or "player"), ev.Grade or "Fail")
 		if play then
 			play:SetResult(remap(ev))
 		end

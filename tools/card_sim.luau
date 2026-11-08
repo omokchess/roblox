@@ -357,6 +357,7 @@ COMBOS = {
 	Berserker_R_Sweep = "Berserker_C_Ember", -- 분노가 상한일 때 분쇄
 	Berserker_C_Headbutt = "Berserker_R_Sweep",
 	Berserker_E_Undying = "Berserker_R_Reckless", -- 쓰러질 만큼 맞아야 켜진다
+	AzureBlade_R_StillWater = "AzureBlade_C_Whet", -- 집중력이 있어야 자동 패링이 붙는다(2026-11-08 QTE 삭제)
 }
 
 local only = process.args[1]

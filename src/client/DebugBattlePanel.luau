@@ -40,6 +40,8 @@ local CharacterDefinitions = require(ReplicatedStorage.Shared.CharacterDefinitio
 local ClassPassives = require(ReplicatedStorage.Shared.ClassPassives)
 local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
 local Keywords = require(ReplicatedStorage.Shared.Keywords)
+local PartyBalance = require(ReplicatedStorage.Shared.PartyBalance)
+local PartyDefinitions = require(ReplicatedStorage.Shared.PartyDefinitions)
 local StatDefinitions = require(ReplicatedStorage.Shared.StatDefinitions)
 
 local BattleStore = require(script.Parent.BattleStore)
@@ -77,6 +79,7 @@ function DebugBattlePanel.new(remotes: Folder)
 	self.state = nil :: any
 	self.snapshot = nil :: any
 	self.tab = "Setup"
+	self.partyUnit = nil :: string?
 	self.open = false
 	self.cardFilter = "All"
 	self.statusTarget = "Enemies"
@@ -85,6 +88,10 @@ function DebugBattlePanel.new(remotes: Folder)
 	self.hoverGui = nil :: GuiObject?
 	self.hoverPaint = nil :: ((boolean) -> ())?
 	self.sideKey = nil :: string?
+	-- 파티 편성 창(화면 가운데) 상태. 코드는 파일 끝 '파티 편성 창' 절
+	self.partyOpen = false
+	self.partyHover = {} :: { any }
+	self.party = { Units = {}, Brush = nil, Selected = nil, Lifted = false, Data = nil, PresetKey = nil, Confirm = nil, Msg = "", Valid = false, ServerMsg = "" } :: any
 	-- 클라이언트에도 카드 풀을 등록한다(순수 자료). 카드 탭이 직업 카드 전부를 보여 준다.
 	AbilityCards.Register()
 	self:_build()
@@ -108,6 +115,13 @@ function DebugBattlePanel.new(remotes: Folder)
 			self.message.Text = state.Message
 		end
 		self:_refresh()
+		if self.partyOpen then
+			if state and state.Message and state.Message ~= "" and state.Message ~= self.party.ServerMsg then
+				self.party.ServerMsg = state.Message
+				self.party.Msg = state.Message
+			end
+			self:_partyRefresh()
+		end
 	end)
 	local folder = remotes :: any
 	folder.GridState.OnClientEvent:Connect(function(snapshot)
@@ -326,11 +340,15 @@ function DebugBattlePanel:_build()
 	make("UIStroke", { Color = LINE, Thickness = 1 }, side)
 	self.side = side
 	self.sideBody = make("Frame", { Size = UDim2.new(1, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, side)
+	self:_buildParty()
 end
 
 function DebugBattlePanel:SetOpen(open: boolean)
 	self.open = open
 	self.panel.Visible = open
+	self.partyOpen = false
+	self.pw.Win.Visible = false
+	self.side.Position = UDim2.fromOffset(12 + PANEL_WIDTH + 10, 100)
 	self.side.Visible = false
 	self.sideKey = nil
 	self.hoverGui = nil
@@ -541,6 +559,10 @@ function DebugBattlePanel:_setupTab(section: (string?, number?) -> Frame)
 	button(go, "몹 치우기", 66, nil, function()
 		send({ Kind = "ClearEncounters" })
 	end, 3)
+	local partyLine = row(top, 2, 34)
+	button(partyLine, "파티 편성 — 직업·배치·카드·프리셋 (화면 가운데 창)", PANEL_WIDTH - 60, C(70, 56, 110), function()
+		self:SetPartyOpen(true)
+	end, 1)
 
 	-- 직업 세 칸씩(조건부 획득 직업은 자물쇠 — 디버그로는 고를 수 있다)
 	local classes = section("직업  <font color=\"rgb(150,154,170)\" size=\"12\">바꾸면 카드 빌드가 비워진다 · 🔒 조건부 획득(디버그로 열림)</font>")
@@ -707,8 +729,47 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 		send({ Kind = "HealAll", Enemies = true })
 	end, 4)
 
+	-- 파티 세션: 아군 유닛 고르기 줄(행동 순서대로 ①②③). 자원 주기 · 상태이상 '고른 유닛' · 체력이 이 유닛에 걸린다
+	local members: { any } = {}
+	local pickedMember: any = nil
+	local circled = { "①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩" }
+	local function className(classId: string): string
+		for _, classEntry in state.Classes or {} do
+			if classEntry.Id == classId then
+				return classEntry.Name
+			end
+		end
+		return classId
+	end
+	if snapshot and snapshot.PartyMode and snapshot.Party then
+		local rank: { [string]: number } = {}
+		for index, id in snapshot.Party.Order or {} do
+			rank[id] = index
+		end
+		members = table.clone(snapshot.Party.Members or {})
+		table.sort(members, function(m1, m2)
+			return (rank[m1.Id] or 99) < (rank[m2.Id] or 99)
+		end)
+		for _, member in members do
+			if member.Id == self.partyUnit then
+				pickedMember = member
+			end
+		end
+		pickedMember = pickedMember or members[1]
+		local box = section('조종할 아군  <font size="12" color="rgb(150,154,170)">자원 주기 · 상태이상 · 체력이 이 유닛에 걸린다</font>')
+		local line = row(box, 1, 34)
+		local width = math.floor((PANEL_WIDTH - 60 - 5 * (#members - 1)) / math.max(#members, 1))
+		for index, member in members do
+			button(line, string.format("%s %s", circled[index] or tostring(index), className(member.ClassId)), width, if member == pickedMember then BLUE else nil, function()
+				self.partyUnit = member.Id
+				self:_refresh()
+			end, index)
+		end
+	end
+	local pickedId: string? = pickedMember and pickedMember.Id
+
 	if snapshot then
-		local me = snapshot.Units and snapshot.Units.player
+		local me = if #members == 0 then snapshot.Units and snapshot.Units.player else nil
 		local foes = section(string.format("적  <font size=\"12\" color=\"rgb(150,154,170)\">%d턴</font>", snapshot.Turn or 0))
 		local ids = {}
 		for id, unit in snapshot.Units or {} do
@@ -734,6 +795,30 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 				end, 5)
 			end
 		end
+		if #members > 0 then
+			local mine = section("아군 체력")
+			for index, member in members do
+				local unit = snapshot.Units[member.Id]
+				if not unit then
+					continue
+				end
+				local line = row(mine, index, 28)
+				label(line, string.format("%s %s", circled[index] or "", className(member.ClassId)), 96, 1, if member == pickedMember then GOLD else TEXT)
+				label(line, if unit.Alive then string.format("%d/%d", unit.Health, unit.MaxHealth) else "쓰러짐", 76, 2, GOLD)
+				button(line, "1", 34, nil, function()
+					send({ Kind = "SetHealth", Id = member.Id, UnitId = member.Id, Value = 1 })
+				end, 3)
+				button(line, "절반", 44, nil, function()
+					send({ Kind = "SetHealth", Id = member.Id, UnitId = member.Id, Value = math.floor(unit.MaxHealth / 2) })
+				end, 4)
+				button(line, "가득", 44, nil, function()
+					send({ Kind = "SetHealth", Id = member.Id, UnitId = member.Id, Value = unit.MaxHealth })
+				end, 5)
+				button(line, "처치", 52, BAD, function()
+					send({ Kind = "KillEnemy", Id = member.Id, UnitId = member.Id })
+				end, 6)
+			end
+		end
 		if me then
 			local mine = section(string.format("나  체력 %d/%d · 스테미나 %d", me.Health, me.MaxHealth, snapshot.AllyStamina or 0))
 			local line = row(mine, 1, 28)
@@ -746,17 +831,17 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 		end
 
 		-- 직업 자원
-		local resources = ClassResources.ForClass(snapshot.AllyClassId or state.Config.ClassId)
+		local resources = ClassResources.ForClass(if pickedMember then pickedMember.ClassId else (snapshot.AllyClassId or state.Config.ClassId))
 		if #resources > 0 then
 			local box = section("자원 주기")
-			local stacks = snapshot.AllyStatus and snapshot.AllyStatus.Stacks or {}
+			local stacks = if pickedMember then (pickedMember.Status and pickedMember.Status.Stacks or {}) else (snapshot.AllyStatus and snapshot.AllyStatus.Stacks or {})
 			for index, id in resources do
 				local line = row(box, index, 26)
 				label(line, ClassResources.Label(id), 110, 1)
 				label(line, tostring(stacks[id] or 0), 40, 2, GOLD, Enum.TextXAlignment.Center)
 				for step, amount in { -1, 1, 5 } do
 					button(line, if amount > 0 then "+" .. amount else tostring(amount), 56, nil, function()
-						send({ Kind = "GiveStack", Id = id, Amount = amount })
+						send({ Kind = "GiveStack", Id = id, Amount = amount, UnitId = pickedId })
 					end, 2 + step)
 				end
 			end
@@ -764,7 +849,10 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 	end
 
 	local status = section("상태이상 걸기")
-	choice(status, 1, { { "Enemies", "적 전체" }, { "Ally", "나" } }, self.statusTarget, function(value)
+	local targetOptions = if pickedId
+		then { { "Enemies", "적 전체" }, { "Ally", "고른 유닛" }, { "AllAllies", "아군 전체" } }
+		else { { "Enemies", "적 전체" }, { "Ally", "나" } }
+	choice(status, 1, targetOptions, self.statusTarget, function(value)
 		self.statusTarget = value
 		self:_refresh()
 	end)
@@ -783,7 +871,7 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 			line = row(status, 1 + math.ceil(index / 4), 30)
 		end
 		button(line :: Frame, entry[2], 94, nil, function()
-			send({ Kind = "ApplyStatus", Target = self.statusTarget, Status = entry[1], Amount = entry[3] })
+			send({ Kind = "ApplyStatus", Target = self.statusTarget, Status = entry[1], Amount = entry[3], UnitId = pickedId })
 		end, index)
 	end
 end
@@ -960,6 +1048,10 @@ end
 -- 매 프레임: 마우스 아래 호버 대상을 칠하고, 곁 창에 보일 것(키)이 바뀌면 다시 그린다
 function DebugBattlePanel:_pollHover()
 	if not self.open then
+		return
+	end
+	if self.partyOpen then
+		self:_pollPartyHover()
 		return
 	end
 	-- AbsolutePosition 은 IgnoreGuiInset 이어도 상단바 아래가 원점이고, GetMouseLocation 은 화면 맨 위가 원점이다 —
@@ -1270,6 +1362,939 @@ function DebugBattlePanel:_showCard(entry: any, level: number, maxLevel: number)
 	if #notes > 0 then
 		local box = tile(body, 30, BAD)
 		text(box, table.concat(notes, "\n"), 1, 12, TEXT)
+	end
+end
+
+--=== 파티 편성 창 (화면 가운데) ===--
+--[[
+	2026-11-08 사용자: "프리셋 저장 기능을 만들어두고, 예시 프리셋으로 3개정도 · F2 디버그 패널에서 전부 다 조정 할 수 있어야 해.
+	왼쪽 패널에만 안 떠도 되고, 화면 가운데에 떠도 되니까." · "한계 코스트를 8로 설정 후, 각 코스트에 맞춰 직업들을 배치."
+	사양: 파티전투_사양.md 4·5절. 열기: 편성 탭의 [파티 편성]. 시작하면 서버에 StartParty { Party = { Units } } 를 보낸다.
+
+	  왼쪽   직업 목록(코스트·역할, 올리면 코스트 근거) → 고르고 칸을 눌러 놓는다
+	  가운데 6×3 아군 격자(왼쪽이 뒤열 x=6, 오른쪽이 앞열 x=1) · 칸마다 행동 순번 · 놓인 유닛을 누르면 오른쪽에서 편집
+	         (눌러서 든 상태에서 다른 칸을 누르면 옮기고, 유닛이 있는 칸이면 자리를 바꾼다)
+	  오른쪽 고른 유닛의 레벨 · 카드(레벨 올리고 내리기·빼기·무작위·지우기, 올리면 카드 미리보기)
+	  아래   프리셋 줄(예시 3개 + 저장분) · 이름 · 저장/불러오기/지우기 · 파티 전투 시작
+]]
+
+local DEFAULT_UNIT_LEVEL = 15
+local RED_TEXT = "rgb(255,120,120)"
+
+local function copyUnit(unit: any): any
+	local cards = {}
+	for _, card in unit.Cards or {} do
+		table.insert(cards, { CardId = card.CardId, Level = card.Level })
+	end
+	return { ClassId = unit.ClassId, X = unit.X, Y = unit.Y, Level = unit.Level or DEFAULT_UNIT_LEVEL, Cards = cards }
+end
+
+local function copyUnits(units: { any }): { any }
+	local out = {}
+	for _, unit in units do
+		table.insert(out, copyUnit(unit))
+	end
+	return out
+end
+
+local function partyCost(units: { any }): number
+	local total = 0
+	for _, unit in units do
+		total += PartyDefinitions.Cost(unit.ClassId) or 0
+	end
+	return total
+end
+
+function DebugBattlePanel:_buildParty()
+	local win = make("Frame", {
+		Name = "PartyWindow",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.92, 0.92),
+		BackgroundColor3 = BG,
+		BackgroundTransparency = 0.02,
+		BorderSizePixel = 0,
+		Visible = false,
+	}, self.Gui)
+	make("UICorner", { CornerRadius = UDim.new(0, 10) }, win)
+	make("UIStroke", { Color = LINE, Thickness = 1 }, win)
+	make("UISizeConstraint", { MinSize = Vector2.new(900, 520), MaxSize = Vector2.new(1180, 740) }, win)
+	-- 곁 창(카드 미리보기)이 이 창 위에 뜨도록
+	self.side.ZIndex = 5
+	local pw: any = { Win = win, Cells = {} }
+	self.pw = pw
+
+	make("TextLabel", {
+		Size = UDim2.fromOffset(130, 26),
+		Position = UDim2.fromOffset(14, 10),
+		BackgroundTransparency = 1,
+		Text = "파티 편성",
+		TextColor3 = GOLD,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 18,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, win)
+	pw.Cost = make("TextLabel", {
+		Size = UDim2.fromOffset(190, 26),
+		Position = UDim2.fromOffset(150, 10),
+		BackgroundTransparency = 1,
+		Text = "",
+		RichText = true,
+		TextColor3 = TEXT,
+		Font = Enum.Font.GothamBold,
+		TextSize = 16,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, win)
+	pw.Reason = make("TextLabel", {
+		Size = UDim2.new(1, -400, 0, 26),
+		Position = UDim2.fromOffset(350, 10),
+		BackgroundTransparency = 1,
+		Text = "",
+		RichText = true,
+		TextColor3 = TEXT,
+		Font = Enum.Font.Gotham,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+	}, win)
+	local close = make("TextButton", {
+		AnchorPoint = Vector2.new(1, 0),
+		Size = UDim2.fromOffset(30, 30),
+		Position = UDim2.new(1, -10, 0, 8),
+		BackgroundColor3 = CARD,
+		BorderSizePixel = 0,
+		Text = "X",
+		TextColor3 = DIM,
+		Font = Enum.Font.GothamBold,
+		TextSize = 16,
+	}, win)
+	make("UICorner", { CornerRadius = UDim.new(0, 6) }, close)
+	close.Activated:Connect(function()
+		self:SetOpen(false)
+	end)
+
+	-- 왼쪽: 직업 목록 + 코스트 근거
+	local left = make("Frame", { Position = UDim2.fromOffset(10, 48), Size = UDim2.new(0, 236, 1, -224), BackgroundTransparency = 1 }, win)
+	pw.ClassList = make("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -168),
+		BackgroundColor3 = CARD,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 5,
+		ScrollBarImageColor3 = LINE,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}, left)
+	make("UICorner", { CornerRadius = UDim.new(0, 8) }, pw.ClassList)
+	make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, pw.ClassList)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5) }, pw.ClassList)
+	pw.Tip = make("TextLabel", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.fromScale(0, 1),
+		Size = UDim2.new(1, 0, 0, 160),
+		BackgroundColor3 = CARD,
+		BorderSizePixel = 0,
+		Text = "",
+		RichText = true,
+		TextColor3 = TEXT,
+		Font = Enum.Font.Gotham,
+		TextSize = 12,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+	}, left)
+	make("UICorner", { CornerRadius = UDim.new(0, 8) }, pw.Tip)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6) }, pw.Tip)
+
+	-- 가운데: 6×3 아군 격자
+	local mid = make("Frame", { Position = UDim2.fromOffset(256, 48), Size = UDim2.new(1, -636, 1, -224), BackgroundTransparency = 1 }, win)
+	make("TextLabel", {
+		Size = UDim2.new(0.5, 0, 0, 20),
+		BackgroundTransparency = 1,
+		Text = "◀ 뒤열 (x=6)",
+		TextColor3 = DIM,
+		Font = Enum.Font.Gotham,
+		TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, mid)
+	make("TextLabel", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(1, 0),
+		Size = UDim2.new(0.5, 0, 0, 20),
+		BackgroundTransparency = 1,
+		Text = "앞열 (x=1) ▶ 적",
+		TextColor3 = DIM,
+		Font = Enum.Font.Gotham,
+		TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, mid)
+	local grid = make("Frame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 3 * 66), BackgroundTransparency = 1 }, mid)
+	for x = 1, BattleGrid.DEFAULT_WIDTH do
+		pw.Cells[x] = {}
+		for y = 1, BattleGrid.DEFAULT_HEIGHT do
+			local cell = make("TextButton", {
+				Size = UDim2.new(1 / 6, -4, 0, 62),
+				Position = UDim2.new((BattleGrid.DEFAULT_WIDTH - x) / 6, 2, 0, (y - 1) * 66),
+				BackgroundColor3 = C(40, 44, 56),
+				BorderSizePixel = 0,
+				Text = "",
+				RichText = true,
+				TextColor3 = DIM,
+				Font = Enum.Font.GothamBold,
+				TextSize = 12,
+				TextWrapped = true,
+			}, grid)
+			make("UICorner", { CornerRadius = UDim.new(0, 5) }, cell)
+			local stroke = make("UIStroke", { Color = GOLD, Thickness = 2, Enabled = false, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, cell)
+			cell.Activated:Connect(function()
+				self:_partyCell(x, y)
+			end)
+			pw.Cells[x][y] = { Button = cell, Stroke = stroke }
+		end
+	end
+	local info = make("Frame", { Position = UDim2.fromOffset(0, 24 + 3 * 66 + 8), Size = UDim2.new(1, 0, 1, -(24 + 3 * 66 + 8)), BackgroundTransparency = 1 }, mid)
+	make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, info)
+	local function infoText(order: number, color: Color3): TextLabel
+		return make("TextLabel", {
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Text = "",
+			RichText = true,
+			TextColor3 = color,
+			Font = Enum.Font.Gotham,
+			TextSize = 13,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			LayoutOrder = order,
+		}, info)
+	end
+	pw.Order = infoText(1, TEXT)
+	pw.Hint = infoText(2, DIM)
+
+	-- 오른쪽: 고른 유닛 편집
+	pw.Editor = make("ScrollingFrame", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -10, 0, 48),
+		Size = UDim2.new(0, 360, 1, -224),
+		BackgroundColor3 = CARD,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 5,
+		ScrollBarImageColor3 = LINE,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}, win)
+	make("UICorner", { CornerRadius = UDim.new(0, 8) }, pw.Editor)
+	make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, pw.Editor)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10) }, pw.Editor)
+
+	-- 아래: 프리셋 줄
+	local bottom = make("Frame", { Position = UDim2.new(0, 10, 1, -166), Size = UDim2.new(1, -20, 0, 156), BackgroundTransparency = 1 }, win)
+	pw.Persist = make("TextLabel", {
+		Size = UDim2.new(1, -430, 0, 18),
+		BackgroundTransparency = 1,
+		Text = "",
+		RichText = true,
+		TextColor3 = DIM,
+		Font = Enum.Font.Gotham,
+		TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, bottom)
+	pw.PresetList = make("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, 20),
+		Size = UDim2.new(1, -430, 1, -20),
+		BackgroundColor3 = CARD,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 5,
+		ScrollBarImageColor3 = LINE,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}, bottom)
+	make("UICorner", { CornerRadius = UDim.new(0, 8) }, pw.PresetList)
+	make("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, pw.PresetList)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5) }, pw.PresetList)
+
+	local controls = make("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 420, 1, 0), BackgroundTransparency = 1 }, bottom)
+	pw.NameBox = make("TextBox", {
+		Size = UDim2.new(1, 0, 0, 28),
+		BackgroundColor3 = CARD,
+		BorderSizePixel = 0,
+		Text = "",
+		PlaceholderText = "프리셋 이름 (40자까지)",
+		PlaceholderColor3 = DIM,
+		TextColor3 = TEXT,
+		Font = Enum.Font.Gotham,
+		TextSize = 13,
+		ClearTextOnFocus = false,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, controls)
+	make("UICorner", { CornerRadius = UDim.new(0, 6) }, pw.NameBox)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, pw.NameBox)
+	pw.NameBox:GetPropertyChangedSignal("Text"):Connect(function()
+		self.party.Confirm = nil
+		pw.Save.Text = "저장"
+	end)
+	local actions = make("Frame", { Position = UDim2.fromOffset(0, 32), Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1 }, controls)
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder }, actions)
+	pw.Save = button(actions, "저장", 140, C(60, 110, 70), function()
+		self:_partySave()
+	end, 1)
+	button(actions, "불러오기", 130, nil, function()
+		self:_partyLoad()
+	end, 2)
+	button(actions, "지우기", 130, nil, function()
+		self:_partyDelete()
+	end, 3)
+	pw.Start = button(make("Frame", { Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1 }, controls), "파티 전투 시작", 420, BAD, function()
+		self:_partyStart()
+	end, 1)
+	-- 안내·오류 글(예시 설명이 길어서 스크롤)
+	local msgBox = make("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, 100),
+		Size = UDim2.new(1, 0, 0, 56),
+		BackgroundColor3 = CARD,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = LINE,
+		CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}, controls)
+	make("UICorner", { CornerRadius = UDim.new(0, 6) }, msgBox)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4) }, msgBox)
+	pw.Msg = make("TextLabel", {
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Text = "",
+		RichText = true,
+		TextColor3 = TEXT,
+		Font = Enum.Font.Gotham,
+		TextSize = 12,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+	}, msgBox)
+end
+
+function DebugBattlePanel:SetPartyOpen(open: boolean)
+	if open and not self.state then
+		return
+	end
+	self.partyOpen = open
+	self.pw.Win.Visible = open
+	self.panel.Visible = self.open and not open
+	-- 카드 미리보기는 창 왼쪽 가장자리에 띄운다(오른쪽 열 위에서 올려 보므로 가리지 않는다)
+	self.side.Position = if open then UDim2.fromOffset(12, 60) else UDim2.fromOffset(12 + PANEL_WIDTH + 10, 100)
+	self.side.Visible = false
+	self.sideKey = nil
+	self.hoverGui = nil
+	self.hoverPaint = nil
+	if open then
+		self:_partyRefresh()
+		if not self.party.Data then
+			self:_presetCall({ Op = "List" })
+		end
+	end
+end
+
+--=== 편성 상태 ===--
+
+function DebugBattlePanel:_partyUnitAt(x: number, y: number): any
+	for _, unit in self.party.Units do
+		if unit.X == x and unit.Y == y then
+			return unit
+		end
+	end
+	return nil
+end
+
+function DebugBattlePanel:_partyUnitOf(classId: string?): any
+	for _, unit in self.party.Units do
+		if unit.ClassId == classId then
+			return unit
+		end
+	end
+	return nil
+end
+
+function DebugBattlePanel:_partyMsg(content: string, bad: boolean?)
+	self.party.Msg = if bad then string.format('<font color="%s">%s</font>', RED_TEXT, content) else content
+	self.pw.Msg.Text = self.party.Msg
+end
+
+function DebugBattlePanel:_partyClass(classId: string): any
+	for _, entry in self.state.Classes or {} do
+		if entry.Id == classId then
+			return entry
+		end
+	end
+	return nil
+end
+
+-- 칸을 눌렀을 때: 놓기(직업을 고른 채) · 고르기 · 든 유닛 옮기기/자리 바꾸기
+function DebugBattlePanel:_partyCell(x: number, y: number)
+	local p = self.party
+	local at = self:_partyUnitAt(x, y)
+	if p.Brush then
+		if at then
+			self:_partyMsg("직업은 빈 칸에 놓습니다.", true)
+			return
+		end
+		local existing = self:_partyUnitOf(p.Brush)
+		if existing then
+			existing.X, existing.Y = x, y
+		else
+			table.insert(p.Units, { ClassId = p.Brush, X = x, Y = y, Level = DEFAULT_UNIT_LEVEL, Cards = {} })
+		end
+		p.Selected, p.Brush, p.Lifted = p.Brush, nil, false
+	elseif at then
+		local lifted = self:_partyUnitOf(p.Selected)
+		if p.Lifted and lifted and lifted ~= at then
+			lifted.X, lifted.Y, at.X, at.Y = at.X, at.Y, lifted.X, lifted.Y
+			p.Lifted = false
+		elseif p.Lifted and lifted == at then
+			p.Lifted = false
+		else
+			p.Selected, p.Lifted = at.ClassId, true
+		end
+	else
+		local lifted = self:_partyUnitOf(p.Selected)
+		if p.Lifted and lifted then
+			lifted.X, lifted.Y = x, y
+			p.Lifted = false
+		end
+	end
+	self:_partyRefresh()
+end
+
+function DebugBattlePanel:_partyRemove(classId: string)
+	local p = self.party
+	for index, unit in p.Units do
+		if unit.ClassId == classId then
+			table.remove(p.Units, index)
+			break
+		end
+	end
+	if p.Selected == classId then
+		p.Selected, p.Lifted = nil, false
+	end
+	self:_partyRefresh()
+end
+
+local function setCardLevel(unit: any, cardId: string, level: number)
+	for index, card in unit.Cards do
+		if card.CardId == cardId then
+			if level <= 0 then
+				table.remove(unit.Cards, index)
+			else
+				card.Level = level
+			end
+			return
+		end
+	end
+	if level > 0 then
+		table.insert(unit.Cards, { CardId = cardId, Level = level })
+	end
+end
+
+-- 무작위 카드 5장(서로 배타인 카드는 피한다)
+local function randomCards(classId: string): { any }
+	local rng = Random.new()
+	local all: { any } = {}
+	for _, grade in { "Essential", "Rare", "Common" } do
+		for _, card in AbilityCardDefinitions.GetPool(classId, grade :: any) do
+			table.insert(all, card)
+		end
+	end
+	local picked: { any } = {}
+	local blocked: { [string]: boolean } = {}
+	while #all > 0 and #picked < 5 do
+		local card = table.remove(all, rng:NextInteger(1, #all))
+		if not blocked[card.Id] then
+			table.insert(picked, { CardId = card.Id, Level = rng:NextInteger(1, AbilityCardDefinitions.MaxLevelFor(card)) })
+			for _, other in card.Excludes or {} do
+				blocked[other] = true
+			end
+		end
+	end
+	return picked
+end
+
+--=== 그리기 ===--
+
+function DebugBattlePanel:_partyRefresh()
+	if not self.partyOpen or not self.state then
+		return
+	end
+	local pw, p = self.pw, self.party
+	self.partyHover = {}
+	self.hoverGui = nil
+	self.hoverPaint = nil
+
+	local total = partyCost(p.Units)
+	local ok, reason = PartyDefinitions.Validate(p.Units)
+	p.Valid = ok
+	pw.Cost.Text = string.format('코스트 <font color="%s">%d</font> / %d', if total > PartyDefinitions.COST_LIMIT then RED_TEXT else "rgb(255,205,90)", total, PartyDefinitions.COST_LIMIT)
+	pw.Reason.Text = if ok then "" elseif #p.Units == 0 then dim(reason or "") else string.format('<font color="%s">%s</font>', RED_TEXT, reason or "")
+	pw.Start.BackgroundColor3 = if ok then BAD else C(70, 60, 64)
+	pw.Msg.Text = p.Msg
+	pw.Save.Text = if p.Confirm then "덮어쓰기? 한 번 더" else "저장"
+	local data = p.Data
+	pw.Persist.Text = if not data then "저장: 불러오는 중…" elseif data.Persistent then "저장: DataStore (DebugPartyPresets)" else '<font color="rgb(255,190,110)">저장: 이 서버 메모리만</font> — 서버를 닫으면 사라집니다'
+
+	self:_partyClasses()
+	self:_partyGrid()
+	self:_partyEditor()
+	self:_partyPresets()
+	for _, d in self.pw.Win:GetDescendants() do
+		if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
+			d.AutoLocalize = false
+		end
+	end
+end
+
+function DebugBattlePanel:_partyTip(classId: string?)
+	local tip = self.pw.Tip
+	if not classId then
+		tip.Text = dim("직업에 마우스를 올리면 역할과 코스트를 이렇게 정한 까닭이 보입니다.")
+		return
+	end
+	local entry = self:_partyClass(classId)
+	tip.Text = string.format(
+		"<b>%s</b>  %s  ·  코스트 <b>%s</b>\n%s",
+		if entry then entry.Name else classId,
+		dim(PartyBalance.ROLES[classId] or ""),
+		tostring(PartyDefinitions.Cost(classId) or "?"),
+		PartyBalance.REASONS[classId] or ""
+	)
+end
+
+function DebugBattlePanel:_partyClasses()
+	local pw, p = self.pw, self.party
+	for _, child in pw.ClassList:GetChildren() do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+	local order = 0
+	for _, entry in self.state.Classes or {} do
+		local cost = PartyDefinitions.Cost(entry.Id)
+		if not cost then
+			continue
+		end
+		order += 1
+		local placed = self:_partyUnitOf(entry.Id) ~= nil
+		local brush = p.Brush == entry.Id
+		local b = make("TextButton", {
+			Size = UDim2.new(1, 0, 0, 42),
+			BackgroundColor3 = if brush then BLUE elseif placed then CARD:Lerp(entry.Color, 0.28) else C(44, 48, 62),
+			BorderSizePixel = 0,
+			Text = string.format('<b>%s</b>   코스트 <font color="rgb(255,205,90)"><b>%d</b></font>\n<font size="11" color="rgb(170,174,190)">%s%s</font>', entry.Name, cost, PartyBalance.ROLES[entry.Id] or "", if placed then " · 배치됨" else ""),
+			RichText = true,
+			TextColor3 = TEXT,
+			Font = Enum.Font.Gotham,
+			TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			LayoutOrder = order,
+		}, pw.ClassList)
+		make("UICorner", { CornerRadius = UDim.new(0, 6) }, b)
+		make("UIPadding", { PaddingLeft = UDim.new(0, 10) }, b)
+		if placed and p.Selected == entry.Id or brush then
+			make("UIStroke", { Color = if brush then BLUE else GOLD, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+		end
+		b.Activated:Connect(function()
+			if placed then
+				p.Selected, p.Brush, p.Lifted = entry.Id, nil, false
+			else
+				p.Brush = if p.Brush == entry.Id then nil else entry.Id
+				p.Lifted = false
+			end
+			self:_partyRefresh()
+		end)
+		table.insert(self.partyHover, {
+			Gui = b,
+			Area = pw.ClassList,
+			Key = "class:" .. entry.Id,
+			Show = function()
+				self.side.Visible = false
+				self:_partyTip(entry.Id)
+			end,
+		})
+	end
+	if not self.sideKey then
+		self:_partyTip(nil)
+	end
+end
+
+function DebugBattlePanel:_partyGrid()
+	local pw, p = self.pw, self.party
+	local orders: { [any]: number } = {}
+	for index, unit in PartyDefinitions.ActionOrder(p.Units) do
+		orders[unit] = index
+	end
+	for x = 1, BattleGrid.DEFAULT_WIDTH do
+		for y = 1, BattleGrid.DEFAULT_HEIGHT do
+			local cell = pw.Cells[x][y]
+			local unit = self:_partyUnitAt(x, y)
+			local button_ = cell.Button
+			if unit then
+				local entry = self:_partyClass(unit.ClassId)
+				button_.BackgroundColor3 = if entry then CARD:Lerp(entry.Color, 0.4) else C(60, 64, 80)
+				button_.TextColor3 = TEXT
+				button_.Text = string.format('<font color="rgb(255,205,90)" size="14">%d</font>  %s\n<font size="11" color="rgb(200,204,216)">코스트 %d · 카드 %d</font>', orders[unit] or 0, if entry then entry.Name else unit.ClassId, PartyDefinitions.Cost(unit.ClassId) or 0, #unit.Cards)
+				cell.Stroke.Enabled = p.Selected == unit.ClassId
+				cell.Stroke.Color = if p.Lifted then BLUE else GOLD
+			else
+				button_.BackgroundColor3 = if p.Brush or p.Lifted then C(50, 56, 72) else C(40, 44, 56)
+				button_.TextColor3 = DIM
+				button_.Text = if x == 1 then "전열" elseif x == BattleGrid.DEFAULT_WIDTH then "후열" else ""
+				cell.Stroke.Enabled = false
+			end
+		end
+	end
+	local names = {}
+	for index, unit in PartyDefinitions.ActionOrder(p.Units) do
+		local entry = self:_partyClass(unit.ClassId)
+		table.insert(names, string.format("%d %s", index, if entry then entry.Name else unit.ClassId))
+	end
+	pw.Order.Text = if #names > 0 then "행동 순서  " .. table.concat(names, "  →  ") else dim("행동 순서  (유닛 없음)")
+	pw.Hint.Text = if p.Brush then
+		"고른 직업을 놓을 빈 칸을 누르세요. (왼쪽 목록에서 다시 누르면 취소)"
+		elseif p.Lifted then "유닛을 들었습니다. 옮길 칸을 누르세요 (유닛이 있는 칸이면 자리 바꿈, 다시 누르면 놓기)."
+		else "① 왼쪽에서 직업을 고르고 빈 칸을 눌러 놓는다  ② 놓인 유닛을 누르면 오른쪽에서 편집하고 든 상태가 된다  ③ 순번 = 행동 순서(행 위 → 아래, 같은 행은 왼쪽 → 오른쪽)"
+end
+
+local function stepRow(parent: Instance, order: number, caption: string, value: string, steps: { { any } }, onStep: (number) -> ()): Frame
+	local line = row(parent, order, 30)
+	label(line, caption, 70, 1, DIM)
+	label(line, value, 52, 2, GOLD, Enum.TextXAlignment.Center)
+	for index, step in steps do
+		button(line, step[2], 48, nil, function()
+			onStep(step[1])
+		end, 2 + index)
+	end
+	return line
+end
+
+function DebugBattlePanel:_partyEditor()
+	local pw, p = self.pw, self.party
+	local editor = pw.Editor
+	local scroll = editor.CanvasPosition
+	for _, child in editor:GetChildren() do
+		if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+			child:Destroy()
+		end
+	end
+	local unit = self:_partyUnitOf(p.Selected)
+	if not unit then
+		make("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 60),
+			BackgroundTransparency = 1,
+			Text = "놓인 유닛을 누르면 여기서 레벨과 카드를 고칩니다.",
+			TextColor3 = DIM,
+			Font = Enum.Font.Gotham,
+			TextSize = 13,
+			TextWrapped = true,
+		}, editor)
+		return
+	end
+	local entry = self:_partyClass(unit.ClassId)
+	local order = 0
+	local function nextOrder(): number
+		order += 1
+		return order
+	end
+	make("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 40),
+		BackgroundTransparency = 1,
+		Text = string.format('<font size="18" color="%s"><b>%s</b></font>  %s\n%s', hexOf(if entry then entry.Color else TEXT), if entry then entry.Name else unit.ClassId, dim((PartyBalance.ROLES[unit.ClassId] or "") .. " · 코스트 " .. tostring(PartyDefinitions.Cost(unit.ClassId) or "?")), dim(string.format("칸 (%d, %d)", unit.X, unit.Y))),
+		RichText = true,
+		TextColor3 = TEXT,
+		Font = Enum.Font.Gotham,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = nextOrder(),
+	}, editor)
+	stepRow(editor, nextOrder(), "유닛 레벨", tostring(unit.Level), { { -5, "−5" }, { -1, "−1" }, { 1, "+1" }, { 5, "+5" } }, function(step)
+		unit.Level = math.clamp(unit.Level + step, 1, self.state.MaxLevel or 60)
+		self:_partyRefresh()
+	end)
+	local actions = row(editor, nextOrder(), 30)
+	button(actions, "무작위 카드", 96, C(60, 110, 70), function()
+		unit.Cards = randomCards(unit.ClassId)
+		self:_partyRefresh()
+	end, 1)
+	button(actions, "카드 모두 빼기", 104, nil, function()
+		unit.Cards = {}
+		self:_partyRefresh()
+	end, 2)
+	button(actions, "유닛 빼기", 84, BAD, function()
+		self:_partyRemove(unit.ClassId)
+	end, 3)
+
+	local have: { [string]: number } = {}
+	for _, card in unit.Cards do
+		have[card.CardId] = card.Level
+	end
+	for _, grade in { "Essential", "Rare", "Common" } do
+		local pool = AbilityCardDefinitions.GetPool(unit.ClassId, grade :: any)
+		if #pool == 0 then
+			continue
+		end
+		local style = CardView.GRADE_STYLE[grade]
+		make("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 20),
+			BackgroundTransparency = 1,
+			Text = string.format('<font color="#%s">%s</font>  %d장', style.Edge:ToHex(), style.Name, #pool),
+			RichText = true,
+			TextColor3 = GOLD,
+			Font = Enum.Font.GothamBold,
+			TextSize = 14,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			LayoutOrder = nextOrder(),
+		}, editor)
+		local sorted = table.clone(pool)
+		table.sort(sorted, function(a, b)
+			return a.Name < b.Name
+		end)
+		for _, card in sorted do
+			local maxLevel = AbilityCardDefinitions.MaxLevelFor(card)
+			local level = have[card.Id] or 0
+			local line = row(editor, nextOrder(), 30)
+			line.BackgroundColor3 = C(70, 58, 112)
+			make("UICorner", { CornerRadius = UDim.new(0, 5) }, line)
+			local lit = make("UIStroke", { Color = GOLD, Thickness = 1.5, Enabled = false }, line)
+			local thumbHolder = make("Frame", { Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, LayoutOrder = 1 }, line)
+			CardView.Thumb(thumbHolder, card, 28)
+			local name = label(line, card.Name, 108, 2, if level > 0 then TEXT else DIM)
+			label(line, if level > 0 then string.format("Lv %d/%d", level, maxLevel) else string.format("−/%d", maxLevel), 50, 3, if level > 0 then GOLD else DIM, Enum.TextXAlignment.Center)
+			button(line, "−", 26, nil, function()
+				setCardLevel(unit, card.Id, level - 1)
+				self:_partyRefresh()
+			end, 4)
+			button(line, "+", 26, nil, function()
+				setCardLevel(unit, card.Id, math.min(level + 1, maxLevel))
+				self:_partyRefresh()
+			end, 5)
+			button(line, "최대", 40, nil, function()
+				setCardLevel(unit, card.Id, maxLevel)
+				self:_partyRefresh()
+			end, 6)
+			table.insert(self.partyHover, {
+				Gui = line,
+				Area = editor,
+				Key = string.format("card:%s:%d", card.Id, level),
+				Show = function()
+					self:_showCard(card, level, maxLevel)
+				end,
+				Paint = function(on: boolean)
+					line.BackgroundTransparency = if on then 0.2 else 1
+					lit.Enabled = on
+					name.TextColor3 = if on then Color3.new(1, 1, 1) elseif level > 0 then TEXT else DIM
+				end,
+			})
+		end
+	end
+	task.defer(function()
+		editor.CanvasPosition = scroll
+	end)
+end
+
+-- 프리셋 줄: 예시(지울 수 없음) 먼저, 그 뒤 저장분
+local function presetEntries(data: any): { any }
+	local entries = {}
+	for index, example in (if data then data.Examples else PartyDefinitions.Examples()) or {} do
+		table.insert(entries, { Key = "E:" .. index, Name = example.Name, Units = example.Units, Example = true, Note = example.Note })
+	end
+	for _, saved in (if data then data.Presets else nil) or {} do
+		table.insert(entries, { Key = "S:" .. saved.Name, Name = saved.Name, Units = saved.Units, Example = false })
+	end
+	return entries
+end
+
+function DebugBattlePanel:_partyPresets()
+	local pw, p = self.pw, self.party
+	for _, child in pw.PresetList:GetChildren() do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+	for index, entry in presetEntries(p.Data) do
+		local picked = p.PresetKey == entry.Key
+		local b = make("TextButton", {
+			Size = UDim2.new(1, 0, 0, 26),
+			BackgroundColor3 = if picked then BLUE else C(44, 48, 62),
+			BorderSizePixel = 0,
+			Text = string.format('%s%s   <font color="rgb(150,154,170)">코스트 %d · 유닛 %d</font>', if entry.Example then '<font color="rgb(255,205,90)">[예시]</font> ' else "", entry.Name, partyCost(entry.Units), #entry.Units),
+			RichText = true,
+			TextColor3 = TEXT,
+			Font = Enum.Font.Gotham,
+			TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			LayoutOrder = index,
+		}, pw.PresetList)
+		make("UICorner", { CornerRadius = UDim.new(0, 5) }, b)
+		make("UIPadding", { PaddingLeft = UDim.new(0, 8) }, b)
+		b.Activated:Connect(function()
+			p.PresetKey = entry.Key
+			p.Confirm = nil
+			if not entry.Example then
+				pw.NameBox.Text = entry.Name
+			end
+			self:_partyMsg(entry.Note or "", false)
+			self:_partyPresets()
+		end)
+	end
+	for _, d in pw.PresetList:GetDescendants() do
+		if d:IsA("TextButton") then
+			d.AutoLocalize = false
+		end
+	end
+end
+
+--=== 프리셋 동작 ===--
+
+local function selectedEntry(self: any): any
+	for _, entry in presetEntries(self.party.Data) do
+		if entry.Key == self.party.PresetKey then
+			return entry
+		end
+	end
+	return nil
+end
+
+-- 서버 PartyPresets 원격에 요청하고 응답(Presets·Examples·Persistent·Error)을 받아 창을 고친다
+function DebugBattlePanel:_presetCall(request: { [string]: any }, okMessage: string?)
+	local remote = (self.Remotes :: any):FindFirstChild("PartyPresets")
+	if not remote then
+		self:_partyMsg("서버에 PartyPresets 원격이 없습니다 (서버를 새로 동기화하세요).", true)
+		return
+	end
+	task.spawn(function()
+		local ok, reply = pcall(function()
+			return remote:InvokeServer(request)
+		end)
+		if not ok or type(reply) ~= "table" then
+			self:_partyMsg("저장소에 닿지 못했습니다.", true)
+			return
+		end
+		self.party.Data = reply
+		if reply.Error then
+			self:_partyMsg(reply.Error, true)
+		elseif okMessage then
+			self:_partyMsg(okMessage, false)
+		end
+		self:_partyRefresh()
+	end)
+end
+
+function DebugBattlePanel:_partySave()
+	local p = self.party
+	local name = self.pw.NameBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+	if name == "" then
+		self:_partyMsg("저장할 이름을 적으세요.", true)
+		return
+	end
+	if #p.Units == 0 then
+		self:_partyMsg("유닛이 한 명도 없습니다.", true)
+		return
+	end
+	local ok, reason = PartyDefinitions.Validate(p.Units)
+	if not ok then
+		self:_partyMsg(reason or "파티 구성이 맞지 않습니다.", true)
+		return
+	end
+	for _, entry in presetEntries(p.Data) do
+		if entry.Name == name then
+			if entry.Example then
+				self:_partyMsg("예시와 같은 이름으로는 저장할 수 없습니다.", true)
+				return
+			end
+			if p.Confirm ~= name then
+				p.Confirm = name
+				self.pw.Save.Text = "덮어쓰기? 한 번 더"
+				self:_partyMsg(string.format("'%s' 저장분이 이미 있습니다. 덮어쓰려면 [저장]을 한 번 더 누르세요.", name), false)
+				return
+			end
+		end
+	end
+	p.Confirm = nil
+	p.PresetKey = "S:" .. name
+	self:_presetCall({ Op = "Save", Name = name, Units = copyUnits(p.Units) }, string.format("'%s' 저장했습니다.", name))
+end
+
+function DebugBattlePanel:_partyLoad()
+	local p = self.party
+	local entry = selectedEntry(self)
+	if not entry then
+		self:_partyMsg("불러올 프리셋을 아래 목록에서 고르세요.", true)
+		return
+	end
+	p.Units = copyUnits(entry.Units)
+	local first = PartyDefinitions.ActionOrder(p.Units)[1]
+	p.Selected, p.Brush, p.Lifted, p.Confirm = if first then first.ClassId else nil, nil, false, nil
+	self:_partyMsg(string.format("'%s' 을 불러왔습니다.", entry.Name), false)
+	self:_partyRefresh()
+end
+
+function DebugBattlePanel:_partyDelete()
+	local p = self.party
+	local entry = selectedEntry(self)
+	if not entry then
+		self:_partyMsg("지울 프리셋을 아래 목록에서 고르세요.", true)
+		return
+	end
+	if entry.Example then
+		self:_partyMsg("예시 프리셋은 지울 수 없습니다.", true)
+		return
+	end
+	p.Confirm = nil
+	p.PresetKey = nil
+	self:_presetCall({ Op = "Delete", Name = entry.Name }, string.format("'%s' 지웠습니다.", entry.Name))
+end
+
+-- 서버에 파티 전투 시작을 부탁한다(적 편성·배율·무적 등은 편성 탭 설정 그대로)
+function DebugBattlePanel:_partyStart()
+	local p = self.party
+	local ok, reason = PartyDefinitions.Validate(p.Units)
+	if not ok then
+		self:_partyMsg(reason or "파티 구성이 맞지 않습니다.", true)
+		return
+	end
+	self:_partyMsg("파티 전투를 시작합니다…", false)
+	send({ Kind = "StartParty", Party = { Units = copyUnits(p.Units) } })
+end
+
+-- 매 프레임: 마우스 아래 직업(코스트 근거)·카드(미리보기)를 보인다
+function DebugBattlePanel:_pollPartyHover()
+	local mouse = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
+	local found = nil
+	for _, target in self.partyHover do
+		if target.Gui.Parent and inside(target.Area, mouse) and inside(target.Gui, mouse) then
+			found = target
+			break
+		end
+	end
+	local gui = found and found.Gui
+	if gui ~= self.hoverGui then
+		if self.hoverPaint then
+			self.hoverPaint(false)
+		end
+		self.hoverGui = gui
+		self.hoverPaint = found and found.Paint
+		if self.hoverPaint then
+			self.hoverPaint(true)
+		end
+	end
+	local key = if found then found.Key else nil
+	if key ~= self.sideKey then
+		self.sideKey = key
+		if found then
+			found.Show()
+		else
+			self.side.Visible = false
+			self:_partyTip(nil)
+		end
 	end
 end
 

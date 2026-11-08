@@ -26,7 +26,7 @@
 	  AfterSkill(info{Skill, Hits, Kills, Grade, Crits})  스킬이 끝난 뒤
 	  Kill(info{Target})                    적이 쓰러졌을 때(무엇으로든)
 	  BeforeTaken(info{Attacker, Grade, Mult, AutoParry})  적 공격을 받기 직전(배율·자동 패링 확률)
-	  Defend(info{Attacker, Grade})         회피·방어·패링 판정 뒤(Success=패링, Partial=방어, Fail=실패)
+	  Defend(info{Attacker, Grade})         피격 판정 뒤(Success=자동 패링·회피가 터짐, Partial=가드를 골랐거나 결투사 방어 태세, Fail=가드 없이 맞음 — QTE 없음)
 	  Taken(info{Attacker, Damage})         적 공격을 맞은 뒤(피해 0 이면 안 부른다)
 	  Damaged(info{Amount, Element})        어떤 이유로든 체력이 깎였을 때(지속 피해·자해 포함)
 	  Gain(id, amount) / Spend(id, amount)  자원(스택)이 늘거나 줄었을 때 — 앞뒤를 견줘 알아낸다
@@ -358,8 +358,10 @@ function H.Hurt(c: Card, unit: any, amount: number, element: string?): number
 end
 
 function H.Log(c: Card, message: string)
+	-- 카드가 아니면 직업 패시브(조율자 별 등 — "[Attuner_Dubhe]" 처럼 Id 가 화면에 나오던 것, 2026-11-08)
 	local card = AbilityCardDefinitions.Get(c.Id)
-	c.Rt.Env.Log(string.format("[%s] %s", card and card.Name or c.Id, message))
+	local passive = not card and ClassPassives.Passive(c.Id)
+	c.Rt.Env.Log(string.format("[%s] %s", if card then card.Name elseif passive then passive.Name else c.Id, message))
 end
 
 function H.Enemies(c: Card): { any }

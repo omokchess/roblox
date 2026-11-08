@@ -1050,6 +1050,37 @@ function CombatDirector:PlayEnemyAttack(enemyId: string, skillId: string, target
 	return play
 end
 
+--[[
+	파티 전투의 적 공격: 모션 하나에 맞는 아군이 여럿이다(QTE 가 없어 등급은 늘 Fail — 방어 기술은 엔진이 피해를 줄인다).
+	victims = { { Id = 맞는 아군, Grade = "Fail"|"Partial"|"Success" } … }. 맞는 순간 유닛마다 등급대로 반응한다.
+]]
+function CombatDirector:PlayEnemyVolley(enemyId: string, skillId: string, victims: { { Id: string, Grade: string } }, onDone: (() -> ())?)
+	local a = self.Actors[enemyId]
+	if not a then
+		if onDone then
+			onDone()
+		end
+		return nil
+	end
+	a.Animator:SetBase(a.Idle)
+	a.HoldId = nil
+	local ids = {}
+	for _, victim in victims do
+		table.insert(ids, victim.Id)
+	end
+	return self:_play(a, self:_skillMotion(a, skillId), { ids }, {
+		OnDone = self:_moodFor(a, skillId, onDone),
+		OnHit = function()
+			for _, victim in victims do
+				local t = self.Actors[victim.Id]
+				if t then
+					self:_react(t, if victim.Grade == "Success" then "Dodge" elseif victim.Grade == "Partial" then "Guard" else "Hit")
+				end
+			end
+		end,
+	})
+end
+
 -- 마우스로 집어 듦
 function CombatDirector:Grab(id: string)
 	local a = self.Actors[id]

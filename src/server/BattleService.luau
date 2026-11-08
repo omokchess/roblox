@@ -43,9 +43,12 @@ local CardDraft = require(ReplicatedStorage.Shared.CardDraft)
 local CardEffects = require(ReplicatedStorage.Shared.CardEffects)
 local CharacterDefinitions = require(ReplicatedStorage.Shared.CharacterDefinitions)
 local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
+local CombatMotions = require(ReplicatedStorage.Shared.Combat.CombatMotions)
 local EnemyDefinitions = require(ReplicatedStorage.Shared.EnemyDefinitions)
 local GridBattle = require(ReplicatedStorage.Shared.GridBattle)
 local GroggyGauge = require(ReplicatedStorage.Shared.GroggyGauge)
+local PartyDefinitions = require(ReplicatedStorage.Shared.PartyDefinitions)
+local SlimeMotions = require(ReplicatedStorage.Shared.Combat.Motions.Slime)
 local PlayerProfile = require(ReplicatedStorage.Shared.PlayerProfile)
 local ProgressionDefinitions = require(ReplicatedStorage.Shared.ProgressionDefinitions)
 local SkyArena = require(ReplicatedStorage.Shared.SkyArena)
@@ -95,6 +98,11 @@ export type Session = {
 	LevelUpSeq: number,
 	BattleSeq: number,
 	SpectatePacket: any?,
+	-- 파티 전투(2026-11-08): 이 전투가 파티 세션인가 · 턴 시작 뒤 서버가 순서대로 해소하는 중인가
+	PartyMode: boolean?,
+	Turning: boolean?,
+	-- 파티 명령이 거절된 까닭(다음 스냅샷에 실어 화면 기록 줄에 띄운다)
+	Notice: string?,
 }
 
 local BattleService = {}
@@ -305,6 +313,8 @@ function BattleService:_session(player: Player): Session
 			LevelUp = nil,
 			LevelUpSeq = 0,
 			BattleSeq = 0,
+			PartyMode = false,
+			Turning = false,
 		}
 		session.Run.Active = true
 		self.Sessions[player] = session
@@ -462,6 +472,14 @@ function BattleService:_publishBattle(player: Player, threats: { any }?)
 	snapshot.Threats = threats or {}
 	snapshot.AutoQte = session.Config.AutoQte
 	snapshot.BattleSeq = session.BattleSeq
+	if session.PartyMode then
+		-- 파티 전투: 화면이 파티 UI 로 갈리는 표지 · 턴 진행 중 · 유닛마다 이번 스킬의 범위 미리보기(유도 반영)
+		snapshot.PartyMode = true
+		snapshot.Turning = session.Turning == true
+		snapshot.Preview = self:_partyPreview(session.Battle)
+		snapshot.Notice = session.Notice
+		session.Notice = nil
+	end
 	self.Remotes.GridState:FireClient(player, snapshot)
 	self:_publishSpectate(player, snapshot)
 end
@@ -478,6 +496,8 @@ local function spectatePacket(player: Player, session: Session, snapshot: any): 
 		units[id] = {
 			Name = u.Name, Side = u.Side, X = u.X, Y = u.Y, GridSide = u.GridSide, Alive = u.Alive,
 			Health = u.Health, MaxHealth = u.MaxHealth, Stunned = u.Stunned,
+			-- 파티: 아군 유닛마다 직업(관전 화면이 유닛마다 인형을 세운다)
+			ClassId = u.ClassId,
 			-- 보스 부위(디버그): 관전하는 쪽도 같은 몸을 그린다
 			Part = u.Part, Cells = u.Cells,
 		}
@@ -626,7 +646,8 @@ end
 	fieldAt 이 오면(만남 몹) 그 자리에서, 아니면 설정의 전장(Sky/Field)에서.
 ]]
 -- enemyIds: 들판 보스 자리처럼 편성을 정해 여는 싸움(없으면 F2 편성)
-function BattleService:StartBattle(player: Player, fieldAt: CFrame?, enemyIds: { string }?): (boolean, string?)
+-- party: 파티 전투 멤버(StartParty 가 검사해 만든 GridBattle.PartyMember 목록). 있으면 NewParty 로 세운다
+function BattleService:StartBattle(player: Player, fieldAt: CFrame?, enemyIds: { string }?, party: { GridBattle.PartyMember }?): (boolean, string?)
 	local session = self:_session(player)
 	local root = rootOf(player)
 	if not root then
@@ -682,24 +703,33 @@ function BattleService:StartBattle(player: Player, fieldAt: CFrame?, enemyIds: {
 	for _, id in StatDefinitions.Order do
 		allyStats[id] = StatDefinitions.TotalValue(session.Stats, id)
 	end
-	local battle = GridBattle.New(
-		math.max(1, session.Wins + 1),
-		player.DisplayName,
-		health,
-		power,
-		config.ClassId,
-		faith,
-		nil,
-		session.Run.Cards,
-		{
-			Name = if enemyIds then "들판 보스" elseif fieldAt then "필드 만남" else "시험 전투",
-			Enemies = table.clone(enemyIds or config.Enemies),
-			HealthScale = config.HealthScale,
-			PowerScale = config.PowerScale,
-			Cells = table.clone(config.Cells),
-		},
-		allyStats
-	)
+	local encounter = {
+		Name = if enemyIds then "들판 보스" elseif fieldAt then "필드 만남" else "시험 전투",
+		Enemies = table.clone(enemyIds or config.Enemies),
+		HealthScale = config.HealthScale,
+		PowerScale = config.PowerScale,
+		Cells = table.clone(config.Cells),
+	}
+	local battle: GridBattle.State
+	if party then
+		local built, result = pcall(GridBattle.NewParty, math.max(1, session.Wins + 1), party, encounter)
+		if not built then
+			-- 전장을 이미 깔았으니 되돌린다(하늘 칸을 놓고 원래 자리로)
+			self:_freeSlot(player)
+			session.Arena = nil
+			local back = session.ReturnCFrame
+			session.ReturnCFrame = nil
+			if back and player.Character then
+				player.Character:PivotTo(back)
+			end
+			return false, tostring(result)
+		end
+		battle = result :: any
+	else
+		battle = GridBattle.New(math.max(1, session.Wins + 1), player.DisplayName, health, power, config.ClassId, faith, nil, session.Run.Cards, encounter, allyStats)
+	end
+	session.PartyMode = party ~= nil
+	session.Turning = false
 	battle.Debug = { God = config.God, AllyDamageScale = config.AllyDamageScale, NoCooldown = config.NoCooldown, AutoDodge = config.AutoQte ~= "Off" }
 	session.Battle = battle
 	session.Threats = {}
@@ -717,6 +747,8 @@ end
 function BattleService:_closeBattle(player: Player, delay: number)
 	local session = self:_session(player)
 	session.Battle = nil
+	session.PartyMode = false
+	session.Turning = false
 	session.Threats = {}
 	self:_publishBattle(player)
 	local arena = session.Arena
@@ -749,6 +781,10 @@ function BattleService:_grantVictory(player: Player)
 	local session = self:_session(player)
 	local run = session.Run
 	session.Wins += 1
+	-- 파티 승리: 솔로 빌드의 레벨·스탯 포인트·카드 제시(LevelUpUi)는 올리지 않는다. 승수만 센다.
+	if session.PartyMode and session.Battle then
+		return
+	end
 	local gained = ProgressionDefinitions.LevelGainForFloor(session.Wins)
 	local from = session.Level
 	session.Level = math.min(MAX_LEVEL, session.Level + gained)
@@ -770,9 +806,10 @@ function BattleService:_settle(player: Player): boolean
 	if battle.Outcome == "Victory" then
 		-- 마지막 일격을 그릴 수 있게 끝나기 직전 상태를 먼저 보낸다
 		self:_publishBattle(player)
+		local party = session.PartyMode
 		self:_grantVictory(player)
 		self:_closeBattle(player, RETURN_DELAY)
-		self:_publish(player, string.format("승리 — %d승", session.Wins))
+		self:_publish(player, string.format("%s — %d승", if party then "파티 승리" else "승리", session.Wins))
 		return true
 	elseif battle.Outcome == "Defeat" then
 		self:_publishBattle(player)
@@ -844,6 +881,255 @@ function BattleService:_pumpThreats(player: Player)
 	self:_publishBattle(player)
 end
 
+--=== 파티 전투 (2026-11-08, 파티전투_사양.md) ===--
+--[[
+	파티 세션: BattleAction StartParty 로 연다. 한 턴은 클라이언트가 GridAction 으로 준비하고(Place · Choose · Homing)
+	BeginTurn 을 보내면 서버가 순서대로 해소한다 — 유닛 하나씩 ResolveUnitSkill → 매번 스냅샷을 보내고 연출 길이만큼 기다린다 →
+	ResolveEnemyPhase → EndTurn → EnemyPlan → 준비 단계 스냅샷. QTE 는 없다(등급은 엔진이 정한다).
+	연출 길이는 모션 Duration 으로 어림한다. 클라이언트는 연출을 대기열로 받아 겹치지 않게 틀므로 어림이 틀려도 순서는 지켜진다.
+]]
+local MAX_UNIT_STAT = 999
+local MIN_ACTION_SECONDS = 0.35
+local ACTION_PAD = 0.7
+local MAX_ACTION_SECONDS = 8
+
+-- StartParty 요청의 Party → GridBattle.PartyMember 목록. 틀리면 (nil, 사유)
+function BattleService:_buildParty(player: Player, party: any): ({ GridBattle.PartyMember }?, string?)
+	local session = self:_session(player)
+	if typeof(party) ~= "table" or typeof(party.Units) ~= "table" then
+		return nil, "파티 정보가 없습니다."
+	end
+	local members: { GridBattle.PartyMember } = {}
+	local check: { PartyDefinitions.Member } = {}
+	for _, unit in party.Units do
+		if typeof(unit) ~= "table" or type(unit.ClassId) ~= "string" or not CharacterDefinitions.IsValid(unit.ClassId) then
+			return nil, string.format("알 수 없는 직업입니다 (%s).", tostring(if typeof(unit) == "table" then unit.ClassId else unit))
+		end
+		local class = CharacterDefinitions.Get(unit.ClassId)
+		if class.Conditional and not self:CanDebug(player) then
+			return nil, string.format("%s — 아직 얻지 못한 직업입니다(조건부 획득).", class.Name)
+		end
+		local x, y = tonumber(unit.X), tonumber(unit.Y)
+		if not x or not y then
+			return nil, string.format("칸이 숫자가 아닙니다 (%s).", unit.ClassId)
+		end
+		table.insert(check, { ClassId = unit.ClassId, X = x, Y = y })
+
+		-- 레벨 · 스탯: 유닛이 정했으면 그것, 아니면 세션(F2 성장 탭) 것
+		local level = math.floor(clampNumber(unit.Level, 1, MAX_LEVEL, session.Level))
+		local block = session.Stats
+		if typeof(unit.Stats) == "table" then
+			block = StatDefinitions.NewBlock()
+			for _, id in StatDefinitions.Order do
+				block.Main[id] = math.floor(clampNumber(unit.Stats[id], 0, MAX_UNIT_STAT, 0))
+			end
+		end
+		local stats = {}
+		for _, id in StatDefinitions.Order do
+			stats[id] = StatDefinitions.TotalValue(block, id)
+		end
+
+		local cards: { CardEffects.Owned } = {}
+		for _, entry in if typeof(unit.Cards) == "table" then unit.Cards else {} do
+			local card = if typeof(entry) == "table" then AbilityCardDefinitions.Get(tostring(entry.CardId)) else nil
+			if not card or card.ClassId ~= unit.ClassId then
+				return nil, string.format("%s — 이 직업의 카드가 아닙니다 (%s).", class.Name, tostring(if typeof(entry) == "table" then entry.CardId else entry))
+			end
+			table.insert(cards, {
+				CardId = card.Id,
+				Grade = card.Grade,
+				Level = math.floor(clampNumber(entry.Level, 1, AbilityCardDefinitions.MaxLevelFor(card), 1)),
+			})
+		end
+
+		table.insert(members, {
+			ClassId = unit.ClassId,
+			X = x,
+			Y = y,
+			Cards = cards,
+			Name = class.Name,
+			Health = ProgressionDefinitions.MaxHealthWithStats(level, block),
+			Power = if session.Config.WeaponPower > 0 then session.Config.WeaponPower else class.BasicPower,
+			Stats = stats,
+			Faith = StatDefinitions.TotalValue(block, "Faith"),
+		})
+	end
+	local ok, why = PartyDefinitions.Validate(check)
+	if not ok then
+		return nil, why
+	end
+	return members, nil
+end
+
+--[[
+	BattleAction StartParty {Party = {Units = {{ClassId, X, Y, Cards = {{CardId, Level}}, Level?, Stats?}}}, Config? = SetConfig 조각}
+	구성(코스트 8 · 같은 직업 · 칸)을 PartyDefinitions.Validate 로 검사해 거절하면 BattleState.Message 로 까닭을 보낸다.
+	이미 전투 중이면 닫고 다시 연다(Restart 와 같다).
+]]
+function BattleService:StartParty(player: Player, request: any): (boolean, string?)
+	local session = self:_session(player)
+	if typeof(request.Config) == "table" then
+		self:_applyConfig(player, request.Config)
+	end
+	local members, why = self:_buildParty(player, request.Party)
+	if not members then
+		return false, why
+	end
+	if session.Battle then
+		self:_closeBattle(player, 0)
+	end
+	return self:StartBattle(player, nil, nil, members)
+end
+
+-- 준비 화면 미리보기: 살아 있는 아군마다 이번에 쓸 스킬(고른 것 → 기본 공격)이 칠할 칸(유도 반영)
+function BattleService:_partyPreview(battle: GridBattle.State): any
+	local preview = {}
+	for _, unit in GridBattle.Allies(battle) do
+		local skillId = unit.Chosen or GridBattle.BasicSkillId(battle, unit.Id)
+		local ok, view = pcall(GridBattle.PreviewCells, battle, unit.Id, skillId, nil)
+		if ok and view then
+			preview[unit.Id] = view
+		end
+	end
+	return preview
+end
+
+local function motionSeconds(motion: any, fallback: number): number
+	return if type(motion) == "table" and type(motion.Duration) == "number" then motion.Duration else fallback
+end
+
+-- 적 스킬 모션 길이(칼리스토 → 슬라임 → 어림)
+local function enemyMotionSeconds(unit: any, skillId: string): number
+	if unit and unit.DefId == "Callisto" then
+		local ok, motion = pcall(CombatMotions.Skill, "Callisto", skillId)
+		return motionSeconds(if ok then motion else nil, 2.2)
+	end
+	return motionSeconds(SlimeMotions.Skills[skillId], 2)
+end
+
+-- since 번호 뒤에 쌓인 사건을 연출하는 데 드는 초: 스킬 = 직업 모션, 적 공격 = 같은 적·같은 스킬 연속은 한 번(맞는 유닛이 여럿이어도 한 모션)
+function BattleService:_eventsSeconds(battle: GridBattle.State, since: number): number
+	local total, lastKey = 0, nil
+	for _, ev in battle.Events do
+		if ev.Seq <= since then
+			continue
+		end
+		if ev.Kind == "Skill" then
+			local unit = battle.Units[ev.Actor]
+			local ok, motion = pcall(CombatMotions.Skill, if unit then unit.ClassId or "" else "", ev.SkillId)
+			total += motionSeconds(if ok then motion else nil, 1.6) + ACTION_PAD
+			lastKey = nil
+		elseif ev.Kind == "EnemyAttack" then
+			local key = tostring(ev.Actor) .. ":" .. tostring(ev.SkillId)
+			if key ~= lastKey then
+				total += enemyMotionSeconds(battle.Units[ev.Actor], ev.SkillId) + 0.5
+				lastKey = key
+			end
+		end
+	end
+	return math.clamp(total, MIN_ACTION_SECONDS, MAX_ACTION_SECONDS)
+end
+
+-- 턴 시작: 행동 순서대로 한 명씩 해소(매번 발행하고 연출만큼 기다림) → 적 행동 → 턴 끝 → 다음 예고 → 준비 단계
+function BattleService:_runPartyTurn(player: Player)
+	local session = self:_session(player)
+	local battle = session.Battle
+	if not battle or not session.PartyMode or session.Turning then
+		return
+	end
+	local ok, why = GridBattle.BeginTurn(battle)
+	if not ok then
+		session.Notice = why
+		self:_publishBattle(player)
+		return
+	end
+	session.Turning = true
+	local seq = session.BattleSeq
+	local function stale(): boolean
+		return session.Battle ~= battle or session.BattleSeq ~= seq or player.Parent == nil
+	end
+	local function random(): number
+		return session.Rng:NextNumber()
+	end
+	self:_publishBattle(player)
+	task.spawn(function()
+		local done, err = pcall(function()
+			task.wait(0.4)
+			while not stale() and battle.Outcome == "Ongoing" do
+				local id = GridBattle.NextActor(battle)
+				if not id then
+					break
+				end
+				local since = battle.EventSeq
+				if not GridBattle.ResolveUnitSkill(battle, id, random) then
+					break
+				end
+				if self:_settle(player) then
+					return
+				end
+				self:_publishBattle(player)
+				task.wait(self:_eventsSeconds(battle, since))
+			end
+			if stale() or battle.Outcome ~= "Ongoing" then
+				return
+			end
+			local since = battle.EventSeq
+			GridBattle.ResolveEnemyPhase(battle, random)
+			if self:_settle(player) then
+				return
+			end
+			self:_publishBattle(player)
+			task.wait(self:_eventsSeconds(battle, since))
+			if stale() then
+				return
+			end
+			GridBattle.EndTurn(battle)
+			if self:_settle(player) then
+				return
+			end
+			GridBattle.EnemyPlan(battle, random)
+			session.Turning = false
+			self:_publishBattle(player)
+		end)
+		if not done then
+			warn("[BattleService] 파티 턴 진행 오류:", err)
+		end
+		-- 오류로 멈췄으면 준비 단계로 되돌려 입력이 막히지 않게
+		if session.Battle == battle and session.Turning and session.BattleSeq == seq then
+			session.Turning = false
+			battle.Round = { Phase = "Prepare", Order = {}, Next = 1 }
+			self:_publishBattle(player)
+		end
+	end)
+end
+
+-- 파티 세션의 GridAction. Place{Id,X,Y} · Choose{Id,SkillId|nil} · Homing{Id,On} · BeginTurn. 해소 중(Turning)에는 아무것도 못 바꾼다
+function BattleService:_handlePartyAction(player: Player, session: Session, battle: GridBattle.State, kind: string, request: any)
+	if kind == "BeginTurn" then
+		self:_runPartyTurn(player)
+		return
+	end
+	local id = if type(request.Id) == "string" then request.Id else nil
+	if session.Turning or not id then
+		self:_publishBattle(player)
+		return
+	end
+	local ok, why = true, nil
+	if kind == "Place" then
+		ok, why = GridBattle.PlaceUnit(battle, id, math.floor(tonumber(request.X) or 0), math.floor(tonumber(request.Y) or 0))
+	elseif kind == "Choose" then
+		ok, why = GridBattle.SetUnitSkill(battle, id, if type(request.SkillId) == "string" then request.SkillId else nil)
+	elseif kind == "Homing" then
+		ok, why = GridBattle.SetHoming(battle, id, request.On == true)
+	else
+		return
+	end
+	if not ok then
+		session.Notice = why
+	end
+	self:_publishBattle(player)
+end
+
 --=== 리모트: GridAction (전투 판정 — 예전 TowerService 에서 그대로 옮김) ===--
 
 function BattleService:HandleGridAction(player: Player, request: any)
@@ -856,6 +1142,11 @@ function BattleService:HandleGridAction(player: Player, request: any)
 		return
 	end
 	local kind = tostring(request.Kind)
+
+	if session.PartyMode then
+		self:_handlePartyAction(player, session, battle, kind, request)
+		return
+	end
 
 	if kind == "Move" then
 		-- 스킬을 쓴 뒤(적 공격을 받는 중)에는 못 움직인다 — 끝날 칸을 바꿔 검수 칸·공격 범위를 속이지 못하게
@@ -932,6 +1223,7 @@ local PUBLIC: { [string]: boolean } = {
 	SpawnEncounter = true,
 	ClearEncounters = true,
 	Restart = true,
+	StartParty = true,
 }
 
 function BattleService:HandleAction(player: Player, request: any)
@@ -954,6 +1246,13 @@ function BattleService:HandleAction(player: Player, request: any)
 		message = self:_applyConfig(player, request.Config)
 	elseif kind == "Start" then
 		local ok, reason = self:StartBattle(player)
+		if not ok then
+			message = reason
+		else
+			return
+		end
+	elseif kind == "StartParty" then
+		local ok, reason = self:StartParty(player, request)
 		if not ok then
 			message = reason
 		else
@@ -983,7 +1282,9 @@ function BattleService:HandleAction(player: Player, request: any)
 				GridBattle.DebugSetHealth(battle, enemy.Id, 0)
 			end
 		else
-			GridBattle.DebugSetHealth(battle, GridBattle.ALLY_ID, 0)
+			for _, ally in GridBattle.Allies(battle) do
+				GridBattle.DebugSetHealth(battle, ally.Id, 0)
+			end
 		end
 		session.Threats = {}
 		if not self:_settle(player) then
@@ -991,15 +1292,17 @@ function BattleService:HandleAction(player: Player, request: any)
 		end
 		return
 	elseif kind == "KillEnemy" or kind == "SetHealth" then
-		if not battle or type(request.Id) ~= "string" then
+		-- 대상: 적 Id(Id) 또는 파티의 아군 유닛 Id(UnitId — 없으면 Id)
+		local targetId = if type(request.UnitId) == "string" then request.UnitId else request.Id
+		if not battle or type(targetId) ~= "string" then
 			return
 		end
-		local unit = battle.Units[request.Id]
+		local unit = battle.Units[targetId]
 		if not unit then
 			return
 		end
 		local value = if kind == "KillEnemy" then 0 else clampNumber(request.Value, 0, unit.MaxHealth, unit.Health)
-		GridBattle.DebugSetHealth(battle, request.Id, value)
+		GridBattle.DebugSetHealth(battle, targetId, value)
 		-- 쓰러진 적의 공격은 대기열에서 뺀다
 		for index = #session.Threats, 1, -1 do
 			local target = battle.Units[session.Threats[index].Id]
@@ -1027,11 +1330,16 @@ function BattleService:HandleAction(player: Player, request: any)
 		if not battle or type(request.Id) ~= "string" then
 			return
 		end
+		-- 파티: UnitId 유닛에(없거나 아군이 아니면 1번), 허용 자원은 그 유닛 직업 것
 		local ally = GridBattle.Ally(battle)
+		local picked = if type(request.UnitId) == "string" then battle.Units[request.UnitId] else nil
+		if picked and picked.Side == "Ally" and picked.Alive then
+			ally = picked
+		end
 		local amount = math.floor(clampNumber(request.Amount, -99, 99, 1))
 		local id = request.Id
 		local allowed = false
-		for _, resource in ClassResources.ForClass(battle.AllyClassId) do
+		for _, resource in ClassResources.ForClass(ally.ClassId or battle.AllyClassId) do
 			allowed = allowed or resource == id
 		end
 		if not allowed then
@@ -1060,7 +1368,12 @@ function BattleService:HandleAction(player: Player, request: any)
 		local amount = math.floor(clampNumber(request.Amount, 0, 999, 1))
 		local targets = {}
 		if request.Target == "Ally" then
-			table.insert(targets, GridBattle.Ally(battle))
+			local picked = if type(request.UnitId) == "string" then battle.Units[request.UnitId] else nil
+			table.insert(targets, if picked and picked.Side == "Ally" and picked.Alive then picked else GridBattle.Ally(battle))
+		elseif request.Target == "AllAllies" then
+			for _, ally in GridBattle.Allies(battle) do
+				table.insert(targets, ally)
+			end
 		else
 			for _, enemy in GridBattle.AliveEnemies(battle) do
 				table.insert(targets, enemy)
@@ -1089,13 +1402,16 @@ function BattleService:HandleAction(player: Player, request: any)
 		return
 	elseif kind == "ClearCooldowns" then
 		if battle then
-			table.clear(GridBattle.Ally(battle).Cooldowns)
+			for _, ally in GridBattle.Allies(battle) do
+				table.clear(ally.Cooldowns)
+			end
 			self:_publishBattle(player)
 		end
 		return
 	elseif kind == "SkipTurn" then
 		-- 행동하지 않고 턴을 넘긴다(예고된 적 공격은 그대로 온다)
-		if battle and #session.Threats == 0 and battle.Outcome == "Ongoing" then
+		-- 파티 세션은 [턴 시작](BeginTurn)으로만 턴이 돈다
+		if battle and not session.PartyMode and #session.Threats == 0 and battle.Outcome == "Ongoing" then
 			self:_queueThreats(player)
 		end
 		return

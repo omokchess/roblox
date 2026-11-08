@@ -846,6 +846,306 @@ do
 	print(string.format("%-12s %s", "칼리스토 통합", if #failures == before then "통과" else "오류 " .. (#failures - before)))
 end
 
+-- 파티 통합(2026-11-08, 파티전투_사양.md): 유닛 셋 파티. 준비(자리 바꾸기 · 스킬 · 유도 · 칸 클릭) → 턴 시작 → 유닛 셋이 순서대로 연출 →
+-- 적 행동(예고 칸 유닛만) → 다음 턴. 서버(BattleService)가 하는 일을 이 점검이 직접 한다 — 엔진 호출 순서와 스냅샷 모양은 같다.
+-- 일부러 행동마다 스냅샷을 연달아 보내(연출을 기다리지 않고) 클라 대기열이 겹치지 않고 순서대로 트는지 본다.
+do
+	local before = #failures
+	try("파티 통합", function()
+		local BattleStage = fakeRequire(client.BattleStage)
+		local PartyHud = fakeRequire(client.PartyHud)
+		local function member(classId: string, x: number, y: number, health: number): any
+			return { ClassId = classId, X = x, Y = y, Cards = {}, Name = classId, Health = health, Power = 14, Stamina = 200 }
+		end
+		-- 코스트 3 + 2 + 3 = 8
+		local state = GridBattle.NewParty(1, {
+			member("WallPilgrim", 6, 2, 600),
+			member("Musician", 5, 2, 600),
+			member("AzureBlade", 4, 2, 600),
+		}, { Name = "파티 통합", Enemies = { "Slime", "Slime", "Slime" }, Cells = { { 1, 1 }, { 1, 2 }, { 1, 3 } }, HealthScale = 4, PowerScale = 0.4 })
+		local seed = 11
+		local function rng()
+			seed = (seed * 48271) % 2147483647
+			return seed / 2147483647
+		end
+		local layout = BattleArena.NewLayout(CFrame.new(0, 0, 0))
+		layout.FlatY = 0
+		local tiles = BattleStage.Build(folder, layout, nil, 6, 3, nil)
+		local sent = {}
+		local hudStub = setmetatable({}, {
+			__index = function()
+				return function() end
+			end,
+		})
+		local gui = FakeInstance.new("ScreenGui")
+		-- Lune 의 카메라에는 화면 크기 기본값이 없다(PartyHud 가 아래 판 배율을 잡을 때 읽는다)
+		local camera = workspace.CurrentCamera
+		if camera then
+			camera.ViewportSize = roblox.Vector2.new(1280, 720)
+		end
+		local self: any
+		self = setmetatable({
+			active = true,
+			director = director,
+			layout = layout,
+			folder = folder,
+			tiles = tiles,
+			hud = hudStub,
+			player = { Character = char },
+			Remotes = {
+				GridAction = {
+					FireServer = function(_, request)
+						table.insert(sent, request)
+					end,
+				},
+			},
+			lastEventSeq = 0,
+			selectedSkill = 1,
+			goneCells = {},
+			layers = { Gimmick = true, Range = true },
+			hpShown = {},
+			partyMode = true,
+			partyQueue = {},
+			partyGapUntil = 0,
+			partyBusyShown = false,
+			dolls = {},
+		}, { __index = BattleClient })
+		self.partyHud = PartyHud.new(gui, {
+			Select = function(id)
+				self.partySelected = id
+				self:_refreshParty()
+				self:_paintTiles()
+			end,
+			Choose = function(id, skillId)
+				if self:_partyCanEdit() then
+					self:_partySend({ Kind = "Choose", Id = id, SkillId = skillId })
+				end
+			end,
+			Homing = function(id, on)
+				if self:_partyCanEdit() then
+					self:_partySend({ Kind = "Homing", Id = id, On = on })
+				end
+			end,
+			Begin = function()
+				if self:_partyCanEdit() then
+					self:_partySend({ Kind = "BeginTurn" })
+				end
+			end,
+			Hover = function(skillId)
+				self.partyHover = skillId
+				self:_paintTiles()
+			end,
+		})
+		self.partyHud:SetActive(true)
+		director.OnDamage = function(id: string, dmg: number)
+			local unit = self.snapshot and self.snapshot.Units[id]
+			local shown = self.hpShown[id]
+			if unit and shown then
+				self.hpShown[id] = math.max(unit.Health, shown - dmg)
+			end
+		end
+		-- 어느 행동이 어떤 순서로 틀렸나
+		local played = {}
+		local inner = BattleClient._playPartyItem
+		self._playPartyItem = function(this, item)
+			table.insert(played, if item.Kind == "Volley" then "Enemy" else item.Event.Actor)
+			inner(this, item)
+		end
+
+		local turning = false
+		-- BattleService:_partyPreview 와 같다
+		local function previewOf()
+			local preview = {}
+			for _, unit in GridBattle.Allies(state) do
+				local ok, view = pcall(GridBattle.PreviewCells, state, unit.Id, unit.Chosen or GridBattle.BasicSkillId(state, unit.Id), nil)
+				if ok and view then
+					preview[unit.Id] = view
+				end
+			end
+			return preview
+		end
+		local function publish()
+			local snapshot = GridBattle.Snapshot(state)
+			snapshot.PartyMode = true
+			snapshot.Turning = turning
+			snapshot.Preview = previewOf()
+			snapshot.Threats = {}
+			snapshot.AutoQte = "Off"
+			self:_onGridState(snapshot)
+		end
+		-- 연출이 끝날 때까지(RenderStepped 연결이 없어 _pumpParty 와 미뤄 둔 그리기를 직접 돌린다)
+		local function drain(what: string)
+			local t0 = now
+			repeat
+				self:_pumpParty()
+				if not step(0.1) then
+					table.insert(failures, what .. " 중에 멈춤")
+					return
+				end
+				if self.pendingRender and not self:_busy() then
+					self.pendingRender = false
+					self:_renderUnits()
+					self:_paintTiles()
+				end
+			until not self:_busy() or now - t0 > 60
+			self:_pumpParty() -- 한가해진 다음 프레임(치워진 배우의 인형 정리·화면 다시 그리기)
+			if self:_busy() then
+				table.insert(failures, string.format("%s: %.0f초가 지나도 연출이 안 끝남", what, now - t0))
+			end
+		end
+
+		director:Remove("player")
+		publish()
+		drain("파티 시작")
+		for _, id in { "player", "ally2", "ally3" } do
+			assert(director:Has(id), "아군 인형이 안 섬: " .. id)
+		end
+		assert(self.dolls.ally2 and self.dolls.ally3, "직업 인형을 만들지 못함")
+		assert(self.partyHud.panel.Visible, "준비 단계에 아래 판이 안 보임")
+		assert(self.partyHud.strip.Visible, "위 순서 띠가 안 보임")
+		-- 순번: 행 1순위(y) · 열 2순위(화면 왼쪽 x=6 먼저) — 셋 다 y=2 이니 x=6(player) → 5(ally2) → 4(ally3)
+		assert(table.concat(PartyHud.OrderOf(self.snapshot), ",") == "player,ally2,ally3", "준비 순서 " .. table.concat(PartyHud.OrderOf(self.snapshot), ","))
+		assert(tiles.Ally[2][6]:FindFirstChild("OrderMark"), "칸 위 순번 숫자가 없음")
+
+		local expectedKills = 0
+		local volleys = 0
+		for turn = 1, 4 do
+			if state.Outcome ~= "Ongoing" then
+				break
+			end
+			table.clear(sent)
+			-- 준비 1: 자리를 바꾼다(2턴 빈 칸으로 · 3턴 맞바꾸기) — 클라는 칸 클릭(끌기)을 Place 로 보낸다
+			if turn == 2 then
+				self.partyPress = { Cell = { X = 5, Y = 2 }, Id = "ally2" }
+				self._partyCursorCell = function()
+					return { X = 5, Y = 1 }, nil
+				end
+				self:_partyRelease()
+				assert(#sent == 1 and sent[1].Kind == "Place" and sent[1].Id == "ally2" and sent[1].X == 5 and sent[1].Y == 1, "끌어 옮김이 Place 로 안 감")
+				assert(GridBattle.PlaceUnit(state, "ally2", 5, 1), "빈 칸으로 옮기기")
+			elseif turn == 3 then
+				assert(GridBattle.PlaceUnit(state, "player", 4, 2), "맞바꾸기")
+			end
+			publish()
+			drain("준비 " .. turn)
+			-- 순번이 자리대로 다시 매겨졌나
+			local order = PartyHud.OrderOf(self.snapshot)
+			local want = GridBattle.ActionOrder(state)
+			assert(table.concat(order, ",") == table.concat(want, ","), "순번이 엔진 순서와 다름: " .. table.concat(order, ","))
+			for n, id in order do
+				local unit = self.snapshot.Units[id]
+				local mark = tiles.Ally[unit.Y][unit.X]:FindFirstChild("OrderMark")
+				assert(mark and mark.Box.Text.Text == tostring(n), "순번 숫자 " .. id)
+			end
+			-- 준비 2: 스킬 고르기 · 유도 — 아래 판 버튼(클릭 표)을 눌러 서버 명령이 나가는지 본다
+			self.partySelected = "ally2"
+			self:_refreshParty()
+			local skills = nil
+			for _, m in self.snapshot.Party.Members do
+				if m.Id == "ally2" then
+					skills = m.Skills
+				end
+			end
+			local pickable = nil
+			for index, skill in skills do
+				if (skill.CooldownLeft or 0) == 0 and not skill.Blocked and (pickable == nil or skill.Damage > 0) then
+					pickable = { Index = index, Skill = skill }
+					if skill.Damage > 0 then
+						break
+					end
+				end
+			end
+			assert(pickable, "고를 스킬이 없음")
+			table.clear(sent)
+			self.partyHud.clicks["Slot" .. pickable.Index]()
+			assert(#sent == 1 and sent[1].Kind == "Choose" and sent[1].SkillId == pickable.Skill.Id, "스킬 고르기가 Choose 로 안 감")
+			assert(GridBattle.SetUnitSkill(state, "ally2", pickable.Skill.Id))
+			local target = if state.Units.ally3.Alive then "ally3" else "ally2" -- 3턴에 ally3 를 쓰러뜨린다
+			self.partySelected = target
+			self:_refreshParty()
+			-- 스킬에 마우스를 올리면 범위 미리보기(PreviewCells 와 같은 모양을 클라가 그린다)
+			self.partyHud.hovers["Slot1"](true) -- 지금 고른 유닛의 첫 스킬
+			assert(self.partyHover ~= nil, "마우스 올림이 미리보기로 안 감")
+			self.partyHud.hovers["Slot1"](false)
+			assert(self.partyHover == nil, "마우스 뗌이 미리보기를 안 지움")
+			local wasHoming = state.Units[target].Homing == true
+			table.clear(sent)
+			self.partyHud.clicks["HomingButton"]()
+			assert(#sent == 1 and sent[1].Kind == "Homing" and sent[1].Id == target and sent[1].On == not wasHoming, string.format("유도 붙이기/떼기가 Homing 으로 안 감 (턴 %d, 보냄 %d, 남은 칩 %d, 붙음 %s, 고름 %s, 편집 %s)", turn, #sent, GridBattle.HomingLeft(state), tostring(wasHoming), tostring(self.partySelected), tostring(self:_partyCanEdit())))
+			assert(GridBattle.SetHoming(state, target, not wasHoming))
+			assert(GridBattle.SetHoming(state, "player", turn % 2 == 1))
+			publish()
+			drain("준비 2 " .. turn)
+			assert(self.snapshot.Preview[target] and #self.snapshot.Preview[target].Motions > 0, "범위 미리보기가 없음")
+			if turn == 3 then
+				-- 쓰러진 유닛은 쓰러짐 연출 뒤 인형까지 치워진다
+				GridBattle.DebugSetHealth(state, "ally3", 0)
+				expectedKills += 1
+				publish()
+				drain("쓰러짐")
+				assert(not director:Has("ally3") and not self.dolls.ally3, string.format("쓰러진 유닛의 인형이 남음 (배우 %s, 인형 %s, 살아 %s)", tostring(director:Has("ally3")), tostring(self.dolls.ally3), tostring(self.snapshot.Units.ally3.Alive)))
+				assert(table.concat(PartyHud.OrderOf(self.snapshot), ",") == "ally2,player" or table.concat(PartyHud.OrderOf(self.snapshot), ",") == "player,ally2", "쓰러진 유닛이 순서에 남음")
+			end
+
+			-- 턴 시작
+			table.clear(sent)
+			self.partyHud.clicks["BeginTurn"]()
+			assert(#sent == 1 and sent[1].Kind == "BeginTurn", "턴 시작이 BeginTurn 으로 안 감")
+			local ok, why, order2 = GridBattle.BeginTurn(state)
+			assert(ok, why)
+			turning = true
+			publish()
+			assert(not self.partyHud.panel.Visible, "턴이 시작됐는데 준비 판이 남음")
+			table.clear(played)
+			-- 유닛 하나씩 해소하며 스냅샷을 연달아 보낸다(연출을 기다리지 않는다)
+			while true do
+				local id = GridBattle.NextActor(state)
+				if not id then
+					break
+				end
+				assert(GridBattle.ResolveUnitSkill(state, id, rng))
+				publish()
+			end
+			GridBattle.ResolveEnemyPhase(state, rng)
+			publish()
+			drain("턴 " .. turn .. " 연출")
+			-- 틀어진 순서 = 엔진 행동 순서(안 움직인 유닛은 빠질 수 있다), 적 행동은 맨 끝
+			local at = 0
+			for _, who in played do
+				if who == "Enemy" then
+					volleys += 1
+					at = math.huge
+				else
+					local pos = table.find(order2, who)
+					assert(pos and pos > at, string.format("연출 순서가 행동 순서와 다름: %s (순서 %s)", table.concat(played, ","), table.concat(order2, ",")))
+					at = pos
+				end
+			end
+			assert(not self:_busy(), "연출이 안 끝남")
+			GridBattle.EndTurn(state)
+			if state.Outcome == "Ongoing" then
+				GridBattle.EnemyPlan(state, rng)
+			end
+			turning = false
+			publish()
+			drain("턴 끝 " .. turn)
+			assert(state.Round.Phase == "Prepare" or state.Outcome ~= "Ongoing", "준비 단계로 안 돌아옴")
+		end
+		assert(volleys > 0, "적 행동 연출이 한 번도 안 나옴")
+		print(string.format("파티 통합: %s, %d턴, 적 공격 연출 %d, 쓰러진 유닛 %d", state.Outcome, state.Turn, volleys, expectedKills))
+		self.partyHud:Destroy()
+		for id in director.Actors do
+			if id ~= "player" then
+				director:Remove(id)
+			end
+		end
+		for _, doll in self.dolls do
+			doll:Destroy()
+		end
+	end)
+	print(string.format("%-12s %s", "파티 통합", if #failures == before then "통과" else "오류 " .. (#failures - before)))
+end
+
 if director.ForcedDone > 0 then
 	table.insert(failures, string.format("안전장치로 강제로 끝낸 재생 %d개(모션이 스스로 안 끝남)", director.ForcedDone))
 end

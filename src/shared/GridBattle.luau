@@ -114,6 +114,8 @@ export type Unit = {
 	Runtime: any?,
 	Homing: boolean?,
 	Chosen: string?,
+	-- 이 적의 지속 피해(출혈·독·화상·융해)를 마지막으로 늘린 아군 유닛 Id. 도트로 쓰러뜨리면 그 유닛만 처치 훅을 받는다
+	DotOwner: string?,
 	LastSkillId: string?,
 	Acted: boolean?,
 	Attacked: boolean?,
@@ -314,6 +316,9 @@ export type State = {
 	Party: boolean,
 	Round: Round,
 	BindDepth: number,
+	-- QTE 없는 전투(NewParty — 솔로 New 만 false). 공격 배율이 QTE 등급과 상관없이 ×1.0
+	-- (2026-11-08 사용자: "QTE로 얻는 피해량 보너스는 없애줘. 그냥 x1.0인거야.")
+	NoQte: boolean?,
 }
 
 export type Round = {
@@ -417,12 +422,35 @@ local function bindUnit(state: State, id: string)
 end
 
 -- fn 을 id 유닛으로 묶은 채 부르고 원래 유닛으로 돌아온다
+-- 적이 가진 지속 피해 수치(출혈·독·화상·융해) 합. 아군 유닛이 행동하는 동안 늘었으면 그 유닛이 건 것이다
+local function dotLoad(unit: Unit): number
+	local status = unit.Status
+	return status.Bleed + status.Poison + status.Burn + BattleStatus.Stack(status, ClassResources.MELT)
+end
+
 local function withUnit(state: State, id: string, fn: (...any) -> ...any, ...: any): ...any
 	local prev = state.AllyId
 	bindUnit(state, id)
+	-- 바깥쪽 묶음에서만 본다(안쪽 묶음은 바깥 유닛 몫에 포함)
+	local before: { [Unit]: number }? = nil
+	if state.BindDepth == 0 then
+		before = {}
+		for _, unit in state.Units do
+			if unit.Side == "Enemy" and unit.Alive then
+				before[unit] = dotLoad(unit)
+			end
+		end
+	end
 	state.BindDepth += 1
 	local results = table.pack(fn(...))
 	state.BindDepth -= 1
+	if before then
+		for unit, load in before do
+			if unit.Alive and dotLoad(unit) > load then
+				unit.DotOwner = id
+			end
+		end
+	end
 	bindUnit(state, prev)
 	return table.unpack(results, 1, results.n)
 end
@@ -543,7 +571,8 @@ local function pushEvent(state: State, event: any)
 	state.EventSeq += 1
 	event.Seq = state.EventSeq
 	table.insert(state.Events, event)
-	while #state.Events > 8 do
+	-- 파티 전투: 적 행동 한 번에 (적 × 맞는 유닛) 사건이 한꺼번에 나와 8개로는 모자라다(2026-11-08)
+	while #state.Events > 24 do
 		table.remove(state.Events, 1)
 	end
 end
@@ -1657,7 +1686,7 @@ export type PartyMember = {
 	파티 전투(2026-11-08): 아군 유닛 여럿으로 전투를 세운다. members[1] 은 Id "player", 그 뒤는 "ally2", "ally3" …
 	opts.SkipValidate: 코스트·구성 검사를 건너뛴다(솔로 New 가 쓴다). 실패하면 error.
 ]]
-function GridBattle.NewParty(floor: number, members: { PartyMember }, encounter: Encounter?, opts: { SkipValidate: boolean? }?): State
+function GridBattle.NewParty(floor: number, members: { PartyMember }, encounter: Encounter?, opts: { SkipValidate: boolean?, Qte: boolean? }?): State
 	if not (opts and opts.SkipValidate) then
 		local ok, reason = PartyDefinitions.Validate(members)
 		if not ok then
@@ -1679,6 +1708,7 @@ function GridBattle.NewParty(floor: number, members: { PartyMember }, encounter:
 		AllyId = ALLY_ID,
 		PrimaryId = ALLY_ID,
 		Party = #members > 1,
+		NoQte = not (opts and opts.Qte),
 		Round = { Phase = "Prepare", Order = {}, Next = 1 },
 		BindDepth = 0,
 		AllyClassId = first.ClassId or "Berserker",
@@ -1885,7 +1915,7 @@ function GridBattle.New(
 			Faith = allyFaith,
 			Stamina = allyStamina,
 		},
-	}, encounter, { SkipValidate = true })
+	}, encounter, { SkipValidate = true, Qte = true })
 end
 
 --=== 조회 ===--
@@ -2264,8 +2294,16 @@ local function damageUnit(
 		if unit.Side == "Enemy" then
 			if state.BindDepth > 0 then
 				fire(state, "Kill", { Target = unit })
-			else
+			elseif #allyUnits(state) <= 1 then
 				fireAll(state, "Kill", { Target = unit })
+			else
+				-- 파티: 조작 중인 유닛이 없으면(턴 끝 지속 피해·반사 등) 그 적에게 지속 피해를 건 유닛에게만. 모르면 아무에게도 안 준다
+				local owner = state.Units[unit.DotOwner or ""]
+				if owner and owner.Alive then
+					withUnit(state, owner.Id, function()
+						fire(state, "Kill", { Target = unit })
+					end)
+				end
 			end
 		end
 		if unit.DefId == "Alcor" then
@@ -2623,7 +2661,7 @@ function GridBattle.ResolveSkill(
 		end
 	end
 
-	local multiplier = QteDefinitions.Multiplier("Skill", grade)
+	local multiplier = if state.NoQte then 1.0 else QteDefinitions.Multiplier("Skill", grade)
 	local growCount = GridBattle.AllyGrowCount(state, skill)
 
 	--[[
@@ -3293,11 +3331,11 @@ function GridBattle.IsDefending(state: State, id: string): boolean
 	return unit.ClassId == "Duelist" and BattleStatus.Stack(unit.Status, ClassResources.STANCE_ATTACK) <= 0
 end
 
--- QTE 없는 맞음 등급: 늘 Fail(×1.0). 2026-11-08 총괄: 방어는 가드 기술(받는 피해 −70%)·결투사 방어 태세(−55%)가
--- 제 보정으로 이미 줄이므로 Partial(×0.5)을 또 곱하면 이중(×0.15)이다 → 방어 효과의 출처는 기술·태세 하나로.
--- IsDefending 은 화면 표시(Snapshot.Defending)용으로만 남는다.
-function GridBattle.DefendGrade(_state: State, _id: string): QteDefinitions.Grade
-	return "Fail"
+-- QTE 없는 맞음 등급: 방어 상태(가드를 골랐거나 결투사 방어 태세)면 Partial(×0.5), 아니면 Fail(×1.0 전부).
+-- 2026-11-08 사용자: "가드는 상황에 따라서 살리려면 필요할 수도 있어서 다시 부활시켜줘." — 총괄이 잠깐 뺐던 절반 감소를 되살림.
+-- 가드 기술 자체의 받는 피해 −70% 와 겹친다(가드 고른 유닛 = ×0.5 × 0.3 = ×0.15).
+function GridBattle.DefendGrade(state: State, id: string): QteDefinitions.Grade
+	return if GridBattle.IsDefending(state, id) then "Partial" else "Fail"
 end
 
 --[[
@@ -3338,6 +3376,21 @@ function GridBattle.ResolveEnemyPhase(
 		end
 	end
 	return results
+end
+
+-- 안 골랐을 때 쓰는 기본 공격 Id(ResolveUnitSkill 과 같은 기준: 목록에서 적을 치는 첫 기술, 지원기 제외). 준비 화면 미리보기용
+function GridBattle.BasicSkillId(state: State, id: string): string?
+	return withUnit(state, id, function()
+		local list = GridBattle.SkillList(state)
+		local basic = list[1]
+		for _, skill in list do
+			if skill.Range ~= "Supporting" and not (skill.Shape and skill.Shape.TargetSide == "Ally") then
+				basic = skill
+				break
+			end
+		end
+		return basic and basic.Id
+	end) :: string?
 end
 
 --[[

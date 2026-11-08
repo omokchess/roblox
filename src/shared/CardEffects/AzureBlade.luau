@@ -260,16 +260,19 @@ M.AzureBlade_R_OneBreath = {
 	end,
 }
 
--- 명경지수: 집중력이 있을 때 회피 시간 +10%
-local function refreshStill(c: Card)
-	H.Clear(c)
-	if focused(c) then
-		H.Mod(c, "ParryWindow", c.P(1), 1)
-	end
-end
+--[[
+	명경지수: [집중력]이 있고 전열(1~2열)에 서 있으면 적의 공격을 {8}% 확률로 저절로 피한다(자동 패링).
+	2026-11-08 QTE 삭제 — 옛 '집중력이 있을 때 회피 시간 +10%'(QTE 입력 시간). 회피 시간 +10% 는 보통 플레이어 회피 성공률을 약 5%p 올린다고 보고
+	같은 크기로 8%(옛 사다리 10~26 → 8~19, 전열 조건이 붙은 만큼 조금 낮게)로 옮겼다. 자리는 맞기 직전에 본다(매 턴 배치가 바뀌므로).
+]]
 M.AzureBlade_R_StillWater = {
-	TurnStart = refreshStill,
-	AfterSkill = refreshStill,
+	BeforeTaken = function(c: Card, info: any)
+		if focused(c) and H.IsFront(c) then
+			info.AutoParry += c.P(1)
+			return true
+		end
+		return false
+	end,
 }
 
 -- 역습 표식: 도발을 쓴 다음 턴의 첫 스킬 치명 +15%
@@ -287,10 +290,12 @@ M.AzureBlade_R_Mark = {
 	end,
 }
 
--- 거짓 틈: 도발을 쓴 턴에 회피하면 50% 확률로 진 발도술 재사용 대기 끝
+-- 거짓 틈: 도발을 쓴 턴에 적의 공격을 받으면 30% 확률로 진 발도술 재사용 대기 끝(턴당 1회)
+-- 2026-11-08 QTE 삭제 — 옛 '회피하면 50%'. 청의 검사는 회피 수단이 거의 없어 죽은 카드였다 → 도발로 일부러 맞아 주는 쪽(배치·도발)으로.
+-- 확률은 옛 성공률 약 60% 를 곱해 50→30(사다리 전체 ×0.6)
 M.AzureBlade_R_FalseGap = {
-	Defend = function(c: Card, info: any)
-		if info.Grade == "Success" and provokedOn(c, 0) and H.Rng(c) < c.P(1) then
+	Defend = function(c: Card, _info: any)
+		if provokedOn(c, 0) and H.Rng(c) < c.P(1) and H.PerTurn(c, "gap", 1) then
 			H.Ally(c).Cooldowns.TrueIaido = 0
 			return true
 		end
@@ -488,11 +493,12 @@ M.AzureBlade_C_Momentum = {
 	end,
 }
 
--- 도발 응수: 도발한 턴에 회피하면 턴 끝에 검집 타격을 공짜로(피해 50%) — 회피할 때 집중력이 있었으면 집중 베기
+-- 도발 응수: 도발한 턴에 적의 공격을 받으면 턴 끝에 검집 타격을 공짜로(피해 30%) — 받을 때 집중력이 있었으면 집중 베기
 -- (집중 베기는 집중력을 쓰지 않는다). (2026-10-28 리메 — 옛 다음 턴 치명 +6%, 2026-10-30 집중 베기 추가)
+-- 2026-11-08 QTE 삭제 — 옛 '회피하면 피해 50%'. 맞아 줘야 하니(배치로 일부러 맞는다) 위력을 성공률 약 60% 만큼 깎아 50→30(사다리 ×0.6)
 M.AzureBlade_C_Answer = {
-	Defend = function(c: Card, info: any)
-		if info.Grade == "Success" and provokedOn(c, 0) then
+	Defend = function(c: Card, _info: any)
+		if provokedOn(c, 0) then
 			c.Mem.answer = if focused(c) then "FocusCut" else "ScabbardStrike"
 		end
 	end,

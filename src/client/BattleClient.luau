@@ -40,6 +40,12 @@ local CombatDirector = require(script.Parent.Combat.CombatDirector)
 local CombatVfx = require(script.Parent.Combat.CombatVfx)
 local CallistoSpace = require(script.Parent.Combat.CallistoSpace)
 local BattleStore = require(script.Parent.BattleStore)
+-- 파티 전투 화면(2026-11-08). 못 읽어도 솔로 전투는 그대로 돌게 보호해서 읽는다
+local okParty, PartyHud: any = pcall(require, script.Parent.PartyHud)
+if not okParty then
+	warn("[BattleClient] PartyHud 를 읽지 못했다:", PartyHud)
+	PartyHud = nil
+end
 
 local BattleClient = {}
 BattleClient.__index = BattleClient
@@ -126,6 +132,16 @@ function BattleClient.new(remotes: Folder, plazaUi: any?)
 	-- 연출 중에 받은 스냅샷의 적 자리 갱신을 미뤄둔다 (모션이 끝나야 적이 움직임)
 	self.pendingRender = false
 	self.arenaOrigin = nil :: Vector3?
+	-- 파티 전투(2026-11-08): 스냅샷 PartyMode · 아직 안 튼 행동 대기열 · 행동 사이 틈 · 지금 행동하는 유닛 · 고른 유닛 · 마우스 누른 칸 · 직업 인형
+	self.partyMode = false
+	self.partyQueue = {} :: { any }
+	self.partyGapUntil = 0
+	self.partyActing = nil :: string?
+	self.partySelected = nil :: string?
+	self.partyPress = nil :: any
+	self.partyHover = nil :: string?
+	self.partyBusyShown = false
+	self.dolls = {} :: { [string]: Model }
 
 	self:_buildUi()
 
@@ -193,6 +209,36 @@ function BattleClient:_buildUi()
 			return self.layers[name]
 		end,
 	})
+
+	-- 파티 전투 화면(위 순서 띠 · 아래 준비 판). 파티 세션일 때만 켠다. 서버 명령: Place · Choose · Homing · BeginTurn
+	if PartyHud then
+		self.partyHud = PartyHud.new(gui, {
+			Select = function(id: string?)
+				self.partySelected = id
+				self:_refreshParty()
+				self:_paintTiles()
+			end,
+			Choose = function(id: string, skillId: string?)
+				if self:_partyCanEdit() then
+					self:_partySend({ Kind = "Choose", Id = id, SkillId = skillId })
+				end
+			end,
+			Homing = function(id: string, on: boolean)
+				if self:_partyCanEdit() then
+					self:_partySend({ Kind = "Homing", Id = id, On = on })
+				end
+			end,
+			Begin = function()
+				if self:_partyCanEdit() then
+					self:_partySend({ Kind = "BeginTurn" })
+				end
+			end,
+			Hover = function(skillId: string?)
+				self.partyHover = skillId
+				self:_paintTiles()
+			end,
+		})
+	end
 
 	-- (임시) 플레이어 체력 표시. 전투 중에 캐릭터 머리 위에 뜬다.
 	self.hpBar = make("BillboardGui", {
@@ -298,7 +344,7 @@ end
 
 -- 공격 버튼·Space: 고른 스킬로 QTE 를 연다
 function BattleClient:_tryAttack()
-	if not self.active or self.qte then
+	if not self.active or self.qte or self.partyMode then
 		return
 	end
 	-- 재사용 대기 중인 스킬은 서버까지 보내지 않고 여기서 막는다(요청한 쿨타임 기능의 짝).
@@ -320,7 +366,7 @@ end
 
 function BattleClient:_toggleStance()
 	local stance = self.snapshot and self.snapshot.Stance
-	if not self.active or not stance or stance.Used or stance.Locked then
+	if not self.active or self.partyMode or not stance or stance.Used or stance.Locked then
 		return
 	end
 	self.Remotes.GridAction:FireServer({ Kind = "Stance" })
@@ -339,12 +385,11 @@ local function keywordLine(name: string): string?
 	return keyword and keyword.Description or nil
 end
 
-function BattleClient:_refreshStatusLine(snapshot: any)
-	local status = snapshot and snapshot.AllyStatus
-	if not status then
-		self.hud:SetEffects({})
-		return
-	end
+--[[
+	유닛 하나의 효과 아이콘 목록(보호막·상태이상·직업 자원·음표). 솔로 효과 줄과 파티 아래 창이 같은 함수를 쓴다.
+	status = BattleStatus.Snapshot 모양, classId = 그 유닛의 직업, solo = 보스전 칸·검수 칩도 넣는가(솔로 플레이어 전용).
+]]
+local function buildEffects(snapshot: any, status: any, classId: string?, solo: boolean): { any }
 	local list = {}
 	-- 사전에 있는 상태이상(출혈·독·보호막 …)은 사전 설명을 쓴다. 칸·검수처럼 사전에 없는 것만 아래 글
 	local function add(id: string, name: string, glyph: string, color: Color3, count: number?, desc: string)
@@ -352,7 +397,7 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 	end
 
 	-- 보스전 칸·검수
-	local boss = snapshot.Boss
+	local boss = if solo then snapshot.Boss else nil
 	if boss then
 		if (boss.Tester or 0) > 0 then
 			add("Tester", "테스터", "T", Color3.fromRGB(255, 200, 80), nil, "이번 턴 가하는 피해량 +3500% · 치명타 확률 +100% · 받는 피해량 −80% · 방어막 80(이번 턴까지).")
@@ -422,7 +467,7 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 	end
 	-- 음악가면(또는 음표가 하나라도 있으면) 음표 아이콘 하나에 숫자 셋(2026-10-04 사용자): 오른쪽 아래 4분 · 왼쪽 아래 8분 · 왼쪽 위 16분.
 	-- 스킬이 "음표를 얻음"이라 한 아이콘이되, 분음표마다 개수가 달라 셋을 따로 보인다(0 이어도)
-	if noteTotal > 0 or snapshot.AllyClassId == "Musician" then
+	if noteTotal > 0 or classId == "Musician" then
 		local q = status.Stacks[ClassResources.QUARTER] or 0
 		local e = status.Stacks[ClassResources.EIGHTH] or 0
 		local x = status.Stacks[ClassResources.SIXTEENTH] or 0
@@ -441,7 +486,16 @@ function BattleClient:_refreshStatusLine(snapshot: any)
 			Desc = (keywordLine("음표") or "음표 — 음악가 자원.") .. string.format("\n4분음표 %d · 8분음표 %d · 16분음표 %d (합 %d)", q, e, x, noteTotal),
 		})
 	end
-	self.hud:SetEffects(list)
+	return list
+end
+
+function BattleClient:_refreshStatusLine(snapshot: any)
+	local status = snapshot and snapshot.AllyStatus
+	if not status then
+		self.hud:SetEffects({})
+		return
+	end
+	self.hud:SetEffects(buildEffects(snapshot, status, snapshot.AllyClassId, true))
 end
 
 --[[
@@ -458,10 +512,10 @@ function BattleClient:_hpView(snapshot: any): any
 		return snapshot
 	end
 	self.hpShown = self.hpShown or {}
-	local busy = self.director ~= nil and self.director:IsBusy()
+	local busy = self:_busy()
 	local units = {}
 	for id, u in snapshot.Units do
-		if u.Side == "Enemy" and u.Health then
+		if (u.Side == "Enemy" or self.partyMode) and u.Health then
 			local shown = self.hpShown[id]
 			if not busy or shown == nil or u.Health > shown then
 				shown = u.Health
@@ -578,6 +632,9 @@ end
 
 function BattleClient:_onGridState(snapshot: any)
 	self.snapshot = snapshot
+	if snapshot then
+		self.partyMode = snapshot.PartyMode == true
+	end
 	-- 보스 정보 창이 열려 있으면 체력·예고를 새 스냅샷으로 고쳐 그린다(보스가 없어졌으면 닫는다)
 	if self.hud and self.hud:IsBossInfoOpen() then
 		if snapshot and snapshot.Boss then
@@ -596,7 +653,8 @@ function BattleClient:_onGridState(snapshot: any)
 		]]
 		task.spawn(function()
 			local waited = 0
-			while self.director and self.director:IsBusy() and waited < 3 do
+			-- 파티 전투는 마지막 행동들이 대기열에 남아 있을 수 있어 더 기다린다
+			while self.director and self:_busy() and waited < (if self.partyMode then 9 else 3) do
 				waited += task.wait(0.1)
 			end
 			if self.snapshot == nil then
@@ -628,12 +686,17 @@ function BattleClient:_onGridState(snapshot: any)
 	self:_callistoAlerts(snapshot)
 	self:_callistoField(snapshot)
 	self:_callistoGimmickUi(snapshot)
-	self:_refreshSkillBar(snapshot)
-	self:_refreshStance(snapshot)
-	self:_refreshStatusLine(snapshot)
-	self:_refreshHpLabel(snapshot)
+	if self.partyMode then
+		-- 파티 전투: 사건을 먼저 대기열에 넣어야 아래 '연출 중' 판정이 맞다(아직 안 튼 행동의 결과를 미리 그리지 않게)
+		self:_consumeEvents(snapshot)
+	else
+		self:_refreshSkillBar(snapshot)
+		self:_refreshStance(snapshot)
+		self:_refreshStatusLine(snapshot)
+		self:_refreshHpLabel(snapshot)
+	end
 	-- 연출(스킬·죽음·적 공격) 중이면 적 자리 갱신을 미룬다 — 모션이 끝나야 적이 움직이게
-	if self.director and self.director:IsBusy() then
+	if self.director and self:_busy() then
 		self.pendingRender = true
 	else
 		self.pendingRender = false
@@ -643,7 +706,13 @@ function BattleClient:_onGridState(snapshot: any)
 	self:_consumeEvents(snapshot)
 
 	if #snapshot.Log > 0 then
-		self.hud:SetLog(snapshot.Log[#snapshot.Log])
+		self.hud:SetLog(if PartyHud then PartyHud.Readable(snapshot.Log[#snapshot.Log]) else snapshot.Log[#snapshot.Log])
+	end
+	if snapshot.Notice then
+		self.hud:SetLog(if PartyHud then PartyHud.Readable(snapshot.Notice) else snapshot.Notice)
+	end
+	if self.partyMode then
+		self:_refreshParty()
 	end
 	-- 테스터가 막 걸렸으면 화면 가운데 크게 한 번
 	local tester = snapshot.Boss and snapshot.Boss.Tester or 0
@@ -658,7 +727,7 @@ function BattleClient:_onGridState(snapshot: any)
 		(RenderStepped 의 `_pumpThreat`).
 	]]
 	local threats = snapshot.Threats or {}
-	if #threats > 0 and not self.qte then
+	if #threats > 0 and not self.qte and not self.partyMode then
 		self.pendingThreat = threats[1]
 		self.threatWaiting = true
 		if self.director then
@@ -1080,6 +1149,10 @@ end
 
 -- 서버 사건(스킬·적 공격 결과)을 기다리던 연출에 붙인다
 function BattleClient:_consumeEvents(snapshot: any)
+	if self.partyMode then
+		self:_consumePartyEvents(snapshot)
+		return
+	end
 	for _, ev in snapshot.Events or {} do
 		if ev.Seq <= self.lastEventSeq then
 			continue
@@ -1209,13 +1282,16 @@ function BattleClient:_setupBattle()
 	self.director.OnDamage = function(id: string, dmg: number)
 		local unit = self.snapshot and self.snapshot.Units and self.snapshot.Units[id]
 		local shown = self.hpShown[id]
-		if not unit or unit.Side ~= "Enemy" or not shown then
+		if not unit or (unit.Side ~= "Enemy" and not self.partyMode) or not shown then
 			return
 		end
 		self.hpShown[id] = math.max(unit.Health, shown - dmg)
 		self.hud:SetBoss(self:_hpView(self.snapshot))
 		self.hud:SetCallisto(self:_hpView(self.snapshot))
 		self:_setEnemyInfo(id, unit)
+		if self.partyMode then
+			self:_updatePartyInfo()
+		end
 	end
 	-- 적 진영 맨 뒷줄 가운데(결투사 강화 스킬이 그 너머까지 꿰뚫고 지나간다)
 	local back = Vector3.zero
@@ -1249,6 +1325,19 @@ function BattleClient:_setupBattle()
 	self.forcedAttacks = {}
 	self.threatWaiting = false
 	self.pendingRender = false
+	-- 파티 전투: 대기열·고른 유닛을 비우고 화면을 파티용으로(솔로는 스킬 바 판)
+	self.partyQueue = {}
+	self.partyGapUntil = 0
+	self.partyActing = nil
+	self.partySelected = nil
+	self.partyPress = nil
+	self.partyHover = nil
+	self.partyBusyShown = false
+	self.dolls = {}
+	self.hud:SetPartyMode(self.partyMode == true)
+	if self.partyHud then
+		self.partyHud:SetActive(self.partyMode == true)
+	end
 
 	self:_setBattlePose(true)
 	self:_lockCamera()
@@ -1260,7 +1349,8 @@ function BattleClient:_setupBattle()
 		if hrp then
 			self.hpBar.Parent = hrp
 		end
-		self.hpBar.Enabled = true
+		-- 파티 전투는 유닛마다 이름·체력을 따로 단다(PartyInfo)
+		self.hpBar.Enabled = self.partyMode ~= true
 	end
 	if self.plazaUi then
 		self.plazaUi:SetBattleActive(true)
@@ -1292,6 +1382,16 @@ function BattleClient:_teardownBattle()
 	CallistoSpace.Hide()
 	self:_callistoPlatform(nil)
 	self:_setBattlePose(false)
+	self:_showAvatar()
+	self:_clearPartyMarks()
+	self.partyQueue = {}
+	self.partyActing = nil
+	self.partyPress = nil
+	self.dolls = {}
+	if self.partyHud then
+		self.partyHud:SetActive(false)
+	end
+	self.hud:SetPartyMode(false)
 	if self.folder then
 		self.folder:Destroy()
 		self.folder = nil
@@ -1374,7 +1474,7 @@ function BattleClient:_renderUnits()
 	-- 아군 아바타(캐릭터가 바뀌었으면 다시 붙인다)
 	local character = self.player.Character
 	local me = snapshot.Units.player
-	if character and me and me.X and me.Y and character:FindFirstChild("HumanoidRootPart") then
+	if character and me and me.X and me.Y and (me.Alive or not self.partyMode) and character:FindFirstChild("HumanoidRootPart") then
 		local home = self:_home("Ally", me.X, me.Y)
 		if director:Model("player") ~= character then
 			director:AddHumanoid("player", character, snapshot.AllyClassId or "Berserker", home)
@@ -1390,12 +1490,20 @@ function BattleClient:_renderUnits()
 		end
 	end
 
+	-- 파티 전투: 직업 인형 아군을 세운다(첫 유닛은 위의 아바타)
+	if self.partyMode then
+		self:_renderPartyAllies()
+	end
+
 	local seen: { [string]: boolean } = {}
 
 	-- 1차: 죽은 적을 먼저 처리한다. 사망 연출이 끝나야 살아 있는 적이 움직인다.
 	local anyNewKill = false
 	for id, unit in snapshot.Units do
 		if unit.Side ~= "Enemy" then
+			if self.partyMode then
+				seen[id] = true -- 파티 전투: 아군 인형은 치우지 않는다(_renderPartyAllies 가 맡는다)
+			end
 			continue
 		end
 		seen[id] = true
@@ -1677,6 +1785,10 @@ end
 function BattleClient:_paintTiles()
 	local snapshot = self.snapshot
 	if not self.active or not snapshot or not self.tiles then
+		return
+	end
+	if self.partyMode then
+		self:_paintPartyTiles()
 		return
 	end
 	local me = snapshot.Units.player
@@ -2122,6 +2234,12 @@ function BattleClient:_bindInput()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			-- 파티 전투: 누른 칸·유닛을 기억해 뒀다가 뗄 때 정한다(_partyRelease). 드래그 집기는 쓰지 않는다
+			if self.partyMode then
+				local cell, id = self:_partyCursorCell()
+				self.partyPress = if cell then { Cell = cell, Id = id } else nil
+				return
+			end
 			-- 연출(스킬·적 공격) 중에는 집어 들지 않는다
 			if self.director and self.director:IsBusy() then
 				return
@@ -2143,6 +2261,10 @@ function BattleClient:_bindInput()
 
 	UserInputService.InputEnded:Connect(function(input)
 		if input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+			return
+		end
+		if self.partyMode then
+			self:_partyRelease()
 			return
 		end
 		if self.dragging then
@@ -2179,7 +2301,7 @@ function BattleClient:_bindInput()
 			return
 		end
 		-- 미뤄둔 적 자리 갱신을 연출이 끝나면 적용한다 (스킬·죽음 모션이 끝나야 적이 움직임)
-		if self.pendingRender and self.director and not self.director:IsBusy() then
+		if self.pendingRender and self.director and not self:_busy() then
 			self.pendingRender = false
 			self:_renderUnits()
 			self:_paintTiles()
@@ -2239,6 +2361,7 @@ function BattleClient:_bindInput()
 			self:_tickQte()
 		end
 		self:_pumpThreat()
+		self:_pumpParty()
 		self:_callistoHold()
 	end)
 
@@ -2256,6 +2379,11 @@ function BattleClient:_bindInput()
 		end
 		if not self.qte then
 			if not self.active then
+				return
+			end
+			-- 파티 전투: 1~6 은 고른 유닛의 스킬. Space·QTE 는 없다
+			if self.partyMode then
+				self:_partyHotkey(input)
 				return
 			end
 			-- 1~6 스킬 고르기, Space 공격(QTE 열기)
@@ -2300,7 +2428,8 @@ end
 	서버로 나가는 것은 **등급 하나**뿐이고, 그 등급이 배율로 쓰인다.
 ]]
 function BattleClient:_startQte(role: QteDefinitions.Role)
-	if self.qte then
+	-- 파티 전투에는 QTE 가 없다(2026-11-08 사용자: 배치로 맞고 피하는 전투)
+	if self.qte or self.partyMode then
 		return
 	end
 	-- 디버그: QTE 를 건너뛰고 정한 등급을 바로 보낸다
@@ -2481,6 +2610,777 @@ function BattleClient:_endQte()
 	self.qte = nil
 	if self.hud then
 		self.hud:QteClose()
+	end
+end
+
+--=== 파티 전투 (2026-11-08, 파티전투_사양.md) ===--
+--[[
+	파티 세션(스냅샷 PartyMode): 아군 칸에 유닛 여럿. 서버가 BeginTurn 뒤 행동 하나씩 스냅샷을 보내면 그 사건(Events)을 대기열에 넣고,
+	앞 연출이 끝날 때마다 하나씩 튼다(_pumpParty) — 서버가 기다리는 시간은 어림이라 연출이 밀려도 순서·겹침은 여기서 지킨다.
+	QTE 는 없다: 솔로 입력(드래그 이동·스킬 바·Space·태세)은 모두 막고, 준비 단계 조작은 PartyHud(스킬·유도·턴 시작)와
+	칸 클릭(유닛 고르기 · 끌어서 옮기기/맞바꾸기)으로 한다. 서버 명령: Place · Choose · Homing · BeginTurn.
+]]
+local PARTY_GAP = 0.25
+local PARTY_ORANGE = Color3.fromRGB(255, 150, 40)
+local TILE_SELECT = Color3.fromRGB(236, 186, 78)
+
+-- 연출이 끝나지 않았나: 연출기가 움직이는 중 · 아직 안 튼 행동이 대기열에 있음 · 행동 사이 짧은 틈
+function BattleClient:_busy(): boolean
+	local director = self.director
+	if director and director:IsBusy() then
+		return true
+	end
+	local queue = self.partyQueue
+	return (queue ~= nil and #queue > 0) or os.clock() < (self.partyGapUntil or 0)
+end
+
+-- 그 칸에 선 살아 있는 아군 유닛 Id
+function BattleClient:_unitIdAt(x: number, y: number): string?
+	for id, unit in (self.snapshot and self.snapshot.Units) or {} do
+		if unit.Side == "Ally" and unit.ClassId and unit.Alive and unit.X == x and unit.Y == y then
+			return id
+		end
+	end
+	return nil
+end
+
+-- 커서 아래 아군 유닛: 마우스 광선이 유닛 몸(모든 파트)에 맞으면 그 유닛 Id. 이름표·순번 BillboardGui 는 광선에 안 맞는다
+function BattleClient:_allyUnderCursor(): string?
+	local director, camera, snapshot = self.director, workspace.CurrentCamera, self.snapshot
+	if not director or not camera or not snapshot then
+		return nil
+	end
+	local models: { Instance } = {}
+	local idOf: { [Instance]: string } = {}
+	for id, unit in snapshot.Units do
+		if unit.Side == "Ally" and unit.ClassId and unit.Alive then
+			local model = director:Model(id)
+			if model and model.Parent then
+				table.insert(models, model)
+				idOf[model] = id
+			end
+		end
+	end
+	if #models == 0 then
+		return nil
+	end
+	local location = UserInputService:GetMouseLocation()
+	local ray = camera:ViewportPointToRay(location.X, location.Y)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = models
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * 900, params)
+	local node: Instance? = hit and hit.Instance
+	while node do
+		if idOf[node] then
+			return idOf[node]
+		end
+		node = node.Parent
+	end
+	return nil
+end
+
+-- 아군 칸 타일만 맞히는 광선(인형은 따로 _allyUnderCursor 가 본다)
+function BattleClient:_partyTileUnderCursor(): any?
+	local camera = workspace.CurrentCamera
+	if not camera or not self.tiles then
+		return nil
+	end
+	local list: { Instance } = {}
+	for y = 1, GRID_HEIGHT do
+		for x = 1, GRID_WIDTH do
+			table.insert(list, self.tiles.Ally[y][x])
+		end
+	end
+	local location = UserInputService:GetMouseLocation()
+	local ray = camera:ViewportPointToRay(location.X, location.Y)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = list
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * 900, params)
+	if not hit then
+		return nil
+	end
+	local side, x, y = hit.Instance.Name:match("^Tile_(%a+)_(%d+)_(%d+)$")
+	if side ~= "Ally" then
+		return nil
+	end
+	return { X = tonumber(x), Y = tonumber(y) }
+end
+
+-- 커서가 가리키는 아군 칸과 그 칸의 유닛(유닛 몸을 가리키면 그 유닛의 칸)
+function BattleClient:_partyCursorCell(): (any?, string?)
+	local body = self:_allyUnderCursor()
+	local unit = body and self.snapshot and self.snapshot.Units[body]
+	if unit and unit.X and unit.Y then
+		return { X = unit.X, Y = unit.Y }, body
+	end
+	local tile = self:_partyTileUnderCursor()
+	if tile then
+		return tile, self:_unitIdAt(tile.X, tile.Y)
+	end
+	return nil, nil
+end
+
+-- 준비 단계에서 조작할 수 있는가
+function BattleClient:_partyCanEdit(): boolean
+	local snapshot = self.snapshot
+	return self.active == true
+		and snapshot ~= nil
+		and snapshot.Party ~= nil
+		and snapshot.Party.Phase == "Prepare"
+		and snapshot.Turning ~= true
+		and snapshot.Outcome == "Ongoing"
+		and not self:_busy()
+end
+
+function BattleClient:_partySend(request: { [string]: any })
+	self.Remotes.GridAction:FireServer(request)
+end
+
+-- 마우스를 놓았다: 유닛을 끌어 놓았으면 옮기기/맞바꾸기, 그 자리에서 뗐으면 고르기(고른 채 빈 칸을 누르면 거기로 옮김)
+function BattleClient:_partyRelease()
+	local press = self.partyPress
+	self.partyPress = nil
+	if not press or not self.snapshot then
+		return
+	end
+	local cell, id = self:_partyCursorCell()
+	if not cell or not self:_partyCanEdit() then
+		return
+	end
+	if press.Id and (cell.X ~= press.Cell.X or cell.Y ~= press.Cell.Y) then
+		self.partySelected = press.Id
+		self:_partySend({ Kind = "Place", Id = press.Id, X = cell.X, Y = cell.Y })
+	elseif cell.X == press.Cell.X and cell.Y == press.Cell.Y then
+		if id then
+			self.partySelected = id
+		elseif self.partySelected then
+			self:_partySend({ Kind = "Place", Id = self.partySelected, X = cell.X, Y = cell.Y })
+		end
+	end
+	self:_refreshParty()
+	self:_paintTiles()
+end
+
+-- 숫자키 1~6: 고른 유닛의 스킬 고르기
+function BattleClient:_partyHotkey(input: InputObject)
+	local slot = SLOT_KEYS[input.KeyCode]
+	local snapshot = self.snapshot
+	if not slot or not self.partySelected or not snapshot or not snapshot.Party or not self:_partyCanEdit() then
+		return
+	end
+	for _, member in snapshot.Party.Members do
+		if member.Id == self.partySelected and member.Skills[slot] then
+			self:_partySend({ Kind = "Choose", Id = member.Id, SkillId = member.Skills[slot].Id })
+		end
+	end
+end
+
+--[[
+	맞는 대상이 하나도 없는 유닛(= '빗나감'). 피해 스킬인데 미리보기 모양(유도 반영)에 적이 선 칸이 없을 때.
+	지원기·가드처럼 피해가 없는 스킬은 헛치는 게 없다.
+]]
+function BattleClient:_partyMiss(snapshot: any): { [string]: boolean }
+	local miss: { [string]: boolean } = {}
+	local occupied: { [string]: boolean } = {}
+	for _, unit in snapshot.Units do
+		if unit.Side == "Enemy" and unit.Alive and unit.X and unit.Y and unit.GridSide ~= "Ally" then
+			for _, c in unit.Cells or { { unit.X, unit.Y } } do
+				occupied[c[1] .. "," .. c[2]] = true
+			end
+		end
+	end
+	for id, view in snapshot.Preview or {} do
+		local skill = BattleSkills.ById(view.SkillId)
+		if not skill or (skill.Damage or 0) <= 0 then
+			continue
+		end
+		local hit = false
+		for _, motion in view.Motions do
+			for _, c in motion do
+				if c.Side == "Enemy" and occupied[c.X .. "," .. c.Y] then
+					hit = true
+				end
+			end
+		end
+		miss[id] = not hit
+	end
+	return miss
+end
+
+-- 파티 화면(위 순서 띠 · 아래 준비 판) 다시 그리기
+function BattleClient:_refreshParty()
+	local snapshot = self.snapshot
+	if not self.partyMode or not snapshot or not snapshot.Party then
+		return
+	end
+	local selected = self.partySelected
+	if not selected or not (snapshot.Units[selected] and snapshot.Units[selected].Alive) then
+		-- 아무도 안 골랐으면(또는 고른 유닛이 쓰러졌으면) 행동 순서 첫 유닛
+		selected = PartyHud and PartyHud.OrderOf(snapshot)[1] or nil
+		self.partySelected = selected
+	end
+	self.partyHover = nil -- 창을 다시 그리면 마우스가 올라 있던 슬롯도 새로 만들어진다
+	if self.partyHud then
+		-- 예고 칸에 선 유닛(가드 안내)
+		local threatened: { [string]: boolean } = {}
+		local keys = self:_partyThreatKeys(snapshot, self:_gridFromSnapshot())
+		for id, unit in snapshot.Units do
+			if unit.Side == "Ally" and unit.ClassId and unit.Alive and unit.X and keys[unit.X .. "," .. unit.Y] then
+				threatened[id] = true
+			end
+		end
+		-- 고른 유닛의 효과 아이콘(솔로 효과 줄과 같은 함수)
+		local effects = nil
+		for _, member in snapshot.Party.Members do
+			if member.Id == selected then
+				effects = buildEffects(snapshot, member.Status, member.ClassId, false)
+			end
+		end
+		self.partyHud:Update(snapshot, {
+			Selected = selected,
+			Busy = self:_busy(),
+			Acting = if snapshot.Party.Phase == "Prepare" then nil else self.partyActing,
+			Miss = self:_partyMiss(snapshot),
+			Stand = if selected and self.director then self.director:Model(selected) else nil,
+			Effects = effects,
+			Threatened = threatened,
+		})
+	end
+	self:_updatePartyInfo()
+end
+
+-- 유닛 머리 아래 이름·체력(보이는 체력 — 피해 숫자가 뜨는 순간 줄어든다)
+function BattleClient:_updatePartyInfo()
+	local snapshot, director = self.snapshot, self.director
+	if not self.partyMode or not snapshot or not director then
+		return
+	end
+	for id, unit in snapshot.Units do
+		if unit.Side ~= "Ally" or not unit.ClassId then
+			continue
+		end
+		local model = director:Model(id)
+		local root = model and model:FindFirstChild("HumanoidRootPart")
+		if not root then
+			continue
+		end
+		local gui = root:FindFirstChild("PartyInfo") :: BillboardGui?
+		if not gui then
+			local made = make("BillboardGui", {
+				Name = "PartyInfo",
+				Size = UDim2.fromOffset(112, 18),
+				StudsOffset = Vector3.new(0, -3.8, 0),
+				AlwaysOnTop = true,
+				Active = false,
+			}, root)
+			make("TextLabel", {
+				Name = "Text",
+				Size = UDim2.fromScale(1, 1),
+				BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+				BackgroundTransparency = 0.25,
+				BorderSizePixel = 0,
+				TextColor3 = if PartyHud then PartyHud.ClassColor(unit.ClassId) else Color3.new(1, 1, 1),
+				Font = Enum.Font.GothamBold,
+				TextSize = 11,
+				TextScaled = false,
+				AutoLocalize = false,
+			}, made)
+			gui = made
+		end
+		-- 멀리서 볼 때 옆 칸 이름표끼리 겹치지 않게 열 번호가 홀수/짝수인 유닛을 위아래로 비킨다
+		;(gui :: BillboardGui).StudsOffset = Vector3.new(0, -3.8 - (if (unit.X or 0) % 2 == 0 then 1.7 else 0), 0)
+		local text = (gui :: BillboardGui):FindFirstChild("Text") :: TextLabel
+		local shown = (self.hpShown and self.hpShown[id]) or unit.Health
+		text.Text = string.format("%s  %d/%d", unit.Name, math.ceil(shown), unit.MaxHealth)
+		;(gui :: BillboardGui).Enabled = unit.Alive
+	end
+end
+
+--[[
+	유닛 하나의 모습을 만드는 곳(2026-11-08 사용자: "유닛은 다 그냥 플레이어 스킨 따라가게 하자.(임시로) 후에 유닛별로 장비나 이런거 맞춰줘서 차별성 둘거야").
+	임시: 플레이어 스킨 — 플레이어 캐릭터를 복제한 R6 인형 그대로(직업 색칠 없음). 유닛별 장비·외형을 입히려면 여기만 고친다.
+	스크립트·소리·이름표·윤곽은 빼고, 복제본에 붙어 온 1번 유닛의 무기 묶음(CombatWeapon)도 뺀다 —
+	무기는 CombatDirector.AddHumanoid 가 이 유닛의 ClassId 로 다시 붙인다(모션도 그 직업 세트).
+]]
+function BattleClient:_makeUnitLook(unitId: string, _classId: string): Model?
+	local character = self.player.Character
+	if not character or not self.folder then
+		return nil
+	end
+	local was = character.Archivable
+	character.Archivable = true
+	local doll = character:Clone()
+	character.Archivable = was
+	if not doll then
+		return nil
+	end
+	local carried = doll:FindFirstChild("CombatWeapon")
+	if carried then
+		carried:Destroy()
+	end
+	for _, d in doll:GetDescendants() do
+		if d:IsA("BaseScript") or d:IsA("Sound") or d:IsA("ForceField") or d:IsA("BillboardGui") or d:IsA("Highlight") then
+			d:Destroy()
+		elseif d:IsA("BasePart") then
+			d.Anchored = false
+			d.CanCollide = false
+			d.CanTouch = false
+			d.CanQuery = true -- 마우스 광선이 인형 몸에 맞아야 유닛을 고를 수 있다(_allyUnderCursor). 칸 광선은 타일만 겨눈다
+		end
+	end
+	local root = doll:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		root.Anchored = true
+	end
+	local humanoid = doll:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		humanoid.PlatformStand = true
+	end
+	doll.Name = "PartyUnit_" .. unitId
+	doll.Parent = self.folder
+	return doll
+end
+
+--[[
+	파티 아군 인형: 첫 유닛("player")은 _renderUnits 가 아바타로 세운다. 나머지는 직업 색 인형을 칸에 세우고 직업 무기를 든다
+	(CombatDirector.AddHumanoid). 쓰러진 유닛은 쓰러짐 연출 뒤 치운다.
+]]
+function BattleClient:_renderPartyAllies()
+	local snapshot, director = self.snapshot, self.director
+	if not snapshot or not director or not self.layout then
+		return
+	end
+	self.dolls = self.dolls or {}
+	for id, unit in snapshot.Units do
+		if unit.Side ~= "Ally" or not unit.ClassId or id == "player" then
+			continue
+		end
+		if not unit.Alive then
+			if director:Has(id) then
+				director:Kill(id)
+			elseif self.dolls[id] then
+				self.dolls[id]:Destroy()
+				self.dolls[id] = nil
+			end
+			continue
+		end
+		if not unit.X or not unit.Y then
+			continue
+		end
+		local home = self:_home("Ally", unit.X, unit.Y)
+		if director:Has(id) then
+			director:SetHome(id, home)
+		else
+			local doll = self.dolls[id] or self:_makeUnitLook(id, unit.ClassId)
+			if doll then
+				self.dolls[id] = doll
+				director:AddHumanoid(id, doll, unit.ClassId, home)
+				director:SetHome(id, home, true)
+			end
+		end
+	end
+	local me = snapshot.Units.player
+	if me and not me.Alive and director:Has("player") then
+		director:Kill("player")
+	end
+	self:_hideFallenAvatar()
+	self:_updatePartyInfo()
+end
+
+--[[
+	쓰러진 첫 유닛(player): 쓰러짐 연출이 끝나 배우가 치워지면 아바타를 감춘다(다른 유닛 인형은 치워진다).
+	이 화면에서만 투명 처리(LocalTransparencyModifier)하고 전투가 끝나면 되돌린다.
+]]
+function BattleClient:_hideFallenAvatar()
+	local snapshot, director = self.snapshot, self.director
+	local me = snapshot and snapshot.Units.player
+	local character = self.player.Character
+	if not me or me.Alive or not director or director:Has("player") or not character or self.avatarHidden then
+		return
+	end
+	self.avatarHidden = true
+	for _, d in character:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.LocalTransparencyModifier = 1
+		end
+	end
+end
+
+function BattleClient:_showAvatar()
+	if not self.avatarHidden then
+		return
+	end
+	self.avatarHidden = false
+	local character = self.player.Character
+	for _, d in if character then character:GetDescendants() else {} do
+		if d:IsA("BasePart") then
+			d.LocalTransparencyModifier = 0
+		end
+	end
+end
+
+-- 전투가 끝나면(끝·그만두기·재시작) 인형·이름표·순번 표지를 전부 치운다. 이름표는 플레이어 캐릭터에 붙어 있어 따로 지운다
+function BattleClient:_clearPartyMarks()
+	local character = self.player.Character
+	for _, d in if character then character:GetDescendants() else {} do
+		if d.Name == "PartyInfo" or d.Name == "OrderMark" then
+			d:Destroy()
+		end
+	end
+	for id, doll in self.dolls or {} do
+		doll:Destroy()
+		self.dolls[id] = nil
+	end
+	for _, side in { "Ally", "Enemy" } do
+		for _, row in (self.tiles and (self.tiles :: any)[side]) or {} do
+			for _, part in row do
+				BattleStage.OrderMark(part, nil)
+				BattleStage.Tag(part, nil)
+			end
+		end
+	end
+end
+
+-- 적이 예고한 공격이 덮는 아군 칸(주황 레이저 층). 예고(Plan)가 있으면 그 칸, 없으면 그 적의 스킬 모양을 제 행 기준으로
+function BattleClient:_partyThreatKeys(snapshot: any, grid: BattleGrid.Grid): { [string]: { any } }
+	local keys: { [string]: { any } } = {}
+	local seen: { [string]: number } = {}
+	for _, enemyId in snapshot.Planned or {} do
+		local unit = snapshot.Units[enemyId]
+		seen[enemyId] = (seen[enemyId] or 0) + 1
+		if not unit or not unit.Alive then
+			continue
+		end
+		local plan = (unit.Plans and unit.Plans[seen[enemyId]]) or (seen[enemyId] == 1 and unit.Plan) or nil
+		local cells: { { number } } = {}
+		if plan then
+			local skill = BattleSkills.ById(plan.SkillId)
+			local damaging = skill ~= nil and ((skill.Damage or 0) > 0 or skill.HpRatio ~= nil or skill.Inflicts == true) and not plan.Canceled
+			if damaging then
+				for _, c in plan.Cells do
+					table.insert(cells, c)
+				end
+			end
+		elseif unit.Y then
+			local foeSkill = BattleSkills.ByIndex(BattleSkills.Enemy(), unit.SkillIndex)
+			for _, shape in BattleSkills.AllShapes(foeSkill) do
+				for _, cell in BattleSkills.Cells(grid, "Enemy", unit.Y, shape, nil, unit.X) do
+					table.insert(cells, { cell.X, cell.Y })
+				end
+			end
+		end
+		for _, c in cells do
+			keys[c[1] .. "," .. c[2]] = { { Group = "Threat", Color = PARTY_ORANGE, Label = "공격 범위" } }
+		end
+	end
+	return keys
+end
+
+--[[
+	파티 판 칠하기: 고른 유닛 칸(금색) · 그 유닛 스킬의 범위 미리보기(적 쪽 붉게, 맞는 적은 더 진하게 · 헛치면 '빗나감') ·
+	칸 위 행동 순번 숫자 · 적이 예고한 공격 범위(주황 레이저 층) · 유닛 윤곽(고른 유닛 금색).
+]]
+function BattleClient:_paintPartyTiles()
+	local snapshot = self.snapshot
+	if not snapshot or not self.tiles or not snapshot.Party then
+		return
+	end
+	local grid = self:_gridFromSnapshot()
+	local selected = self.partySelected
+	local preview = if selected and snapshot.Preview then snapshot.Preview[selected] else nil
+	-- 스킬에 마우스를 올렸으면 그 스킬의 범위(고른 유닛의 유도 반영 행 기준)를 대신 보여 준다
+	local hovered = self.partyHover
+	local hoverUnit = if selected then snapshot.Units[selected] else nil
+	if hovered and hoverUnit and hoverUnit.X and hoverUnit.Y then
+		local skill = BattleSkills.ById(hovered)
+		local grow = 0
+		for _, member in snapshot.Party.Members do
+			if member.Id == selected then
+				for _, view in member.Skills do
+					if view.Id == hovered then
+						grow = view.Grow or 0
+					end
+				end
+			end
+		end
+		if skill then
+			local motions = {}
+			local lane = hoverUnit.AimY or hoverUnit.Y
+			for _, shape in BattleSkills.AllShapes(skill) do
+				local cells = {}
+				for _, c in BattleSkills.Cells(grid, "Ally", lane, shape, grow, hoverUnit.X) do
+					table.insert(cells, { Side = c.Side, X = c.X, Y = c.Y })
+				end
+				table.insert(motions, cells)
+			end
+			preview = { SkillId = hovered, Lane = lane, Motions = motions }
+		end
+	end
+
+	local enemyRange: { [string]: boolean } = {}
+	local allyRange: { [string]: boolean } = {}
+	local firstEnemyCell: any = nil
+	for _, motion in (preview and preview.Motions) or {} do
+		for _, c in motion do
+			if c.Side == "Enemy" then
+				enemyRange[c.X .. "," .. c.Y] = true
+				firstEnemyCell = firstEnemyCell or c
+			else
+				allyRange[c.X .. "," .. c.Y] = true
+			end
+		end
+	end
+	local occupied: { [string]: string } = {}
+	local hitIds: { [string]: boolean } = {}
+	for id, unit in snapshot.Units do
+		if unit.Side == "Enemy" and unit.Alive and unit.X and unit.Y and unit.GridSide ~= "Ally" then
+			for _, c in unit.Cells or { { unit.X, unit.Y } } do
+				local key = c[1] .. "," .. c[2]
+				occupied[key] = id
+				if enemyRange[key] then
+					hitIds[id] = true
+				end
+			end
+		end
+	end
+
+	-- 유닛 윤곽: 아군 청백(고른 유닛은 금색), 미리보기에 맞는 적은 붉은 윤곽
+	if self.director then
+		for id, unit in snapshot.Units do
+			local model = self.director:Model(id)
+			if not model then
+				continue
+			end
+			local ring = model:FindFirstChild("UnitMark") :: Highlight?
+			if not ring then
+				local r = Instance.new("Highlight")
+				r.Name = "UnitMark"
+				local ally = unit.Side ~= "Enemy"
+				r.FillColor = if ally then Color3.fromRGB(190, 225, 255) else Color3.fromRGB(255, 150, 140)
+				r.OutlineColor = if ally then Color3.fromRGB(235, 245, 255) else Color3.fromRGB(255, 90, 80)
+				r.FillTransparency = 1
+				r.OutlineTransparency = 0.1
+				r.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				r.Parent = model
+				ring = r
+			end
+			local unitMark = ring :: Highlight
+			if unit.Side ~= "Enemy" then
+				unitMark.Enabled = unit.Alive
+				unitMark.OutlineColor = if id == selected then TILE_SELECT else Color3.fromRGB(235, 245, 255)
+				continue
+			end
+			local want = unit.Alive and hitIds[id] == true
+			unitMark.Enabled = unit.Alive and not want
+			local mark = model:FindFirstChild("TargetMark") :: Highlight?
+			if want and not mark then
+				local h = Instance.new("Highlight")
+				h.Name = "TargetMark"
+				h.FillColor = Color3.fromRGB(255, 70, 70)
+				h.FillTransparency = if unit.Part then 0.9 else 0.65
+				h.OutlineColor = Color3.fromRGB(255, 120, 110)
+				h.OutlineTransparency = 0
+				h.DepthMode = Enum.HighlightDepthMode.Occluded
+				h.Parent = model
+				mark = h
+			end
+			if mark then
+				mark.Enabled = want
+			end
+		end
+	end
+
+	-- 행동 순번(자리를 바꾸면 바로 다시 매긴다)
+	local order = if PartyHud then PartyHud.OrderOf(snapshot) else {}
+	local orderAt: { [string]: number } = {}
+	for n, id in order do
+		local unit = snapshot.Units[id]
+		if unit and unit.X and unit.Y then
+			orderAt[unit.X .. "," .. unit.Y] = n
+		end
+	end
+	local acting = if snapshot.Party.Phase == "Prepare" then nil else self.partyActing
+	local actingIndex = if acting then table.find(order, acting) else nil
+	local selectedUnit = if selected then snapshot.Units[selected] else nil
+
+	BattleStage.SetSideVisible(self.tiles, "Enemy", snapshot.Boss == nil)
+	self:_syncTiles()
+	local missText = nil
+	if selected and preview and firstEnemyCell then
+		local skill = BattleSkills.ById(preview.SkillId)
+		missText = skill ~= nil and (skill.Damage or 0) > 0 and next(hitIds) == nil
+	end
+	for y = 1, GRID_HEIGHT do
+		for x = 1, GRID_WIDTH do
+			local key = x .. "," .. y
+			local ally = self.tiles.Ally[y][x]
+			if selectedUnit and selectedUnit.X == x and selectedUnit.Y == y then
+				BattleStage.Paint(ally, TILE_SELECT, true)
+			elseif allyRange[key] then
+				BattleStage.Paint(ally, TILE_DROP, true)
+			else
+				BattleStage.Paint(ally, TILE_IDLE, false)
+			end
+			local n = orderAt[key]
+			local id = if n then order[n] else nil
+			BattleStage.OrderMark(ally, n, id ~= nil and acting == id, actingIndex ~= nil and n ~= nil and n < actingIndex or acting == "Enemy")
+
+			local foe = self.tiles.Enemy[y][x]
+			if enemyRange[key] then
+				BattleStage.Paint(foe, if occupied[key] and hitIds[occupied[key]] then TILE_RANGE_HIT else TILE_RANGE, true)
+			else
+				BattleStage.Paint(foe, if occupied[key] then TILE_OCCUPIED else TILE_IDLE, occupied[key] ~= nil)
+			end
+			BattleStage.Tag(foe, if missText and firstEnemyCell.X == x and firstEnemyCell.Y == y then "빗나감" else nil, Color3.fromRGB(255, 120, 110))
+		end
+	end
+
+	local threatKeys = if self.layers and self.layers.Range then self:_partyThreatKeys(snapshot, grid) else {}
+	local director = self.director
+	BattleStage.ThreatMarks(self.tiles, threatKeys, function(id: string): BasePart?
+		local model = director and director:Model(id)
+		return model and model.PrimaryPart
+	end)
+end
+
+-- 서버 사건을 대기열에 넣는다: 아군 스킬(Skill) · 적 공격(EnemyAttack — 같은 적·같은 스킬 연속은 한 번 휘두르고 여럿이 맞는다) · 보스 행동(Cast)
+function BattleClient:_consumePartyEvents(snapshot: any)
+	self.partyQueue = self.partyQueue or {}
+	local queue = self.partyQueue
+	for _, ev in snapshot.Events or {} do
+		if ev.Seq <= self.lastEventSeq then
+			continue
+		end
+		self.lastEventSeq = ev.Seq
+		if ev.Kind == "Skill" then
+			table.insert(queue, { Kind = "Skill", Event = ev })
+		elseif ev.Kind == "EnemyAttack" then
+			local last = queue[#queue]
+			if last and last.Kind == "Volley" and last.Actor == ev.Actor and last.SkillId == ev.SkillId then
+				table.insert(last.Events, ev)
+			else
+				table.insert(queue, { Kind = "Volley", Actor = ev.Actor, SkillId = ev.SkillId, Events = { ev } })
+			end
+		elseif ev.Kind == "Cast" then
+			table.insert(queue, { Kind = "Cast", Event = ev })
+		end
+	end
+end
+
+-- 대기열 맨 앞 행동을 튼다
+function BattleClient:_playPartyItem(item: any)
+	local director = self.director
+	if not director then
+		return
+	end
+	local snapshot = self.snapshot
+	local function sideOf(id: string): string?
+		local unit = snapshot and snapshot.Units[id]
+		return unit and unit.Side
+	end
+	if item.Kind == "Skill" then
+		local ev = item.Event
+		if not director:Has(ev.Actor) then
+			return
+		end
+		-- 맞는 모양 묶음별 대상(상대편만 반응한다. 서포트는 받는 아군에게 이펙트가 가고 반응 모션은 없다)
+		local foeSide = if sideOf(ev.Actor) == "Enemy" then "Ally" else "Enemy"
+		local groups: { { string } } = {}
+		for _, hits in ev.Hits do
+			local ids = {}
+			for _, h in hits do
+				if sideOf(h.Id) == foeSide and director:Has(h.Id) then
+					table.insert(ids, h.Id)
+				end
+			end
+			table.insert(groups, ids)
+		end
+		if #groups == 0 then
+			groups = { {} }
+		end
+		local play = director:PlaySkill(ev.Actor, ev.SkillId, groups)
+		if play then
+			play:SetResult(ev)
+		end
+		self.partyActing = ev.Actor
+		for _, hits in ev.Hits do
+			for _, h in hits do
+				if h.Killed then
+					director:Kill(h.Id)
+				end
+			end
+		end
+	elseif item.Kind == "Volley" then
+		if not director:Has(item.Actor) then
+			return
+		end
+		local victims, hits = {}, {}
+		local reflect, reflectKilled = 0, false
+		for _, ev in item.Events do
+			local h = ev.Hits and ev.Hits[1] and ev.Hits[1][1]
+			if h and director:Has(h.Id) then
+				table.insert(victims, { Id = h.Id, Grade = h.Grade or ev.Grade or "Fail" })
+				table.insert(hits, h)
+				if h.Killed then
+					director:Kill(h.Id)
+				end
+			end
+			reflect += ev.Reflect or 0
+			reflectKilled = reflectKilled or ev.ReflectKilled == true
+		end
+		self:_fxTiles(nil)
+		director:Windup(item.Actor, false)
+		local play = director:PlayEnemyVolley(item.Actor, item.SkillId or "SlimeTackle", victims)
+		if play then
+			play:SetResult({ Hits = { hits }, Reflect = reflect, ReflectKilled = reflectKilled })
+		end
+		self.partyActing = "Enemy"
+	elseif item.Kind == "Cast" then
+		local ev = item.Event
+		if director:Has(ev.Actor) then
+			self:_fxTiles({ Safe = ev.Safe, Rope = ev.Rope, Strong = ev.Strong })
+			director:PlaySkill(ev.Actor, ev.SkillId, { {} })
+			self.partyActing = "Enemy"
+		end
+	end
+end
+
+-- 매 프레임: 연출이 한가하면 다음 행동을 튼다. 바쁨/한가함이 바뀌면 화면(준비 판 보임·순번 밝힘)을 다시 그린다
+function BattleClient:_pumpParty()
+	local director, queue = self.director, self.partyQueue
+	if not self.partyMode or not director or not queue then
+		return
+	end
+	self:_hideFallenAvatar()
+	-- 스탠딩을 못 만들었으면(무대 인형이 아직 없거나 복제 실패) 0.5초마다 다시 시도
+	if self.partyHud and self.partyHud:NeedsStand() and os.clock() >= (self.standRetryAt or 0) then
+		self.standRetryAt = os.clock() + 0.5
+		self:_refreshParty()
+	end
+	-- 쓰러짐 연출이 끝나 배우가 치워진 유닛의 인형을 마저 치운다
+	for id, doll in self.dolls or {} do
+		local unit = self.snapshot and self.snapshot.Units[id]
+		if unit and not unit.Alive and not director:Has(id) then
+			doll:Destroy()
+			self.dolls[id] = nil
+		end
+	end
+	if #queue > 0 and not director:IsBusy() and os.clock() >= (self.partyGapUntil or 0) then
+		self:_playPartyItem(table.remove(queue, 1))
+		self.partyGapUntil = os.clock() + PARTY_GAP
+		self.partyBusyShown = self:_busy()
+		self:_refreshParty()
+		self:_paintTiles()
+		return
+	end
+	local busy = self:_busy()
+	if busy ~= self.partyBusyShown then
+		self.partyBusyShown = busy
+		self:_refreshParty()
+		self:_paintTiles()
 	end
 end
 

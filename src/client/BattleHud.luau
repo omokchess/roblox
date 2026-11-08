@@ -457,6 +457,87 @@ function BattleHud:_buildDock()
 end
 
 --[[
+	효과 아이콘 하나(글자 기호 + 개수, 음표는 모서리마다 기호+개수). 솔로 효과 줄(SetEffects)과 파티 아래 창(PartyHud)이 같이 쓴다.
+	e = { Id, Name, Glyph, Color, Count?, Multi?, Desc }. 마우스 올림/눌림 연결은 부른 쪽이 한다.
+]]
+function BattleHud.EffectIcon(parent: Instance, e: any, order: number): TextButton
+	local icon = make("TextButton", {
+		Name = e.Id,
+		Size = UDim2.fromOffset(38, 38),
+		AutoButtonColor = false,
+		BackgroundColor3 = INK,
+		BackgroundTransparency = 0.05,
+		BorderSizePixel = 0,
+		Text = "",
+		LayoutOrder = order,
+	}, parent)
+	stroke(icon, e.Color, 0.25)
+	make("Frame", { Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = e.Color, BorderSizePixel = 0 }, icon)
+	make("TextLabel", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Text = e.Glyph,
+		TextColor3 = e.Color,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 19,
+	}, icon)
+	--[[ 숫자 여럿(음표): 모서리마다 기호 + 개수. BR 오른쪽 아래 · BL 왼쪽 아래 · TL 왼쪽 위.
+	     기호는 제 숫자 쪽으로 조금씩 비켜 겹치되 색·테두리로 또렷하게(2026-10-04 사용자) ]]
+	if e.Multi then
+		local SPOT = {
+			-- { 기호 자리(가운데 비율), 숫자 자리·정렬 }
+			BR = { Vector2.new(0.68, 0.6), UDim2.new(1, -2, 1, 0), Vector2.new(1, 1), Enum.TextXAlignment.Right },
+			BL = { Vector2.new(0.36, 0.66), UDim2.new(0, 2, 1, 0), Vector2.new(0, 1), Enum.TextXAlignment.Left },
+			TL = { Vector2.new(0.5, 0.42), UDim2.new(0, 2, 0, 1), Vector2.new(0, 0), Enum.TextXAlignment.Left },
+		}
+		for zi, m in e.Multi do
+			local spot = SPOT[m[3]]
+			local g = make("TextLabel", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(spot[1].X, spot[1].Y),
+				Size = UDim2.fromOffset(22, 22),
+				BackgroundTransparency = 1,
+				Text = m[1],
+				TextColor3 = m[4],
+				Font = Enum.Font.GothamBlack,
+				TextSize = 18,
+				ZIndex = 2 + zi,
+			}, icon)
+			make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, g)
+			local n = make("TextLabel", {
+				AnchorPoint = spot[3],
+				Position = spot[2],
+				Size = UDim2.fromOffset(18, 13),
+				BackgroundTransparency = 1,
+				Text = tostring(m[2]),
+				TextColor3 = m[4],
+				Font = Enum.Font.GothamBlack,
+				TextSize = 12,
+				TextXAlignment = spot[4],
+				ZIndex = 6,
+			}, icon)
+			make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, n)
+		end
+	end
+	if e.Count then
+		local count = make("TextLabel", {
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -2, 1, 0),
+			Size = UDim2.fromOffset(30, 14),
+			BackgroundTransparency = 1,
+			Text = tostring(e.Count),
+			TextColor3 = BONE,
+			Font = Enum.Font.GothamBlack,
+			TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			ZIndex = 2,
+		}, icon)
+		make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, count)
+	end
+	return icon
+end
+
+--[[
 	걸린 효과 아이콘. effects = { { Id, Name, Glyph, Color, Count?, Desc } }.
 	목록(Id·수)이 같으면 다시 찍지 않는다 — 마우스를 올린 채 스냅샷이 와도 말풍선이 꺼지지 않게.
 	  PC       마우스를 올리거나 누르고 있으면 설명
@@ -485,79 +566,7 @@ function BattleHud:SetEffects(effects: { any })
 	end
 	self.effectIcons = {}
 	for order, e in effects do
-		local icon = make("TextButton", {
-			Name = e.Id,
-			Size = UDim2.fromOffset(38, 38),
-			AutoButtonColor = false,
-			BackgroundColor3 = INK,
-			BackgroundTransparency = 0.05,
-			BorderSizePixel = 0,
-			Text = "",
-			LayoutOrder = order,
-		}, self.effectRow)
-		stroke(icon, e.Color, 0.25)
-		make("Frame", { Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = e.Color, BorderSizePixel = 0 }, icon)
-		make("TextLabel", {
-			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
-			Text = e.Glyph,
-			TextColor3 = e.Color,
-			Font = Enum.Font.GothamBlack,
-			TextSize = 19,
-		}, icon)
-		--[[ 숫자 여럿(음표): 모서리마다 기호 + 개수. BR 오른쪽 아래 · BL 왼쪽 아래 · TL 왼쪽 위.
-		     기호는 제 숫자 쪽으로 조금씩 비켜 겹치되 색·테두리로 또렷하게(2026-10-04 사용자) ]]
-		if e.Multi then
-			local SPOT = {
-				-- { 기호 자리(가운데 비율), 숫자 자리·정렬 }
-				BR = { Vector2.new(0.68, 0.6), UDim2.new(1, -2, 1, 0), Vector2.new(1, 1), Enum.TextXAlignment.Right },
-				BL = { Vector2.new(0.36, 0.66), UDim2.new(0, 2, 1, 0), Vector2.new(0, 1), Enum.TextXAlignment.Left },
-				TL = { Vector2.new(0.5, 0.42), UDim2.new(0, 2, 0, 1), Vector2.new(0, 0), Enum.TextXAlignment.Left },
-			}
-			for zi, m in e.Multi do
-				local spot = SPOT[m[3]]
-				local g = make("TextLabel", {
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.fromScale(spot[1].X, spot[1].Y),
-					Size = UDim2.fromOffset(22, 22),
-					BackgroundTransparency = 1,
-					Text = m[1],
-					TextColor3 = m[4],
-					Font = Enum.Font.GothamBlack,
-					TextSize = 18,
-					ZIndex = 2 + zi,
-				}, icon)
-				make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, g)
-				local n = make("TextLabel", {
-					AnchorPoint = spot[3],
-					Position = spot[2],
-					Size = UDim2.fromOffset(18, 13),
-					BackgroundTransparency = 1,
-					Text = tostring(m[2]),
-					TextColor3 = m[4],
-					Font = Enum.Font.GothamBlack,
-					TextSize = 12,
-					TextXAlignment = spot[4],
-					ZIndex = 6,
-				}, icon)
-				make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, n)
-			end
-		end
-		if e.Count then
-			local count = make("TextLabel", {
-				AnchorPoint = Vector2.new(1, 1),
-				Position = UDim2.new(1, -2, 1, 0),
-				Size = UDim2.fromOffset(30, 14),
-				BackgroundTransparency = 1,
-				Text = tostring(e.Count),
-				TextColor3 = BONE,
-				Font = Enum.Font.GothamBlack,
-				TextSize = 12,
-				TextXAlignment = Enum.TextXAlignment.Right,
-				ZIndex = 2,
-			}, icon)
-			make("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, count)
-		end
+		local icon = BattleHud.EffectIcon(self.effectRow, e, order)
 		local id = e.Id
 		icon.MouseEnter:Connect(function()
 			self:_showEffect(id, icon)
@@ -1015,7 +1024,7 @@ function BattleHud:SetActive(on: boolean)
 	if not on and self.callistoBar then
 		self.callistoBar.Visible = false
 	end
-	self.dock.Visible = on
+	self.dock.Visible = on and not self.partyMode
 	self.exit.Visible = on
 	self.layerBar.Visible = on
 	self.stance.Visible = on and self.stanceShown
@@ -1027,6 +1036,14 @@ function BattleHud:SetActive(on: boolean)
 		self:HideBossInfo()
 		self:QteClose()
 	end
+end
+
+-- 파티 전투(2026-11-08): 아래 스킬 바·공격 버튼 판(솔로용)을 감춘다. 파티 화면은 PartyHud 가 그린다
+function BattleHud:SetPartyMode(on: boolean)
+	self.partyMode = on
+	self.dock.Visible = self.active and not on
+	-- 파티 전투는 위에 순서 띠(디버그 빠른 줄 아래)가 있어 기록 줄을 그 밑으로
+	self.log.Position = UDim2.new(0.5, 0, 0, if on then 102 else 68)
 end
 
 function BattleHud:SetLog(text: string?)

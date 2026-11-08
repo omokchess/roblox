@@ -58,7 +58,7 @@ export type Context = {
 	Targets: { any },
 	-- 아군 전체. 솔로에서는 Ally 하나뿐이다.
 	Allies: { any },
-	-- QTE 등급 ("Success" | "Partial" | "Fail")
+	-- 등급 ("Success" | "Partial" | "Fail"). 파티 전투엔 QTE 가 없어 아군 공격은 늘 Success(배율 ×1.0) — 효과가 조건으로 쓰지 않는다
 	Grade: string,
 	-- 결정적 난수. 같은 씨앗이면 같은 결과가 나와야 하므로 반드시 이걸 쓴다.
 	Rng: () -> number,
@@ -341,8 +341,8 @@ local duelistEffects: { [string]: Effect } = {
 		연계: 마지막까지 빛나는 점을 향해 검 끝을 쏘아라.
 
 		이 스킬의 치명 확률 +20%, [집중] 1당 [가하는 피해량] +5%·치명 피해량 +5%([집중]은 쓰지 않는다). 적중 시 [출혈] 4.
-		3턴 동안 아군 패링 실패 1개를 성공으로 보고 받는 피해 −20%. **태세 변경**, 바뀐 태세에 따라
-		  방어: 2턴 받는 피해 −20% · 가하는 피해 −20% · 패링 실패 1개 봐줌, 방어 태세인 동안 치명 피해를 한 번 체력 10으로 버틴다([마지막 버팀])
+		3턴 동안 아군 패링 확률 +20% · 받는 피해 −20%(2026-11-08 QTE 삭제 — 옛 패링 실패 1개 봐주기를 확률로). **태세 변경**, 바뀐 태세에 따라
+		  방어: 2턴 받는 피해 −20% · 가하는 피해 −20% · 패링 확률 +20%, 방어 태세인 동안 치명 피해를 한 번 체력 10으로 버틴다([마지막 버팀])
 		  공격: 2턴 받는 피해 +20% · 가하는 피해 +20% · 받는 버프 효율 +30%, [집중] 5
 	]]
 	PointBlank = {
@@ -357,9 +357,11 @@ local duelistEffects: { [string]: Effect } = {
 		After = function(ctx)
 			local status = ctx.Status
 			BattleStatus.SpendStack(status, R.READY, 1)
+			-- QTE 가 없는 전투(결투사 키트가 PartyParry 로 알린다)는 패링 확률, QTE 가 있는 솔로는 옛 '패링 실수 봐주기'
+			local noQte = ctx.Query("PartyParry", 0) >= 1
 			for _, ally in ctx.Allies do
 				local allyStatus = ctx.StatusOf(ally)
-				BattleStatus.AddModifier(allyStatus, "ParryForgive", 1, 3, "연계")
+				BattleStatus.AddModifier(allyStatus, if noQte then "AutoParry" else "ParryForgive", if noQte then 0.2 else 1, 3, "연계")
 				BattleStatus.AddModifier(allyStatus, "DamageTaken", -0.2, 3, "연계")
 			end
 			for _, target in ctx.Targets do
@@ -376,7 +378,7 @@ local duelistEffects: { [string]: Effect } = {
 			else
 				BattleStatus.AddModifier(status, "DamageTaken", -0.2, 2, "연계 여파")
 				BattleStatus.AddModifier(status, "DamageDealt", -0.2, 2, "연계 여파")
-				BattleStatus.AddModifier(status, "ParryForgive", 1, 2, "연계 여파")
+				BattleStatus.AddModifier(status, if noQte then "AutoParry" else "ParryForgive", if noQte then 0.2 else 1, 2, "연계 여파")
 				BattleStatus.AddStack(status, R.LAST_STAND, 1, 1)
 			end
 		end,
@@ -596,7 +598,8 @@ local pulsarEffects: { [string]: Effect } = {
 	},
 
 	--[[
-		수렴: [공명] 1당 피해 +30%. QTE 성공이면 피해 +20%(정밀 조율 +)·[감극] 1 더.
+		수렴: [공명] 수만큼 연타. 대상에게 이미 [감극]이 있으면(앞 순번 아군·지난 스킬이 걸어 둔 것) 피해 +20%(정밀 조율 +)·[감극] 1 더.
+		2026-11-08 QTE 삭제 — 옛 QTE 성공 보너스를 '앞서 걸린 [감극]'(행동 순서·배치) 조건으로 바꿨다. 고정 조준은 [감극]이 없어도 확률로 있는 셈 친다.
 		md 는 "공명 수만큼 연타"지만 이 전투는 스킬 한 번이 한 타라 배율로 옮겼다.
 		쌓인 [공명]을 **전부 쓴다**(플라이휠이 바닥만큼 남긴다) — 자기권·섬광으로 모으고 수렴으로 터뜨리는 박자.
 	]]
@@ -609,20 +612,31 @@ local pulsarEffects: { [string]: Effect } = {
 			if fixed >= 0 then
 				stacks = fixed
 			end
-			local qte = if ctx.Grade == "Success" then ctx.Query("ConvergeQteBonus", 0.2) else 0
+			-- 대상마다 '이미 [감극]이 있나'를 먼저 적어 둔다(After 가 감극을 더하기 전 상태). 고정 조준은 없어도 확률로 있는 셈 친다
+			local synergy: { [string]: boolean } = {}
+			local chance = ctx.Query("ConvergeSynergyChance", 0)
+			for _, target in ctx.Targets do
+				synergy[target.Id] = BattleStatus.Stack(ctx.StatusOf(target), R.DEPOLAR) > 0 or (chance > 0 and ctx.Rng() < chance)
+			end
+			;(ctx :: any).Synergy = synergy
 			-- 2026-10-04: 설명대로 [공명] 수만큼 연타(없으면 한 번). 예전엔 한 번만 때리고 공명 1당 +30% 를 곱했다
 			ctx.Repeat = math.max(1, stacks)
 			ctx.Log(string.format("수렴 %d연타", ctx.Repeat))
-			return 1 + qte
+			return 1
+		end,
+		TargetBonus = function(ctx, target)
+			local synergy: { [string]: boolean }? = (ctx :: any).Synergy
+			return if synergy and synergy[target.Id] then ctx.Query("ConvergeBonus", 0.2) else 0
 		end,
 		After = function(ctx)
-			local extra = 1 + (if ctx.Grade == "Success" then 1 else 0) + math.floor(ctx.Query("ConvergeDepolarBonus", 0))
+			local synergy: { [string]: boolean } = (ctx :: any).Synergy or {}
+			local bonus = math.floor(ctx.Query("ConvergeDepolarBonus", 0))
 			for _, target in ctx.Targets do
 				if target.Alive then
-					depolar(ctx, target, extra)
+					depolar(ctx, target, 1 + (if synergy[target.Id] then 1 else 0) + bonus)
 				end
 			end
-			ctx.Log(string.format("감극 +%d", extra))
+			ctx.Log(string.format("감극 +%d", 1 + bonus))
 		end,
 	},
 

@@ -493,7 +493,7 @@ M.Berserker_C_Devour = {
 	end,
 }
 
--- 무감각(2026-10-09 그로기 삭제로 변경): 방어에 실패해 맞을 때 받는 피해 −{1}%
+-- 무감각(2026-10-09 그로기 삭제로 변경): 가드·패링 없이 맞을 때 받는 피해 −{1}%(2026-11-08 글만 '방어에 실패해' → '가드를 쓰지 않고')
 M.Berserker_C_Numb = {
 	BeforeTaken = function(c: Card, info: any)
 		if info.Grade == "Fail" then
@@ -549,11 +549,26 @@ M.Berserker_C_DeathWish = {
 }
 
 --[[
-	자랑: QTE 를 성공하면(스킬·패링 둘 다) 자해 {1}. 죽지 않고, 재기·불굴도 켜지지 않는다.
-	다혈질이 [분노]로 바꾼다 — 사실상 "성공하면 분노".
+	자랑: 스킬을 쓴 뒤 **같은 행에 다른 아군이 있으면** 자해 {1}. 죽지 않고, 재기·불굴도 켜지지 않는다.
+	다혈질이 [분노]로 바꾼다 — 사실상 "구경꾼이 있으면 분노".
+	2026-11-08 QTE 삭제 — 옛 '스킬·패링 QTE 성공 시 자해'(성공률 약 60%). 파티 전투 배치 조건으로 바꿨다: 같은 행에 아군이 서 있어야 폼이 난다.
+	Party 카드(솔로는 같은 행 아군이 없어 켜지지 않는다). 자리는 스킬을 쓴 시점에 본다.
 ]]
-local function boast(c: Card, grade: string)
-	if grade ~= "Success" then
+local function boast(c: Card)
+	local me = H.Ally(c)
+	local mine = H.Cell(c)
+	if not mine then
+		return false
+	end
+	local watched = false
+	for _, ally in H.Allies(c) do
+		local cell = if ally.Id ~= me.Id then H.Cell(c, ally) else nil
+		if cell and cell.Y == mine.Y then
+			watched = true
+			break
+		end
+	end
+	if not watched then
 		return false
 	end
 	c.Rt.Quiet = true
@@ -562,11 +577,9 @@ local function boast(c: Card, grade: string)
 	return true
 end
 M.Berserker_C_UnstoppingArm = {
-	AfterSkill = function(c: Card, info: any)
-		return boast(c, info.Grade)
-	end,
-	Defend = function(c: Card, info: any)
-		return boast(c, info.Grade)
+	Party = true,
+	AfterSkill = function(c: Card, _info: any)
+		return boast(c)
 	end,
 }
 

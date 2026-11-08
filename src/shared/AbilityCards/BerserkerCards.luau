@@ -299,7 +299,7 @@ local cards: { Card } = {
 		MaxLevel = 1,
 		Art = "Berserker_C_Numb",
 		Name = "무감각",
-		Description = "방어에 실패해 맞을 때 받는 피해가 {15}% 감소한다.",
+		Description = "`가드`를 쓰지 않고 맞을 때 받는 피해가 {15}% 감소한다.",
 		Levels = { { 15 } },
 		Grade = "Common",
 		ClassId = CLASS_ID,
@@ -341,9 +341,8 @@ local cards: { Card } = {
 		MaxLevel = 1,
 		Art = "Berserker_C_UnstoppingArm",
 		Name = "자랑",
-		Description = "QTE 성공 시 자해 피해를 {1} 입는다.\n"
-			.. "이 효과로 사망하지 않는다.\n"
-			.. "이 효과로 `불굴`과 `재기` 효과를 발동하지 않는다.",
+		Description = "스킬을 쓴 뒤 같은 행에 다른 아군이 있으면 자해 피해를 {1} 입는다.\n이 효과로 사망하지 않는다.\n이 효과로 `불굴`과 `재기` 효과를 발동하지 않는다.",
+		Party = true,
 		Grade = "Common",
 		ClassId = CLASS_ID,
 		Tags = { "Frenzy", "Rage" },

@@ -16,7 +16,6 @@
 local BattleSkillEffects = require(script.Parent.Parent.BattleSkillEffects)
 local BattleStatus = require(script.Parent.Parent.BattleStatus)
 local ClassResources = require(script.Parent.Parent.ClassResources)
-local QteDefinitions = require(script.Parent.Parent.QteDefinitions)
 
 local R = ClassResources
 
@@ -344,10 +343,11 @@ M.Pulsar_R_Recharge = {
 	end,
 }
 
--- 정밀 조율: 수렴 QTE 성공 보너스 {1}% → {2}%
+-- 정밀 조율: 수렴의 [감극] 연계 보너스(대상에게 이미 [감극]이 있을 때 피해 증가) {1}% → {2}%
+-- (2026-11-08 QTE 삭제 — 옛 '수렴 QTE 성공 보너스'. Id 는 저장 키라 그대로)
 M.Pulsar_R_QteMastery = {
 	Rules = {
-		ConvergeQteBonus = function(c: Card, value: number): number
+		ConvergeBonus = function(c: Card, value: number): number
 			return math.max(value, c.P(2))
 		end,
 	},
@@ -362,7 +362,7 @@ M.Pulsar_R_Grounding = {
 	end,
 }
 
--- 차폐(2026-10-09 그로기 삭제로 변경): 자기장 동안 받는 피해 −{1}%. 방어에 실패해 맞을 때마다 자기장 −{2}턴
+-- 차폐(2026-10-09 그로기 삭제로 변경): 자기장 동안 받는 피해 −{1}%. 가드·패링 없이 맞을 때마다 자기장 −{2}턴(2026-11-08 글만 '방어에 실패해' → '가드를 쓰지 않고')
 M.Pulsar_R_Shroud = {
 	BeforeTaken = function(c: Card, info: any)
 		if hasField(c) then
@@ -615,16 +615,14 @@ M.Pulsar_C_Discharge = {
 	end,
 }
 
--- 고정 조준: 수렴 QTE 가 방어 판정이면 {1}% 확률로 성공 판정
+-- 고정 조준: 수렴이 [감극]이 없는 대상에게도 {1}% 확률로 있는 것으로 쳐 연계 보너스를 받는다
+-- (2026-11-08 QTE 삭제 — 옛 '방어 판정을 확률로 성공 판정으로'. 수렴 쪽 BattleSkillEffects 가 질의로 굴린다)
 M.Pulsar_C_FixedAim = {
-	BeforeSkill = function(c: Card, info: any)
-		if isSkill(info, "Converge") and info.Grade == "Partial" and H.Rng(c) < c.P(1) then
-			info.Mult *= QteDefinitions.Multiplier("Skill", "Success") / math.max(0.01, QteDefinitions.Multiplier("Skill", "Partial"))
-			H.Log(c, "조준이 맞았다")
-			return true
-		end
-		return false
-	end,
+	Rules = {
+		ConvergeSynergyChance = function(c: Card, value: number): number
+			return value + c.P(1)
+		end,
+	},
 }
 
 -- 여광: 자기장이 끝난 다음 턴까지 받는 피해 감소의 {1}%가 남는다

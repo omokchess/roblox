@@ -74,7 +74,7 @@ local KITS: { [string]: ClassKit } = {
 				Id = "Duelist_Read",
 				Name = "간파",
 				Description = "- 막기의 [받는 피해량] 감소 효과가 절반이 된다.\n"
-					.. "- 패링 실패 1개를 성공으로 본다.",
+					.. "- 패링 확률 +10%",
 			},
 			{
 				Id = "Duelist_Situation",

@@ -3,7 +3,9 @@
 	결투사 — 직업 키트·패시브·카드 34장의 전투 효과. (CardEffects 2판, 2026-09-28 · 2026-11-07 결투사 리메이크)
 
 	키트(Duelist_Kit) — `결투사_리메이크_사양.md`
-	  [집중] 최대 8, 스택 1당 받는 피해 −1%, 피해 +2%, 최대면 패링 실수 1개를 더 봐준다(무명검이 스택당 효과를 줄인다)
+	  [집중] 최대 8, 스택 1당 받는 피해 −1%, 피해 +2%, 최대면 패링 확률 +10%(무명검이 스택당 효과를 줄인다)
+	  패링은 확률형이다(2026-11-08 파티 전투 — QTE 가 없다): 공격을 받을 때 공격 태세 20% · 방어 태세 40%(+ 집중×5%)로 터진다.
+	    근거 — 옛 QTE 패링 성공률을 보통 플레이어 약 60% 로 보고, 방어 태세는 패링을 노리는 자세라 그 2/3(40%), 공격 태세는 절반 아래(20%).
 	  공격 태세  받는 피해 +15%, 피해 +(20+집중×2)%, 치명 확률 +15%, 치명 피해 +(치명 확률÷2, 최대 40%), 모든 타격 출혈 1.
 	             집중 4 이상에서 막지도 패링하지도 못하고 맞으면 집중 4를 써서 자동 패링(턴당 1회, 궁극기·패링 불가에도)
 	  방어 태세  받는 피해 −(55+집중×1.25)%, 피해 −(55−집중×2.5)%, (집중×5)% 확률 자동 패링(궁극기·패링 불가에도). 집중 자동 패링은 꺼진다
@@ -62,10 +64,20 @@ local function syncBody(c: Card)
 	end
 end
 
+-- QTE 없는 전투(파티 NewParty)인가. QTE 가 있는 솔로 New 는 옛 QTE 패링이 있으니 기본 패링 확률·패링 실수 봐주기 대신 쓰지 않는다
+local function noQte(c: Card): boolean
+	return H.State(c).NoQte == true
+end
+
+-- 기본 패링 확률(태세별). 위 머리 주석의 근거
+local PARRY_BASE_ATTACK = 0.2
+local PARRY_BASE_DEFENSE = 0.4
+
 local function refreshStance(c: Card)
 	local status = H.Status(c)
 	BattleStatus.RemoveBySource(status, "태세")
 	BattleStatus.RemoveBySource(status, "집중")
+	BattleStatus.RemoveBySource(status, "패링")
 	-- 필수 카드가 태세를 정해 두었으면 그쪽으로 되돌린다
 	local forced = Q(c.Rt, "ForcedStance", 0) -- 1 공격, −1 방어
 	if forced > 0 and not isAttack(c) then
@@ -78,20 +90,31 @@ local function refreshStance(c: Card)
 	if stacks > 0 then
 		BattleStatus.AddModifier(status, "DamageTaken", -0.01 * stacks * per, -1, "집중")
 		BattleStatus.AddModifier(status, "DamageDealt", 0.02 * stacks * per, -1, "집중")
-		-- 최대 스택이면 패링 실수 1개를 더 성공으로 본다(간파와 합산)
+		-- 최대 스택이면 패링 확률 +10%(간파와 합산). QTE 가 있는 전투(솔로 New)에선 옛 '패링 실수 1개 봐주기'
 		if stacks >= Q(c.Rt, "FocusCap", R.Cap(R.FOCUS) or 8) then
-			BattleStatus.AddModifier(status, "ParryForgive", 1, -1, "집중")
+			if noQte(c) then
+				BattleStatus.AddModifier(status, "AutoParry", 0.1, -1, "집중")
+			else
+				BattleStatus.AddModifier(status, "ParryForgive", 1, -1, "집중")
+			end
 		end
 	end
 	local boost = 1 + Q(c.Rt, "StanceBoost", 0)
+	local baseParry = noQte(c)
 	if isAttack(c) then
 		BattleStatus.AddModifier(status, "DamageTaken", math.max(0, 0.15 - Q(c.Rt, "AttackTakenCut", 0)), -1, "태세")
 		BattleStatus.AddModifier(status, "DamageDealt", (0.2 + 0.02 * stacks * per) * boost, -1, "태세")
 		BattleStatus.AddModifier(status, "CritChance", 0.15 * boost, -1, "태세")
+		if baseParry then
+			BattleStatus.AddModifier(status, "AutoParry", math.min(PARRY_BASE_ATTACK * boost, 1), -1, "패링")
+		end
 	else
 		BattleStatus.AddModifier(status, "DamageTaken", -(0.55 + 0.0125 * stacks * per) * boost, -1, "태세")
 		BattleStatus.AddModifier(status, "DamageDealt", math.min(0, -math.max(0, 0.55 - 0.025 * stacks * per) + Q(c.Rt, "DefenseDealtCut", 0)), -1, "태세")
 		BattleStatus.AddModifier(status, "AutoParry", math.min(0.05 * stacks * per * boost, 1), -1, "태세")
+		if baseParry then
+			BattleStatus.AddModifier(status, "AutoParry", math.min(PARRY_BASE_DEFENSE * boost, 1), -1, "패링")
+		end
 	end
 end
 
@@ -103,6 +126,10 @@ M.Duelist_Kit = {
 	Rules = {
 		FocusCap = function(_c: Card, value: number): number
 			return value
+		end,
+		-- 연계(BattleSkillEffects)가 묻는다: QTE 없는 전투면 1
+		PartyParry = function(c: Card, value: number): number
+			return if noQte(c) then 1 else value
 		end,
 	},
 	BattleStart = function(c: Card)
@@ -234,10 +261,14 @@ M.Duelist_Kit = {
 
 -- 「네 번의 준비, 한 번의 반격」은 Duelist_Kit.BeforeTaken 이 한다(위).
 
--- 간파: 가드(막기)의 받는 피해 감소가 절반, 대신 패링 QTE 실패 1개를 더 성공으로 본다
+-- 간파: 가드(막기)의 받는 피해 감소가 절반, 대신 패링 확률 +10%(옛 패링 실수 1개 봐주기 — QTE 가 없어 확률로)
 M.Duelist_Read = {
 	BattleStart = function(c: Card)
-		H.Mod(c, "ParryForgive", 1, -1)
+		if noQte(c) then
+			H.Mod(c, "AutoParry", 0.1, -1)
+		else
+			H.Mod(c, "ParryForgive", 1, -1) -- QTE 가 있는 전투(솔로 New)의 옛 값
+		end
 	end,
 	BeforeTaken = function(_c: Card, info: any)
 		if info.Grade == "Partial" then
@@ -304,7 +335,8 @@ M.Duelist_Guard = {
 
 --=== 필수 ===--
 
--- 철벽: 공격 태세·공격 스킬 없음. 매 턴 도발 {1}. 패링 못 하면 집중 {1}을 얻고 반드시 방어.
+-- 철벽: 공격 태세·공격 스킬 없음. 매 턴 도발 {1}. 패링 못 하고 맞으면 집중 {1}을 얻고 반드시 방어.
+-- (2026-11-08: 방어 태세 고정이라 맞음 등급이 늘 Partial 이라 옛 Fail 조건이 죽어 있었다 → 패링이 터지지 않았을 때(Defend)로.)
 -- 피격 시 그 스킬 기본 피해의 {25}%를 반사. 패링 불가 스킬을 전투당 {1}회 패링(지금 적에게는 없다).
 M.Duelist_E_IronWall = {
 	Rules = {
@@ -322,15 +354,17 @@ M.Duelist_E_IronWall = {
 		local ally = H.Ally(c)
 		ally.Taunt = math.max(ally.Taunt, math.floor(c.V(1)))
 	end,
-	BeforeTaken = function(c: Card, info: any)
+	BeforeTaken = function(_c: Card, info: any)
 		if info.Grade == "Fail" then
 			info.Grade = "Partial"
-			gainFocus(c, math.floor(c.V(2)))
 			return true
 		end
 		return false
 	end,
 	Defend = function(c: Card, info: any)
+		if info.Grade ~= "Success" then
+			gainFocus(c, math.floor(c.V(2)))
+		end
 		local attacker = info.Attacker
 		if attacker and attacker.Alive and info.Skill then
 			local amount = (attacker.Power + info.Skill.Damage) * c.P(3)

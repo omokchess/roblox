@@ -113,6 +113,58 @@ function BattleStage.Tag(part: BasePart, text: string?, color: Color3?)
 end
 
 --[[
+	파티 전투: 아군 칸 위(유닛 머리 위)에 행동 순번 숫자. n 이 nil 이면 지운다.
+	active = 지금 행동하는 칸(금색으로 밝힘), done = 이미 행동한 칸(흐리게).
+]]
+function BattleStage.OrderMark(part: BasePart, n: number?, active: boolean?, done: boolean?)
+	local gui = part:FindFirstChild("OrderMark") :: BillboardGui?
+	if not n then
+		if gui then
+			gui:Destroy()
+		end
+		return
+	end
+	if not gui then
+		local b = Instance.new("BillboardGui")
+		b.Name = "OrderMark"
+		b.Size = UDim2.fromOffset(34, 34)
+		b.StudsOffsetWorldSpace = Vector3.new(0, 8.4, 0)
+		b.AlwaysOnTop = true
+		b.Active = false
+		b.MaxDistance = 300
+		local box = Instance.new("Frame")
+		box.Name = "Box"
+		box.Size = UDim2.fromScale(1, 1)
+		box.BackgroundColor3 = Color3.fromRGB(15, 14, 18)
+		box.BorderSizePixel = 0
+		box.Parent = b
+		local line = Instance.new("UIStroke")
+		line.Name = "Line"
+		line.Thickness = 2
+		line.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		line.Parent = box
+		local label = Instance.new("TextLabel")
+		label.Name = "Text"
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.GothamBlack
+		label.TextSize = 24
+		label.AutoLocalize = false
+		label.Parent = box
+		b.Parent = part
+		gui = b
+	end
+	local box = (gui :: BillboardGui):FindFirstChild("Box") :: Frame
+	local label = box:FindFirstChild("Text") :: TextLabel
+	local line = box:FindFirstChild("Line") :: UIStroke
+	local color = if active then Color3.fromRGB(236, 186, 78) elseif done then Color3.fromRGB(146, 138, 124) else Color3.fromRGB(230, 218, 194)
+	label.Text = tostring(n)
+	label.TextColor3 = color
+	line.Color = color
+	box.BackgroundTransparency = if done then 0.45 else 0.08
+end
+
+--[[
 	여러 칸을 차지한 유닛(보스 부위)의 자리: 칸들 가운데 바닥, 아군 쪽을 본다.
 ]]
 function BattleStage.BlockHome(layout: BattleArena.Layout, cells: { { number } }, width: number, height: number, rayParams: RaycastParams?): CFrame

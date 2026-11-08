@@ -1403,7 +1403,7 @@ local function runParty()
 	expect(hs.Units.player.Health < 500 and hs.Units.ally2.Health < 500, "both units on the cells take damage")
 	expect(hs.Units.ally3.Health == 500, "a unit off the cells takes nothing")
 	expect(results[1].Grade == "Fail" and results[2].Grade == "Fail", "no QTE: units on the cells take the full Fail multiplier")
-	-- 방어는 가드 기술 자체(−70%)로만 — 등급은 늘 Fail(이중 감소 없음, 2026-11-08 총괄). 실제 흐름대로: 고르고 → 턴 시작 → 순서대로 행동 → 적 행동
+	-- 가드를 고른 유닛은 Partial(×0.5) + 가드 기술 −70%(2026-11-08 사용자: "가드는 … 다시 부활"). 실제 흐름대로: 고르고 → 턴 시작 → 순서대로 행동 → 적 행동
 	local gs = hitState()
 	for _, id in GridBattle.ActionOrder(gs) do
 		expect(GridBattle.SetUnitSkill(gs, id, "Guard"), "pick a guard skill for " .. id)
@@ -1420,7 +1420,7 @@ local function runParty()
 	for _, r in guarded do
 		gradeOf[r.Target] = r.Grade
 	end
-	expect(gradeOf.player == "Fail" and gradeOf.ally2 == "Fail", "no QTE: a guarding unit is still graded Fail (the guard skill cuts the damage)")
+	expect(gradeOf.player == "Partial" and gradeOf.ally2 == "Partial", "no QTE: a guarding unit takes the Partial (half) grade")
 	expect(results[1].Target == "ally2" and results[2].Target == "player", "victims are hit in action order (row, then screen-left first)")
 	expect(gs.Units.player.Health > hs.Units.player.Health, "a guarding unit takes less damage than the same unit without guard")
 
@@ -1503,6 +1503,61 @@ local function runParty()
 	local usedSkill = require(ReplicatedStorage.Shared.BattleSkills).ById(usedBasic)
 	expect(usedBasic ~= "Magnetosphere" and usedSkill ~= nil and usedSkill.Range ~= "Supporting",
 		"an idle unit must fall back to its first enemy-hitting skill, not a support skill (" .. tostring(usedBasic) .. ")")
+end
+
+--[[
+	파티 전투 처치 귀속(2026-11-08): 조작 중인 유닛이 없을 때(턴 끝 지속 피해·반사 등) 적이 쓰러지면
+	그 적에게 지속 피해를 건 유닛만 [처치하면] 효과를 받는다. 건 유닛을 모르면 아무도 받지 않는다. 솔로는 그대로 모두(하나).
+]]
+local function runPartyKillCredit()
+	local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
+	local BattleStatus = require(ReplicatedStorage.Shared.BattleStatus)
+	local seed = 7
+	local function rng(): number
+		seed = (seed * 48271) % 2147483647
+		return seed / 2147483647
+	end
+	local function member(classId: string, x: number, y: number, cards: { any }?): any
+		return { ClassId = classId, X = x, Y = y, Cards = cards or {}, Name = classId, Health = 500, Power = 10, Stamina = 200 }
+	end
+	-- 광전사(player, 뒤열)가 먼저 행동해 폭발로 출혈을 건다. 연금술사(ally2)는 [채집: 처치하면 약재]를 들고 있다
+	local function setup(): (any, any)
+		local state = GridBattle.NewParty(1, {
+			member("Berserker", 6, 1),
+			member("Alchemist", 5, 1, { { CardId = "Alchemist_C_Killherb", Level = 1 } }),
+		}, { Name = "처치 귀속", Enemies = { "Slime" }, Cells = { { 1, 1 } }, HealthScale = 1000, PowerScale = 1 })
+		GridBattle.SetUnitSkill(state, "player", "Burst")
+		GridBattle.BeginTurn(state)
+		GridBattle.ResolveUnitSkill(state, "player", rng)
+		GridBattle.ResolveUnitSkill(state, "ally2", rng)
+		return state, GridBattle.AliveEnemies(state)[1]
+	end
+	local function herbs(state: any): number
+		return BattleStatus.Stack(state.Units.ally2.Status, ClassResources.HERB)
+	end
+
+	-- 1) 광전사가 건 출혈 → 도트 주인 = 광전사. 쓰러져도 연금술사의 처치 효과는 안 돈다
+	local state, enemy = setup()
+	expect(enemy.Status.Bleed > 0, "the berserker's skill must have put bleed on the enemy")
+	expect(enemy.DotOwner == "player", "the unit that built the damage-over-time must be recorded as its owner")
+	local before = herbs(state)
+	GridBattle.DebugHitPart(state, enemy.Id, 1e9)
+	expect(not enemy.Alive, "the debug hit must kill the enemy")
+	expect(herbs(state) == before, "a kill owned by another unit must not trigger this unit's on-kill card")
+
+	-- 2) 주인이 연금술사면 받는다
+	state, enemy = setup()
+	enemy.DotOwner = "ally2"
+	before = herbs(state)
+	GridBattle.DebugHitPart(state, enemy.Id, 1e9)
+	expect(herbs(state) > before, "the owner of the damage-over-time must get the on-kill effect")
+
+	-- 3) 주인을 모르면 아무도 받지 않는다
+	state, enemy = setup()
+	enemy.DotOwner = nil
+	before = herbs(state)
+	GridBattle.DebugHitPart(state, enemy.Id, 1e9)
+	expect(herbs(state) == before, "an unattributed kill must not trigger on-kill cards")
 end
 
 function PrototypeTests.RunSystems()
@@ -2741,6 +2796,7 @@ function PrototypeTests.RunSystems()
 		runCardEffects()
 		runStatusAndSkillEffects()
 		runParty()
+		runPartyKillCredit()
 	end
 
 	--=== 직업별 스킬 ===--

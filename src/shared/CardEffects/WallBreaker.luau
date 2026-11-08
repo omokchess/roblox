@@ -435,7 +435,7 @@ M.WallBreaker_C_ShortWindup = {
 	end,
 }
 
--- 무방비: 패링·방어에 실패한 다음 턴에 주는 피해 +{1}%, 받는 피해 +{2}%
+-- 무방비: 가드도 패링도 없이 맞은 턴의 다음 턴에 주는 피해 +{1}%, 받는 피해 +{2}%(2026-11-08 글만 — 옛 '패링·방어에 실패한')
 M.WallBreaker_C_Defenceless = {
 	Defend = function(c: Card, info: any)
 		if info.Grade == "Fail" then
