@@ -42,6 +42,7 @@ local CardEffects = require(script.Parent.CardEffects)
 local ClassResources = require(script.Parent.ClassResources)
 local EnemyDefinitions = require(script.Parent.EnemyDefinitions)
 local GroggyGauge = require(script.Parent.GroggyGauge)
+local PartyDefinitions = require(script.Parent.PartyDefinitions)
 local ProgressionDefinitions = require(script.Parent.ProgressionDefinitions)
 local QteDefinitions = require(script.Parent.QteDefinitions)
 local TowerDefinitions = require(script.Parent.TowerDefinitions)
@@ -101,6 +102,24 @@ export type Unit = {
 	Plans: { any }?,
 	-- 적 정의 Id(EnemyDefinitions). 클라이언트가 모양을 고른다(칼리스토 = 사람 모양)
 	DefId: string?,
+	-- 알코르 쌍둥이 표시(아군 진형에 서지만 맞지 않는다)
+	Twin: boolean?,
+	--[[
+		파티 전투(2026-11-08): 아군 유닛마다 따로 가진 것. 유닛을 '조작 중'으로 묶을 때(bindUnit) state 의 같은 이름 칸과 맞바꾼다.
+		  ClassId · Stats · Runtime(카드 실행기) · Homing(이번 턴 유도) · Chosen(이번 턴 고른 스킬 Id)
+		  LastSkillId · Acted · Attacked · Moved · StanceToggledTurn · BossFx(검수 효과 묶음)
+	]]
+	ClassId: string?,
+	Stats: { [string]: number }?,
+	Runtime: any?,
+	Homing: boolean?,
+	Chosen: string?,
+	LastSkillId: string?,
+	Acted: boolean?,
+	Attacked: boolean?,
+	Moved: boolean?,
+	StanceToggledTurn: number?,
+	BossFx: any?,
 }
 
 --[[
@@ -130,6 +149,7 @@ export type CallistoState = {
 	AlcorTwinId: string?,
 	-- 심베라즈마로 던진 뒤 다음 턴 [묶임](질문 6-A) — 턴 끝(공통 묶임 풀기 뒤)에 건다
 	BindNext: boolean?,
+	BindUnits: { [string]: boolean }?,
 	-- 북두칠성에 실을 [성위 - 점멸] 보너스(질문 10 — 점멸 스택마다 +10%, 북두칠성을 고를 때 스택을 쓴다)
 	DipperBonus: number?,
 	AlcorCount: number,
@@ -286,6 +306,20 @@ export type State = {
 	Boss: BossState?,
 	-- 칼리스토전이면 있다
 	Callisto: CallistoState?,
+	--[[
+		파티 전투(2026-11-08). AllyId 는 '지금 조작 중인 유닛'(솔로는 늘 "player"). PrimaryId 는 가만히 있을 때 가리키는 유닛.
+		Round: 한 턴의 진행 — Phase "Prepare"(배치·스킬·유도) → "Acting"(BeginTurn 이후, Order 순서대로) → "Enemy"(아군 행동 끝)
+	]]
+	PrimaryId: string,
+	Party: boolean,
+	Round: Round,
+	BindDepth: number,
+}
+
+export type Round = {
+	Phase: "Prepare" | "Acting" | "Enemy",
+	Order: { string },
+	Next: number,
 }
 
 export type DebugFlags = {
@@ -331,6 +365,93 @@ local function query(state: State, key: string, base: number): number
 	return CardEffects.Query(state.Runtime, key, base)
 end
 
+--[[
+	파티 전투: 유닛을 '조작 중'으로 묶는다(2026-11-08).
+	엔진 곳곳(카드 훅·스킬·피격)은 state.AllyId / AllyClassId / AllyStats / Runtime / LastSkillId / Acted / Attacked / Moved /
+	StanceToggledTurn 과 boss 의 검수 효과(Tester·Locked …)를 '그 아군 것'으로 읽는다. 유닛을 바꿔 묶으면 지금 값을 원래 유닛에 되돌려
+	적고 새 유닛 값을 올린다. 솔로(유닛 하나)는 바뀌는 게 없다.
+]]
+local BOSS_FX = { "Tester", "TesterShield", "Locked", "LockImmune", "StaminaDebt", "OwnBindImmune" }
+
+local function saveBound(state: State)
+	local cur = state.Units[state.AllyId]
+	if not cur then
+		return
+	end
+	cur.ClassId, cur.Stats, cur.Runtime = state.AllyClassId, state.AllyStats, state.Runtime
+	cur.LastSkillId, cur.Acted, cur.Attacked = state.LastSkillId, state.Acted, state.Attacked
+	cur.Moved, cur.StanceToggledTurn = state.Moved, state.StanceToggledTurn
+	local boss: any = state.Boss
+	if boss then
+		local fx: { [string]: any } = {}
+		for _, key in BOSS_FX do
+			fx[key] = boss[key]
+		end
+		cur.BossFx = fx
+	end
+end
+
+local function bindUnit(state: State, id: string)
+	if state.AllyId == id then
+		return
+	end
+	local unit = state.Units[id]
+	if not unit then
+		return
+	end
+	saveBound(state)
+	state.AllyId = id
+	state.AllyClassId = unit.ClassId or state.AllyClassId
+	state.AllyStats = unit.Stats or {}
+	state.Runtime = unit.Runtime
+	state.LastSkillId = unit.LastSkillId or ""
+	state.Acted, state.Attacked = unit.Acted == true, unit.Attacked == true
+	state.Moved, state.StanceToggledTurn = unit.Moved == true, unit.StanceToggledTurn or 0
+	local boss: any = state.Boss
+	if boss then
+		local fx = unit.BossFx or {}
+		for _, key in BOSS_FX do
+			boss[key] = fx[key]
+		end
+	end
+end
+
+-- fn 을 id 유닛으로 묶은 채 부르고 원래 유닛으로 돌아온다
+local function withUnit(state: State, id: string, fn: (...any) -> ...any, ...: any): ...any
+	local prev = state.AllyId
+	bindUnit(state, id)
+	state.BindDepth += 1
+	local results = table.pack(fn(...))
+	state.BindDepth -= 1
+	bindUnit(state, prev)
+	return table.unpack(results, 1, results.n)
+end
+
+-- 살아 있는 아군 유닛(쌍둥이 빼고), Id 순. dead 도 넣으려면 includeDead
+local function allyUnits(state: State, includeDead: boolean?): { Unit }
+	local list: { Unit } = {}
+	for _, unit in state.Units do
+		if unit.Side == "Ally" and not unit.Twin and (includeDead or unit.Alive) then
+			table.insert(list, unit)
+		end
+	end
+	table.sort(list, function(a, b)
+		return a.Id < b.Id
+	end)
+	return list
+end
+
+-- 훅을 아군 유닛 전부의 카드 실행기에 쏜다(각자 묶은 채)
+local function fireAll(state: State, hook: string, ...: any): number
+	local total = 0
+	for _, unit in allyUnits(state) do
+		total += withUnit(state, unit.Id, function(...)
+			return fire(state, hook, ...)
+		end, ...) :: number
+	end
+	return total
+end
+
 -- 결정적 난수(카드·치명타). 선형 합동 — 같은 씨앗이면 같은 수열
 -- Park–Miller. 곱이 2^53 안에 머문다(예전 1103515245 곱은 double 정밀도를 넘어 수열이 무너졌다).
 -- 다단히트 규칙은 BattleSkills.HitShares (타마다 독립 타격, 타당 skill_base 를 낮춤)
@@ -356,11 +477,11 @@ local function dotTuple(status: any): { number }
 	return { status.Bleed, status.Poison, status.Burn, status.Oil, status.Stacks[ClassResources.ZEAL] or 0 }
 end
 
-local function watchBegin(state: State): any
-	local ally = state.Units[ALLY_ID]
+local function watchBegin(state: State, noDots: boolean?): any
+	local ally = state.Units[state.AllyId]
 	local dots = {}
 	for id, unit in state.Units do
-		if unit.Side == "Enemy" then
+		if unit.Side == "Enemy" and not noDots then
 			dots[id] = dotTuple(unit.Status)
 		end
 	end
@@ -368,7 +489,7 @@ local function watchBegin(state: State): any
 end
 
 local function watchEnd(state: State, before: any)
-	local ally = state.Units[ALLY_ID]
+	local ally = state.Units[state.AllyId]
 	if not state.Runtime or not ally then
 		return
 	end
@@ -674,7 +795,7 @@ end
 -- 아군이 선 칸의 효과("Buff" | "Debuff" | "Heal" | nil)
 local function standingMod(state: State): string?
 	local boss = state.Boss
-	local cell = BattleGrid.CellOf(state.Grid, ALLY_ID)
+	local cell = BattleGrid.CellOf(state.Grid, state.AllyId)
 	if not boss or not cell then
 		return nil
 	end
@@ -686,7 +807,7 @@ local function _bossLaneOk(state: State, unit: Unit): boolean
 	if not unit.Block then
 		return true
 	end
-	local cell = BattleGrid.CellOf(state.Grid, ALLY_ID)
+	local cell = BattleGrid.CellOf(state.Grid, state.AllyId)
 	if not cell then
 		return false
 	end
@@ -816,7 +937,7 @@ end
 -- 아군이 검은 칸(검수됨!) 위에 있나
 local function onChecked(state: State): boolean
 	local boss = state.Boss
-	local cell = BattleGrid.CellOf(state.Grid, ALLY_ID)
+	local cell = BattleGrid.CellOf(state.Grid, state.AllyId)
 	return boss ~= nil and cell ~= nil and boss.Deleted[BattleGrid.CellKey("Ally", cell.X, cell.Y)] ~= nil
 end
 
@@ -824,7 +945,7 @@ end
 local function onPending(state: State): boolean
 	local boss = state.Boss
 	local plan = boss and boss.DeletePlan
-	local cell = BattleGrid.CellOf(state.Grid, ALLY_ID)
+	local cell = BattleGrid.CellOf(state.Grid, state.AllyId)
 	if not plan or not cell then
 		return false
 	end
@@ -847,6 +968,27 @@ local function enabledAllyCells(state: State): { { number } }
 		end
 	end
 	return cells
+end
+
+--[[
+	추적(Seek)·대상 기준 공격의 대상 아군(2026-11-08 파티): 도발 스택이 가장 큰 유닛(같으면 Id 순), 없으면 rng 로 산 유닛 하나.
+	산 아군이 하나뿐이면 rng 를 쓰지 않는다(솔로 재현). 예고 때 정해 Plan.TargetId 에 적는다.
+]]
+local function pickTarget(state: State, rng: () -> number): Unit?
+	local list = allyUnits(state)
+	if #list <= 1 then
+		return list[1]
+	end
+	local best: Unit? = nil
+	for _, u in list do
+		if u.Taunt > 0 and (not best or u.Taunt > best.Taunt) then
+			best = u
+		end
+	end
+	if best then
+		return best
+	end
+	return list[math.floor(rng() * #list) + 1]
 end
 
 -- pool 에서 조건에 맞는 칸 하나를 무작위로 뽑아 빼낸다
@@ -1135,9 +1277,25 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 		pushLog(state, "디버그가 멈칫했다 — 이번 턴은 예고가 없다")
 		return
 	end
-	local ally = BattleGrid.CellOf(state.Grid, ALLY_ID)
-	if not ally then
+	local anyAlly = allyUnits(state)[1]
+	if not anyAlly or not BattleGrid.CellOf(state.Grid, anyAlly.Id) then
 		return
+	end
+	-- 파티: 부위마다 이번 턴 노릴 아군을 하나 정한다(도발 최대 → rng). 솔로는 늘 그 하나
+	local targetMemo: { [string]: { Unit: Unit, Cell: BattleGrid.Cell } } = {}
+	local function targetFor(key: string?): (Unit?, BattleGrid.Cell?)
+		local k = key or ""
+		local t = targetMemo[k]
+		if not t then
+			local u = pickTarget(state, rng)
+			local cell = u and BattleGrid.CellOf(state.Grid, u.Id)
+			if not u or not cell then
+				return nil, nil
+			end
+			t = { Unit = u, Cell = cell }
+			targetMemo[k] = t
+		end
+		return t.Unit, t.Cell
 	end
 	local grid = state.Grid
 	local turn = state.Turn
@@ -1169,6 +1327,10 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 	local function useSkill(unit: Unit, skillId: string): boolean
 		local skill = BattleSkills.ById(skillId)
 		if not skill then
+			return false
+		end
+		local targetUnit, ally = targetFor(unit.Part)
+		if not targetUnit or not ally then
 			return false
 		end
 		local cells, safe = bossCells(state, skillId, rng, ally)
@@ -1210,7 +1372,7 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 			table.insert(nextCombo, { Kind = "Spread" })
 			table.insert(nextNotes, "버그 연쇄: 다음 턴 코어 공격이 버그 칸까지 번진다")
 		end
-		local plan = { SkillId = skillId, Cells = cells, Kind = kind, Safe = safe }
+		local plan = { SkillId = skillId, Cells = cells, Kind = kind, Safe = safe, TargetId = targetUnit.Id }
 		if kind == "Buff" then
 			if BOSS_BUFFS[skillId] then
 				addBossBuff(state, skillId)
@@ -1314,7 +1476,12 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 
 	-- 칸 기믹 2: 패치 적용(서브코어-패치, 홀수 턴)
 	local patch = bossPart(state, "PatchArm")
-	local headLane: number? = if bossPart(state, "Head") then ally.Y else nil
+	local headCell: BattleGrid.Cell? = nil
+	if bossPart(state, "Head") then
+		local _, cell = targetFor("Head")
+		headCell = cell
+	end
+	local headLane: number? = if headCell then headCell.Y else nil
 	if patch and turn % 2 == 1 and not GroggyGauge.IsStunned(patch.Groggy) and (boss.PartStun.PatchArm or 0) <= 0 then
 		patchCells(state, rng, headLane, keepNext)
 	end
@@ -1366,8 +1533,12 @@ local function bossPlan(state: State, rng: () -> number, planned: { Unit })
 				local chargeSkill = BattleSkills.ById(charge.SkillId)
 				local releaseId = chargeSkill and chargeSkill.Release
 				if releaseId then
-					local cells = bossCells(state, releaseId, rng, ally)
-					attach(unit, { SkillId = releaseId, Cells = cells, Kind = "Attack", Release = true })
+					local relUnit, relCell = targetFor(key)
+					if not relUnit or not relCell then
+						continue
+					end
+					local cells = bossCells(state, releaseId, rng, relCell)
+					attach(unit, { SkillId = releaseId, Cells = cells, Kind = "Attack", Release = true, TargetId = relUnit.Id })
 					pushLog(state, string.format("%s — 충전 완료! 이번 턴 [%s]가 터진다(아직 끊을 수 있다)", unit.Name, (BattleSkills.ById(releaseId) :: any).Name))
 					usedNow[releaseId] = true
 					continue
@@ -1469,18 +1640,32 @@ end
 	배치는 사양의 6×3 격자다. 적이 여럿이면 라인을 갈라 세워, 라인 회피가 실제로
 	의미를 갖게 한다(같은 라인에 몰아 두면 한 번에 쓸린다).
 ]]
-function GridBattle.New(
-	floor: number,
-	allyName: string,
-	allyHealth: number,
-	allyPower: number,
-	allyClassId: string?,
-	allyFaith: number?,
-	allyStamina: number?,
-	allyCards: { CardEffects.Owned }?,
-	encounter: Encounter?,
-	allyStats: { [string]: number }?
-): State
+export type PartyMember = {
+	ClassId: string,
+	X: number,
+	Y: number,
+	Cards: { CardEffects.Owned }?,
+	Name: string?,
+	Health: number?,
+	Power: number?,
+	Stats: { [string]: number }?,
+	Faith: number?,
+	Stamina: number?,
+}
+
+--[[
+	파티 전투(2026-11-08): 아군 유닛 여럿으로 전투를 세운다. members[1] 은 Id "player", 그 뒤는 "ally2", "ally3" …
+	opts.SkipValidate: 코스트·구성 검사를 건너뛴다(솔로 New 가 쓴다). 실패하면 error.
+]]
+function GridBattle.NewParty(floor: number, members: { PartyMember }, encounter: Encounter?, opts: { SkipValidate: boolean? }?): State
+	if not (opts and opts.SkipValidate) then
+		local ok, reason = PartyDefinitions.Validate(members)
+		if not ok then
+			error("[GridBattle.NewParty] " .. tostring(reason), 2)
+		end
+	end
+	assert(#members >= 1, "파티에 유닛이 없습니다")
+	local first = members[1]
 	local definition = TowerDefinitions.Get(floor)
 	local grid = BattleGrid.New()
 	local enemyIds = if encounter and #encounter.Enemies > 0 then encounter.Enemies else definition.Enemies
@@ -1492,12 +1677,16 @@ function GridBattle.New(
 		Grid = grid,
 		Units = {},
 		AllyId = ALLY_ID,
-		AllyClassId = allyClassId or "Berserker",
+		PrimaryId = ALLY_ID,
+		Party = #members > 1,
+		Round = { Phase = "Prepare", Order = {}, Next = 1 },
+		BindDepth = 0,
+		AllyClassId = first.ClassId or "Berserker",
 		Turn = 1,
 		Outcome = "Ongoing",
 		LastSkillId = "",
 		Planned = {},
-		Cards = allyCards or {},
+		Cards = first.Cards or {},
 		Acted = false,
 		Log = {},
 		Events = {},
@@ -1506,31 +1695,46 @@ function GridBattle.New(
 		Moved = false,
 		Attacked = false,
 		StanceToggledTurn = 0,
-		AllyStats = allyStats or {},
+		AllyStats = first.Stats or {},
 		RandomState = (floor * 7919 + 1) % 2147483648,
 	}
 
-	state.Units[ALLY_ID] = {
-		Id = ALLY_ID,
-		Name = allyName,
-		Side = "Ally",
-		Health = allyHealth,
-		MaxHealth = allyHealth,
-		Power = allyPower,
-		Groggy = GroggyGauge.New(),
-		Taunt = 0,
-		Status = BattleStatus.New(),
-		Faith = allyFaith or 0,
-		Stamina = allyStamina or 60,
-		MaxStamina = allyStamina or 60,
-		SkillIndex = 1,
-		Alive = true,
-		Cooldowns = {},
-	}
-	-- 패시브로 들고 시작하는 자원(음악가 박자표, 연금술사 약재·빈 병 등).
-	BattleSkillEffects.ApplyStartingStacks(state.Units[ALLY_ID].Status, state.AllyClassId)
-	-- 아군은 전열 가운데 라인에서 시작한다.
-	BattleGrid.Place(grid, ALLY_ID, "Ally", 1, 2)
+	for index, member in members do
+		local id = if index == 1 then ALLY_ID else "ally" .. index
+		local stamina = member.Stamina or 60
+		local unit: Unit = {
+			Id = id,
+			Name = member.Name or member.ClassId,
+			Side = "Ally",
+			Health = member.Health or 60,
+			MaxHealth = member.Health or 60,
+			Power = member.Power or 0,
+			Groggy = GroggyGauge.New(),
+			Taunt = 0,
+			Status = BattleStatus.New(),
+			Faith = member.Faith or 0,
+			Stamina = stamina,
+			MaxStamina = stamina,
+			SkillIndex = 1,
+			Alive = true,
+			Cooldowns = {},
+			ClassId = member.ClassId or "Berserker",
+			Stats = if index == 1 then state.AllyStats else (member.Stats or {}),
+			Homing = false,
+			LastSkillId = "",
+			Acted = false,
+			Attacked = false,
+			Moved = false,
+			StanceToggledTurn = 0,
+		}
+		state.Units[id] = unit
+		-- 패시브로 들고 시작하는 자원(음악가 박자표, 연금술사 약재·빈 병 등).
+		BattleSkillEffects.ApplyStartingStacks(unit.Status, unit.ClassId :: string)
+		local placed, reason = BattleGrid.Place(grid, id, "Ally", member.X, member.Y)
+		if not placed then
+			error("[GridBattle.NewParty] " .. tostring(reason), 2)
+		end
+	end
 
 	-- 보스가 편성에 있으면 보스 하나만 세운다(적 진영을 통째로 차지한다)
 	local bossDef: EnemyDefinitions.EnemyDefinition? = nil
@@ -1634,14 +1838,54 @@ function GridBattle.New(
 		이어서 1턴 몫의 `매 턴` 효과도 한 번 쏜다. 이게 없으면 조건부 보정값
 		("체력 30% 아래면 피해 +12%")이 1턴에는 통째로 빠진 채 시작한다.
 	]]
-	state.Runtime = CardEffects.NewRuntime(state, allyCards, makeEnv(state), state.AllyClassId)
-	local watch = watchBegin(state)
-	local started = fire(state, "BattleStart") + fire(state, "TurnStart", state.Turn)
-	watchEnd(state, watch)
+	local env = makeEnv(state)
+	for index, member in members do
+		local unit = state.Units[if index == 1 then ALLY_ID else "ally" .. index]
+		unit.Runtime = CardEffects.NewRuntime(state, member.Cards, env, unit.ClassId)
+	end
+	state.Runtime = state.Units[ALLY_ID].Runtime
+	local started = 0
+	for _, unit in allyUnits(state) do
+		started += withUnit(state, unit.Id, function(): number
+			local watch = watchBegin(state)
+			local n = fire(state, "BattleStart") + fire(state, "TurnStart", state.Turn)
+			watchEnd(state, watch)
+			return n
+		end) :: number
+	end
 	if started > 0 then
 		pushLog(state, string.format("능력 카드 %d개 발동", started))
 	end
 	return state
+end
+
+-- 솔로 전투(유닛 하나짜리 파티). 예전과 똑같이 돈다
+function GridBattle.New(
+	floor: number,
+	allyName: string,
+	allyHealth: number,
+	allyPower: number,
+	allyClassId: string?,
+	allyFaith: number?,
+	allyStamina: number?,
+	allyCards: { CardEffects.Owned }?,
+	encounter: Encounter?,
+	allyStats: { [string]: number }?
+): State
+	return GridBattle.NewParty(floor, {
+		{
+			ClassId = allyClassId or "Berserker",
+			X = 1,
+			Y = 2,
+			Cards = allyCards,
+			Name = allyName,
+			Health = allyHealth,
+			Power = allyPower,
+			Stats = allyStats,
+			Faith = allyFaith,
+			Stamina = allyStamina,
+		},
+	}, encounter, { SkipValidate = true })
 end
 
 --=== 조회 ===--
@@ -1812,30 +2056,44 @@ end
 	아군을 자기 진영 안에서 옮긴다(사양: "매 턴마다 해당 격자 내에서 움직이며").
 	진영을 넘어가는 이동은 BattleGrid.Move가 막는다.
 ]]
+-- 지금 조작 중인 유닛이 못 움직이는 까닭(없으면 nil)
+local function moveBlocked(state: State): string?
+	local ally = GridBattle.Ally(state)
+	if GroggyGauge.IsStunned(ally.Groggy) then
+		return "그로기 상태에서는 움직일 수 없습니다."
+	end
+	if state.Boss and (state.Boss.Locked or 0) > 0 then
+		return "검수 준비중 칸에서 턴을 마쳐 이번 턴은 움직일 수 없습니다."
+	end
+	if BattleStatus.Stack(ally.Status, ClassResources.BIND) > 0 then
+		return "[묶임] — 이번 턴은 움직일 수 없습니다."
+	end
+	return nil
+end
+
+-- 옮긴 뒤 처리(이동 기록 · 카드 Move 훅 · 칼리스토 별자리 칸)
+local function afterMove(state: State, fromX: number, fromY: number, x: number, y: number)
+	state.Moved = true
+	local watch = watchBegin(state)
+	fire(state, "Move", { FromX = fromX, FromY = fromY, ToX = x, ToY = y })
+	if state.Callisto then
+		GridBattle.CallistoStar(state)
+	end
+	watchEnd(state, watch)
+end
+
 function GridBattle.MoveAlly(state: State, x: number, y: number): (boolean, string?)
 	if state.Outcome ~= "Ongoing" then
 		return false, "전투가 끝났습니다."
 	end
-	local ally = GridBattle.Ally(state)
-	if GroggyGauge.IsStunned(ally.Groggy) then
-		return false, "그로기 상태에서는 움직일 수 없습니다."
-	end
-	if state.Boss and (state.Boss.Locked or 0) > 0 then
-		return false, "검수 준비중 칸에서 턴을 마쳐 이번 턴은 움직일 수 없습니다."
-	end
-	if BattleStatus.Stack(ally.Status, ClassResources.BIND) > 0 then
-		return false, "[묶임] — 이번 턴은 움직일 수 없습니다."
+	local blocked = moveBlocked(state)
+	if blocked then
+		return false, blocked
 	end
 	local from = BattleGrid.CellOf(state.Grid, state.AllyId)
 	local ok, reason = BattleGrid.Move(state.Grid, state.AllyId, x, y)
 	if ok and from and (from.X ~= x or from.Y ~= y) then
-		state.Moved = true
-		local watch = watchBegin(state)
-		fire(state, "Move", { FromX = from.X, FromY = from.Y, ToX = x, ToY = y })
-		if state.Callisto then
-			GridBattle.CallistoStar(state)
-		end
-		watchEnd(state, watch)
+		afterMove(state, from.X, from.Y, x, y)
 	end
 	return ok, reason
 end
@@ -1898,8 +2156,7 @@ local function callistoNextPage(state: State, unit: Unit, c: CallistoState)
 	unit.MaxHealth, unit.Health = health, health
 	-- 1페이즈 것 정리: 작은 곰 자리 · 아군 고찰(심베라즈마가 3페이즈엔 없다)
 	BattleStatus.SpendAll(unit.Status, ClassResources.URSA_MINOR)
-	local ally = state.Units[ALLY_ID]
-	if ally then
+	for _, ally in allyUnits(state, true) do
 		BattleStatus.SpendAll(ally.Status, ClassResources.GOCHAL)
 		BattleStatus.RemoveBySource(ally.Status, "고찰")
 		BattleStatus.SpendAll(ally.Status, ClassResources.MIZAR)
@@ -1983,9 +2240,9 @@ local function damageUnit(
 	--[[
 		아군이 쓰러지기 직전 — 카드(재기·불굴)가 막을 수 있다. Cancel 이면 Health 로 버틴다.
 	]]
-	if unit.Id == ALLY_ID and unit.Health <= 0 and unit.Alive then
+	if unit.Side == "Ally" and not unit.Twin and unit.Health <= 0 and unit.Alive then
 		local save = { Cancel = false, Health = 1 }
-		fire(state, "Lethal", save)
+		withUnit(state, unit.Id, fire, state, "Lethal", save)
 		if save.Cancel then
 			unit.Health = math.clamp(math.floor(save.Health), 1, unit.MaxHealth)
 		end
@@ -1995,8 +2252,8 @@ local function damageUnit(
 		카드의 `피해를 받으면` 효과. 격노처럼 맞을 때마다 자원을 버는 카드가 쓴다.
 		실제로 체력이 깎였을 때만 — 보호막이 전부 막았으면 맞은 것이 아니다.
 	]]
-	if unit.Id == ALLY_ID and dealt > 0 and unit.Alive then
-		fire(state, "Damaged", { Amount = dealt, Element = kind })
+	if unit.Side == "Ally" and not unit.Twin and dealt > 0 and unit.Alive then
+		withUnit(state, unit.Id, fire, state, "Damaged", { Amount = dealt, Element = kind })
 	end
 
 	if unit.Health <= 0 and unit.Alive then
@@ -2005,7 +2262,11 @@ local function damageUnit(
 		pushLog(state, string.format("%s 쓰러짐", unit.Name))
 		-- 카드의 `적을 처치하면` 효과.
 		if unit.Side == "Enemy" then
-			fire(state, "Kill", { Target = unit })
+			if state.BindDepth > 0 then
+				fire(state, "Kill", { Target = unit })
+			else
+				fireAll(state, "Kill", { Target = unit })
+			end
 		end
 		if unit.DefId == "Alcor" then
 			removeAlcorTwin(state)
@@ -2025,12 +2286,13 @@ end
 -- 회복하고, 아군이 실제로 회복했으면 카드 훅(Healed)을 쏜다
 local function heal(state: State, unit: Unit, amount: number): number
 	-- 보스 궁극기(블루스크린)를 맞은 뒤 몇 턴은 아군이 어떤 회복도 못 받는다
-	if unit.Id == ALLY_ID and state.Boss and state.Boss.NoHeal > 0 then
+	local isAlly = unit.Side == "Ally" and not unit.Twin
+	if isAlly and state.Boss and state.Boss.NoHeal > 0 then
 		return 0
 	end
 	local gained = healUnit(unit, amount)
-	if gained > 0 and unit.Id == ALLY_ID then
-		fire(state, "Healed", { Amount = gained })
+	if gained > 0 and isAlly then
+		withUnit(state, unit.Id, fire, state, "Healed", { Amount = gained })
 	end
 	return gained
 end
@@ -2070,7 +2332,7 @@ end
 makeEnv = function(state: State): any
 	return {
 		Ally = function()
-			return state.Units[ALLY_ID]
+			return state.Units[state.AllyId]
 		end,
 		Allies = function()
 			return GridBattle.Allies(state)
@@ -2079,7 +2341,7 @@ makeEnv = function(state: State): any
 			return GridBattle.AliveEnemies(state)
 		end,
 		Gain = function(id: string, amount: number): number
-			return gainResource(state, state.Units[ALLY_ID], id, amount)
+			return gainResource(state, state.Units[state.AllyId], id, amount)
 		end,
 		Heal = function(unit: Unit, amount: number): number
 			return heal(state, unit, amount)
@@ -2114,23 +2376,14 @@ GridBattle.GainResource = gainResource
 
 -- 아군 전체(솔로면 자기 하나). "아군 전체" 효과가 도는 목록이다.
 function GridBattle.Allies(state: State): { Unit }
-	local list: { Unit } = {}
-	for _, unit in state.Units do
-		if unit.Side == "Ally" and unit.Alive then
-			table.insert(list, unit)
-		end
-	end
-	table.sort(list, function(a, b)
-		return a.Id < b.Id
-	end)
-	return list
+	return allyUnits(state)
 end
 
 local function refreshOutcome(state: State)
 	if state.Outcome ~= "Ongoing" then
 		return
 	end
-	if not GridBattle.Ally(state).Alive then
+	if #allyUnits(state) == 0 then
 		state.Outcome = "Defeat"
 		pushLog(state, "패배")
 		return
@@ -2174,7 +2427,11 @@ function GridBattle.DebugSetHealth(state: State, unitId: string, value: number)
 		BattleGrid.Remove(state.Grid, unit.Id)
 		pushLog(state, string.format("[디버그] %s 쓰러짐", unit.Name))
 		if unit.Side == "Enemy" then
-			fire(state, "Kill", { Target = unit })
+			if state.BindDepth > 0 then
+				fire(state, "Kill", { Target = unit })
+			else
+				fireAll(state, "Kill", { Target = unit })
+			end
 		end
 		if unit.DefId == "Alcor" then
 			removeAlcorTwin(state)
@@ -2229,6 +2486,48 @@ local function callistoSkillHit(state: State, hits: { Unit }, grade: string, fre
 			c.StruckAlcor = true
 		end
 	end
+end
+
+--[[
+	유도(2026-11-08 사용자: "유도 스킬을 원하는 유닛한테 붙이면, 자신의 행에 적이 없을 때 바로 위, 혹은 아래 행을 탐지"):
+	유도가 붙은 유닛은 자기 행(y)에 산 적(보스 부위 칸 포함)이 없으면 y-1 행에 적이 있을 때 그 행, 없으면 y+1 행에 있을 때 그 행을 겨눈다.
+	셋 다 비었으면 자기 행 그대로(헛침). 범위 모양은 그 행 기준으로 그대로. **판정(ResolveSkill)과 미리보기(PreviewCells)가 이 함수를 같이 쓴다.**
+]]
+local function laneHasEnemy(state: State, y: number): boolean
+	return BattleGrid.FirstOccupiedColumn(state.Grid, "Enemy", y) ~= nil
+end
+
+local function homingLane(state: State, y: number, homing: boolean?): number
+	if not homing or laneHasEnemy(state, y) then
+		return y
+	end
+	if y > 1 and laneHasEnemy(state, y - 1) then
+		return y - 1
+	end
+	if y < state.Grid.Height and laneHasEnemy(state, y + 1) then
+		return y + 1
+	end
+	return y
+end
+
+-- 이 모양(모션)이 겨눌 행. 아군을 겨누는 모양(TargetSide Ally)은 유도와 상관없이 자기 행
+local function aimLane(state: State, y: number, shape: BattleGrid.Shape, homing: boolean?): number
+	if shape.TargetSide == "Ally" then
+		return y
+	end
+	return homingLane(state, y, homing)
+end
+
+-- 공개: 유닛 id 가 (homing 생략 = 그 유닛의 지금 유도 여부) 쏠 때 겨누는 행
+function GridBattle.AimLane(state: State, id: string, homing: boolean?): number?
+	local unit, cell = state.Units[id], BattleGrid.CellOf(state.Grid, id)
+	if not unit or not cell then
+		return nil
+	end
+	if homing == nil then
+		homing = unit.Homing == true
+	end
+	return homingLane(state, cell.Y, homing)
 end
 
 function GridBattle.ResolveSkill(
@@ -2337,8 +2636,9 @@ function GridBattle.ResolveSkill(
 	local motionHitUnits: { { Unit } } = {}
 	local hitUnits: { Unit } = {}
 	local seenUnit: { [string]: boolean } = {}
+	local homing = ally.Homing == true
 	for _, shape in BattleSkills.AllShapes(skill) do
-		local targets = BattleSkills.Targets(state.Grid, "Ally", cell.Y, shape, growCount, cell.X)
+		local targets = BattleSkills.Targets(state.Grid, "Ally", aimLane(state, cell.Y, shape, homing), shape, growCount, cell.X)
 		local aliveHits: { Unit } = {}
 		for _, targetId in targets do
 			local target = state.Units[targetId]
@@ -2359,8 +2659,9 @@ function GridBattle.ResolveSkill(
 	if skill.MaxTargets and #hitUnits > skill.MaxTargets then
 		table.sort(hitUnits, function(a, b)
 			local ca, cb = BattleGrid.CellOf(state.Grid, a.Id), BattleGrid.CellOf(state.Grid, b.Id)
-			local ka = if ca then ca.X * 10 + math.abs(ca.Y - cell.Y) else 999
-			local kb = if cb then cb.X * 10 + math.abs(cb.Y - cell.Y) else 999
+			local aimY = homingLane(state, cell.Y, homing)
+			local ka = if ca then ca.X * 10 + math.abs(ca.Y - aimY) else 999
+			local kb = if cb then cb.X * 10 + math.abs(cb.Y - aimY) else 999
 			if ka ~= kb then
 				return ka < kb
 			end
@@ -2711,6 +3012,371 @@ function GridBattle.PullEnemies(state: State, columns: number, ids: { [string]: 
 		end
 	end
 	return moved
+end
+
+--=== 파티 전투 (2026-11-08) ===--
+--[[
+	파티 전투의 준비/실행 API. 사양: 파티전투_사양.md. QTE 가 없다(사용자 확정) —
+	아군 행동 등급은 늘 Success(×1.2), 적 행동은 예고 칸에 선 유닛만 맞고 등급은 Fail(×1.0), 방어를 고른 유닛은 Partial(×0.5).
+
+	한 턴: EnemyPlan(예고) → [준비] PlaceUnit · SetUnitSkill · SetHoming → BeginTurn → ResolveUnitSkill(순서대로) →
+	       ResolveEnemyPhase → EndTurn. 솔로(유닛 하나)는 이 API 없이 예전 ResolveSkill/ResolveDodge 로도 그대로 돈다.
+]]
+
+-- 그 유닛이 쓸 수 있는 스킬 목록(SkillList 와 같은 기준)
+function GridBattle.UnitSkillList(state: State, id: string): { BattleSkills.Skill }
+	return withUnit(state, id, GridBattle.SkillList, state) :: any
+end
+
+-- 행동 순서(살아 있는 아군 Id): 행(y) 위 → 아래, 같은 행에선 열(x) 큰 쪽(화면 왼쪽) → 작은 쪽
+function GridBattle.ActionOrder(state: State): { string }
+	local entries: { { Id: string, X: number, Y: number } } = {}
+	for _, unit in allyUnits(state) do
+		local cell = BattleGrid.CellOf(state.Grid, unit.Id)
+		if cell then
+			table.insert(entries, { Id = unit.Id, X = cell.X, Y = cell.Y })
+		end
+	end
+	local ids: { string } = {}
+	for _, entry in PartyDefinitions.ActionOrder(entries) do
+		table.insert(ids, entry.Id)
+	end
+	return ids
+end
+
+local function prepareError(state: State): string?
+	if state.Outcome ~= "Ongoing" then
+		return "전투가 끝났습니다."
+	end
+	if state.Round.Phase ~= "Prepare" then
+		return "턴이 시작되어 지금은 바꿀 수 없습니다."
+	end
+	return nil
+end
+
+local function partyAlly(state: State, id: string): Unit?
+	local unit = state.Units[id]
+	if unit and unit.Side == "Ally" and not unit.Twin and unit.Alive then
+		return unit
+	end
+	return nil
+end
+
+--[[
+	유닛을 칸에 놓는다(준비 단계). 빈 칸이면 옮기기(MoveAlly — BattleGrid.Move), 같은 편 유닛이 있으면 자리 바꾸기.
+	막힌 칸·적 쪽(알코르 쌍둥이 등)·격자 밖은 거절. 그로기·묶임·검수 잠금인 유닛은 못 움직인다(MoveAlly 와 같은 규칙).
+]]
+function GridBattle.PlaceUnit(state: State, id: string, x: number, y: number): (boolean, string?)
+	local err = prepareError(state)
+	if err then
+		return false, err
+	end
+	local unit = partyAlly(state, id)
+	if not unit then
+		return false, "그런 아군이 없습니다."
+	end
+	local grid = state.Grid
+	if not BattleGrid.InBounds(grid, x, y) then
+		return false, "격자 밖입니다."
+	end
+	if not BattleGrid.IsEnabled(grid, "Ally", x, y) then
+		return false, "이 전투에서 막혀 있는 칸입니다."
+	end
+	local from = BattleGrid.CellOf(grid, id)
+	if not from then
+		return false, "격자에 없습니다."
+	end
+	if from.X == x and from.Y == y then
+		return true, nil
+	end
+	local occupantId = BattleGrid.Occupant(grid, "Ally", x, y)
+	if occupantId == nil then
+		return withUnit(state, id, GridBattle.MoveAlly, state, x, y) :: any
+	end
+	local other = partyAlly(state, occupantId)
+	if not other then
+		return false, "그 칸에는 놓을 수 없습니다."
+	end
+	for _, who in { id, occupantId } do
+		local blocked = withUnit(state, who, moveBlocked, state) :: string?
+		if blocked then
+			return false, string.format("%s: %s", state.Units[who].Name, blocked)
+		end
+	end
+	-- 자리 바꾸기: 둘 다 BattleGrid.Place 로 옮긴다(먼저 한 유닛을 비워 자리를 만든다)
+	BattleGrid.Remove(grid, id)
+	BattleGrid.Place(grid, occupantId, "Ally", from.X, from.Y)
+	BattleGrid.Place(grid, id, "Ally", x, y)
+	withUnit(state, id, afterMove, state, from.X, from.Y, x, y)
+	withUnit(state, occupantId, afterMove, state, x, y, from.X, from.Y)
+	return true, nil
+end
+
+-- 이 유닛이 이번 턴 스킬을 못 쓰는 까닭(없으면 nil). 지금 조작 중인 유닛 기준
+local function skillBlocked(state: State, skill: BattleSkills.Skill): string?
+	local ally = GridBattle.Ally(state)
+	local left = ally.Cooldowns[skill.Id] or 0
+	if left > 0 then
+		return string.format("%s은(는) 아직 재사용 대기 중입니다 (%d턴 남음).", skill.Name, left)
+	end
+	if skill.Damage > 0 and query(state, "NoAttackSkills", 0) >= 1 then
+		return "필수 카드 때문에 공격 스킬을 쓸 수 없습니다."
+	end
+	local cost = GridBattle.StaminaCost(state, skill)
+	local noCost = state.Debug and state.Debug.NoCooldown
+	if ally.Stamina < cost and not noCost and not skill.HealthForStamina then
+		return string.format("스테미나가 부족합니다 (%d/%d).", math.floor(ally.Stamina), cost)
+	end
+	return nil
+end
+
+-- 유닛마다 이번 턴 스킬 하나(skillId nil = 지우기 → 기본 공격). 쿨타임·스테미나·직업 기술 목록 검사
+function GridBattle.SetUnitSkill(state: State, id: string, skillId: string?): (boolean, string?)
+	local err = prepareError(state)
+	if err then
+		return false, err
+	end
+	local unit = partyAlly(state, id)
+	if not unit then
+		return false, "그런 아군이 없습니다."
+	end
+	if skillId == nil then
+		unit.Chosen = nil
+		return true, nil
+	end
+	for _, skill in GridBattle.UnitSkillList(state, id) do
+		if skill.Id == skillId then
+			local why = withUnit(state, id, skillBlocked, state, skill) :: string?
+			if why then
+				return false, why
+			end
+			unit.Chosen = skillId
+			return true, nil
+		end
+	end
+	return false, "이 유닛이 쓸 수 없는 스킬입니다."
+end
+
+-- 이번 턴 남은 유도 수
+function GridBattle.HomingLeft(state: State): number
+	local used = 0
+	for _, unit in allyUnits(state) do
+		if unit.Homing then
+			used += 1
+		end
+	end
+	return PartyDefinitions.HOMING_PER_TURN - used
+end
+
+-- 유도를 붙이거나 뗀다. 매 턴 HOMING_PER_TURN 개, 다음 턴 초기화(EndTurn)
+function GridBattle.SetHoming(state: State, id: string, on: boolean): (boolean, string?)
+	local err = prepareError(state)
+	if err then
+		return false, err
+	end
+	local unit = partyAlly(state, id)
+	if not unit then
+		return false, "그런 아군이 없습니다."
+	end
+	if on and not unit.Homing and GridBattle.HomingLeft(state) <= 0 then
+		return false, string.format("이번 턴 유도 %d개를 모두 썼습니다.", PartyDefinitions.HOMING_PER_TURN)
+	end
+	unit.Homing = on
+	return true, nil
+end
+
+-- 턴 시작: 행동 순서를 고정한다(이후 배치·스킬·유도 변경 금지)
+function GridBattle.BeginTurn(state: State): (boolean, string?, { string }?)
+	local err = prepareError(state)
+	if err then
+		return false, err, nil
+	end
+	local order = GridBattle.ActionOrder(state)
+	state.Round = { Phase = if #order > 0 then "Acting" else "Enemy", Order = order, Next = 1 }
+	local names = {}
+	for _, id in order do
+		table.insert(names, state.Units[id].Name)
+	end
+	pushLog(state, "턴 시작 — 행동 순서: " .. table.concat(names, " → "))
+	return true, nil, order
+end
+
+-- 다음에 행동할 유닛 Id(쓰러진 유닛은 건너뛴다). 다 했으면 nil
+function GridBattle.NextActor(state: State): string?
+	local round = state.Round
+	if round.Phase ~= "Acting" then
+		return nil
+	end
+	while round.Next <= #round.Order and not state.Units[round.Order[round.Next]].Alive do
+		round.Next += 1
+	end
+	if round.Next > #round.Order then
+		round.Phase = "Enemy"
+		return nil
+	end
+	return round.Order[round.Next]
+end
+
+--[[
+	유닛 하나의 행동. **순서대로만**(다음 차례가 아니면 거절). QTE 없음 — 등급은 늘 Success.
+	고른 스킬(SetUnitSkill)을 쓰고, 못 쓰거나 안 골랐으면 기본 공격(직업 스킬 1번). 그것도 못 쓰면(스테미나·그로기 …) 건너뛴다.
+	돌려주는 값: ok(순서가 지나갔나), 건너뛴 까닭(행동했으면 nil), acted
+]]
+function GridBattle.ResolveUnitSkill(state: State, id: string, rng: any?): (boolean, string?, boolean?)
+	if state.Outcome ~= "Ongoing" then
+		return false, "전투가 끝났습니다.", false
+	end
+	if state.Round.Phase ~= "Acting" then
+		return false, "턴이 시작되지 않았습니다.", false
+	end
+	local nextId = GridBattle.NextActor(state)
+	if nextId == nil then
+		return false, "행동할 유닛이 없습니다.", false
+	end
+	if nextId ~= id then
+		return false, string.format("아직 이 유닛의 차례가 아닙니다 (다음: %s).", state.Units[nextId].Name), false
+	end
+	local random: (() -> number)? = if type(rng) == "function" then rng else nil
+	local unit = state.Units[id]
+	local skipReason: string? = nil
+	local acted = false
+	withUnit(state, id, function()
+		local list = GridBattle.SkillList(state)
+		local tries: { string } = {}
+		if unit.Chosen then
+			table.insert(tries, unit.Chosen)
+		end
+		-- 안 골랐거나 못 쓰면 기본 공격 = 목록에서 적을 치는 첫 기술(2026-11-08 총괄: 1번이 지원기인 직업 — 펄서 자기권·연금술사 갈기 — 이 그걸 쓰지 않게)
+		local basic = list[1]
+		for _, skill in list do
+			if skill.Range ~= "Supporting" and not (skill.Shape and skill.Shape.TargetSide == "Ally") then
+				basic = skill
+				break
+			end
+		end
+		if basic and basic.Id ~= unit.Chosen then
+			table.insert(tries, basic.Id)
+		end
+		for _, skillId in tries do
+			local ok, why = GridBattle.ResolveSkill(state, 1, "Success", random, skillId)
+			if ok then
+				acted = true
+				return
+			end
+			skipReason = skipReason or why
+		end
+	end)
+	if not acted then
+		pushLog(state, string.format("%s — 행동하지 못했다 (%s)", unit.Name, skipReason or "?"))
+	end
+	state.Round.Next += 1
+	GridBattle.NextActor(state)
+	return true, if acted then nil else skipReason, acted
+end
+
+-- 이 유닛이 이번 턴 방어 상태인가: 가드를 골랐거나, 결투사 방어 태세(공격 태세가 꺼짐)
+function GridBattle.IsDefending(state: State, id: string): boolean
+	local unit = state.Units[id]
+	if not unit then
+		return false
+	end
+	if unit.Chosen == "Guard" then
+		return true
+	end
+	if unit.Chosen then
+		for _, skill in BattleSkills.DuelistDefense() do
+			if skill.Id == unit.Chosen then
+				return true
+			end
+		end
+	end
+	return unit.ClassId == "Duelist" and BattleStatus.Stack(unit.Status, ClassResources.STANCE_ATTACK) <= 0
+end
+
+-- QTE 없는 맞음 등급: 늘 Fail(×1.0). 2026-11-08 총괄: 방어는 가드 기술(받는 피해 −70%)·결투사 방어 태세(−55%)가
+-- 제 보정으로 이미 줄이므로 Partial(×0.5)을 또 곱하면 이중(×0.15)이다 → 방어 효과의 출처는 기술·태세 하나로.
+-- IsDefending 은 화면 표시(Snapshot.Defending)용으로만 남는다.
+function GridBattle.DefendGrade(_state: State, _id: string): QteDefinitions.Grade
+	return "Fail"
+end
+
+--[[
+	적 행동을 한 번에 해소한다(파티 전투 — QTE 없음). 예고한 순서대로, 예고 칸에 선 아군 유닛 전부에게
+	ResolveDodgeFor(Fail / 방어 유닛은 Partial). 자동 패링·회피 확률(BeforeTaken)은 그대로 굴러간다.
+	돌려주는 값: { Enemy, Index, Target(아군 Id), Taken, Grade } 목록. rng 는 쓰지 않는다(엔진 난수) — 자리만 둔 인자.
+]]
+function GridBattle.ResolveEnemyPhase(
+	state: State,
+	_rng: (() -> number)?
+): { { Enemy: Unit, Index: number, Target: string, Taken: number, Grade: string } }
+	local results = {}
+	local seen: { [string]: number } = {}
+	for _, enemyId in table.clone(state.Planned) do
+		seen[enemyId] = (seen[enemyId] or 0) + 1
+		local index = seen[enemyId]
+		local enemy = state.Units[enemyId]
+		if state.Outcome ~= "Ongoing" then
+			break
+		end
+		if enemy and enemy.Alive then
+			local victims = GridBattle.ThreatenedAllies(state, enemy, index)
+			-- 맞는 순서도 행동 순서와 같게
+			local order = GridBattle.ActionOrder(state)
+			table.sort(victims, function(a, b)
+				return (table.find(order, a) or 99) < (table.find(order, b) or 99)
+			end)
+			for _, victimId in victims do
+				if state.Outcome ~= "Ongoing" or not enemy.Alive then
+					break
+				end
+				local grade = GridBattle.DefendGrade(state, victimId)
+				local ok, _, taken = GridBattle.ResolveDodgeFor(state, enemyId, victimId, grade, index)
+				if ok then
+					table.insert(results, { Enemy = enemy, Index = index, Target = victimId, Taken = taken or 0, Grade = grade })
+				end
+			end
+		end
+	end
+	return results
+end
+
+--[[
+	미리보기: 유닛이 (skillId 생략 = 고른 스킬 → 기본 공격) 쓸 때 칠할 칸 — 판정(ResolveSkill)과 같은 aimLane 을 쓴다.
+	homing 생략 = 그 유닛의 지금 유도 여부. 돌려주는 값: { SkillId, Lane(첫 모양이 겨누는 행), Motions = 모양마다 { {Side,X,Y} } }
+]]
+function GridBattle.PreviewCells(state: State, id: string, skillId: string?, homing: boolean?): any
+	local unit, cell = state.Units[id], BattleGrid.CellOf(state.Grid, id)
+	if not unit or not cell then
+		return nil
+	end
+	return withUnit(state, id, function()
+		local list = GridBattle.SkillList(state)
+		local skill = list[1]
+		local want = skillId or unit.Chosen
+		if want then
+			for _, candidate in list do
+				if candidate.Id == want then
+					skill = candidate
+				end
+			end
+		end
+		local on = if homing == nil then unit.Homing == true else homing
+		local grow = GridBattle.AllyGrowCount(state, skill)
+		local motions = {}
+		local lane = cell.Y
+		for index, shape in BattleSkills.AllShapes(skill) do
+			local shapeLane = aimLane(state, cell.Y, shape, on)
+			if index == 1 then
+				lane = shapeLane
+			end
+			local cells = {}
+			for _, c in BattleSkills.Cells(state.Grid, "Ally", shapeLane, shape, grow, cell.X) do
+				table.insert(cells, { Side = c.Side, X = c.X, Y = c.Y })
+			end
+			table.insert(motions, cells)
+		end
+		return { SkillId = skill.Id, Lane = lane, Motions = motions }
+	end)
 end
 
 --=== 보스: 칼리스토 ===--
@@ -3204,7 +3870,7 @@ end
 ]]
 local function callistoSeek(state: State, plan: any): string
 	local stars = (state.Callisto and state.Callisto.Lure) or {}
-	local target = plan.Target or ALLY_ID
+	local target = plan.TargetId or plan.Target or state.PrimaryId
 	local at = BattleGrid.CellOf(state.Grid, target)
 	if not at or not hasCell(stars, at.X, at.Y) then
 		return target
@@ -3323,7 +3989,7 @@ local function ropeCells(state: State): { { number } }
 end
 
 local function allyOnRope(state: State): boolean
-	local at = BattleGrid.CellOf(state.Grid, ALLY_ID)
+	local at = BattleGrid.CellOf(state.Grid, state.AllyId)
 	return at ~= nil and (at.X == 1 or at.X == state.Grid.Width)
 end
 
@@ -3331,7 +3997,7 @@ end
 	피니셔 한 턴의 예고(callistoPlan 이 3페이즈에서 먼저 부른다). 돌려주는 값 = 이번 턴 예고를 이걸로 끝냈나.
 	  추락 스턴 중이면 쉰다 · 진행 중 턴 B 면 다이브·파워밤 · 조건이 차면 턴 A 도발(Cast)
 ]]
-local function callistoFinisherPlan(state: State, rng: () -> number, unit: Unit, c: CallistoState, planned: { Unit }): boolean
+local function callistoFinisherPlan(state: State, rng: () -> number, unit: Unit, c: CallistoState, planned: { Unit }, target: Unit): boolean
 	if (c.Stun or 0) > 0 then
 		c.Stun -= 1
 		pushLog(state, unit.Name .. " — 추락한 충격으로 이번 턴 움직이지 못한다")
@@ -3363,7 +4029,7 @@ local function callistoFinisherPlan(state: State, rng: () -> number, unit: Unit,
 	c.Lure = nil
 	local plans = {}
 	for k, id in { "CallistoKenosDive", "CallistoKenosBomb" } do
-		table.insert(plans, { SkillId = id, Cells = danger, Safe = f.Safe, Rope = rope, Strong = f.Strong, Strike = k, Target = ALLY_ID })
+		table.insert(plans, { SkillId = id, Cells = danger, Safe = f.Safe, Rope = rope, Strong = f.Strong, Strike = k, Target = target.Id, TargetId = target.Id })
 		table.insert(state.Planned, unit.Id)
 	end
 	unit.Plans = plans
@@ -3378,13 +4044,14 @@ end
 	연타면 그 수만큼 예고를 줄 세운다.
 ]]
 local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: CallistoState, planned: { Unit })
-	local ally = state.Units[ALLY_ID]
-	local here = BattleGrid.CellOf(state.Grid, ALLY_ID)
+	-- 파티: 이번 공격이 노릴 아군(도발 최대 → rng, 예고 때 정해 Plan.TargetId 로 보인다). 솔로는 늘 그 하나
+	local ally = pickTarget(state, rng)
+	local here = if ally then BattleGrid.CellOf(state.Grid, ally.Id) else nil
 	unit.Plans, unit.Plan = nil, nil
 	if not ally or not ally.Alive or not here then
 		return
 	end
-	if c.Page >= 3 and callistoFinisherPlan(state, rng, unit, c, planned) then
+	if c.Page >= 3 and callistoFinisherPlan(state, rng, unit, c, planned, ally) then
 		return
 	end
 	local id = callistoPick(state, c, unit, ally)
@@ -3420,7 +4087,7 @@ local function callistoPlan(state: State, rng: () -> number, unit: Unit, c: Call
 	local track = if form == "TrackRow" and zone == nil then "Row" elseif form == "TrackColumn" then "Column" else nil
 	local plans = {}
 	for k = 1, count do
-		table.insert(plans, { SkillId = id, Cells = cells, Track = track, Strike = k, Seek = form == "Seek" or nil, Shape = shape, Shelter = (form ~= "Seek" and zone == nil) or nil, Safe = safe, Target = ALLY_ID })
+		table.insert(plans, { SkillId = id, Cells = cells, Track = track, Strike = k, Seek = form == "Seek" or nil, Shape = shape, Shelter = (form ~= "Seek" and zone == nil) or nil, Safe = safe, Target = ally.Id, TargetId = ally.Id })
 		table.insert(state.Planned, unit.Id)
 	end
 	unit.Plans = plans
@@ -3480,7 +4147,7 @@ end
 	맞은 뒤 효과(ResolveDodge 가 피해를 넣은 다음). 회피(Success)한 공격은 아무것도 안 건다 —
 	피해 없는 회피 불가 스킬(사진·멱살·렌즈·장판)은 늘 걸린다(결투사가 패리해도).
 ]]
-local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: Unit, skill: BattleSkills.Skill, grade: string)
+local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: Unit, skill: BattleSkills.Skill, grade: string, first: boolean)
 	local landed = grade ~= "Success" or (skill.Inflicts == true and skill.Damage <= 0)
 	if not landed or not ally.Alive then
 		return
@@ -3526,17 +4193,19 @@ local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: U
 		pushLog(state, ally.Name .. " — 고찰이 지워지고 [심베라즈마] (방어력 −20%)")
 		-- 사양 "멱살을 잡고 찍은 뒤 내던진다": 아군을 3칸 넘게 떨어진 칸으로 던지고, 다음 턴 [묶임](질문 6-A — 묶임 공통 규칙·면역)
 		c.BindNext = true
-		local at = BattleGrid.CellOf(state.Grid, ALLY_ID)
+		c.BindUnits = c.BindUnits or {}
+		c.BindUnits[ally.Id] = true
+		local at = BattleGrid.CellOf(state.Grid, ally.Id)
 		if at then
 			local far = {}
 			for _, cell in allCells(state) do
-				if math.abs(cell[1] - at.X) + math.abs(cell[2] - at.Y) >= 3 then
+				if math.abs(cell[1] - at.X) + math.abs(cell[2] - at.Y) >= 3 and not BattleGrid.Occupant(state.Grid, "Ally", cell[1], cell[2]) then
 					table.insert(far, cell)
 				end
 			end
 			if #far > 0 then
 				local to = far[math.floor(nextRandom(state) * #far) + 1]
-				BattleGrid.Move(state.Grid, ALLY_ID, to[1], to[2])
+				BattleGrid.Move(state.Grid, ally.Id, to[1], to[2])
 			end
 		end
 	elseif id == "CallistoSynthesis" then
@@ -3566,7 +4235,8 @@ local function callistoOnHit(state: State, c: CallistoState, unit: Unit, ally: U
 		-- 아군 몫(최대 체력 5%)은 ResolveDodge 가 이미 넣었다. 칼리스토 몫(10%)과 남은 장판 턴
 		c.Field = FIELD_TURNS - 1
 		c.FieldTurn = state.Turn
-		local lost = damageUnit(state, unit, unit.MaxHealth * FIELD_SELF, "True", true)
+		-- 칼리스토 몫은 공격당 한 번(맞은 아군이 여럿이어도)
+		local lost = if first then damageUnit(state, unit, unit.MaxHealth * FIELD_SELF, "True", true) else 0
 		pushLog(state, string.format("뭇별 아래에 잠기리 — 장판 %d턴 · 칼리스토도 %d 잃음(잊혀져가는 성위)", FIELD_TURNS, lost))
 	end
 end
@@ -3597,8 +4267,9 @@ end
 ]]
 local function callistoEndTurn(state: State, c: CallistoState)
 	local unit = state.Units[c.UnitId]
-	local ally = state.Units[ALLY_ID]
-	if not unit or not ally then
+	-- 파티(2026-11-08): 아군에게 쌓이는 것은 아군마다 돈다. 솔로는 한 명이라 예전 순서 그대로
+	local allies = allyUnits(state, true)
+	if not unit or #allies == 0 then
 		return
 	end
 	-- 기믹 조건(이번 턴 적중)은 턴이 끝나면 비운다
@@ -3625,34 +4296,45 @@ local function callistoEndTurn(state: State, c: CallistoState)
 			c.FinisherCount = (c.FinisherCount or 0) + 1
 		end
 	end
-	if ally.Alive and stackOf(ally, ClassResources.GOCHAL) > 0 then
-		BattleStatus.AddBurn(ally.Status, 1)
+	for _, ally in allies do
+		if ally.Alive and stackOf(ally, ClassResources.GOCHAL) > 0 then
+			BattleStatus.AddBurn(ally.Status, 1)
+		end
 	end
 	-- 별자리 칸(유도): 거기서 턴을 마쳤으면 [성위] — 피한 값
-	local at = BattleGrid.CellOf(state.Grid, ALLY_ID)
-	if c.Lure and at and ally.Alive and hasCell(c.Lure, at.X, at.Y) and #GridBattle.Allies(state) <= 1 then   -- 파티면 없음(질문 2-C)
-		addSeongwi(state, ally, LURE_SEONGWI)
-		pushLog(state, string.format("별자리 칸 — %s [성위] %d", ally.Name, LURE_SEONGWI))
+	for _, ally in allies do
+		local at = BattleGrid.CellOf(state.Grid, ally.Id)
+		if c.Lure and at and ally.Alive and hasCell(c.Lure, at.X, at.Y) and #GridBattle.Allies(state) <= 1 then   -- 파티면 없음(질문 2-C)
+			addSeongwi(state, ally, LURE_SEONGWI)
+			pushLog(state, string.format("별자리 칸 — %s [성위] %d", ally.Name, LURE_SEONGWI))
+		end
 	end
 	c.Lure = nil
-	for id, source in { [ClassResources.MUTBYEOL] = "뭇별", [ClassResources.SYMBERASMA] = "심베라즈마", [ClassResources.BLADE_SCAR] = "칼춤 상처", [ClassResources.STAR_GUARD] = "별빛 가호" } do
-		local left = 0
-		for _, m in ally.Status.Modifiers do
-			if m.Source == source then
-				left = math.max(left, m.Turns)
+	for _, ally in allies do
+		for id, source in { [ClassResources.MUTBYEOL] = "뭇별", [ClassResources.SYMBERASMA] = "심베라즈마", [ClassResources.BLADE_SCAR] = "칼춤 상처", [ClassResources.STAR_GUARD] = "별빛 가호" } do
+			local left = 0
+			for _, m in ally.Status.Modifiers do
+				if m.Source == source then
+					left = math.max(left, m.Turns)
+				end
 			end
+			ally.Status.Stacks[id] = left
 		end
-		ally.Status.Stacks[id] = left
 	end
 	for id, n in c.Cooldowns do
 		c.Cooldowns[id] = math.max(0, n - 1)
 	end
 	if c.Field > 0 and c.FieldTurn ~= state.Turn and unit.Alive then
 		c.Field -= 1
-		local hurt = if ally.Alive then damageUnit(state, ally, ally.MaxHealth * FIELD_ALLY, "True", true) else 0
+		local hurtTotal, names = 0, {}
+		for _, ally in allies do
+			local hurt = if ally.Alive then damageUnit(state, ally, ally.MaxHealth * FIELD_ALLY, "True", true) else 0
+			hurtTotal += hurt
+			table.insert(names, ally.Name)
+		end
 		local lost = damageUnit(state, unit, unit.MaxHealth * FIELD_SELF, "True", true)
-		pushLog(state, string.format("뭇별 아래에 잠기리 — %s %d · 칼리스토 %d (장판 %d턴 남음)", ally.Name, hurt, lost, c.Field))
-		pushEvent(state, { Kind = "Field", Actor = unit.Id, Ally = hurt, Self = lost, Left = c.Field })
+		pushLog(state, string.format("뭇별 아래에 잠기리 — %s %d · 칼리스토 %d (장판 %d턴 남음)", table.concat(names, "·"), hurtTotal, lost, c.Field))
+		pushEvent(state, { Kind = "Field", Actor = unit.Id, Ally = hurtTotal, Self = lost, Left = c.Field })
 	end
 	if c.Page == 1 and unit.Alive and stackOf(unit, ClassResources.URSA_MINOR) == 0 and unit.Health < unit.MaxHealth * URSA_RATIO then
 		BattleStatus.AddStack(unit.Status, ClassResources.URSA_MINOR, 1, 1)
@@ -3660,24 +4342,30 @@ local function callistoEndTurn(state: State, c: CallistoState)
 		pushLog(state, "아들을 위한 자리 — 칼리스토가 [작은 곰 자리]를 얻었다")
 	end
 	-- [알카이드]: 턴 끝 스택 × 3 피해(특수 화상 — 이 효과로는 죽지 않는다). 페이즈가 바뀌어도 남는다
-	local alkaid = stackOf(ally, ClassResources.ALKAID)
-	if alkaid > 0 and ally.Alive then
-		local burnt = damageUnit(state, ally, alkaid * 3 * c.PowerScale, "True", false)
-		pushLog(state, string.format("%s — 알카이드 %d (%d 피해)", ally.Name, alkaid, burnt))
+	for _, ally in allies do
+		local alkaid = stackOf(ally, ClassResources.ALKAID)
+		if alkaid > 0 and ally.Alive then
+			local burnt = damageUnit(state, ally, alkaid * 3 * c.PowerScale, "True", false)
+			pushLog(state, string.format("%s — 알카이드 %d (%d 피해)", ally.Name, alkaid, burnt))
+		end
+		-- 질문 13-A: [알카이드]·[두베]는 턴마다 1 씩 준다(두베는 받는 피해 보정도 다시)
+		if alkaid > 0 then
+			BattleStatus.SpendStack(ally.Status, ClassResources.ALKAID, 1)
+		end
+		if stackOf(ally, ClassResources.DUBHE) > 0 then
+			BattleStatus.SpendStack(ally.Status, ClassResources.DUBHE, 1)
+			addDubhe(state, c, unit, ally, 0)
+		end
 	end
-	-- 질문 13-A: [알카이드]·[두베]는 턴마다 1 씩 준다(두베는 받는 피해 보정도 다시)
-	if alkaid > 0 then
-		BattleStatus.SpendStack(ally.Status, ClassResources.ALKAID, 1)
-	end
-	if stackOf(ally, ClassResources.DUBHE) > 0 then
-		BattleStatus.SpendStack(ally.Status, ClassResources.DUBHE, 1)
-		addDubhe(state, c, unit, ally, 0)
-	end
-	-- 심베라즈마로 던져졌으면 다음 턴 묶임(공통 묶임 풀기는 이 턴 끝 앞에서 이미 했다)
+	-- 심베라즈마로 던져졌으면 다음 턴 묶임(공통 묶임 풀기는 이 턴 끝 앞에서 이미 했다). BindUnits 가 있으면 그 아군만
 	if c.BindNext then
 		c.BindNext = nil
-		if ally.Alive and BattleSkillEffects.TryBind(ally.Status) then
-			pushLog(state, ally.Name .. " — 내던져져 [묶임] (다음 턴 움직일 수 없다)")
+		local who = c.BindUnits
+		c.BindUnits = nil
+		for _, ally in allies do
+			if ally.Alive and (who == nil or who[ally.Id]) and BattleSkillEffects.TryBind(ally.Status) then
+				pushLog(state, ally.Name .. " — 내던져져 [묶임] (다음 턴 움직일 수 없다)")
+			end
 		end
 	end
 	if c.Page < 2 or not unit.Alive then
@@ -3685,37 +4373,48 @@ local function callistoEndTurn(state: State, c: CallistoState)
 		return
 	end
 	-- 알리오스 장판: 턴이 지날 때마다 피해 5 · 두베 1 · 성위 2
-	if c.Aliot > 0 and ally.Alive then
+	local anyAlive = false
+	for _, ally in allies do
+		anyAlive = anyAlive or ally.Alive
+	end
+	if c.Aliot > 0 and anyAlive then
 		c.Aliot -= 1
-		-- 2026-11-06 개선안 2절: 장판 6칸 안에 서 있을 때만
-		local standing = BattleGrid.CellOf(state.Grid, ALLY_ID)
-		if not c.AliothCells or (standing and hasCell(c.AliothCells, standing.X, standing.Y)) then
-			local hurt = damageUnit(state, ally, 5 * c.PowerScale, "Physical", true)
-			addDubhe(state, c, unit, ally, 1)
-			addSeongwi(state, ally, 2)
-			pushLog(state, string.format("알리오스 장판 — %s %d · [두베] 1 · [성위] 2 (%d턴 남음)", ally.Name, hurt, c.Aliot))
-		else
-			pushLog(state, string.format("알리오스 장판 — %s 장판 밖에 서 있어 피함 (%d턴 남음)", ally.Name, c.Aliot))
+		for _, ally in allies do
+			if not ally.Alive then
+				continue
+			end
+			-- 2026-11-06 개선안 2절: 장판 6칸 안에 서 있을 때만
+			local standing = BattleGrid.CellOf(state.Grid, ally.Id)
+			if not c.AliothCells or (standing and hasCell(c.AliothCells, standing.X, standing.Y)) then
+				local hurt = damageUnit(state, ally, 5 * c.PowerScale, "Physical", true)
+				addDubhe(state, c, unit, ally, 1)
+				addSeongwi(state, ally, 2)
+				pushLog(state, string.format("알리오스 장판 — %s %d · [두베] 1 · [성위] 2 (%d턴 남음)", ally.Name, hurt, c.Aliot))
+			else
+				pushLog(state, string.format("알리오스 장판 — %s 장판 밖에 서 있어 피함 (%d턴 남음)", ally.Name, c.Aliot))
+			end
 		end
 		if c.Aliot <= 0 then
 			c.AliothCells = nil
 		end
 	end
-	-- 미자르: 알코르를 그 턴에 잡지 못했으면 다음 턴 알카이드 1(알코르가 쓰러졌으면 사라진다)
-	if stackOf(ally, ClassResources.MIZAR) > 0 then
-		if alcorAlive(state, c) then
-			addAlkaid(state, c, unit, ally, 1)
-			pushLog(state, "미자르 — 알코르가 살아 있다 · [알카이드] 1")
-		else
-			BattleStatus.SpendAll(ally.Status, ClassResources.MIZAR)
+	for _, ally in allies do
+		-- 미자르: 알코르를 그 턴에 잡지 못했으면 다음 턴 알카이드 1(알코르가 쓰러졌으면 사라진다)
+		if stackOf(ally, ClassResources.MIZAR) > 0 then
+			if alcorAlive(state, c) then
+				addAlkaid(state, c, unit, ally, 1)
+				pushLog(state, "미자르 — 알코르가 살아 있다 · [알카이드] 1")
+			else
+				BattleStatus.SpendAll(ally.Status, ClassResources.MIZAR)
+			end
 		end
-	end
-	-- 타들어가는 성위: 다음 턴 시작에 화상을 수치와 상관없이 알카이드 1 + 두베 1 로
-	if ally.Alive and ally.Status.Burn > 0 then
-		ally.Status.Burn, ally.Status.BurnIgnore = 0, nil
-		addAlkaid(state, c, unit, ally, 1)
-		addDubhe(state, c, unit, ally, 1)
-		pushLog(state, "타들어가는 성위 — 화상이 [알카이드] 1 · [두베] 1 로")
+		-- 타들어가는 성위: 다음 턴 시작에 화상을 수치와 상관없이 알카이드 1 + 두베 1 로
+		if ally.Alive and ally.Status.Burn > 0 then
+			ally.Status.Burn, ally.Status.BurnIgnore = 0, nil
+			addAlkaid(state, c, unit, ally, 1)
+			addDubhe(state, c, unit, ally, 1)
+			pushLog(state, "타들어가는 성위 — 화상이 [알카이드] 1 · [두베] 1 로")
+		end
 	end
 	-- 성위 품은 자: 이번 턴 공격이 한 번도 맞지 않았으면 [성위 - 점멸]
 	if c.Swing and not c.Swing.Hit then
@@ -3786,7 +4485,20 @@ end
 	플레이어가 이동한 **뒤에** 부른다. 예고된 라인에서 비켜섰으면 그 공격은
 	여기서 빠진다 — 그게 위치로 피한다는 뜻이다.
 ]]
-function GridBattle.PlannedThreatList(state: State): { { Unit: Unit, Index: number } }
+-- 이 예고가 닿는 아군 Id 목록(파티: 예고 칸에 선 유닛 전부). 솔로는 0~1개
+function GridBattle.ThreatenedAllies(state: State, enemy: Unit, index: number?): { string }
+	local hit: { string } = {}
+	-- 파티 전투면 산 아군 전부, 솔로(옛 시험이 AllyId 를 바꿔 가며 보는 것 포함)는 지금 조작 중인 유닛만
+	local candidates = if state.Party then allyUnits(state) else { state.Units[state.AllyId] }
+	for _, ally in candidates do
+		if ally.Alive and GridBattle.EnemyThreatensAlly(state, enemy, index, ally.Id) then
+			table.insert(hit, ally.Id)
+		end
+	end
+	return hit
+end
+
+function GridBattle.PlannedThreatList(state: State): { { Unit: Unit, Index: number, Targets: { string } } }
 	local threats = {}
 	if state.Outcome ~= "Ongoing" then
 		return threats
@@ -3796,8 +4508,11 @@ function GridBattle.PlannedThreatList(state: State): { { Unit: Unit, Index: numb
 	for _, enemyId in state.Planned do
 		seen[enemyId] = (seen[enemyId] or 0) + 1
 		local enemy = state.Units[enemyId]
-		if enemy and enemy.Alive and GridBattle.EnemyThreatensAlly(state, enemy, seen[enemyId]) then
-			table.insert(threats, { Unit = enemy, Index = seen[enemyId] })
+		if enemy and enemy.Alive then
+			local victims = GridBattle.ThreatenedAllies(state, enemy, seen[enemyId])
+			if #victims > 0 then
+				table.insert(threats, { Unit = enemy, Index = seen[enemyId], Targets = victims })
+			end
 		end
 	end
 	return threats
@@ -3815,7 +4530,8 @@ end
 	적 하나의 공격이 아군에게 닿는지. 닿으면 회피/패리 QTE를 띄울 차례다.
 	사양의 라인 규칙을 그대로 쓰므로, 아군이 다른 라인에 있으면 그냥 빗나간다.
 ]]
-function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?): boolean
+function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?, victimId: string?): boolean
+	local victim = victimId or state.AllyId
 	local cell = BattleGrid.CellOf(state.Grid, enemy.Id)
 	if not cell then
 		return false
@@ -3823,7 +4539,7 @@ function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?
 	-- 보스 부위: 예고 때 고른 칸에 서 있으면 맞는다(피해 없는 행동·끊긴 충전은 위협이 아니다)
 	local plan = planAt(enemy, index)
 	if plan then
-		local here = BattleGrid.CellOf(state.Grid, state.AllyId)
+		local here = BattleGrid.CellOf(state.Grid, victim)
 		local foeSkill = GridBattle.EnemySkill(enemy, index)
 		if not here or plan.Canceled or (foeSkill.Damage <= 0 and not foeSkill.HpRatio and not foeSkill.Inflicts) then
 			return false
@@ -3836,7 +4552,7 @@ function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?
 			if center then
 				return hasCell(shapeCells(plan.Shape, center.X, center.Y, state.Grid.Width, state.Grid.Height), here.X, here.Y)
 			end
-			return seekId == state.AllyId
+			return seekId == victim
 		end
 		-- 판 전체·행열(질문 3-A · 4): 파티면 별 칸 위 사람은 빠진다(솔로는 별 위에서도 맞고 회복·가호를 받는다)
 		if plan.Shelter and #GridBattle.Allies(state) > 1 and state.Callisto and state.Callisto.Lure
@@ -3861,7 +4577,7 @@ function GridBattle.EnemyThreatensAlly(state: State, enemy: Unit, index: number?
 	-- 모션이 여럿이면 그중 하나라도 나를 걸면 위협이다.
 	for _, shape in BattleSkills.AllShapes(skill) do
 		for _, targetId in BattleSkills.Targets(state.Grid, "Enemy", cell.Y, shape, growCount, cell.X) do
-			if targetId == state.AllyId then
+			if targetId == victim then
 				return true
 			end
 		end
@@ -3875,12 +4591,11 @@ end
 	사양: 패리 성공 시 상대 그로기가 오른다(QteDefinitions.PARRY_GROGGY_GAIN).
 	Dodge 배율은 Success 0 / Partial 0.5 / Fail 1.0 — 즉 성공하면 아예 안 맞는다.
 ]]
-function GridBattle.ResolveDodge(
+local function resolveDodgeBound(
 	state: State,
 	enemyId: string,
 	grade: QteDefinitions.Grade,
 	planIndex: number?,
-	-- 강제 결투 응수: 이 스킬을 지금 쓰게 한다(예고 없이). 스킬 안에서 도는 것이라 앞뒤 비교(watch)는 바깥 스킬이 한다
 	forceSkill: BattleSkills.Skill?
 ): (boolean, string?, number?)
 	if state.Outcome ~= "Ongoing" then
@@ -3892,7 +4607,22 @@ function GridBattle.ResolveDodge(
 	end
 
 	local ally = GridBattle.Ally(state)
+	if not ally.Alive then
+		return false, "쓰러진 유닛입니다."
+	end
 	local skill = forceSkill or GridBattle.EnemySkill(enemy, planIndex)
+	-- 같은 예고가 아군 여럿에게 닿을 때 칼리스토 자기 몫(장판 자해 등)은 한 번만: 이 예고를 이미 다른 아군이 맞았나
+	local hitPlan: any = if forceSkill then nil else planAt(enemy, planIndex)
+	local firstVictim = true
+	if hitPlan then
+		for id in (hitPlan.Done or {}) do
+			if id ~= ally.Id then
+				firstVictim = false
+			end
+		end
+		hitPlan.Done = hitPlan.Done or {}
+		hitPlan.Done[ally.Id] = true
+	end
 	--[[
 		2026-10-04 월 필그림 리워크 — 적이 스킬을 쓸 때:
 		  [경련] 걸린 턴에 쓰면 최대 체력 3% 피해 + 그로기 게이지 10%(공격은 그대로 나간다)
@@ -4040,7 +4770,7 @@ function GridBattle.ResolveDodge(
 	end
 	local taken = damageUnit(state, ally, incoming, element, true)
 	if callisto then
-		callistoOnHit(state, callisto, enemy, ally, skill, grade)
+		callistoOnHit(state, callisto, enemy, ally, skill, grade, firstVictim)
 	end
 	if boss and skill.NoHealTurns and taken > 0 then
 		boss.NoHeal = math.max(boss.NoHeal, skill.NoHealTurns)
@@ -4116,6 +4846,7 @@ function GridBattle.ResolveDodge(
 		Actor = enemy.Id,
 		SkillId = skill.Id,
 		Target = ally.Id,
+		TargetId = ally.Id,
 		Grade = grade,
 		Hits = { { { Id = ally.Id, Damage = taken, Grade = grade, Killed = not ally.Alive } } },
 		Gimmick = gimmickCut,
@@ -4132,13 +4863,44 @@ function GridBattle.ResolveDodge(
 end
 
 --[[
+	파티: id 아군이 맞는다(예고 칸에 선 유닛마다 한 번씩 부른다). grade 는 호출한 쪽이 정한다 —
+	파티 전투는 QTE 가 없어 ResolveEnemyPhase 가 Fail(전부)/Partial(방어 선택 유닛)을 넣는다.
+]]
+function GridBattle.ResolveDodgeFor(
+	state: State,
+	enemyId: string,
+	allyId: string,
+	grade: QteDefinitions.Grade,
+	planIndex: number?,
+	forceSkill: BattleSkills.Skill?
+): (boolean, string?, number?)
+	local victim = state.Units[allyId]
+	if not victim or victim.Side ~= "Ally" or victim.Twin then
+		return false, "그런 아군이 없습니다."
+	end
+	return withUnit(state, allyId, resolveDodgeBound, state, enemyId, grade, planIndex, forceSkill) :: any
+end
+
+-- 솔로 호환: 지금 조작 중인 유닛(state.AllyId)이 맞는다
+function GridBattle.ResolveDodge(
+	state: State,
+	enemyId: string,
+	grade: QteDefinitions.Grade,
+	planIndex: number?,
+	-- 강제 결투 응수: 이 스킬을 지금 쓰게 한다(예고 없이). 스킬 안에서 도는 것이라 앞뒤 비교(watch)는 바깥 스킬이 한다
+	forceSkill: BattleSkills.Skill?
+): (boolean, string?, number?)
+	return resolveDodgeBound(state, enemyId, grade, planIndex, forceSkill)
+end
+
+--[[
 	검수 턴 끝 처리(EndTurn). 칸이 바뀌기 **전에** 어디 서 있었는지 본다.
 	  1. 지난 턴에 걸린 것이 한 턴 흐른다(테스터·묶임·스테미나 빚)
 	  2. 검은 칸 갱신(bossEndTurn)
 	  3. 검은 칸에서 마쳤으면 검수중 값(최대 체력 4% 고정 피해 — 죽지 않음·스테미나 빚) → 다음 턴 테스터
 	  4. 검수 준비중 칸에서 마쳤으면 다음 턴 묶임
 ]]
-local function bossTurnEffects(state: State, boss: BossState)
+local function bossTurnPre(state: State, boss: BossState): { Checked: boolean, Pending: boolean }
 	local ally = GridBattle.Ally(state)
 	local checked, pending = onChecked(state), onPending(state)
 	if (boss.Tester or 0) > 0 then
@@ -4165,9 +4927,14 @@ local function bossTurnEffects(state: State, boss: BossState)
 			table.remove(debts, i)
 		end
 	end
+	return { Checked = checked, Pending = pending }
+end
 
-	bossEndTurn(state)
-
+local function bossTurnPost(state: State, boss: BossState, marks: { Checked: boolean, Pending: boolean })
+	local ally = GridBattle.Ally(state)
+	local checked, pending = marks.Checked, marks.Pending
+	local debts = boss.StaminaDebt or {}
+	boss.StaminaDebt = debts
 	if checked and ally.Alive then
 		-- 부작용은 부위를 부술 때마다 하나씩 사라진다(서브코어-삭제 → 고정 피해, 머리 → 스테미나 후유증)
 		local notes = {}
@@ -4208,6 +4975,19 @@ local function bossTurnEffects(state: State, boss: BossState)
 	end
 end
 
+-- 검수 턴 끝: 아군마다(조작 묶음) 앞 단계 → 칸 갱신 한 번 → 뒤 단계
+local function bossTurnEffects(state: State, boss: BossState)
+	local allies = allyUnits(state, true)
+	local marks: { [string]: { Checked: boolean, Pending: boolean } } = {}
+	for _, a in allies do
+		marks[a.Id] = withUnit(state, a.Id, bossTurnPre, state, boss) :: any
+	end
+	bossEndTurn(state)
+	for _, a in allies do
+		withUnit(state, a.Id, bossTurnPost, state, boss, marks[a.Id])
+	end
+end
+
 --[[
 	턴을 마무리한다.
 
@@ -4222,22 +5002,30 @@ function GridBattle.EndTurn(state: State)
 	if state.Outcome ~= "Ongoing" then
 		return
 	end
-	local watch = watchBegin(state)
+	-- 앞뒤 비교(자원 훅)는 아군마다 자기 것을 본다. 적 도트 비교는 첫 아군 하나만(같은 일을 여럿에게 두 번 알리지 않게)
+	local watches: { [string]: any } = {}
+	for index, a in allyUnits(state) do
+		watches[a.Id] = withUnit(state, a.Id, watchBegin, state, index > 1)
+	end
 	-- 보스전 회복 칸: 턴 끝에 그 위에 서 있으면 최대 체력의 HEAL_RATIO
-	if state.Boss and standingMod(state) == "Heal" then
-		local ally = GridBattle.Ally(state)
-		if ally.Alive then
-			-- 회복 불가(블루스크린) 중에도 회복 칸은 반만큼 들어간다(2026-10-04 힐장판 강화)
-			local gained
-			if state.Boss.NoHeal > 0 then
-				gained = healUnit(ally, ally.MaxHealth * HEAL_RATIO * 0.5)
-			else
-				gained = heal(state, ally, ally.MaxHealth * HEAL_RATIO)
+	for _, a in allyUnits(state) do
+		withUnit(state, a.Id, function()
+			if state.Boss and standingMod(state) == "Heal" then
+				local ally = GridBattle.Ally(state)
+				if ally.Alive then
+					-- 회복 불가(블루스크린) 중에도 회복 칸은 반만큼 들어간다(2026-10-04 힐장판 강화)
+					local gained
+					if state.Boss.NoHeal > 0 then
+						gained = healUnit(ally, ally.MaxHealth * HEAL_RATIO * 0.5)
+					else
+						gained = heal(state, ally, ally.MaxHealth * HEAL_RATIO)
+					end
+					if gained > 0 then
+						pushLog(state, string.format("회복 칸 — 체력 %d 회복", gained))
+					end
+				end
 			end
-			if gained > 0 then
-				pushLog(state, string.format("회복 칸 — 체력 %d 회복", gained))
-			end
-		end
+		end)
 	end
 	local boss = state.Boss
 	if boss then
@@ -4249,7 +5037,11 @@ function GridBattle.EndTurn(state: State)
 	for _, a in GridBattle.Allies(state) do
 		BattleStatus.SpendAll(a.Status, ClassResources.BIND)
 	end
-	fire(state, "TurnEnd", { Acted = state.Acted, Moved = state.Moved, Attacked = state.Attacked })
+	for _, a in allyUnits(state) do
+		withUnit(state, a.Id, function()
+			fire(state, "TurnEnd", { Acted = state.Acted, Moved = state.Moved, Attacked = state.Attacked })
+		end)
+	end
 	local dotSpent: { [string]: number } = {}
 	for _, unit in state.Units do
 		if unit.Alive then
@@ -4358,7 +5150,7 @@ function GridBattle.EndTurn(state: State)
 		end
 		local dealt = damageUnit(state, unit, burst, "True", false)
 		pushLog(state, string.format("%s — 융해 %d 폭발 (%d 피해 · 화상 +%d)", unit.Name, melt, dealt, melt * 3))
-		fire(state, "MeltBurst", { Target = unit, Melt = melt, Damage = dealt })
+		fireAll(state, "MeltBurst", { Target = unit, Melt = melt, Damage = dealt })
 	end
 
 	-- 칼리스토: 고찰 화상 · 남은 턴 숫자 · 재사용 대기 · 장판 · 작은 곰 자리
@@ -4367,26 +5159,21 @@ function GridBattle.EndTurn(state: State)
 	end
 
 	-- 직업 자원 자동 회복. 아군만 해당한다(적은 직업이 없다).
-	local ally = GridBattle.Ally(state)
-	if ally.Alive then
-		for id, amount in ClassResources.TurnGain(state.AllyClassId, state.Turn) do
-			gainResource(state, ally, id, amount)
-		end
-		--[[
-			스테미나는 사양대로 매 턴 고정 8씩 찬다
-			(`ProgressionDefinitions.StaminaRegen`, 받는 버프 효율이 반영된다).
-		]]
-		local regen = ProgressionDefinitions.StaminaRegen(BattleStatus.Total(ally.Status, "BuffTaken"))
-			* math.max(0, 1 + BattleStatus.Total(ally.Status, "StaminaGain"))
-		ally.Stamina = math.min(ally.MaxStamina, ally.Stamina + math.floor(regen + 0.5))
+	for _, a in allyUnits(state) do
+		withUnit(state, a.Id, function()
+			local ally = GridBattle.Ally(state)
+			for id, amount in ClassResources.TurnGain(state.AllyClassId, state.Turn) do
+				gainResource(state, ally, id, amount)
+			end
+			--[[
+				스테미나는 사양대로 매 턴 고정 8씩 찬다
+				(`ProgressionDefinitions.StaminaRegen`, 받는 버프 효율이 반영된다).
+			]]
+			local regen = ProgressionDefinitions.StaminaRegen(BattleStatus.Total(ally.Status, "BuffTaken"))
+				* math.max(0, 1 + BattleStatus.Total(ally.Status, "StaminaGain"))
+			ally.Stamina = math.min(ally.MaxStamina, ally.Stamina + math.floor(regen + 0.5))
+		end)
 	end
-
-	--[[
-		카드의 `행동하지 않고 턴을 마치면` 효과. 턴을 넘기기 **전에** 판정한다.
-		페르마타·묵상처럼 한 턴을 통째로 쉬는 대신 자원을 받는 카드가 여기 걸린다.
-	]]
-	state.Acted = false
-	state.Attacked = false
 
 	--[[
 		예고를 비운다. 이번 턴 몫은 이미 해소됐으므로, 남겨 두면 다음 턴에 같은
@@ -4394,16 +5181,26 @@ function GridBattle.EndTurn(state: State)
 	]]
 	state.Planned = {}
 	state.Turn += 1
-	state.Moved = false
-	CardEffects.NewTurn(state.Runtime)
-
+	-- 새 턴: 아군마다 행동 기록을 지우고 카드 실행기를 새 턴으로 — `행동하지 않고 턴을 마치면` 은 위 TurnEnd 에서 이미 판정했다.
 	--[[
 		카드의 `매 턴` 효과. **턴 번호를 올린 뒤**에 쏜다 — 여기서 거는 조건부
 		보정값은 1턴짜리라, 새 턴이 시작한 시점에 붙어야 그 턴 내내 유효하다.
 		직전 `TickModifiers`가 지난 턴 몫을 이미 걷어 갔으므로 겹치지도 않는다.
 	]]
-	fire(state, "TurnStart", state.Turn)
-	watchEnd(state, watch)
+	for _, a in allyUnits(state, true) do
+		withUnit(state, a.Id, function()
+			state.Acted, state.Attacked, state.Moved = false, false, false
+			CardEffects.NewTurn(state.Runtime)
+			a.Homing, a.Chosen = false, nil
+			if a.Alive then
+				fire(state, "TurnStart", state.Turn)
+				if watches[a.Id] then
+					watchEnd(state, watches[a.Id])
+				end
+			end
+		end)
+	end
+	state.Round = { Phase = "Prepare", Order = {}, Next = 1 }
 
 	refreshOutcome(state)
 end
@@ -4480,6 +5277,55 @@ local function bossSnapshot(state: State): any
 	}
 end
 
+-- 조작 중인 유닛의 스킬 바(스냅샷용). 번호의 기준은 SkillList
+local function skillViews(state: State): { any }
+	local ally = GridBattle.Ally(state)
+	local classCount = #BattleSkills.ForClass(state.AllyClassId)
+	local commonCount = #BattleSkills.Common()
+	local allySkills = {}
+	local resolved = GridBattle.SkillList(state)
+	for index, skill in resolved do
+		local override = BattleSkillEffects.DisplayName(skill.Id, ally.Status)
+		--[[
+			종류를 함께 보낸다.
+			  Class    직업 스킬 1~3
+			  Upgrade  강화·연계 (3번 오른쪽)
+			  Common   가드·명상
+		]]
+		local kind = "Class"
+		if index > #resolved - commonCount then
+			kind = "Common"
+		elseif index > classCount then
+			kind = "Upgrade"
+		end
+
+		table.insert(allySkills, {
+			Index = index,
+			Id = skill.Id,
+			Name = override or skill.Name,
+			-- 스킬 바에서 마우스를 올렸을 때 띄울 설명과 범위.
+			Description = skill.Description or "",
+			ShapeText = BattleSkills.ShapeText(skill),
+			Damage = skill.Damage,
+			Range = BattleSkills.RangeText(skill),
+			-- 근거리 / 원거리 (요청).
+			RangeKind = skill.Range,
+			RangeLabel = BattleSkills.RangeLabel(skill),
+			Kind = kind,
+			Upgraded = kind == "Upgrade" or override ~= nil,
+			-- 쿨타임. UI가 이걸로 스킬 바를 잠그거나 "N턴 남음"을 띄운다.
+			Cooldown = skill.Cooldown or 0,
+			CooldownLeft = ally.Cooldowns[skill.Id] or 0,
+			StaminaCost = GridBattle.StaminaCost(state, skill),
+			Blocked = skill.Damage > 0 and query(state, "NoAttackSkills", 0) >= 1,
+			-- 범위 미리보기용 실제 성장 단계(카드가 바꾼 것까지). 클라이언트는 이 값을 먼저 쓴다
+			Grow = GridBattle.AllyGrowCount(state, skill),
+		})
+	end
+
+	return allySkills
+end
+
 function GridBattle.Snapshot(state: State): any
 	local units = {}
 	for id, unit in state.Units do
@@ -4515,6 +5361,11 @@ function GridBattle.Snapshot(state: State): any
 			Plans = unit.Plans,
 			-- 적 정의 Id: 클라이언트가 모양을 고른다(칼리스토 = 사람 모양)
 			DefId = unit.DefId,
+			-- 파티 전투(아군만): 직업·이번 턴 유도·고른 스킬·유도가 겨누는 행
+			ClassId = if unit.Side == "Ally" and not unit.Twin then unit.ClassId else nil,
+			Homing = if unit.Side == "Ally" and not unit.Twin then unit.Homing == true else nil,
+			Chosen = unit.Chosen,
+			AimY = if unit.Side == "Ally" and not unit.Twin and cell then homingLane(state, cell.Y, unit.Homing) else nil,
 		}
 	end
 	-- 칼리스토전: 페이즈·장판·박자(체력바·정보 창)
@@ -4588,48 +5439,7 @@ function GridBattle.Snapshot(state: State): any
 		쓸 수 있는 스킬 그대로 내려보낸다. `SkillList`가 유일한 기준이므로 클라이언트
 		버튼 번호와 서버 판정이 어긋날 수 없다.
 	]]
-	local classCount = #BattleSkills.ForClass(state.AllyClassId)
-	local commonCount = #BattleSkills.Common()
-	local allySkills = {}
-	local resolved = GridBattle.SkillList(state)
-	for index, skill in resolved do
-		local override = BattleSkillEffects.DisplayName(skill.Id, allyStatus)
-		--[[
-			종류를 함께 보낸다.
-			  Class    직업 스킬 1~3
-			  Upgrade  강화·연계 (3번 오른쪽)
-			  Common   가드·명상
-		]]
-		local kind = "Class"
-		if index > #resolved - commonCount then
-			kind = "Common"
-		elseif index > classCount then
-			kind = "Upgrade"
-		end
-
-		table.insert(allySkills, {
-			Index = index,
-			Id = skill.Id,
-			Name = override or skill.Name,
-			-- 스킬 바에서 마우스를 올렸을 때 띄울 설명과 범위.
-			Description = skill.Description or "",
-			ShapeText = BattleSkills.ShapeText(skill),
-			Damage = skill.Damage,
-			Range = BattleSkills.RangeText(skill),
-			-- 근거리 / 원거리 (요청).
-			RangeKind = skill.Range,
-			RangeLabel = BattleSkills.RangeLabel(skill),
-			Kind = kind,
-			Upgraded = kind == "Upgrade" or override ~= nil,
-			-- 쿨타임. UI가 이걸로 스킬 바를 잠그거나 "N턴 남음"을 띄운다.
-			Cooldown = skill.Cooldown or 0,
-			CooldownLeft = ally.Cooldowns[skill.Id] or 0,
-			StaminaCost = GridBattle.StaminaCost(state, skill),
-			Blocked = skill.Damage > 0 and query(state, "NoAttackSkills", 0) >= 1,
-			-- 범위 미리보기용 실제 성장 단계(카드가 바꾼 것까지). 클라이언트는 이 값을 먼저 쓴다
-			Grow = GridBattle.AllyGrowCount(state, skill),
-		})
-	end
+	local allySkills = skillViews(state)
 
 	return {
 		Floor = state.Floor,
@@ -4675,6 +5485,34 @@ function GridBattle.Snapshot(state: State): any
 		-- 보스전 판: 지워진 아군 칸 {X, Y, Turns}, 버프/버그 칸 {X, Y, Kind}, 지금 선 칸의 효과
 		Boss = if state.Boss then bossSnapshot(state) else nil,
 		Callisto = callistoView,
+		-- 파티 전투: 단계(Prepare/Acting/Enemy) · 행동 순서와 다음 차례 · 남은 유도 · 유닛마다 스킬 바/자원/상태
+		Party = (function()
+			local members = {}
+			for _, a in allyUnits(state, true) do
+				local view = withUnit(state, a.Id, function()
+					return {
+						Id = a.Id,
+						ClassId = a.ClassId,
+						Cost = PartyDefinitions.Cost(a.ClassId :: string),
+						Skills = skillViews(state),
+						Status = BattleStatus.Snapshot(a.Status),
+						Stamina = a.Stamina,
+						MaxStamina = a.MaxStamina,
+						Standing = standingMod(state),
+						Defending = GridBattle.IsDefending(state, a.Id),
+					}
+				end)
+				table.insert(members, view)
+			end
+			return {
+				Phase = state.Round.Phase,
+				Order = table.clone(state.Round.Order),
+				Next = state.Round.Next,
+				HomingLeft = GridBattle.HomingLeft(state),
+				HomingPerTurn = PartyDefinitions.HOMING_PER_TURN,
+				Members = members,
+			}
+		end)(),
 		Log = table.clone(state.Log),
 		Events = table.clone(state.Events),
 	}

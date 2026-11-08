@@ -1150,6 +1150,361 @@ end
 	수치가 사양대로인지 검사한다. 사양의 숫자를 그대로 박아 두었으므로,
 	사양이 바뀌면 이 테스트부터 고쳐야 한다.
 ]]
+--[[
+	파티 전투(2026-11-08, 파티전투_사양.md) 검증. QTE 가 없는 흐름 — 아군 행동은 늘 Success, 적 행동은 예고 칸의 유닛만 Fail(방어 선택은 Partial).
+	`RunSystems`의 지역 변수 한계 때문에 따로 둔다.
+]]
+local function runParty()
+	local PartyDefinitions = require(ReplicatedStorage.Shared.PartyDefinitions)
+	local BattleGrid = require(ReplicatedStorage.Shared.BattleGrid)
+	local CardEffects = require(ReplicatedStorage.Shared.CardEffects)
+	local BattleStatus = require(ReplicatedStorage.Shared.BattleStatus)
+	local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
+
+	local seed = 7
+	local function rng(): number
+		seed = (seed * 48271) % 2147483647
+		return seed / 2147483647
+	end
+	local function noCrit(): number
+		return 0.99
+	end
+	local function member(classId: string, x: number, y: number, cards: { any }?): any
+		return { ClassId = classId, X = x, Y = y, Cards = cards or {}, Name = classId, Health = 500, Power = 10, Stamina = 200 }
+	end
+	local function party(members: { any }, enemies: { string }?, cells: { { number } }?): any
+		return GridBattle.NewParty(1, members, {
+			Name = "파티 시험",
+			Enemies = enemies or { "Slime" },
+			Cells = cells or { { 1, 1 } },
+			HealthScale = 1000,
+			PowerScale = 1,
+		})
+	end
+	local function skillActors(state: any): { string }
+		local actors = {}
+		for _, event in state.Events do
+			if event.Kind == "Skill" then
+				table.insert(actors, event.Actor)
+			end
+		end
+		return actors
+	end
+
+	--=== 구성 검사(코스트 · 중복 · 겹침 · 범위) ===--
+	local classes = { "Attuner", "Berserker", "AzureBlade", "WallPilgrim", "Musician", "Duelist", "Quasar", "Alchemist", "Pulsar", "WallMason", "WallBreaker" }
+	for _, classId in classes do
+		expect(PartyDefinitions.Cost(classId) ~= nil, "every class needs a party cost: " .. classId)
+	end
+	local over, total = {}, 0
+	for index, classId in classes do
+		table.insert(over, { ClassId = classId, X = (index - 1) % 6 + 1, Y = (index - 1) // 6 + 1 })
+		total += PartyDefinitions.Cost(classId) :: number
+		if total > PartyDefinitions.COST_LIMIT then
+			break
+		end
+	end
+	expect(total > PartyDefinitions.COST_LIMIT, "test classes must be able to exceed the cost limit")
+	local okOver, whyOver = PartyDefinitions.Validate(over)
+	expect(not okOver and whyOver ~= nil and string.find(whyOver, "코스트", 1, true) ~= nil, "a party over the cost limit must be rejected")
+	expect(not pcall(GridBattle.NewParty, 1, over, { Enemies = { "Slime" } }), "NewParty must refuse an over-cost party")
+	table.remove(over)
+	expect(PartyDefinitions.Validate(over), "the same party without the last class must fit the limit")
+	expect(
+		not PartyDefinitions.Validate({ { ClassId = "Pulsar", X = 1, Y = 1 }, { ClassId = "Pulsar", X = 2, Y = 1 } }),
+		"the same class twice must be rejected"
+	)
+	expect(
+		not PartyDefinitions.Validate({ { ClassId = "Pulsar", X = 1, Y = 1 }, { ClassId = "WallMason", X = 1, Y = 1 } }),
+		"two units on one cell must be rejected"
+	)
+	expect(not PartyDefinitions.Validate({ { ClassId = "Pulsar", X = 7, Y = 1 } }), "a cell outside the grid must be rejected")
+	expect(not PartyDefinitions.Validate({ { ClassId = "Pulsar", X = 1, Y = 4 } }), "a row outside the grid must be rejected")
+	expect(not PartyDefinitions.Validate({}), "an empty party must be rejected")
+	for _, preset in PartyDefinitions.Examples() do
+		expect(PartyDefinitions.Validate(preset.Units), "example preset must be a valid party: " .. preset.Name)
+	end
+
+	--=== 행동 순서: 행(y) 위 → 아래, 같은 행은 열(x) 큰 쪽(화면 왼쪽) → 작은 쪽 ===--
+	local sorted = PartyDefinitions.ActionOrder({ { X = 1, Y = 1 }, { X = 6, Y = 1 }, { X = 3, Y = 2 }, { X = 6, Y = 3 } })
+	expect(
+		sorted[1].X == 6 and sorted[1].Y == 1 and sorted[2].X == 1 and sorted[2].Y == 1 and sorted[3].X == 3 and sorted[4].X == 6 and sorted[4].Y == 3,
+		"action order is row first (top down), then column from the screen-left (x 6 → 1)"
+	)
+	local orderState = party({ member("Pulsar", 1, 1), member("Quasar", 6, 1), member("WallMason", 3, 2), member("WallBreaker", 6, 3) })
+	local orderIds = GridBattle.ActionOrder(orderState)
+	expect(
+		#orderIds == 4 and orderIds[1] == "ally2" and orderIds[2] == "player" and orderIds[3] == "ally3" and orderIds[4] == "ally4",
+		"state action order must follow the rule"
+	)
+
+	--=== 솔로 호환: New 는 Id player 의 유닛 하나 ===--
+	local solo = GridBattle.New(1, "혼자", 100, 10, "Berserker")
+	expect(solo.Units.player ~= nil and not solo.Party and #GridBattle.Allies(solo) == 1, "New must stay a one-unit party")
+
+	--=== 배치: 빈 칸 옮기기 · 맞바꾸기 · 막힌 칸/격자 밖 거절 · 턴 시작 뒤 잠금 ===--
+	local place = party({ member("Pulsar", 1, 1), member("WallMason", 3, 2), member("WallBreaker", 6, 3) })
+	expect(GridBattle.PlaceUnit(place, "player", 1, 2), "placing on an empty cell must work")
+	expect(BattleGrid.CellOf(place.Grid, "player").Y == 2, "the unit must have moved")
+	expect(GridBattle.PlaceUnit(place, "player", 3, 2), "placing on a friend must swap")
+	expect(
+		BattleGrid.CellOf(place.Grid, "player").X == 3 and BattleGrid.CellOf(place.Grid, "ally2").X == 1,
+		"the two units must have traded places"
+	)
+	expect(not GridBattle.PlaceUnit(place, "player", 7, 1), "outside the grid must be refused")
+	BattleGrid.SetEnabled(place.Grid, "Ally", 5, 1, false)
+	expect(not GridBattle.PlaceUnit(place, "player", 5, 1), "a blocked cell must be refused")
+	expect(not GridBattle.PlaceUnit(place, "nobody", 2, 1), "an unknown unit must be refused")
+
+	--=== 유닛마다 스킬 · 유도 3개 ===--
+	expect(not GridBattle.SetUnitSkill(place, "player", "NotMySkill"), "a skill outside the unit's list must be refused")
+	expect(GridBattle.SetUnitSkill(place, "player", "Guard"), "a unit may pick a common skill")
+	expect(place.Units.player.Chosen == "Guard", "the pick must be remembered")
+	expect(GridBattle.SetUnitSkill(place, "player", nil), "clearing the pick must work")
+	expect(GridBattle.HomingLeft(place) == PartyDefinitions.HOMING_PER_TURN, "three homing marks per turn")
+	local extra = party({ member("Pulsar", 1, 1), member("WallMason", 2, 1), member("WallBreaker", 3, 1), member("Musician", 4, 1) })
+	expect(GridBattle.SetHoming(extra, "player", true), "homing 1")
+	expect(GridBattle.SetHoming(extra, "ally2", true), "homing 2")
+	expect(GridBattle.SetHoming(extra, "ally3", true), "homing 3")
+	expect(not GridBattle.SetHoming(extra, "ally4", true), "the fourth homing mark must be refused")
+	expect(GridBattle.SetHoming(extra, "ally3", false) and GridBattle.SetHoming(extra, "ally4", true), "taking a mark off frees it")
+	local beganOk = GridBattle.BeginTurn(extra)
+	expect(beganOk, "BeginTurn must start the round")
+	expect(not GridBattle.PlaceUnit(extra, "player", 5, 1), "no placing after the turn began")
+	expect(not GridBattle.SetHoming(extra, "ally3", true), "no homing change after the turn began")
+	expect(not GridBattle.SetUnitSkill(extra, "player", "Guard"), "no skill change after the turn began")
+	expect(not GridBattle.BeginTurn(extra), "BeginTurn twice must be refused")
+	GridBattle.EndTurn(extra)
+	expect(GridBattle.HomingLeft(extra) == PartyDefinitions.HOMING_PER_TURN, "homing marks must reset next turn")
+	expect(GridBattle.PlaceUnit(extra, "player", 5, 1), "placing is open again the next turn")
+
+	--=== 유도: 자기 행 → 위 → 아래 → 헛침, 유도 없으면 헛침. 미리보기 = 판정 ===--
+	local function lone(unitY: number, enemyRows: { number }): any
+		local cells = {}
+		for _, y in enemyRows do
+			table.insert(cells, { 1, y })
+		end
+		local enemies = {}
+		for _ in enemyRows do
+			table.insert(enemies, "Slime")
+		end
+		return party({ member("WallMason", 3, unitY) }, enemies, cells)
+	end
+	local s1 = lone(2, { 1 })
+	expect(GridBattle.AimLane(s1, "player", false) == 2, "without homing the unit aims its own row")
+	expect(GridBattle.AimLane(s1, "player", true) == 1, "homing: own row empty → the row above")
+	local s2 = lone(2, { 1, 3 })
+	expect(GridBattle.AimLane(s2, "player", true) == 1, "homing: both neighbours have enemies → above first")
+	local s3 = lone(2, { 3 })
+	expect(GridBattle.AimLane(s3, "player", true) == 3, "homing: above empty → the row below")
+	local s4 = lone(1, { 3 })
+	expect(GridBattle.AimLane(s4, "player", true) == 1, "homing looks one row only: nothing adjacent → miss")
+	local s5 = lone(2, { 2, 1 })
+	expect(GridBattle.AimLane(s5, "player", true) == 2, "homing: an enemy on the own row keeps the own row")
+	local previewHomed = GridBattle.PreviewCells(s1, "player", "ChiselWork", true)
+	local previewPlain = GridBattle.PreviewCells(s1, "player", "ChiselWork", false)
+	expect(previewHomed.Lane == 1 and #previewHomed.Motions[1] >= 1 and previewHomed.Motions[1][1].Y == 1, "preview paints the homed row")
+	expect(#previewPlain.Motions[1] == 0, "preview paints nothing when the own row has no enemy")
+
+	local function swing(state: any, homing: boolean): number
+		local enemy = GridBattle.AliveEnemies(state)[1]
+		local before = enemy.Health
+		if homing then
+			expect(GridBattle.SetHoming(state, "player", true), "homing on")
+		end
+		expect(GridBattle.BeginTurn(state), "begin")
+		expect(GridBattle.ResolveUnitSkill(state, "player", noCrit), "the unit acts")
+		return before - enemy.Health
+	end
+	expect(swing(lone(2, { 1 }), true) > 0, "a homing swing reaches the row above")
+	expect(swing(lone(2, { 1 }), false) == 0, "a swing without homing misses an empty row")
+	expect(swing(lone(2, { 3 }), true) > 0, "a homing swing reaches the row below")
+	expect(swing(lone(1, { 3 }), true) == 0, "homing never reaches two rows away")
+
+	--=== 순서대로 한 번씩 · 어기면 거절 · 등급은 늘 Success ===--
+	local run = party({ member("Pulsar", 1, 1), member("Quasar", 6, 1), member("WallMason", 3, 2), member("WallBreaker", 6, 3) })
+	expect(not GridBattle.ResolveUnitSkill(run, "ally2", noCrit), "acting before BeginTurn must be refused")
+	GridBattle.BeginTurn(run)
+	expect(run.Round.Phase == "Acting", "the round must be acting")
+	expect(not GridBattle.ResolveUnitSkill(run, "player", noCrit), "acting out of order must be refused")
+	for _, id in { "ally2", "player", "ally3", "ally4" } do
+		expect(GridBattle.NextActor(run) == id, "next actor must follow the order: " .. id)
+		local ok, _, acted = GridBattle.ResolveUnitSkill(run, id, noCrit)
+		expect(ok and acted == true, "unit must act in turn: " .. id)
+		expect(not GridBattle.ResolveUnitSkill(run, id, noCrit) or GridBattle.NextActor(run) ~= id, "a unit never acts twice")
+	end
+	local actors = skillActors(run)
+	expect(table.concat(actors, ",") == "ally2,player,ally3,ally4", "each unit acts exactly once in order: " .. table.concat(actors, ","))
+	for _, event in run.Events do
+		if event.Kind == "Skill" then
+			expect(event.Grade == "Success", "party attacks are always Success")
+		end
+	end
+	expect(run.Round.Phase == "Enemy" and GridBattle.NextActor(run) == nil, "after the last unit the enemy phase starts")
+
+	--=== 앞 유닛이 건 디버프가 뒤 유닛 피해에 먹는다 ===--
+	local function followUpDamage(quasarSkill: string?): number
+		local state = party({ member("Quasar", 6, 1), member("WallMason", 5, 1) })
+		if quasarSkill then
+			expect(GridBattle.SetUnitSkill(state, "player", quasarSkill), "pick the front unit's skill")
+		end
+		GridBattle.BeginTurn(state)
+		GridBattle.ResolveUnitSkill(state, "player", noCrit)
+		GridBattle.ResolveUnitSkill(state, "ally2", noCrit)
+		local last = 0
+		for _, event in state.Events do
+			if event.Kind == "Skill" and event.Actor == "ally2" then
+				last = 0
+				for _, list in event.Hits do
+					for _, hit in list do
+						last += hit.Damage
+					end
+				end
+			end
+		end
+		return last
+	end
+	local boosted, plain = followUpDamage(nil), followUpDamage("Guard")
+	expect(plain > 0 and boosted > plain, string.format("a debuff from the earlier unit must raise the later unit's damage (%d vs %d)", boosted, plain))
+
+	--=== 카드 런타임은 유닛마다 따로, 아군 전체 카드는 c.Allies() 로 모두에 ===--
+	local cardParty = party({
+		member("WallBreaker", 2, 1, { { CardId = "Berserker_R_ScentOfBlood", Level = 1 } }),
+		member("WallMason", 3, 2),
+		member("Musician", 4, 3, { { CardId = "Musician_C_Prelude", Level = 1 } }),
+	})
+	expect(cardParty.Units.player.Runtime ~= cardParty.Units.ally2.Runtime, "every unit owns its own card runtime")
+	local weak = { MaxHealth = 100, Health = 10 }
+	local infoA = { Target = weak, Bonus = 0 }
+	CardEffects.Fire(cardParty.Units.player.Runtime, "BeforeHit", infoA)
+	local infoB = { Target = weak, Bonus = 0 }
+	CardEffects.Fire(cardParty.Units.ally2.Runtime, "BeforeHit", infoB)
+	expect(infoA.Bonus > 0 and infoB.Bonus == 0, "one unit's card must not touch another unit's damage")
+	expect(
+		cardParty.Units.player.Status.Shield > 0 and cardParty.Units.ally2.Status.Shield > 0 and cardParty.Units.ally3.Status.Shield > 0,
+		"an all-allies card must reach every ally through c.Allies()"
+	)
+	expect(cardParty.AllyId == "player" and cardParty.Runtime == cardParty.Units.player.Runtime, "the primary unit stays bound when idle")
+
+	--=== 적 행동: 예고 칸의 유닛 전부 맞는다 · 칸 밖은 피해 0 · 방어 선택은 절반 ===--
+	local function hitState(): any
+		local state = party({ member("Pulsar", 2, 1), member("WallMason", 3, 1), member("WallBreaker", 4, 3) })
+		local enemy = GridBattle.AliveEnemies(state)[1]
+		enemy.SkillIndex = 1
+		BattleStatus.AddModifier(enemy.Status, "CritChance", -1, 9, "시험")
+		state.Planned = { enemy.Id }
+		return state
+	end
+	local hs = hitState()
+	local threatened = GridBattle.ThreatenedAllies(hs, GridBattle.AliveEnemies(hs)[1], 1)
+	expect(#threatened == 2, "both units on the telegraphed row are threatened")
+	local results = GridBattle.ResolveEnemyPhase(hs, rng)
+	expect(#results == 2, "the enemy phase must hit every unit on the cells")
+	expect(hs.Units.player.Health < 500 and hs.Units.ally2.Health < 500, "both units on the cells take damage")
+	expect(hs.Units.ally3.Health == 500, "a unit off the cells takes nothing")
+	expect(results[1].Grade == "Fail" and results[2].Grade == "Fail", "no QTE: units on the cells take the full Fail multiplier")
+	-- 방어는 가드 기술 자체(−70%)로만 — 등급은 늘 Fail(이중 감소 없음, 2026-11-08 총괄). 실제 흐름대로: 고르고 → 턴 시작 → 순서대로 행동 → 적 행동
+	local gs = hitState()
+	for _, id in GridBattle.ActionOrder(gs) do
+		expect(GridBattle.SetUnitSkill(gs, id, "Guard"), "pick a guard skill for " .. id)
+	end
+	expect(GridBattle.BeginTurn(gs), "begin the guarded turn")
+	for _ = 1, 3 do
+		local who = GridBattle.NextActor(gs)
+		if who then
+			GridBattle.ResolveUnitSkill(gs, who, rng)
+		end
+	end
+	local guarded = GridBattle.ResolveEnemyPhase(gs, rng)
+	local gradeOf: { [string]: string } = {}
+	for _, r in guarded do
+		gradeOf[r.Target] = r.Grade
+	end
+	expect(gradeOf.player == "Fail" and gradeOf.ally2 == "Fail", "no QTE: a guarding unit is still graded Fail (the guard skill cuts the damage)")
+	expect(results[1].Target == "ally2" and results[2].Target == "player", "victims are hit in action order (row, then screen-left first)")
+	expect(gs.Units.player.Health > hs.Units.player.Health, "a guarding unit takes less damage than the same unit without guard")
+
+	--=== 추적(Seek) 대상: 도발 최대 → 아니면 rng. 예고 때 정해 TargetId 로 ===--
+	local function callistoParty(): any
+		return party({ member("Pulsar", 1, 1), member("WallMason", 2, 2), member("WallBreaker", 3, 3) }, { "Callisto" }, nil)
+	end
+	local seekState = callistoParty()
+	GridBattle.AddTaunt(seekState, "ally2", 3)
+	GridBattle.AddTaunt(seekState, "ally1", 0)
+	GridBattle.EnemyPlan(seekState, rng)
+	local callisto = seekState.Units[seekState.Callisto.UnitId]
+	expect(callisto.Plan ~= nil and callisto.Plan.TargetId == "ally2", "a seek attack must aim at the unit with the most taunt")
+	expect(callisto.Plan.Target == "ally2", "the old Target field mirrors TargetId")
+	local seekState2 = callistoParty()
+	GridBattle.AddTaunt(seekState2, "ally2", 3)
+	GridBattle.AddTaunt(seekState2, "ally3", 5)
+	GridBattle.EnemyPlan(seekState2, rng)
+	expect(seekState2.Units[seekState2.Callisto.UnitId].Plan.TargetId == "ally3", "the larger taunt wins")
+	local seekState3 = callistoParty()
+	GridBattle.EnemyPlan(seekState3, rng)
+	local pick = seekState3.Units[seekState3.Callisto.UnitId].Plan.TargetId
+	expect(pick == "player" or pick == "ally2" or pick == "ally3", "without taunt a living unit is picked at random")
+	-- 1턴 칼리스토는 십자 유도기: 고른 대상 주변 십자 안의 유닛만 맞고, 걸리는 것도 맞은 유닛에게만
+	local victims = GridBattle.ThreatenedAllies(seekState2, seekState2.Units[seekState2.Callisto.UnitId], 1)
+	expect(#victims == 1 and victims[1] == "ally3", "only the targeted unit stands in the cross")
+	GridBattle.BeginTurn(seekState2)
+	while GridBattle.NextActor(seekState2) do
+		GridBattle.ResolveUnitSkill(seekState2, GridBattle.NextActor(seekState2) :: string, rng)
+	end
+	GridBattle.ResolveEnemyPhase(seekState2, rng)
+	expect(
+		BattleStatus.Stack(seekState2.Units.ally3.Status, ClassResources.GOCHAL) > 0
+			and BattleStatus.Stack(seekState2.Units.player.Status, ClassResources.GOCHAL) == 0,
+		"what the boss stacks on allies lands on the unit that was hit"
+	)
+
+	--=== 전멸 → Defeat · 쓰러진 유닛은 순서에서 빠진다 ===--
+	local wipe = party({ member("Pulsar", 1, 1), member("WallMason", 2, 2), member("WallBreaker", 3, 3) })
+	GridBattle.DebugSetHealth(wipe, "ally2", 0)
+	expect(wipe.Outcome == "Ongoing", "one fallen unit is not a defeat")
+	local wipeOrder = GridBattle.ActionOrder(wipe)
+	expect(#wipeOrder == 2 and table.find(wipeOrder, "ally2") == nil, "a fallen unit leaves the order")
+	GridBattle.DebugSetHealth(wipe, "player", 0)
+	GridBattle.DebugSetHealth(wipe, "ally3", 0)
+	expect(wipe.Outcome == "Defeat", "all units fallen is a defeat")
+
+	--=== 칼리스토 파티 전투 몇 턴 돌기 ===--
+	local longRun = GridBattle.NewParty(1, {
+		{ ClassId = "Pulsar", X = 1, Y = 1, Name = "a", Health = 6000, Power = 10, Stamina = 999 },
+		{ ClassId = "WallMason", X = 2, Y = 2, Name = "b", Health = 6000, Power = 10, Stamina = 999 },
+		{ ClassId = "WallBreaker", X = 3, Y = 3, Name = "c", Health = 6000, Power = 10, Stamina = 999 },
+	}, { Name = "칼리스토 파티", Enemies = { "Callisto" }, HealthScale = 1, PowerScale = 1 })
+	local turnsRun = 0
+	for _ = 1, 8 do
+		if longRun.Outcome ~= "Ongoing" then
+			break
+		end
+		GridBattle.EnemyPlan(longRun, rng)
+		expect(GridBattle.BeginTurn(longRun), "party round begins")
+		while GridBattle.NextActor(longRun) do
+			GridBattle.ResolveUnitSkill(longRun, GridBattle.NextActor(longRun) :: string, rng)
+		end
+		GridBattle.ResolveEnemyPhase(longRun, rng)
+		GridBattle.EndTurn(longRun)
+		turnsRun += 1
+		local snap = GridBattle.Snapshot(longRun)
+		expect(snap.Party ~= nil and #snap.Party.Members == 3 and snap.Party.Phase == "Prepare", "the snapshot carries the party view")
+	end
+	expect(turnsRun >= 4 and longRun.Turn == turnsRun + 1, "the party fight must keep running turn after turn")
+	expect(longRun.Units.player.Health < 6000 or longRun.Units.ally2.Health < 6000 or longRun.Units.ally3.Health < 6000, "the boss must have hurt somebody")
+	expect(GridBattle.AimLane ~= nil and longRun.AllyId == "player", "binding returns to the primary unit")
+
+	--=== 안 고른 유닛의 기본 공격 = 적을 치는 첫 기술(1번이 지원기인 펄서가 자기권을 쓰지 않음, 2026-11-08 총괄) ===--
+	local basicState = party({ member("Pulsar", 2, 2) })
+	expect(GridBattle.BeginTurn(basicState), "begin the basic-attack turn")
+	local okBasic, whyBasic, actedBasic = GridBattle.ResolveUnitSkill(basicState, "player", rng)
+	expect(okBasic and actedBasic, "the idle unit must act: " .. tostring(whyBasic))
+	local usedBasic = basicState.LastSkillId
+	local usedSkill = require(ReplicatedStorage.Shared.BattleSkills).ById(usedBasic)
+	expect(usedBasic ~= "Magnetosphere" and usedSkill ~= nil and usedSkill.Range ~= "Supporting",
+		"an idle unit must fall back to its first enemy-hitting skill, not a support skill (" .. tostring(usedBasic) .. ")")
+end
+
 function PrototypeTests.RunSystems()
 	--=== 스탯 ===--
 	local block = StatDefinitions.NewBlock()
@@ -2385,6 +2740,7 @@ function PrototypeTests.RunSystems()
 		runKeywords()
 		runCardEffects()
 		runStatusAndSkillEffects()
+		runParty()
 	end
 
 	--=== 직업별 스킬 ===--
