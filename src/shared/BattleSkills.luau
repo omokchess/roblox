@@ -482,13 +482,11 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoTrohia",
 		Name = "트로히아",
-		Description = "- 유도기(3×3): 쫓는 대상 칸이 중심인 3×3(판 밖은 잘림). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 팔등에서 나온 칼날로 5번 연달아 벰(5 × 5).\n- 회피 QTE 한 번(5타 모두 같은 등급).\n- 맞을 때마다 [성위] 1.\n- 대상에게 [뭇별]이 있으면 한 번마다 [성위] 대신 [화상] 3.",
+		Description = "- 유도기(3×3): 쫓는 대상 칸이 중심인 3×3(판 밖은 잘림). 옮겨도 따라오고 모양 안 아군은 모두 맞는다.\n- 팔등에서 나온 칼날로 몰아 베는 한 번의 공격(5).\n- 회피 QTE 한 번.\n- 맞으면 [성위] 1.\n- 대상에게 [뭇별]이 있으면 [성위] 대신 [화상] 3.",
 		Damage = 5,
 		Range = "Melee",
 		Shape = { Kind = "Square", Radius = 1 },
-		Strikes = 5,
-		ChainQte = true,
-		SameGrade = true,
+		-- 2026-11-08 사용자: "`x3 스킬 이름 (한 번씩 회피)` 있는 스킬들만 한번만 사용하게" — 연타(Strikes 5)를 빼 한 번만 친다(모션은 5연격 그대로)
 		BossKind = "Attack",
 	},
 	{
@@ -509,12 +507,11 @@ local bossSkills: { Skill } = {
 		Id = "CallistoSynthesis",
 		Gimmick = { Id = "Stand", Name = "발 묶기", Reduce = 0.5, Text = "이번 턴 이동하지 않음" },
 		Name = "신데시 톤 아스트론",
-		Description = "- 유도기(줄): 쫓는 대상이 선 행 6칸. 옮겨도 따라오고 그 줄의 아군은 모두 맞는다.\n- 손을 칼날로 바꿔 3번 찌름(12 × 3).\n- 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 대상에게 [성위]가 있으면 피해 +30% · 찌를 때마다 [화상] 5.\n- 기믹 [발 묶기]: 이번 턴 이동하지 않으면 피해 −50%.",
+		Description = "- 유도기(줄): 쫓는 대상이 선 행 6칸. 옮겨도 따라오고 그 줄의 아군은 모두 맞는다.\n- 손을 칼날로 바꿔 찌르는 한 번의 공격(12).\n- 회피 QTE 한 번.\n- 대상에게 [성위]가 있으면 피해 +30% · [화상] 5.\n- 기믹 [발 묶기]: 이번 턴 이동하지 않으면 피해 −50%.",
 		Damage = 12,
 		Range = "Melee",
 		Shape = { Kind = "Row" },
-		Strikes = 3,
-		ChainQte = true, -- 2026-11-06 개선안 4절: 회피 QTE 3번 대신 QTE 1개 안의 3비트
+		-- 2026-11-08 사용자: "한번만 사용하게" — 3비트 연타(Strikes 3 · ChainQte)를 빼 한 번만 친다(모션은 3연격 그대로)
 		BossKind = "Attack",
 	},
 	{
@@ -571,12 +568,11 @@ local bossSkills: { Skill } = {
 	{
 		Id = "CallistoShower",
 		Name = "쏟아지는 뭇별",
-		Description = "- 유도기(열): 쫓는 대상이 선 열 3칸. 옮겨도 따라오고 그 열의 아군은 모두 맞는다.\n- 별을 쏟아 3번 때림(5 × 3). 3연타 QTE 1개(화살표 5개 × 3비트)로 비트마다 회피.\n- 맞을 때마다 [성위] 1.",
+		Description = "- 유도기(열): 쫓는 대상이 선 열 3칸. 옮겨도 따라오고 그 열의 아군은 모두 맞는다.\n- 별을 쏟아 한 번 때림(5). 회피 QTE 한 번.\n- 맞으면 [성위] 1.",
 		Damage = 5,
 		Range = "Ranged",
 		Shape = { Kind = "Column" },
-		Strikes = 3,
-		ChainQte = true,
+		-- 2026-11-08 사용자: "한번만 사용하게" — 3비트 연타(Strikes 3 · ChainQte)를 빼 한 번만 친다
 		BossKind = "Attack",
 		BossCooldown = 5, -- 2026-11-06 R3: 2 → 3, 사용자 답 +2 → 5
 	},

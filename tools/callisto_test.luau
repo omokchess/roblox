@@ -75,7 +75,7 @@ do
 	check(stack(ally, ClassResources.SYMBERASMA) > 0, "심베라즈마 디버프")
 	local b = boss(s)
 	local t3 = playTurn(s)
-	check(#b.Plans == 3 and #t3 >= 1 and t3[1] == "CallistoSynthesis", "3턴 성위가 없어 신데시 톤 아스트론 3연타 — " .. table.concat(t3, ","))
+	check(#b.Plans == 1 and #t3 >= 1 and t3[1] == "CallistoSynthesis", "3턴 성위가 없어 신데시 톤 아스트론(2026-11-08 한 번만) — " .. table.concat(t3, ","))
 	-- 2026-11-06 궁극기 보장: 4번째 턴은 첫 바퀴 끝의 아스트로 세시(바퀴 순서는 그대로 이어진다)
 	playTurn(s)
 	check(b.Plan and b.Plan.SkillId == "CallistoAstro" and s.Callisto.UltUsed, "4번째 턴 아스트로 세시 보장")
@@ -83,31 +83,29 @@ do
 	check(t4[1] == "CallistoSlash", "4턴(짝수 바퀴) 세시 파라티리시 — " .. tostring(t4[1]))
 	check(stack(ally, ClassResources.SEONGWI) == 2, "세시 파라티리시 성위 2 — " .. stack(ally, ClassResources.SEONGWI))
 	local t5 = playTurn(s)
-	check(#b.Plans == 5 and #t5 >= 2 and t5[1] == "CallistoTrohia", "5턴 트로히아 5연타(추적 — 다 맞음) — " .. table.concat(t5, ","))
-	check(stack(ally, ClassResources.SEONGWI) == 2 + #t5, "트로히아 타당 성위 1 — " .. stack(ally, ClassResources.SEONGWI))
+	check(#b.Plans == 1 and #t5 >= 1 and t5[1] == "CallistoTrohia", "5턴 트로히아 한 번(2026-11-08 — 추적, 맞음) — " .. table.concat(t5, ","))
+	check(stack(ally, ClassResources.SEONGWI) == 3, "트로히아 성위 1 — " .. stack(ally, ClassResources.SEONGWI))
 	check(BattleStatus.Total(ally.Status, "DamageTaken") >= stack(ally, ClassResources.SEONGWI) * 0.01 - 1e-6, "성위 1당 받는 피해 +1%")
-	local ripe = stack(ally, ClassResources.SEONGWI) >= 6
+	local ripe = stack(ally, ClassResources.SEONGWI) >= 3 -- R1(2026-11-06): 렌즈 문턱 성위 3
 	local t6 = playTurn(s)
-	check(t6[1] == (if ripe then "CallistoArktos" else "CallistoSynthesis"), "6턴: 성위 6 이상이면 렌즈, 아니면 찌르기 — " .. tostring(t6[1]))
+	check(t6[1] == (if ripe then "CallistoArktos" else "CallistoSynthesis"), "6턴: 성위 3 이상이면 렌즈, 아니면 찌르기 — " .. tostring(t6[1]))
 	if ripe then
 		check(stack(ally, ClassResources.SEONGWI) == 0 and stack(ally, ClassResources.MUTBYEOL) > 0, "렌즈가 성위를 뭇별로 바꿈")
 	end
-	-- 2026-11-06 트로히아 다단히트: 회피 QTE 하나(ChainQte)의 등급 하나(SameGrade)가 5타 모두에 — 타마다 같은 피해
-	local tro = loadShared("BattleSkills").ById("CallistoTrohia")
-	check(tro.ChainQte == true and tro.SameGrade == true and tro.Strikes == 5, "트로히아 QTE 한 번 · 5타 같은 등급")
+	-- 2026-11-08 사용자: "x3 … (한 번씩 회피) 있는 스킬들만 한번만 사용하게" — 트로히아·신데시·뭇별은 연타 없이 한 번
+	local BS = loadShared("BattleSkills")
+	for _, id in { "CallistoTrohia", "CallistoSynthesis", "CallistoShower" } do
+		local sk = BS.ById(id)
+		check((sk.Strikes or 1) == 1 and not sk.ChainQte and not sk.SameGrade, id .. " 한 번만(연타·연타 QTE 없음)")
+	end
 	local ts = battle()
 	local tb = boss(ts)
-	tb.Plans = {}
-	for k = 1, 5 do
-		tb.Plans[k] = { SkillId = "CallistoTrohia", Cells = { { 1, 2 } } }
-	end
+	tb.Plans = { { SkillId = "CallistoTrohia", Cells = { { 1, 2 } } } }
 	tb.Plan = tb.Plans[1]
-	ts.Planned = { tb.Id, tb.Id, tb.Id, tb.Id, tb.Id }
+	ts.Planned = { tb.Id }
 	local before = GridBattle.Ally(ts).Health
-	for k = 1, 5 do
-		GridBattle.ResolveDodge(ts, tb.Id, "Success", k)
-	end
-	check(GridBattle.Ally(ts).Health == before, "트로히아 5타 회피 성공 — 피해 없음")
+	GridBattle.ResolveDodge(ts, tb.Id, "Success", 1)
+	check(GridBattle.Ally(ts).Health == before, "트로히아 회피 성공 — 피해 없음")
 	print("2 1페이즈 박자 OK")
 end
 
@@ -118,7 +116,7 @@ do
 	playTurn(s, "Success") -- 사진(회피 불가)
 	check(stack(ally, ClassResources.GOCHAL) == 1, "회피 불가 사진은 QTE 성공이어도 걸림")
 	playTurn(s, "Success")
-	playTurn(s, "Success") -- 찌르기 3연타 전부 회피
+	playTurn(s, "Success") -- 찌르기 회피
 	playTurn(s, "Success") -- 아스트로 세시(궁극기 보장 — 회피 불가라 맞는다)
 	playTurn(s, "Success") -- 베기 회피
 	check(stack(ally, ClassResources.SEONGWI) == 2, "2026-11-06 베기는 가드 QTE(회피 불가) — 성공해도 막기라 성위 2")
@@ -797,7 +795,7 @@ do
 		GridBattle.Ally(s2).Status.Stacks[ClassResources.SEONGWI] = 2
 		GridBattle.EnemyPlan(s2, rng)
 		check(planOf(s2).SkillId == "CallistoSynthesis", "성위 2 면 렌즈 아님(R1 문턱 3)")
-		check(#boss(s2).Plans == 3 and BattleSkills.ById("CallistoSynthesis").ChainQte == true, "신데시 3타 · 연타 QTE 묶음")
+		check(#boss(s2).Plans == 1 and not BattleSkills.ById("CallistoSynthesis").ChainQte, "신데시 한 번(2026-11-08)")
 
 		local s3 = battle()
 		stack(boss(s3), ClassResources.URSA_MINOR)
@@ -887,20 +885,20 @@ do
 			QteDefinitions.FeedDirection(q, q.ExpectedDirections[i])
 		end
 		check(QteDefinitions.FeedDirection(q, q.ExpectedDirections[8]) == false and q.BeatMistakes[2] == 1, "비트 2 에선 보이는 방향 그대로 누르면 실수")
-		-- 서버: 비트별 등급으로 ResolveDodge (3 → 회피 · 막기 · 실패)
-		local s = battle()
-		playTurn(s)
-		playTurn(s)
-		GridBattle.EnemyPlan(s, rng)
-		check(#boss(s).Plans == 3 and #GridBattle.PlannedThreatList(s) == 3, "신데시 3타가 위협 3개")
-		local ally = GridBattle.Ally(s)
+		-- 서버: 신데시는 2026-11-08 부터 한 번만(연타 QTE 없음) — 위협 하나, 등급 하나로 피해 0 < 막기 < 전액
 		local dmg = {}
-		for beat, grade in { "Success", "Partial", "Fail" } do
+		for i, grade in { "Success", "Partial", "Fail" } do
+			local s = battle()
+			playTurn(s)
+			playTurn(s)
+			GridBattle.EnemyPlan(s, rng)
+			check(#boss(s).Plans == 1 and #GridBattle.PlannedThreatList(s) == 1, "신데시 한 번 — 위협 하나")
+			local ally = GridBattle.Ally(s)
 			local hp = ally.Health
-			GridBattle.ResolveDodge(s, boss(s).Id, grade :: any, beat)
-			dmg[beat] = hp - ally.Health
+			GridBattle.ResolveDodge(s, boss(s).Id, grade :: any, 1)
+			dmg[i] = hp - ally.Health
 		end
-		check(dmg[1] == 0 and dmg[2] > 0 and dmg[3] > dmg[2], string.format("비트별 피해 0 < 막기 < 전액 (%d · %d · %d)", dmg[1], dmg[2], dmg[3]))
+		check(dmg[1] == 0 and dmg[2] > 0 and dmg[3] > dmg[2], string.format("등급별 피해 0 < 막기 < 전액 (%d · %d · %d)", dmg[1], dmg[2], dmg[3]))
 	end
 	-- 궁극기 보장: 체력이 거의 안 깎여도(작은 곰 자리·칠성군 없음) 1P 4번째 턴 아스트로 세시 · 2P 6번째 턴 북두칠성
 	do

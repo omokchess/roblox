@@ -769,7 +769,7 @@ do
 		local pages: { [number]: boolean } = {}
 		local cutscenes: { [string]: boolean } = {}
 		GridBattle.EnemyPlan(state, rng)
-		for turn = 1, 40 do
+		for turn = 1, 80 do -- 2026-11-08 연타 스킬이 한 번이 되며 2페이즈가 길어져(성위·뭇별이 덜 쌓임) 40 → 80
 			if state.Outcome ~= "Ongoing" then
 				break
 			end
