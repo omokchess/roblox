@@ -1,0 +1,93 @@
+{
+ "_": "models/snow3/build_kit.py 가 만든 표(손으로 고치지 말 것). 로블록스 로컬 = (-x, z, y), 원점 = 발자국 가운데 땅",
+ "new_materials": {
+  "DarkLog": "#3B2A1F"
+ },
+ "models": {
+  "Sn3_Smithy": {
+   "prefix": "Sn3Smithy",
+   "variant": "A",
+   "base": {
+    "x0": -16.02,
+    "x1": 19.5,
+    "z0": -19.0,
+    "z1": 13.02
+   },
+   "all": {
+    "x0": -19.35,
+    "x1": 19.5,
+    "z0": -19.0,
+    "z1": 15.44
+   },
+   "size_base": [
+    35.52,
+    32.02
+   ],
+   "size_all": [
+    38.85,
+    34.44
+   ],
+   "height": 34.14,
+   "doors": [
+    {
+     "x": -0.0,
+     "z": -12.0,
+     "width": 10.4,
+     "height": 10.0,
+     "facing": "-Z"
+    }
+   ],
+   "materials": [
+    "Brass",
+    "Canvas",
+    "Char",
+    "Copper",
+    "Core",
+    "DarkLog",
+    "Dial",
+    "Glass",
+    "Glow",
+    "Iron",
+    "IronLight",
+    "Leather",
+    "Paint",
+    "RoofMetal",
+    "SnowCap",
+    "Soot",
+    "Steel",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "WinGlass",
+    "Wood"
+   ],
+   "tris": {
+    "Stone": 1452,
+    "StoneTrim": 288,
+    "Iron": 2168,
+    "IronLight": 48,
+    "Brass": 1242,
+    "Copper": 504,
+    "Timber": 1596,
+    "RoofMetal": 24,
+    "SnowCap": 168,
+    "Glow": 60,
+    "Core": 120,
+    "Soot": 24,
+    "Char": 300,
+    "Canvas": 12,
+    "Wood": 432,
+    "Glass": 72,
+    "Leather": 120,
+    "Vent": 24,
+    "Dial": 60,
+    "WinGlass": 72,
+    "Paint": 504,
+    "Steel": 156,
+    "DarkLog": 1992
+   },
+   "tris_total": 11438
+  }
+ }
+}
