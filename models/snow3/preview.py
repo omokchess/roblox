@@ -26,21 +26,28 @@ os.makedirs(OUT, exist_ok=True)
 def views(m):
     inf = m.INFO
     fz, eye = inf["floor"], inf["floor"] + K.EYE
-    (dx, dy), (cx, cy) = inf["walk"]
-    door = K.DOOR_INFO[m.NAME][0][0]
-    x0, x1, y0, y1 = inf["counter"]
-    ccx = (x0 + x1) / 2
-    return [
+    out = [
         ("ext34", (-54, -60, 32), (0, 0, 12), 30, None),
         ("ext34r", (54, -60, 32), (0, 0, 12), 30, None),
         ("front", (0, -80, 14), (0, 0, 14), 32, None),
         ("back", (46, 62, 30), (0, 0, 12), 30, None),
-        ("fp_door10", (door[0], door[1] - 10, K.EYE), (door[0], door[1] + 20, fz + 3.0), 17, None),
-        ("fp_sill", (door[0], door[1] - 0.5, eye), (door[0] - 2, door[1] + 20, fz + 3.0), 17, None),
-        ("fp_mid", (0, 0, eye), (*inf.get("forge_look", (-6, 12)), fz + 3.0), 17, None),
-        ("fp_counter", (ccx, y0 - 6.0, eye), (ccx, y1 + 6, fz + 3.0), 17, None),
-        ("plan", (0, 0, 120), (0, 0.01, 0), None, (120 - (fz + inf["ceiling"] - 0.3), 44)),
     ]
+    # (부서원 1 더함 2026-11-14) 카운터·천장이 없는 건물(계류탑·동문)은 그 시점을 건너뛰고, INFO["door_view"] 로 1인칭 문을 고르고,
+    # INFO["extra_views"] = [(꼬리, 카메라, 바라볼 점, 렌즈, None)] 를 덧붙인다. 대장간처럼 이 키가 없는 건물은 그대로.
+    if "counter" in inf:
+        door = inf.get("door_view") or K.DOOR_INFO[m.NAME][0][0]
+        x0, x1, y0, y1 = inf["counter"]
+        ccx = (x0 + x1) / 2
+        out += [
+            ("fp_door10", (door[0], door[1] - 10, K.EYE), (door[0], door[1] + 20, fz + 3.0), 17, None),
+            ("fp_sill", (door[0], door[1] - 0.5, eye), (door[0] - 2, door[1] + 20, fz + 3.0), 17, None),
+            ("fp_mid", (0, 0, eye), (*inf.get("forge_look", (-6, 12)), fz + 3.0), 17, None),
+            ("fp_counter", (ccx, y0 - 6.0, eye), (ccx, y1 + 6, fz + 3.0), 17, None),
+        ]
+    if "ceiling" in inf:
+        out.append(("plan", (0, 0, 120), (0, 0.01, 0), None, (120 - (fz + inf["ceiling"] - 0.3), inf.get("plan_scale", 44))))
+    out += [tuple(v) for v in inf.get("extra_views", ())]
+    return out
 
 
 def main():

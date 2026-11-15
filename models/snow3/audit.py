@@ -35,6 +35,8 @@ def walk_width(name, info):
     nx, ny = int((x1 - x0) / CELL), int((y1 - y0) / CELL)
     boxes = [(cx, cy, sx, sy, math.cos(rz), math.sin(rz)) for cx, cy, cz, sx, sy, sz, rz in K.I.COLL[name]
              if cz - sz / 2 <= zq <= cz + sz / 2]
+    # (부서원 1 더함 2026-11-14) 바닥 구멍(계단 구멍 등 — 충돌 상자가 없지만 걸을 수 없는 곳)을 막힌 칸으로
+    boxes += [((a + b) / 2, (c + d) / 2, b - a, d - c, 1.0, 0.0) for a, b, c, d in info.get("voids", ())]
 
     def dist(px, py):
         """칸 가운데에서 가장 가까운 충돌 상자(이 높이 단면) 가장자리까지 — 상자 속이면 0. 옆·뒤 범위 끝도 벽으로 본다(앞 = 문 밖 마루는 열림)"""
@@ -105,13 +107,21 @@ def main():
         lines.append("%s (안 %s, 덩이 %d): 구조 걸림 %d" % (m.NAME, getattr(m, "VARIANT", "-"), len(isl), len(f)))
         lines += f
         info = getattr(m, "INFO", None)
-        if info:
+        if info and "walk" in info:      # 계류탑처럼 안이 없는 건물은 통로를 재지 않는다
             w, at, fb = walk_width(m.NAME, info)
             ok = w >= K.WALK - 1e-6 and fb == 0
             if not ok:
                 total += 1
             lines.append("  통로: 문 → 카운터 앞 가장 좁은 폭 %.1f (기준 %.0f, 가장 좁은 자리 블렌더 x %.1f y %.1f) · 카운터 앞 빈 바닥 %.0f×%.0f 막힌 칸 %d → %s" % (
                 w, K.WALK, at[0], at[1], info["free"][1] - info["free"][0], info["free"][3] - info["free"][2], fb, "통과" if ok else "걸림"))
+        for k, sub in enumerate((info or {}).get("floors", ())):      # 2층 건물: 층마다 통로(INFO["floors"] = [{floor, walk, free, inside, voids, name}])
+            w, at, fb = walk_width(m.NAME, sub)
+            ok = w >= K.WALK - 1e-6 and fb == 0
+            if not ok:
+                total += 1
+            lines.append("  통로(%s, 바닥 %.1f): %s 가장 좁은 폭 %.1f (가장 좁은 자리 x %.1f y %.1f) · 빈 바닥 %.0f×%.0f 막힌 칸 %d → %s" % (
+                sub.get("name", "%d층" % (k + 2)), sub["floor"], sub.get("what", "계단 위 → 쉬는 자리"), w, at[0], at[1],
+                sub["free"][1] - sub["free"][0], sub["free"][3] - sub["free"][2], fb, "통과" if ok else "걸림"))
         for grp in g.values():
             grp.bm.free()
     lines.append("걸림 합계 %d" % total)
