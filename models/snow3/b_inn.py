@@ -144,11 +144,11 @@ def tavern(g):
         K.SVC.barrel(g, x, y, FZ, r=0.85, h=2.2)
     # 식탁: 앞 오른 긴 식탁 · 가운데 오른 긴 식탁 · 둥근 탁자
     A.long_table(g, 6.5, 12.5, -8.4, -6.8, FZ)
-    K.I.round_table(g, 4.6, -2.8, FZ, r=1.6, h=2.6, stools=4)
+    K.I.round_table(g, 5.4, -1.0, FZ, r=1.6, h=2.6, stools=4)
     for x, y in ((8.5, -7.6), (10.5, -7.6)):
         K.SVC.beer_mug(g, x, y, FZ + 2.6)
     # 샹들리에·등(2층 보에 매닮)
-    K.SVC.chandelier(g, 4.6, -2.8, Z1C, FZ + 8.6)
+    K.SVC.chandelier(g, 5.4, -1.0, Z1C, FZ + 8.6)
     K.SVC.chandelier(g, 9.5, -7.6, Z1C, FZ + 8.6)
     K.lantern(g, -11.0, -5.0, Z1C, FZ + 8.4)
     K.lantern(g, -11.0, 1.0, Z1C, FZ + 8.4)

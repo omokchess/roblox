@@ -4,6 +4,741 @@
   "DarkLog": "#3B2A1F"
  },
  "models": {
+  "Sn3_Bank": {
+   "prefix": "Sn3Bank",
+   "variant": "B",
+   "base": {
+    "x0": -17.42,
+    "x1": 17.42,
+    "z0": -17.25,
+    "z1": 14.02
+   },
+   "all": {
+    "x0": -20.5,
+    "x1": 20.5,
+    "z0": -17.31,
+    "z1": 17.1
+   },
+   "size_base": [
+    34.84,
+    31.27
+   ],
+   "size_all": [
+    41.0,
+    34.41
+   ],
+   "height": 29.76,
+   "doors": [
+    {
+     "x": -0.0,
+     "z": -13.0,
+     "width": 10.4,
+     "height": 10.0,
+     "facing": "-Z"
+    }
+   ],
+   "materials": [
+    "Brass",
+    "Copper",
+    "DarkLog",
+    "DarkStone",
+    "Dial",
+    "Glass",
+    "Glow",
+    "Iron",
+    "IronLight",
+    "Leather",
+    "Paint",
+    "RoofMetal",
+    "SignGold",
+    "SnowCap",
+    "Steel",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "WinGlass",
+    "Wood"
+   ],
+   "tris": {
+    "Stone": 4416,
+    "StoneTrim": 312,
+    "Iron": 2768,
+    "IronLight": 132,
+    "Brass": 2640,
+    "Copper": 1180,
+    "Timber": 2920,
+    "RoofMetal": 40,
+    "SnowCap": 268,
+    "Glow": 96,
+    "Wood": 60,
+    "Glass": 72,
+    "Leather": 24,
+    "Vent": 12,
+    "SignGold": 240,
+    "Dial": 60,
+    "DarkStone": 12,
+    "WinGlass": 96,
+    "Paint": 672,
+    "Steel": 96,
+    "DarkLog": 1740
+   },
+   "tris_total": 17856
+  },
+  "Sn3_Clock": {
+   "prefix": "Sn3Clock",
+   "variant": "B",
+   "base": {
+    "x0": -10.22,
+    "x1": 10.22,
+    "z0": -13.1,
+    "z1": 10.22
+   },
+   "all": {
+    "x0": -11.5,
+    "x1": 11.5,
+    "z0": -13.1,
+    "z1": 11.5
+   },
+   "size_base": [
+    20.44,
+    23.32
+   ],
+   "size_all": [
+    23.0,
+    24.6
+   ],
+   "height": 107.47,
+   "doors": [
+    {
+     "x": -0.0,
+     "z": -9.2,
+     "width": 10.4,
+     "height": 10.0,
+     "facing": "-Z"
+    }
+   ],
+   "materials": [
+    "Brass",
+    "Canvas",
+    "Copper",
+    "DarkLog",
+    "Dial",
+    "Glass",
+    "Glow",
+    "GlowTeal",
+    "Iron",
+    "Paint",
+    "PaintGreen",
+    "RoofMetal",
+    "SignRed",
+    "SnowCap",
+    "Soot",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "WinGlass"
+   ],
+   "tris": {
+    "Stone": 5856,
+    "StoneTrim": 168,
+    "Iron": 1708,
+    "Brass": 2162,
+    "Copper": 856,
+    "Timber": 5276,
+    "RoofMetal": 144,
+    "SnowCap": 612,
+    "Glow": 36,
+    "Soot": 144,
+    "Canvas": 12,
+    "Glass": 48,
+    "Vent": 12,
+    "SignRed": 28,
+    "Dial": 664,
+    "GlowTeal": 140,
+    "WinGlass": 168,
+    "Paint": 1176,
+    "PaintGreen": 24,
+    "DarkLog": 3240
+   },
+   "tris_total": 22474
+  },
+  "Sn3_Enhance": {
+   "prefix": "Sn3Enhance",
+   "variant": "B",
+   "base": {
+    "x0": -13.52,
+    "x1": 13.52,
+    "z0": -15.75,
+    "z1": 12.02
+   },
+   "all": {
+    "x0": -16.94,
+    "x1": 16.94,
+    "z0": -15.81,
+    "z1": 14.44
+   },
+   "size_base": [
+    27.04,
+    27.77
+   ],
+   "size_all": [
+    33.88,
+    30.25
+   ],
+   "height": 37.24,
+   "doors": [
+    {
+     "x": -0.0,
+     "z": -11.0,
+     "width": 10.4,
+     "height": 10.0,
+     "facing": "-Z"
+    }
+   ],
+   "materials": [
+    "Brass",
+    "Copper",
+    "DarkLog",
+    "DarkStone",
+    "Dial",
+    "Glass",
+    "Glow",
+    "GlowTeal",
+    "Iron",
+    "IronLight",
+    "Paint",
+    "RoofMetal",
+    "SnowCap",
+    "Steel",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "WinGlass",
+    "Wood"
+   ],
+   "tris": {
+    "Stone": 2952,
+    "StoneTrim": 132,
+    "Iron": 1128,
+    "IronLight": 24,
+    "Brass": 2434,
+    "Copper": 1660,
+    "Timber": 2924,
+    "RoofMetal": 24,
+    "SnowCap": 180,
+    "Glow": 60,
+    "Wood": 24,
+    "Glass": 88,
+    "Vent": 24,
+    "Dial": 60,
+    "DarkStone": 208,
+    "GlowTeal": 380,
+    "WinGlass": 96,
+    "Paint": 672,
+    "Steel": 24,
+    "DarkLog": 1584
+   },
+   "tris_total": 14678
+  },
+  "Sn3_Gate": {
+   "prefix": "Sn3Gate",
+   "variant": "A",
+   "base": {
+    "x0": -13.42,
+    "x1": 13.42,
+    "z0": -4.25,
+    "z1": 3.42
+   },
+   "all": {
+    "x0": -14.84,
+    "x1": 14.84,
+    "z0": -5.15,
+    "z1": 5.15
+   },
+   "size_base": [
+    26.84,
+    7.67
+   ],
+   "size_all": [
+    29.68,
+    10.3
+   ],
+   "height": 27.89,
+   "doors": [
+    {
+     "x": -0.0,
+     "z": -2.4,
+     "width": 12.0,
+     "height": 12.0,
+     "facing": "-Z"
+    }
+   ],
+   "materials": [
+    "Brass",
+    "Copper",
+    "DarkLog",
+    "Dial",
+    "Glass",
+    "Glow",
+    "Iron",
+    "Paint",
+    "RoofMetal",
+    "SnowCap",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "WinGlass",
+    "Wood"
+   ],
+   "tris": {
+    "Stone": 648,
+    "StoneTrim": 24,
+    "Iron": 656,
+    "Brass": 808,
+    "Copper": 468,
+    "Timber": 1452,
+    "RoofMetal": 24,
+    "SnowCap": 84,
+    "Glow": 24,
+    "Wood": 12,
+    "Glass": 24,
+    "Vent": 12,
+    "Dial": 60,
+    "WinGlass": 24,
+    "Paint": 168,
+    "DarkLog": 1884
+   },
+   "tris_total": 6372
+  },
+  "Sn3_General": {
+   "prefix": "Sn3General",
+   "variant": "A",
+   "base": {
+    "x0": -15.7,
+    "x1": 13.02,
+    "z0": -15.5,
+    "z1": 12.02
+   },
+   "all": {
+    "x0": -15.7,
+    "x1": 15.44,
+    "z0": -15.5,
+    "z1": 15.35
+   },
+   "size_base": [
+    28.72,
+    27.52
+   ],
+   "size_all": [
+    31.14,
+    30.85
+   ],
+   "height": 29.92,
+   "doors": [
+    {
+     "x": -0.0,
+     "z": -10.5,
+     "width": 10.4,
+     "height": 10.0,
+     "facing": "-Z"
+    }
+   ],
+   "materials": [
+    "Brass",
+    "Canvas",
+    "Char",
+    "Copper",
+    "Core",
+    "DarkLog",
+    "Dial",
+    "Glass",
+    "Glow",
+    "Iron",
+    "Leather",
+    "Paint",
+    "RoofMetal",
+    "SignGold",
+    "SignRed",
+    "SnowCap",
+    "Soot",
+    "Steel",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "Verdigris",
+    "WinGlass",
+    "Wood"
+   ],
+   "tris": {
+    "Stone": 1140,
+    "StoneTrim": 60,
+    "Iron": 2136,
+    "Brass": 2590,
+    "Copper": 292,
+    "Verdigris": 196,
+    "Timber": 1664,
+    "RoofMetal": 24,
+    "SnowCap": 168,
+    "Glow": 60,
+    "Core": 12,
+    "Soot": 12,
+    "Char": 48,
+    "Canvas": 316,
+    "Wood": 1124,
+    "Glass": 900,
+    "Leather": 36,
+    "Vent": 24,
+    "SignGold": 224,
+    "SignRed": 56,
+    "Dial": 60,
+    "WinGlass": 96,
+    "Paint": 1368,
+    "Steel": 516,
+    "DarkLog": 1728
+   },
+   "tris_total": 14850
+  },
+  "Sn3_Hospital": {
+   "prefix": "Sn3Hospital",
+   "variant": "B",
+   "base": {
+    "x0": -20.02,
+    "x1": 20.02,
+    "z0": -17.4,
+    "z1": 12.62
+   },
+   "all": {
+    "x0": -21.35,
+    "x1": 22.44,
+    "z0": -17.84,
+    "z1": 13.94
+   },
+   "size_base": [
+    40.04,
+    30.02
+   ],
+   "size_all": [
+    43.79,
+    31.78
+   ],
+   "height": 32.79,
+   "doors": [
+    {
+     "x": 7.65,
+     "z": -11.6,
+     "width": 10.4,
+     "height": 10.0,
+     "facing": "-Z"
+    },
+    {
+     "x": -8.0,
+     "z": 0.0,
+     "width": 10.4,
+     "height": 10.0,
+     "facing": "-X"
+    }
+   ],
+   "materials": [
+    "Banner",
+    "Brass",
+    "Canvas",
+    "Copper",
+    "DarkLog",
+    "Dial",
+    "Glass",
+    "Glow",
+    "Iron",
+    "Leather",
+    "Paint",
+    "PaintGreen",
+    "RoofMetal",
+    "SignRed",
+    "SnowCap",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "WinGlass",
+    "Wood"
+   ],
+   "tris": {
+    "Stone": 2700,
+    "StoneTrim": 180,
+    "Iron": 1364,
+    "Brass": 1416,
+    "Copper": 112,
+    "Timber": 3740,
+    "RoofMetal": 60,
+    "SnowCap": 216,
+    "Glow": 72,
+    "Canvas": 336,
+    "Banner": 72,
+    "Wood": 408,
+    "Glass": 536,
+    "Leather": 12,
+    "Vent": 12,
+    "SignRed": 444,
+    "Dial": 60,
+    "WinGlass": 72,
+    "Paint": 504,
+    "PaintGreen": 12,
+    "DarkLog": 2316
+   },
+   "tris_total": 14644
+  },
+  "Sn3_Inn": {
+   "prefix": "Sn3Inn",
+   "variant": "A",
+   "base": {
+    "x0": -19.4,
+    "x1": 21.2,
+    "z0": -19.0,
+    "z1": 12.62
+   },
+   "all": {
+    "x0": -21.75,
+    "x1": 21.75,
+    "z0": -19.0,
+    "z1": 15.04
+   },
+   "size_base": [
+    40.6,
+    31.62
+   ],
+   "size_all": [
+    43.5,
+    34.04
+   ],
+   "height": 47.55,
+   "doors": [
+    {
+     "x": -0.0,
+     "z": -11.5,
+     "width": 10.4,
+     "height": 10.0,
+     "facing": "-Z"
+    },
+    {
+     "x": -0.0,
+     "z": -11.5,
+     "width": 8.0,
+     "height": 9.0,
+     "facing": "-Z"
+    }
+   ],
+   "materials": [
+    "Banner",
+    "Brass",
+    "Canvas",
+    "Char",
+    "Copper",
+    "Core",
+    "DarkLog",
+    "Dial",
+    "Felt",
+    "Glass",
+    "Glow",
+    "Iron",
+    "Leather",
+    "Marble",
+    "Paint",
+    "RoofMetal",
+    "SignGold",
+    "SignRed",
+    "SnowCap",
+    "Soot",
+    "Steel",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "Verdigris",
+    "WinGlass",
+    "Wood"
+   ],
+   "tris": {
+    "Stone": 1584,
+    "StoneTrim": 312,
+    "Iron": 2908,
+    "Brass": 3354,
+    "Copper": 136,
+    "Verdigris": 72,
+    "Timber": 4164,
+    "RoofMetal": 24,
+    "SnowCap": 288,
+    "Glow": 252,
+    "Core": 72,
+    "Soot": 24,
+    "Char": 76,
+    "Canvas": 240,
+    "Banner": 36,
+    "Wood": 1904,
+    "Glass": 688,
+    "Leather": 36,
+    "Vent": 24,
+    "SignGold": 228,
+    "SignRed": 84,
+    "Dial": 60,
+    "Marble": 12,
+    "Felt": 12,
+    "WinGlass": 192,
+    "Paint": 2040,
+    "Steel": 60,
+    "DarkLog": 4128
+   },
+   "tris_total": 23010
+  },
+  "Sn3_Mast": {
+   "prefix": "Sn3Mast",
+   "variant": "A",
+   "base": {
+    "x0": -5.1,
+    "x1": 5.1,
+    "z0": -5.2,
+    "z1": 4.9
+   },
+   "all": {
+    "x0": -5.1,
+    "x1": 5.1,
+    "z0": -5.2,
+    "z1": 4.9
+   },
+   "size_base": [
+    10.2,
+    10.1
+   ],
+   "size_all": [
+    10.2,
+    10.1
+   ],
+   "height": 46.05,
+   "doors": [],
+   "materials": [
+    "Brass",
+    "Copper",
+    "Core",
+    "Dial",
+    "Iron",
+    "IronLight",
+    "SnowDrift",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent"
+   ],
+   "tris": {
+    "Stone": 96,
+    "StoneTrim": 60,
+    "Iron": 2076,
+    "IronLight": 144,
+    "Brass": 1036,
+    "Copper": 824,
+    "Timber": 240,
+    "Core": 36,
+    "Vent": 12,
+    "Dial": 60,
+    "SnowDrift": 24
+   },
+   "tris_total": 4608
+  },
+  "Sn3_Potion": {
+   "prefix": "Sn3Potion",
+   "variant": "A",
+   "base": {
+    "x0": -15.1,
+    "x1": 12.42,
+    "z0": -16.0,
+    "z1": 12.42
+   },
+   "all": {
+    "x0": -15.82,
+    "x1": 15.82,
+    "z0": -16.0,
+    "z1": 14.84
+   },
+   "size_base": [
+    27.52,
+    28.42
+   ],
+   "size_all": [
+    31.64,
+    30.84
+   ],
+   "height": 31.46,
+   "doors": [
+    {
+     "x": -0.0,
+     "z": -11.0,
+     "width": 10.4,
+     "height": 10.0,
+     "facing": "-Z"
+    }
+   ],
+   "materials": [
+    "Brass",
+    "Canvas",
+    "Char",
+    "Copper",
+    "DarkLog",
+    "Dial",
+    "Felt",
+    "Glass",
+    "Glow",
+    "GlowTeal",
+    "Iron",
+    "Paint",
+    "PaintGreen",
+    "RoofMetal",
+    "SignGold",
+    "SignPurple",
+    "SignRed",
+    "SignTeal",
+    "SnowCap",
+    "Steel",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "Verdigris",
+    "WinGlass",
+    "Wood"
+   ],
+   "tris": {
+    "Stone": 1284,
+    "StoneTrim": 60,
+    "Iron": 1424,
+    "Brass": 2140,
+    "Copper": 1056,
+    "Verdigris": 388,
+    "Timber": 1836,
+    "RoofMetal": 24,
+    "SnowCap": 156,
+    "Glow": 72,
+    "Char": 88,
+    "Canvas": 112,
+    "Wood": 2180,
+    "Glass": 3052,
+    "Vent": 24,
+    "SignGold": 324,
+    "SignTeal": 460,
+    "SignRed": 436,
+    "SignPurple": 380,
+    "Dial": 60,
+    "Felt": 40,
+    "GlowTeal": 324,
+    "WinGlass": 84,
+    "Paint": 588,
+    "Steel": 12,
+    "PaintGreen": 96,
+    "DarkLog": 1776
+   },
+   "tris_total": 18476
+  },
   "Sn3_Smithy": {
    "prefix": "Sn3Smithy",
    "variant": "A",
@@ -88,6 +823,81 @@
     "DarkLog": 1992
    },
    "tris_total": 11438
+  },
+  "Sn3_Ticket": {
+   "prefix": "Sn3Ticket",
+   "variant": "A",
+   "base": {
+    "x0": -7.1,
+    "x1": 6.14,
+    "z0": -5.14,
+    "z1": 6.3
+   },
+   "all": {
+    "x0": -8.84,
+    "x1": 8.84,
+    "z0": -7.84,
+    "z1": 8.28
+   },
+   "size_base": [
+    13.24,
+    11.44
+   ],
+   "size_all": [
+    17.68,
+    16.12
+   ],
+   "height": 22.21,
+   "doors": [
+    {
+     "x": -0.0,
+     "z": 3.9,
+     "width": 3.6,
+     "height": 8.0,
+     "facing": "+Z"
+    }
+   ],
+   "materials": [
+    "Brass",
+    "Canvas",
+    "Copper",
+    "DarkLog",
+    "Dial",
+    "Glass",
+    "Glow",
+    "Iron",
+    "Paint",
+    "RoofMetal",
+    "SignGold",
+    "SnowCap",
+    "Stone",
+    "StoneTrim",
+    "Timber",
+    "Vent",
+    "WinGlass",
+    "Wood"
+   ],
+   "tris": {
+    "Stone": 456,
+    "StoneTrim": 36,
+    "Iron": 872,
+    "Brass": 950,
+    "Copper": 468,
+    "Timber": 732,
+    "RoofMetal": 24,
+    "SnowCap": 96,
+    "Glow": 36,
+    "Canvas": 340,
+    "Wood": 36,
+    "Glass": 36,
+    "Vent": 12,
+    "SignGold": 96,
+    "Dial": 60,
+    "WinGlass": 24,
+    "Paint": 264,
+    "DarkLog": 1092
+   },
+   "tris_total": 5630
   }
  }
 }
