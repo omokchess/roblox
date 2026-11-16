@@ -38,11 +38,11 @@ Z_PLATE = Z2F + CEIL2 + 0.9                # 25.3
 PORCH_Y, TRUSS_Y = -16.0, -15.5
 POST_XS = (-17.5, -7.0, 7.0, 17.5)
 ST_Y0, ST_Y1 = 3.0, YBI                    # 계단 폭(뒷벽에 붙음)
-ST_BOT, ST_TOP = 12.7, -6.8                # 아랫단 앞 x · 윗단 끝 x
+ST_BOT, ST_TOP = 13.3, -6.2                # 아랫단 앞 x · 윗단 끝 x
 HDR_Y = 2.5                                # 계단 앞 받을보 가운데 y
 STACK = (16.4, 19.4, -5.8, -2.2)           # 굴뚝(오른 벽을 뚫고 밖으로 2.0)
 HEARTH = (13.2, XI, -7.6, -0.4)            # 벽난로 x0 x1 y0 y1
-REST = [(-12.5, -6.2), (12.5, -6.2), (14.9, 2.6)]     # 쉬는 자리(침대 발치, 2층 바닥 위)
+REST = [(-12.5, -6.2), (12.5, -6.2)]     # 쉬는 자리(침대 발치, 2층 바닥 위)
 
 
 def shell(g, R):
@@ -64,7 +64,7 @@ def shell(g, R):
     K.window(g, "x", YF, 0.0, gz, 3.0, 4.0, face=-1)
     K.gable_logs(g, "x", YB, HALF, Z_PLATE, top)
     K.door_open(g, "x", YF, 0.0, MAIN_W, MAIN_H, FZ, face=-1, open_deg=170.0)
-    K.door_open(g, "x", YF, 0.0, DOOR_W, DOOR_H, Z2F, face=-1, open_deg=95.0, outward=False)
+    K.door_open(g, "x", YF, 0.0, DOOR_W, DOOR_H, Z2F, face=-1, open_deg=170.0)
 
 
 def floor2(g):
@@ -129,12 +129,12 @@ def hearth(g):
 
 
 def tavern(g):
-    zt = K.counter(g, -16.0, -6.0, -0.75, 1.75)
-    K.SVC.cash_register(g, -8.2, 0.5, zt)
-    K.SVC.beer_tower(g, -13.0, 0.6, zt)
+    zt = K.counter(g, -16.0, -6.0, -0.25, 1.75)
+    K.SVC.cash_register(g, -8.2, 0.8, zt)
+    K.SVC.beer_tower(g, -13.0, 0.9, zt)
     for x in (-11.4, -10.6):
-        K.SVC.beer_mug(g, x, -0.2, zt)
-    NPC(-11.0, 2.25, FZ, 0.0)
+        K.SVC.beer_mug(g, x, 0.2, zt)
+    NPC(-11.0, 2.4, FZ, 0.0)
     # 계단 옆 판에 붙인 얕은 병 선반(카운터 뒤)
     for z in (FZ + 4.2, FZ + 5.6):
         bx(g, "Wood", -16.4, -7.4, ST_Y0 - 0.5, ST_Y0, z - 0.12, z)
@@ -143,14 +143,13 @@ def tavern(g):
     for k, (x, y) in enumerate(((-15.4, 5.0), (-13.6, 5.0), (-15.4, 9.6), (-11.0, 9.8))):
         K.SVC.barrel(g, x, y, FZ, r=0.85, h=2.2)
     # 식탁: 앞 오른 긴 식탁 · 가운데 오른 긴 식탁 · 둥근 탁자
-    A.long_table(g, 7.5, 14.5, -8.4, -6.8, FZ)
-    A.long_table(g, 6.5, 13.0, -2.4, -0.8, FZ)
-    K.I.round_table(g, 2.6, -4.2, FZ, r=1.6, h=2.6, stools=4)
-    for x, y in ((9.5, -7.6), (11.5, -7.6), (8.4, -1.6)):
+    A.long_table(g, 6.5, 12.5, -8.4, -6.8, FZ)
+    K.I.round_table(g, 4.6, -2.8, FZ, r=1.6, h=2.6, stools=4)
+    for x, y in ((8.5, -7.6), (10.5, -7.6)):
         K.SVC.beer_mug(g, x, y, FZ + 2.6)
     # 샹들리에·등(2층 보에 매닮)
-    K.SVC.chandelier(g, 0.0, -5.0, Z1C, FZ + 8.6)
-    K.SVC.chandelier(g, 10.5, -4.6, Z1C, FZ + 8.6)
+    K.SVC.chandelier(g, 4.6, -2.8, Z1C, FZ + 8.6)
+    K.SVC.chandelier(g, 9.5, -7.6, Z1C, FZ + 8.6)
     K.lantern(g, -11.0, -5.0, Z1C, FZ + 8.4)
     K.lantern(g, -11.0, 1.0, Z1C, FZ + 8.4)
 
@@ -159,10 +158,10 @@ def rooms(g):
     """2층: 칸막이 둘 · 침대 셋(쉬는 자리) · 옷장·세면대 · 가운데 방 깔개·걸상 · 등"""
     zc = Z_PLATE - 0.9
     for x in (-6.0, 6.0):
-        A.partition(g, "y", x, YFI, -3.4, Z2F, zc)
+        A.partition(g, "y", x, YFI, -8.2, Z2F, zc)
     K.I.bed(g, -12.5, -9.0, Z2F, rz=0.0, mat="Banner")
     K.I.bed(g, 12.5, -9.0, Z2F, rz=math.pi, mat="Felt")
-    K.I.bed(g, 14.9, 7.4, Z2F, rz=-math.pi / 2, mat="Banner")
+    K.I.wardrobe(g, 15.95, 7.0, Z2F, "-x")
     K.I.wardrobe(g, -7.6, -9.4, Z2F, "-x")
     K.I.washstand(g, 7.2, -10.0, Z2F, "+y")
     K.I.wardrobe(g, 15.95, -2.2, Z2F, "-x") if False else None
@@ -170,10 +169,10 @@ def rooms(g):
         bx(g, "Banner", x - 1.6, x + 1.6, y - 1.0, y + 1.0, Z2F, Z2F + 0.06)
         bx(g, "Brass", x - 1.7, x + 1.7, y - 1.1, y + 1.1, Z2F, Z2F + 0.03)
     # 가운데 방(발코니 문 앞) 깔개 + 걸상 둘
-    bx(g, "Leather", -3.6, 3.6, -8.6, -4.4, Z2F, Z2F + 0.05)
-    for x in (-4.6, 4.6):
-        K.SVC.bench(g, x, -6.4, Z2F, 3.6, axis="y", mat="Leather")
-    for x, y in ((-11.5, -3.0), (0.0, -6.0), (11.5, -3.0), (-11.5, 7.0), (14.8, 7.0)):
+    bx(g, "Leather", -3.6, 3.6, -9.6, -7.9, Z2F, Z2F + 0.05)
+    for x in (-4.9, 4.9):
+        K.SVC.bench(g, x, -9.3, Z2F, 3.0, axis="y", mat="Leather")
+    for x, y in ((-11.5, -3.0), (0.0, -9.0), (11.5, -3.0), (-11.5, 7.0), (14.8, 7.0)):
         K.lantern(g, x, y, zc, Z2F + 7.4)
 
 
@@ -245,15 +244,15 @@ def build(g):
     rooms(g)
     outside(g)
     CLEAR(-4.8, 4.8, YFI + 0.2, -6.0, FZ + 0.15, FZ + 5.4)
-    CLEAR(-16.0, -6.0, -10.9, -0.9, FZ + 0.15, FZ + 5.4)
+    CLEAR(-16.0, -6.0, -10.9, -0.4, FZ + 0.15, FZ + 5.4)
 
 
 INFO = {
     "variant": VARIANT,
     "floor": FZ,
     "ceiling": CEIL,
-    "counter": (-16.0, -6.0, -0.75, 1.75),
-    "free": (-16.0, -6.0, -10.9, -0.9),
+    "counter": (-16.0, -6.0, -0.25, 1.75),
+    "free": (-16.0, -6.0, -10.9, -0.4),
     "walk": ((0.0, YF - 1.5), (-11.0, -6.0)),
     "inside": (-XI, XI, YF - T / 2 - 1.5, YBI),
     "forge_look": (HEARTH[0], (HEARTH[2] + HEARTH[3]) / 2),
@@ -261,14 +260,15 @@ INFO = {
     "rest": REST,                               # 쉬는 자리(블렌더 x, y — 바닥 = Z2F). Studio 표지 종류는 질문 md
     "floors": [
         {"name": "2층", "floor": Z2F, "what": "계단 윗단 → 왼 방 쉬는 자리",
-         "walk": ((-11.8, 7.0), (-11.4, -2.0)), "free": (-16.4, -6.6, -7.0, 3.0),
+         "walk": ((-11.5, 5.0), (-11.4, -2.0)), "free": (-16.6, -6.6, -7.0, 3.0),
          "inside": (-XI, XI, YFI, YBI), "voids": [(ST_TOP, ST_BOT, HDR_Y + 0.5, YBI)]},
         {"name": "2층b", "floor": Z2F, "what": "계단 윗단 → 오른 방 쉬는 자리",
-         "walk": ((-11.8, 7.0), (11.4, -2.0)), "free": (6.6, 16.4, -7.0, 2.0),
+         "walk": ((-11.5, 5.0), (8.6, -2.0)), "free": (3.6, 13.6, -7.0, 3.0),
          "inside": (-XI, XI, YFI, YBI), "voids": [(ST_TOP, ST_BOT, HDR_Y + 0.5, YBI)]},
     ],
     "extra_views": [
-        ("fp_stair", (14.5, -1.0, FZ + 4.5), (-6.0, 7.0, Z2F - 2.0), 17, None),          # 1층에서 계단 올려다봄
+        ("fp_stair", (16.0, 7.0, FZ + 4.5), (-2.0, 7.0, Z2F - 1.0), 17, None),          # 계단 아랫단(동쪽)에서 올려다봄
+        ("fp_stair_side", (8.0, -2.5, FZ + 4.5), (2.0, 7.0, FZ + 5.0), 17, None),          # 계단 앞(식당 쪽)에서 측판 보기
         ("fp_stairtop", (-9.0, 7.0, Z2F + 4.5), (-11.0, -8.0, Z2F + 2.0), 17, None),     # 2층 계단참 → 왼 방
         ("fp_2f", (0.0, 1.0, Z2F + 4.5), (12.0, -8.0, Z2F + 2.0), 17, None),            # 2층 복도 → 오른 방
         ("fp_balcony", (-10.0, -14.0, Z2F + 4.5), (10.0, -14.5, Z2F + 2.0), 17, None),  # 발코니

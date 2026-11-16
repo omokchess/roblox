@@ -34,7 +34,7 @@ I1 = W1 - T / 2                           # 1단 안쪽 면 8.6
 Z1, Z2, Z3 = 22.0, 44.0, 62.0             # 단 벽 윗면
 STONE_TO = FZ + 12.0                      # 돌 밑단 높게(레퍼런스 3절 "8" 을 1단 방 천장 위까지 — 단단한 탑 밑동)
 CLOCK_Z, CLOCK_R = 53.5, 4.6
-COUNTER = (-2.5, 2.5, 4.6, 7.6)           # 이동 탑 받침(카운터 자리)
+COUNTER = (-2.5, 2.5, 5.0, 8.0)           # 이동 탑 받침(카운터 자리)
 FREE = (-5.0, 5.0, -5.4, 4.6)
 TANK = (-6.4, 6.4)
 
@@ -92,8 +92,8 @@ def room(g):
     bx(g, "StoneTrim", x0 - 0.2, x1 + 0.2, y0 - 0.2, y1 + 0.2, FZ, FZ + 0.4)
     bx(g, "StoneTrim", x0 - 0.15, x1 + 0.15, y0 - 0.15, y1 + 0.15, FZ + 2.6, FZ + 2.9)
     zt = FZ + 2.9
-    g["Brass"].cyl(cx, cy, zt, 2.3, 2.3, 0.35, seg=28)                 # 지도 원판(놋쇠 테)
-    g["Dial"].cyl(cx, cy, zt + 0.35, 2.0, 2.0, 0.1, seg=28)
+    g["Brass"].cyl(cx, cy, zt, 2.0, 2.0, 0.35, seg=28)                 # 지도 원판(놋쇠 테)
+    g["Dial"].cyl(cx, cy, zt + 0.35, 1.75, 1.75, 0.1, seg=28)
     for k, (dx, dy) in enumerate(((-1.0, 0.5), (0.6, 0.9), (1.1, -0.6), (-0.4, -0.9), (0.0, 0.0))):   # 이동 자리 빛 점
         g["GlowTeal"].cyl(cx + dx, cy + dy, zt + 0.45, 0.2, 0.2, 0.12, seg=8)
     # 위 놋쇠 고리(아스트롤라베) — 받침 뒤 기둥 둘이 받침
@@ -154,7 +154,9 @@ def top(g):
     for sx in (-1, 1):
         for sy in (-1, 1):
             K.post(g, sx * 2.6, sy * 2.6, zl0, zl1, s=0.8, coll=False)
-            K.brace(g, "x", sy * 2.6, sx * 2.6, zl1 - 1.6, sx * 1.0, zl1, s=0.35)
+    for s in (-1, 1):                                  # 랜턴 중간 띠(기둥 사이를 잡는 가로대) + 놋쇠 난간살
+        bx(g, "DarkLog", -2.9, 2.9, s * 2.6 - 0.3, s * 2.6 + 0.3, zl0 + 1.0, zl0 + 1.7)
+        bx(g, "DarkLog", s * 2.6 - 0.3, s * 2.6 + 0.3, -2.9, 2.9, zl0 + 1.0, zl0 + 1.7)
     for s in (-1, 1):
         bx(g, "DarkLog", -3.1, 3.1, s * 2.6 - 0.45, s * 2.6 + 0.45, zl1, zl1 + 0.9)
         bx(g, "DarkLog", s * 2.6 - 0.45, s * 2.6 + 0.45, -3.1, 3.1, zl1, zl1 + 0.9)
@@ -165,7 +167,7 @@ def top(g):
     g["Iron"].cyl(0, 0, zl1 - 3.9, 0.22, 0.22, 0.8, seg=8)
     # 구리 첨탑
     zs0 = zl1 + 0.9
-    ztip, zb2 = KB.hip_roof(g, 3.1, 3.1, zl1, 80.0, eave=0.5, snow=False, cover="Copper")
+    ztip, zb2 = KB.hip_roof(g, 3.1, 3.1, zl1, 80.0, eave=1.3, snow=False, cover="Copper")
     bx(g, "Brass", -0.5, 0.5, -0.5, 0.5, ztip - 0.6, ztip + 0.9)
     g["Brass"].cyl(0, 0, ztip + 0.9, 0.7, 0.7, 0.3, seg=12)
     g["Brass"].cyl(0, 0, ztip + 1.2, 0.75, 0.2, 1.0, seg=12)
@@ -202,10 +204,10 @@ INFO = {
     "free": FREE,
     "walk": ((0.0, -W1 - 1.5), (0.0, -1.0)),
     "inside": (-I1, I1, -W1 - T / 2 - 1.5, I1),
-    "forge_look": (0.0, 6.1),
+    "forge_look": (0.0, 6.5),
     "plan_scale": 30,
     # 순간이동 UI 자리(받침 위 지도 원판 가운데) — 블렌더 좌표, 로블록스 로컬 = (-x, z, y)
-    "teleport": (0.0, 6.1, FZ + 3.35),
+    "teleport": (0.0, 6.5, FZ + 3.35),
     # 시계 바늘 달 자리: (판 가운데 x, y, z, 바라보는 쪽, 반지름) — 블렌더 좌표. 메시에 10:10 고정 바늘이 그려져 있다(Studio 바늘을 달면 메시 바늘은 Iron 덩이에서 지울 것)
     "clock_faces": [(0.0, -O3 - 1.15, CLOCK_Z, "-y", CLOCK_R), (0.0, O3 + 1.15, CLOCK_Z, "+y", CLOCK_R),
                     (-O3 - 1.15, 0.0, CLOCK_Z, "-x", CLOCK_R), (O3 + 1.15, 0.0, CLOCK_Z, "+x", CLOCK_R)],
