@@ -253,11 +253,20 @@ local okRun, errRun = pcall(function()
 	end
 	-- 바위 + 윗면만 눈. 걷는 면(top)은 그대로, 바위 윗면은 top-0.2 아래로 묻고 눈 판(두께 0.6)이 x·z 로 0.1 넘게 덮는다.
 	-- 높이 1 이하는 눈 상자 하나.
-	local function rockSnow(kind, name, x0, x1, z0, z1, top, parent)
+	-- 바위 톤(2026-11-14 — 미리보기 tools/mapshot 과 같은 규칙): 바위 몸통만, 상자 서북 모서리로 세 톤(×0.94 · ×1.00 · ×1.06).
+	-- 한 가지 회색 벽이 민짜로 보이지 않게(맵_기준.md 16). toned = true 일 때만.
+	local TONES = { 0.94, 1.00, 1.06 }
+	local function toneCol(x0, z0)
+		local f = TONES[(7 * math.floor(x0) + 13 * math.floor(z0)) % 3 + 1]
+		local c = rockCol[1]
+		return { Color3.new(math.clamp(c.R * f, 0, 1), math.clamp(c.G * f, 0, 1), math.clamp(c.B * f, 0, 1)), rockCol[2] }
+	end
+	local function rockSnow(kind, name, x0, x1, z0, z1, top, parent, toned)
 		if top - BOTTOM <= 1 then
 			return box(kind, name, x0 - jit(), x1 + jit(), BOTTOM - jit(), top, z0 - jit(), z1 + jit(), snowCol, parent)
 		end
-		local body = box(kind, name .. "_바위", x0 - jit(), x1 + jit(), BOTTOM - jit(), top - 0.2 - jit() * 0.5, z0 - jit(), z1 + jit(), rockCol, parent)
+		local bodyCol = if toned then toneCol(x0, z0) else rockCol
+		local body = box(kind, name .. "_바위", x0 - jit(), x1 + jit(), BOTTOM - jit(), top - 0.2 - jit() * 0.5, z0 - jit(), z1 + jit(), bodyCol, parent)
 		local e = function()
 			return 0.15 + jit()
 		end
@@ -277,7 +286,7 @@ local okRun, errRun = pcall(function()
 		box("넓은단", s[1], s[2], s[3], BOTTOM, s[6], s[4], s[5], rockCol, fStep)
 	end
 	for _, r in ipairs(D.ROCKS) do
-		rockSnow("바위", string.format("바위%s", r[6] and ("_" .. r[6]) or ""), r[1], r[2], r[3], r[4], r[5], fRock)
+		rockSnow("바위", string.format("바위%s", r[6] and ("_" .. r[6]) or ""), r[1], r[2], r[3], r[4], r[5], fRock, true)
 	end
 	for _, s in ipairs(D.SLABS) do
 		box("판", "눈판", s[1] - jit(), s[2] + jit(), BOTTOM - jit(), s[5], s[3] - jit(), s[4] + jit(), snowCol, fSlab)
