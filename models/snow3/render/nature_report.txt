@@ -1,0 +1,26 @@
+# nature_preview.py 
+Sn3_Birch        크기  13.0 ×  10.5 ×  26.2 (목표 12 × None × 26)  삼각형  866/900  충돌 3  반짝임 고친 면 0 남음 0  재질 BirchBark,BirchMark,Twig
+Sn3_Boulder_L    크기  18.9 ×  14.1 ×   9.8 (목표 18 × 14 × 10)  삼각형  216/600  충돌 3  반짝임 고친 면 0 남음 0  재질 RockA,RockB,RockC,SnowCap
+Sn3_Boulder_M    크기  10.2 ×   8.2 ×   6.0 (목표 10 × 8 × 6)  삼각형  202/600  충돌 2  반짝임 고친 면 0 남음 0  재질 RockA,RockB,RockC,SnowCap
+Sn3_Boulder_S    크기   5.1 ×   3.9 ×   3.5 (목표 5 × 4 × 3.5)  삼각형  128/600  충돌 1  반짝임 고친 면 0 남음 0  재질 RockA,RockB,SnowCap
+Sn3_Bush         크기   6.0 ×   4.6 ×   3.0 (목표 6 × 5 × 3)  삼각형  172/600  충돌 1  반짝임 고친 면 0 남음 0  재질 Needle,NeedleLit,SnowCap
+Sn3_DeadPine     크기   5.8 ×   5.7 ×  20.0 (목표 6 × 6 × 20)  삼각형  222/900  충돌 1  반짝임 고친 면 0 남음 0  재질 DeadWood,SnowCap,Wood
+Sn3_Drift_A      크기  13.8 ×   7.7 ×   1.0 (목표 14 × 8 × 1.0)  삼각형  110/600  충돌 1  반짝임 고친 면 0 남음 0  재질 SnowCap
+Sn3_Drift_B      크기  21.1 ×   9.3 ×   2.2 (목표 22 × 10 × 2.2)  삼각형  108/600  충돌 2  반짝임 고친 면 0 남음 0  재질 SnowCap
+Sn3_Log          크기  15.7 ×   2.0 ×   2.1 (목표 16 × 2 × 2)  삼각형  206/600  충돌 1  반짝임 고친 면 0 남음 0  재질 Bark,SnowCap,Wood
+Sn3_SnowFence    크기  12.7 ×   2.2 ×   3.5 (목표 12 × None × 3.5)  삼각형  316/600  충돌 1  반짝임 고친 면 0 남음 0  재질 DarkLog,DeadWood,SnowCap
+Sn3_Spruce_Bent  크기  11.9 ×  11.2 ×  26.0 (목표 12 × 12 × 26)  삼각형  886/900  충돌 1  반짝임 고친 면 0 남음 0  재질 Bark,Needle,NeedleLit,SnowCap
+Sn3_Spruce_L     크기  18.0 ×  16.8 ×  46.0 (목표 18 × 18 × 46)  삼각형 1062/1200  충돌 1  반짝임 고친 면 0 남음 0  재질 Bark,Needle,NeedleLit,SnowCap
+Sn3_Spruce_M     크기  12.7 ×  12.0 ×  30.0 (목표 13 × 13 × 30)  삼각형  854/900  충돌 1  반짝임 고친 면 0 남음 0  재질 Bark,Needle,NeedleLit,SnowCap
+Sn3_Spruce_S     크기   7.9 ×   7.7 ×  16.0 (목표 8 × 8 × 16)  삼각형  654/900  충돌 1  반짝임 고친 면 0 남음 0  재질 Bark,Needle,NeedleLit,SnowCap
+Sn3_Stump        크기   2.4 ×   2.6 ×   1.6 (목표 2.6 × 2.6 × 1.6)  삼각형  126/600  충돌 1  반짝임 고친 면 0 남음 0  재질 Bark,SnowCap,Wood
+Sn3_Woodpile     크기   6.3 ×   3.1 ×   4.0 (목표 6 × 3 × 4)  삼각형  456/600  충돌 1  반짝임 고친 면 0 남음 0  재질 Bark,DarkLog,SnowCap,Timber,Wood
+
+# 1인칭 잎 면 가름(나무마다 따로, 눈높이 4.5)
+Sn3_Spruce_L     거리 20: 바늘잎 77% · 눈 23%   거리 40: 바늘잎 66% · 눈 34%
+Sn3_Spruce_M     거리 20: 바늘잎 66% · 눈 34%   거리 40: 바늘잎 59% · 눈 41%
+Sn3_Spruce_S     거리 20: 바늘잎 62% · 눈 38%   거리 40: 바늘잎 60% · 눈 40%
+Sn3_Spruce_Bent  거리 20: 바늘잎 61% · 눈 39%   거리 40: 바늘잎 55% · 눈 45%
+Pine_A(지금)       거리 20: 바늘잎 0% · 눈 100%   거리 40: 바늘잎 0% · 눈 100%
+
+# 시트 칸: 1 나무 1인칭 · 2 땅 조각 1인칭 / 3 3/4 위 · 4 지금 나무 비교(왼쪽 Pine_A 눈색, Spruce_L, Spruce_M) / 5 바늘잎 톤 세 쌍(왼쪽부터 짙게 #1E2D28·#2C3E34 / 중간 #283A32·#384E40 / 조금 밝게 #32463A·#46604C) · 6 1인칭 가름(빨강 바늘잎·파랑 나무 눈·초록 줄기 등)

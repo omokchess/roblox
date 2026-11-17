@@ -1,7 +1,17 @@
 {
  "_": "models/snow3/build_kit.py 가 만든 표(손으로 고치지 말 것). 로블록스 로컬 = (-x, z, y), 원점 = 발자국 가운데 땅",
  "new_materials": {
-  "DarkLog": "#3B2A1F"
+  "DarkLog": "#3B2A1F",
+  "Needle": "#283A32",
+  "NeedleLit": "#384E40",
+  "Bark": "#584030",
+  "BirchBark": "#D6D2C6",
+  "BirchMark": "#34302E",
+  "Twig": "#5E4A44",
+  "DeadWood": "#786C62",
+  "RockA": "#646E6A",
+  "RockB": "#58615F",
+  "RockC": "#4A5250"
  },
  "models": {
   "Sn3_Bank": {
@@ -898,6 +908,606 @@
     "DarkLog": 1092
    },
    "tris_total": 5630
+  },
+  "Sn3_Birch": {
+   "prefix": "Sn3Birch",
+   "variant": null,
+   "base": {
+    "x0": -1.04,
+    "x1": 1.0,
+    "z0": -0.8,
+    "z1": 0.97
+   },
+   "all": {
+    "x0": -6.78,
+    "x1": 6.22,
+    "z0": -4.15,
+    "z1": 6.35
+   },
+   "size_base": [
+    2.04,
+    1.77
+   ],
+   "size_all": [
+    13.0,
+    10.5
+   ],
+   "height": 26.2,
+   "doors": [],
+   "materials": [
+    "BirchBark",
+    "BirchMark",
+    "Twig"
+   ],
+   "tris": {
+    "BirchBark": 306,
+    "BirchMark": 204,
+    "Twig": 356
+   },
+   "tris_total": 866
+  },
+  "Sn3_Boulder_L": {
+   "prefix": "Sn3BoulderL",
+   "variant": null,
+   "base": {
+    "x0": -9.18,
+    "x1": 8.83,
+    "z0": -7.06,
+    "z1": 7.15
+   },
+   "all": {
+    "x0": -9.18,
+    "x1": 9.77,
+    "z0": -7.06,
+    "z1": 7.15
+   },
+   "size_base": [
+    18.01,
+    14.21
+   ],
+   "size_all": [
+    18.95,
+    14.21
+   ],
+   "height": 9.82,
+   "doors": [],
+   "materials": [
+    "RockA",
+    "RockB",
+    "RockC",
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 88,
+    "RockA": 58,
+    "RockB": 32,
+    "RockC": 38
+   },
+   "tris_total": 216
+  },
+  "Sn3_Boulder_M": {
+   "prefix": "Sn3BoulderM",
+   "variant": null,
+   "base": {
+    "x0": -5.13,
+    "x1": 5.21,
+    "z0": -4.11,
+    "z1": 4.12
+   },
+   "all": {
+    "x0": -5.13,
+    "x1": 5.21,
+    "z0": -4.11,
+    "z1": 4.12
+   },
+   "size_base": [
+    10.34,
+    8.23
+   ],
+   "size_all": [
+    10.34,
+    8.23
+   ],
+   "height": 6.01,
+   "doors": [],
+   "materials": [
+    "RockA",
+    "RockB",
+    "RockC",
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 82,
+    "RockA": 38,
+    "RockB": 32,
+    "RockC": 50
+   },
+   "tris_total": 202
+  },
+  "Sn3_Boulder_S": {
+   "prefix": "Sn3BoulderS",
+   "variant": null,
+   "base": {
+    "x0": -2.59,
+    "x1": 2.49,
+    "z0": -1.88,
+    "z1": 1.96
+   },
+   "all": {
+    "x0": -2.59,
+    "x1": 2.6,
+    "z0": -1.97,
+    "z1": 1.96
+   },
+   "size_base": [
+    5.08,
+    3.84
+   ],
+   "size_all": [
+    5.19,
+    3.93
+   ],
+   "height": 3.52,
+   "doors": [],
+   "materials": [
+    "RockA",
+    "RockB",
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 52,
+    "RockA": 44,
+    "RockB": 32
+   },
+   "tris_total": 128
+  },
+  "Sn3_Bush": {
+   "prefix": "Sn3Bush",
+   "variant": null,
+   "base": {
+    "x0": -3.05,
+    "x1": 2.91,
+    "z0": -1.8,
+    "z1": 2.6
+   },
+   "all": {
+    "x0": -3.05,
+    "x1": 2.91,
+    "z0": -1.97,
+    "z1": 2.6
+   },
+   "size_base": [
+    5.96,
+    4.4
+   ],
+   "size_all": [
+    5.96,
+    4.57
+   ],
+   "height": 3.05,
+   "doors": [],
+   "materials": [
+    "Needle",
+    "NeedleLit",
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 76,
+    "Needle": 72,
+    "NeedleLit": 24
+   },
+   "tris_total": 172
+  },
+  "Sn3_DeadPine": {
+   "prefix": "Sn3DeadPine",
+   "variant": null,
+   "base": {
+    "x0": -1.25,
+    "x1": 1.6,
+    "z0": -1.78,
+    "z1": 1.46
+   },
+   "all": {
+    "x0": -2.9,
+    "x1": 2.88,
+    "z0": -2.78,
+    "z1": 2.92
+   },
+   "size_base": [
+    2.85,
+    3.24
+   ],
+   "size_all": [
+    5.78,
+    5.7
+   ],
+   "height": 20.0,
+   "doors": [],
+   "materials": [
+    "DeadWood",
+    "SnowCap",
+    "Wood"
+   ],
+   "tris": {
+    "SnowCap": 36,
+    "Wood": 8,
+    "DeadWood": 178
+   },
+   "tris_total": 222
+  },
+  "Sn3_Drift_A": {
+   "prefix": "Sn3DriftA",
+   "variant": null,
+   "base": {
+    "x0": -7.3,
+    "x1": 7.4,
+    "z0": -4.3,
+    "z1": 4.2
+   },
+   "all": {
+    "x0": -7.3,
+    "x1": 7.4,
+    "z0": -4.3,
+    "z1": 4.2
+   },
+   "size_base": [
+    14.7,
+    8.5
+   ],
+   "size_all": [
+    14.7,
+    8.5
+   ],
+   "height": 1.0,
+   "doors": [],
+   "materials": [
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 110
+   },
+   "tris_total": 110
+  },
+  "Sn3_Drift_B": {
+   "prefix": "Sn3DriftB",
+   "variant": null,
+   "base": {
+    "x0": -10.8,
+    "x1": 11.0,
+    "z0": -5.5,
+    "z1": 4.9
+   },
+   "all": {
+    "x0": -10.8,
+    "x1": 11.0,
+    "z0": -5.5,
+    "z1": 4.9
+   },
+   "size_base": [
+    21.8,
+    10.4
+   ],
+   "size_all": [
+    21.8,
+    10.4
+   ],
+   "height": 2.2,
+   "doors": [],
+   "materials": [
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 108
+   },
+   "tris_total": 108
+  },
+  "Sn3_Log": {
+   "prefix": "Sn3Log",
+   "variant": null,
+   "base": {
+    "x0": -8.0,
+    "x1": 7.66,
+    "z0": -0.98,
+    "z1": 0.98
+   },
+   "all": {
+    "x0": -8.0,
+    "x1": 7.66,
+    "z0": -0.98,
+    "z1": 0.98
+   },
+   "size_base": [
+    15.66,
+    1.96
+   ],
+   "size_all": [
+    15.66,
+    1.96
+   ],
+   "height": 2.14,
+   "doors": [],
+   "materials": [
+    "Bark",
+    "SnowCap",
+    "Wood"
+   ],
+   "tris": {
+    "SnowCap": 84,
+    "Wood": 58,
+    "Bark": 64
+   },
+   "tris_total": 206
+  },
+  "Sn3_SnowFence": {
+   "prefix": "Sn3SnowFence",
+   "variant": null,
+   "base": {
+    "x0": -5.94,
+    "x1": 6.4,
+    "z0": -2.3,
+    "z1": 0.21
+   },
+   "all": {
+    "x0": -6.62,
+    "x1": 6.4,
+    "z0": -2.3,
+    "z1": 0.27
+   },
+   "size_base": [
+    12.34,
+    2.51
+   ],
+   "size_all": [
+    13.02,
+    2.57
+   ],
+   "height": 3.48,
+   "doors": [],
+   "materials": [
+    "DarkLog",
+    "DeadWood",
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 172,
+    "DarkLog": 48,
+    "DeadWood": 96
+   },
+   "tris_total": 316
+  },
+  "Sn3_Spruce_Bent": {
+   "prefix": "Sn3SpruceBent",
+   "variant": null,
+   "base": {
+    "x0": -1.5,
+    "x1": 1.26,
+    "z0": -1.7,
+    "z1": 0.79
+   },
+   "all": {
+    "x0": -5.88,
+    "x1": 6.05,
+    "z0": -5.52,
+    "z1": 5.7
+   },
+   "size_base": [
+    2.76,
+    2.49
+   ],
+   "size_all": [
+    11.93,
+    11.22
+   ],
+   "height": 26.0,
+   "doors": [],
+   "materials": [
+    "Bark",
+    "Needle",
+    "NeedleLit",
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 312,
+    "Needle": 156,
+    "NeedleLit": 318,
+    "Bark": 100
+   },
+   "tris_total": 886
+  },
+  "Sn3_Spruce_L": {
+   "prefix": "Sn3SpruceL",
+   "variant": null,
+   "base": {
+    "x0": -2.26,
+    "x1": 2.41,
+    "z0": -2.02,
+    "z1": 1.93
+   },
+   "all": {
+    "x0": -8.8,
+    "x1": 9.15,
+    "z0": -8.27,
+    "z1": 8.54
+   },
+   "size_base": [
+    4.67,
+    3.95
+   ],
+   "size_all": [
+    17.95,
+    16.81
+   ],
+   "height": 46.0,
+   "doors": [],
+   "materials": [
+    "Bark",
+    "Needle",
+    "NeedleLit",
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 392,
+    "Needle": 196,
+    "NeedleLit": 398,
+    "Bark": 76
+   },
+   "tris_total": 1062
+  },
+  "Sn3_Spruce_M": {
+   "prefix": "Sn3SpruceM",
+   "variant": null,
+   "base": {
+    "x0": -1.38,
+    "x1": 1.48,
+    "z0": -1.77,
+    "z1": 1.19
+   },
+   "all": {
+    "x0": -6.26,
+    "x1": 6.45,
+    "z0": -6.07,
+    "z1": 5.95
+   },
+   "size_base": [
+    2.86,
+    2.96
+   ],
+   "size_all": [
+    12.71,
+    12.02
+   ],
+   "height": 30.0,
+   "doors": [],
+   "materials": [
+    "Bark",
+    "Needle",
+    "NeedleLit",
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 312,
+    "Needle": 156,
+    "NeedleLit": 318,
+    "Bark": 68
+   },
+   "tris_total": 854
+  },
+  "Sn3_Spruce_S": {
+   "prefix": "Sn3SpruceS",
+   "variant": null,
+   "base": {
+    "x0": -4.26,
+    "x1": 3.65,
+    "z0": -2.43,
+    "z1": 0.97
+   },
+   "all": {
+    "x0": -4.26,
+    "x1": 3.65,
+    "z0": -3.86,
+    "z1": 3.86
+   },
+   "size_base": [
+    7.91,
+    3.4
+   ],
+   "size_all": [
+    7.91,
+    7.72
+   ],
+   "height": 16.0,
+   "doors": [],
+   "materials": [
+    "Bark",
+    "Needle",
+    "NeedleLit",
+    "SnowCap"
+   ],
+   "tris": {
+    "SnowCap": 232,
+    "Needle": 116,
+    "NeedleLit": 238,
+    "Bark": 68
+   },
+   "tris_total": 654
+  },
+  "Sn3_Stump": {
+   "prefix": "Sn3Stump",
+   "variant": null,
+   "base": {
+    "x0": -1.26,
+    "x1": 1.26,
+    "z0": -1.38,
+    "z1": 1.26
+   },
+   "all": {
+    "x0": -1.26,
+    "x1": 1.26,
+    "z0": -1.38,
+    "z1": 1.26
+   },
+   "size_base": [
+    2.52,
+    2.64
+   ],
+   "size_all": [
+    2.52,
+    2.64
+   ],
+   "height": 1.6,
+   "doors": [],
+   "materials": [
+    "Bark",
+    "SnowCap",
+    "Wood"
+   ],
+   "tris": {
+    "SnowCap": 30,
+    "Wood": 28,
+    "Bark": 68
+   },
+   "tris_total": 126
+  },
+  "Sn3_Woodpile": {
+   "prefix": "Sn3Woodpile",
+   "variant": null,
+   "base": {
+    "x0": -3.13,
+    "x1": 3.13,
+    "z0": -1.47,
+    "z1": 1.33
+   },
+   "all": {
+    "x0": -3.13,
+    "x1": 3.13,
+    "z0": -1.63,
+    "z1": 1.5
+   },
+   "size_base": [
+    6.26,
+    2.8
+   ],
+   "size_all": [
+    6.26,
+    3.13
+   ],
+   "height": 4.01,
+   "doors": [],
+   "materials": [
+    "Bark",
+    "DarkLog",
+    "SnowCap",
+    "Timber",
+    "Wood"
+   ],
+   "tris": {
+    "Timber": 36,
+    "SnowCap": 12,
+    "Wood": 300,
+    "DarkLog": 96,
+    "Bark": 12
+   },
+   "tris_total": 456
   }
  }
 }

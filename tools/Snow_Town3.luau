@@ -519,6 +519,18 @@ local okRun, errRun = pcall(function()
 				else
 					lost[kind] = true
 				end
+			elseif kit3 and kit3:FindFirstChild(kind) then
+				-- 3판 자연 키트(Sn3_Spruce_L 등, 2026-11-17): 원점에서 충돌 상자를 붙인 뒤 통째로 키우고 옮긴다(충돌도 같이 커짐)
+				local m = kit3[kind]:Clone()
+				m.Name = kind
+				m:PivotTo(CFrame.new())
+				applyInside(m, kind)
+				if sc ~= 1 then
+					m:ScaleTo(sc)
+				end
+				m:PivotTo(CFrame.new(x, y, z) * CFrame.Angles(0, math.rad(yaw), 0))
+				m.Parent = fProp
+				nTrees += 1
 			else
 				local src = forestKit and forestKit:FindFirstChild(kind)
 				if src then
@@ -551,7 +563,7 @@ local okRun, errRun = pcall(function()
 		for k in pairs(lost) do
 			lostL[#lostL + 1] = k
 		end
-		say("소품: 가스등 %d, 나무 %d, 틀 없어 못 놓은 종류: %s", nLamps, nTrees, #lostL > 0 and table.concat(lostL, ", ") or "없음")
+		say("소품: 가스등 %d, 자연(나무·바위 등) %d, 틀 없어 못 놓은 종류: %s", nLamps, nTrees, #lostL > 0 and table.concat(lostL, ", ") or "없음")
 		if D.AIRSHIP then
 			local a = D.AIRSHIP
 			local src = kitOld and kitOld:FindFirstChild("Airship")

@@ -8,6 +8,9 @@ models/snow3/b_*.py 를 모두 찾아(ONLY=Sn3_Smithy,Sn3_Bank 로 몇 개만) �
   tools/Snow_Inside3_data.luau   충돌·소품·등·NPC·불 표(tools/Snow_Inside_data.luau 와 같은 형식 — build_steam_inside.emit_luau)
   tools/snow3_kit.json           모델마다 앞머리·발자국(base/all, 로블록스 로컬 x0 x1 z0 z1)·문·높이·재질·삼각형
 ONLY 로 일부만 지으면 FBX 이름은 SnowTown3Kit_<이름>.fbx, data·json 은 쓰지 않는다(다른 건물 자료가 빠지니까).
+(2026-11-17 아트) 자연 키트 models/snow3/n_*.py(나무·바위·눈더미 16종)도 같이 짓는다. ONLY=nature 면 n_*.py 전부.
+  자연 조각만 둘 이상이면 FBX 이름은 SnowTown3Kit_Nature.fbx(이름 16개를 이으면 Windows 경로 260자를 넘는다).
+  자연 조각은 문·안살림이 없어 doors 가 비고, 충돌 상자(lib.cbox)는 건물처럼 Snow_Inside3_data.luau 의 그 이름 coll 로 들어간다.
 돌리기: "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b -P models/snow3/build_kit.py
 """
 import glob
@@ -27,8 +30,9 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 
 def modules():
     out = []
-    for p in sorted(glob.glob(os.path.join(HERE, "b_*.py"))):
-        out.append(importlib.import_module(os.path.splitext(os.path.basename(p))[0]))
+    for pat in ("b_*.py", "n_*.py"):
+        for p in sorted(glob.glob(os.path.join(HERE, pat))):
+            out.append(importlib.import_module(os.path.splitext(os.path.basename(p))[0]))
     return out
 
 
@@ -53,7 +57,7 @@ def footprint(objs):
 
 def main():
     only = os.environ.get("ONLY")
-    mods = [m for m in modules() if not only or m.NAME in only.split(",")]
+    mods = [m for m in modules() if not only or m.NAME in only.split(",") or (only == "nature" and m.__name__.startswith("n_"))]
     assert mods, "지을 건물이 없다(ONLY=%s)" % only
     K.L.clear_scene()
     objs, kit = [], {}
@@ -78,7 +82,8 @@ def main():
     for ob in objs + [marker]:
         ob.select_set(True)
     bpy.context.view_layer.objects.active = marker
-    fbx = os.path.join(ROOT, "models", "SnowTown3Kit.fbx" if not only else "SnowTown3Kit_%s.fbx" % only.replace(",", "_"))
+    tag = "Nature" if len(mods) > 1 and all(m.__name__.startswith("n_") for m in mods) else (only or "").replace(",", "_")
+    fbx = os.path.join(ROOT, "models", "SnowTown3Kit.fbx" if not only else "SnowTown3Kit_%s.fbx" % tag)
     bpy.ops.export_scene.fbx(filepath=fbx, use_selection=True, global_scale=1.0, apply_unit_scale=True, apply_scale_options="FBX_SCALE_ALL",
                              axis_forward="-Z", axis_up="Y", object_types={"MESH"}, mesh_smooth_type="FACE", use_mesh_modifiers=True,
                              bake_space_transform=False)
@@ -87,7 +92,7 @@ def main():
         K.I.emit_luau(os.path.join(ROOT, "tools", "Snow_Inside3_data.luau"))
         with open(os.path.join(ROOT, "tools", "snow3_kit.json"), "w", encoding="utf-8", newline="\n") as fh:
             json.dump({"_": "models/snow3/build_kit.py 가 만든 표(손으로 고치지 말 것). 로블록스 로컬 = (-x, z, y), 원점 = 발자국 가운데 땅",
-                       "new_materials": {"DarkLog": K.PAL["DarkLog"]}, "models": kit}, fh, ensure_ascii=False, indent=1)
+                       "new_materials": {"DarkLog": K.PAL["DarkLog"], **K.NATURE}, "models": kit}, fh, ensure_ascii=False, indent=1)
         print("data: tools/Snow_Inside3_data.luau · tools/snow3_kit.json")
 
 

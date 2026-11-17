@@ -82,6 +82,10 @@ PITCH = {"A": 40.0, "B": 50.0}            # 지붕 물매(도) — A 통나무(�
 
 PAL = dict(T.PAL)
 PAL.update({"DarkLog": "#3B2A1F"})        # 새 재질: 짙은 통나무(사양 4절 "짙은 원목") — Studio SKIN 에 넣을 것(보고서)
+# 자연 키트(n_*.py, 2026-11-17 아트): 바늘잎 두 톤 · 줄기 · 자작 · 잔가지 · 죽은 나무 · 바위 세 톤(맵 Slate 두 톤 + 짙은 밑 톤)
+NATURE = {"Needle": "#283A32", "NeedleLit": "#384E40", "Bark": "#584030", "BirchBark": "#D6D2C6", "BirchMark": "#34302E",
+          "Twig": "#5E4A44", "DeadWood": "#786C62", "RockA": "#646E6A", "RockB": "#58615F", "RockC": "#4A5250"}
+PAL.update(NATURE)
 
 
 def G(prefix):

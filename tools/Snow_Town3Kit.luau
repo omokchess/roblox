@@ -55,8 +55,24 @@ local SKIN = {
 	WinGlass = { RGB(191, 217, 230), M.Glass },
 	LampPt = { RGB(255, 255, 255), M.SmoothPlastic },
 	DarkLog = { RGB(59, 42, 31), M.Wood }, -- 3판 새 재질(통나무 짙은 색)
+	-- 자연 키트(models/snow3/n_*.py, 2026-11-17 아트)
+	Needle = { RGB(40, 58, 50), M.Grass }, -- 바늘잎 짙은 톤(층 아랫면)
+	NeedleLit = { RGB(56, 78, 64), M.Grass }, -- 바늘잎 밝은 톤(층 윗면·처진 끝)
+	Bark = { RGB(88, 64, 48), M.Wood },
+	BirchBark = { RGB(214, 210, 198), M.Wood },
+	BirchMark = { RGB(52, 48, 46), M.Wood },
+	Twig = { RGB(94, 74, 68), M.Wood },
+	DeadWood = { RGB(120, 108, 98), M.Wood },
+	RockA = { RGB(100, 110, 106), M.Slate },
+	RockB = { RGB(88, 97, 95), M.Slate },
+	RockC = { RGB(74, 82, 80), M.Slate },
 }
 local HULL = { RoofMetal = true, SnowCap = true, Canvas = true }
+local NATURE = {} -- 자연 키트 16종(models/snow3/n_*.py)
+for _, n in { "Spruce_L", "Spruce_M", "Spruce_S", "Spruce_Bent", "Birch", "DeadPine", "Stump", "Log", "Bush",
+	"Boulder_S", "Boulder_M", "Boulder_L", "Drift_A", "Drift_B", "SnowFence", "Woodpile" } do
+	NATURE["Sn3_" .. n] = true
+end
 local NOCOLLIDE = { Glow = true, Core = true, Banner = true, Vent = true, LampPt = true, GlowTeal = true }
 
 local report = {}
@@ -183,6 +199,11 @@ local ok, err = pcall(function()
 			for _, e in ipairs(list) do
 				e.p.CFrame = e.p.CFrame - o
 				skin(e.p, e.key)
+				if NATURE[name] then
+					-- 자연 키트(나무·바위·눈더미 등, 2026-11-17): 수백 개 놓이니 충돌 모양은 상자 하나(실제 충돌은 Snow_Inside3_data 상자가 맡음)
+					e.p.CollisionFidelity = Enum.CollisionFidelity.Box
+					e.p.RenderFidelity = Enum.RenderFidelity.Automatic
+				end
 				e.p.Parent = m
 			end
 			m.WorldPivot = CFrame.new()
