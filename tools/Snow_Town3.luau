@@ -110,7 +110,8 @@ local okRun, errRun = pcall(function()
 		local rockByName, rockByMat, snowByName, snowByMat
 		for _, p in ipairs(G:GetDescendants()) do
 			if p:IsA("BasePart") then
-				if not rockByName and (p.Name:find("바위") or p.Name:lower():find("rock")) then
+				-- 바위 몸통만(윗면 눈 판 "바위47_눈" 같은 것은 빼고 — 2026-11-18 몸통까지 눈색이 된 버그)
+				if not rockByName and ROCKMAT[p.Material] and not p.Name:find("_눈") and (p.Name:find("바위") or p.Name:lower():find("rock")) then
 					rockByName = p
 				end
 				if not rockByMat and ROCKMAT[p.Material] then
