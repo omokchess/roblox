@@ -75,36 +75,18 @@ end)
 -- 천문대 망원경이 별을 따라간다(적도의 — 극축 하나만 돌리면 된다). 돔은 경통 끝 방위로 돌아 틈을 맞춘다.
 -- 보기 전용이고 서버 시간에 맞춰 모두에게 같다. 값 = models/build_steam_obs.py (블렌더 (x,y,z) → 로블록스 로컬 (-x, z, y))
 local OBS_SCRIPT = [==[
+-- 2026-11-23 사용자: "천문대 망원경이 해 따라가는 건 그냥 지붕 따라서 움직이는 것처럼 바꾸고"
+-- → 별(해)을 띄워 극축으로 따라가던 것을 없애고, 돔이 천천히 돌면 망원경이 돔 틈을 따라 같이 돈다(같은 수직축, 경통 기울기는 그대로).
 local CS = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
-local H = Vector3.new(0, 20.2284, -2.2981) -- 적위축이 극축과 만나는 점
-local P = Vector3.new(0, 0.6428, -0.7660) -- 극축(위도 40도, 문 쪽)
-local S0 = Vector3.new(0, 0.9397, -0.3420) -- 남중한 별 쪽
-local APERTURE = Vector3.new(3.6, 34.922, -7.752) -- 처음 자세의 경통 끝(차양) 가운데
-local PERIOD = 1200 -- 한 바퀴 20분. 실제 하늘(하루)보다 빨라 "조금씩" 도는 게 보인다
-local DIST = 1400
+local APERTURE = Vector3.new(3.6, 34.922, -7.752) -- 처음 자세의 경통 끝(차양) — 돔 틈이 이쪽을 보게 맞춘다
+local YAW0 = math.atan2(-APERTURE.X, -APERTURE.Z)
+local PERIOD = 1200 -- 한 바퀴 20분(서버 시간에 맞춰 모두 같은 각)
 local list = {}
-local function newStar()
-	local s = Instance.new("Part")
-	s.Name = "ObservatoryStar"
-	s.Shape = Enum.PartType.Ball
-	s.Size = Vector3.new(14, 14, 14)
-	s.Material = Enum.Material.Neon
-	s.Color = Color3.fromRGB(225, 238, 255)
-	s.Anchored, s.CanCollide, s.CanQuery, s.CanTouch, s.CastShadow = true, false, false, false, false
-	local halo = s:Clone()
-	halo.Name = "ObservatoryStarHalo"
-	halo.Size = Vector3.new(46, 46, 46)
-	halo.Transparency = 0.86
-	halo.Parent = workspace
-	s.Parent = workspace
-	return s, halo
-end
 local function add(m)
 	local dome, scope = m:FindFirstChild("Observatory_Dome"), m:FindFirstChild("Observatory_Scope")
 	if dome and scope and not list[m] then
-		local s, halo = newStar()
-		list[m] = { base = m:GetPivot(), dome = dome, scope = scope, star = s, halo = halo }
+		list[m] = { base = m:GetPivot(), dome = dome, scope = scope }
 	end
 end
 for _, m in CS:GetTagged("SnowObservatory") do
@@ -112,27 +94,15 @@ for _, m in CS:GetTagged("SnowObservatory") do
 end
 CS:GetInstanceAddedSignal("SnowObservatory"):Connect(add)
 CS:GetInstanceRemovedSignal("SnowObservatory"):Connect(function(m)
-	local o = list[m]
-	if o then
-		o.star:Destroy()
-		o.halo:Destroy()
-		list[m] = nil
-	end
+	list[m] = nil
 end)
 RunService.RenderStepped:Connect(function()
-	local t = workspace:GetServerTimeNow()
-	local ang = (t % PERIOD) / PERIOD * 2 * math.pi
+	local yaw = (workspace:GetServerTimeNow() % PERIOD) / PERIOD * 2 * math.pi
 	for m, o in list do
 		if m.Parent then
-			local rot = CFrame.fromAxisAngle(P, ang)
-			local loc = CFrame.new(H) * rot * CFrame.new(-H)
-			o.scope:PivotTo(o.base * loc)
-			local ap = loc * APERTURE
-			o.dome:PivotTo(o.base * CFrame.Angles(0, math.atan2(-ap.X, -ap.Z), 0))
-			local pos = o.base * H + o.base:VectorToWorldSpace(rot:VectorToWorldSpace(S0)) * DIST
-			o.star.Position = pos
-			o.halo.Position = pos
-			o.halo.Transparency = 0.84 + 0.05 * math.sin(t * 3.1)
+			local r = CFrame.Angles(0, yaw, 0)
+			o.scope:PivotTo(o.base * r)
+			o.dome:PivotTo(o.base * CFrame.Angles(0, YAW0, 0) * r)
 		end
 	end
 end)
