@@ -13,7 +13,10 @@ b_ticket.py — 2026-11-14. 설원 마을 3판: 비행선 티켓 판매점(매�
   처마 밑 마당 y -5..-1.4 (판석 0.15), 기둥 x ±5.5 · y -4.5 + 앞 트러스 + 비행선 그림 판 · 뒷벽 직원 문(폭 3.6, 손님용 아님)
   창구 앞 빈 땅 x -5..5 · y -12..-2.1(처마 밑 + 앞)
 """
+import math
+
 import lib as K
+import lib_int1 as P
 import lib_a as A
 from lib import LOG, bx, cbox, NPC, CLEAR
 
@@ -45,7 +48,18 @@ def shell(g, R):
     top = lambda m: R.zb(m) - 0.05      # noqa: E731
     K.gable_logs(g, "x", YF, HALF, Z_PLATE, top)
     K.gable_logs(g, "x", YB, HALF, Z_PLATE, top)
-    K.door_open(g, "x", YB, 0.0, 3.6, 8.0, FB, face=1, open_deg=95.0, leaves=1)
+    # 뒷문은 닫아 둔다(비평 1차: 창구 너머 열린 뒷문으로 바깥이 뚫려 보임) — 문설주·인방 + 널문(두 색 널 · 띠 셋 · 쇠 띠) + 놋쇠 빗장·걸쇠
+    for e0, e1 in ((-2.4, -1.8), (1.8, 2.4)):
+        bx(g, "Timber", e0, e1, YB - T / 2 - 0.1, YB + T / 2 + 0.1, FB, FB + 8.6)
+    bx(g, "Timber", -2.4, 2.4, YB - T / 2 - 0.1, YB + T / 2 + 0.1, FB + 8.0, FB + 8.6)
+    for i in range(4):
+        bx(g, "DarkLog" if i % 2 else "Timber", -1.8 + 0.9 * i + 0.02, -1.8 + 0.9 * (i + 1) - 0.02, YB - 0.18, YB + 0.18, FB, FB + 8.0)
+    for zz in (FB + 1.4, FB + 4.0, FB + 6.6):
+        bx(g, "Timber", -1.8, 1.8, YB - 0.33, YB - 0.18, zz - 0.3, zz + 0.3)
+        bx(g, "Iron", -1.5, 1.5, YB - 0.38, YB - 0.33, zz - 0.12, zz + 0.12)
+    bx(g, "Brass", 0.8, 1.7, YB - 0.45, YB - 0.33, FB + 4.6, FB + 4.8)
+    bx(g, "Brass", 1.65, 2.0, YB - 0.5, YB - 0.33, FB + 4.5, FB + 4.9)
+    cbox(-1.8, 1.8, YB - 0.2, YB + 0.2, FB, FB + 8.0)
 
 
 def wicket(g):
@@ -72,23 +86,83 @@ def wicket(g):
 
 
 def inside(g):
-    # 선반 위(창구 틈 앞): 표 묶음 · 동전 접시 · 놋쇠 표 찍개 — 뒷문 비울 자리(안 y 0.7~)를 피해 얕게
+    """매표소 안(K3 세우라사리 매표소 · 역 매표 창구 레퍼런스 KI1~KI3): 선반 위 표 묶음 · 동전 접시 · 놋쇠 표 찍개(손잡이 지레) ·
+    뒷벽 표 꽂이 둘(칸마다 표 다발) + 문 위 벽시계 · 직원 걸상 · 작은 쇠 궤 · 뒷문 옆 달력 판 · 매단 등"""
     bx(g, "Canvas", -1.8, -0.6, YFI - 0.2, YFI + 0.4, LEDGE, LEDGE + 0.25)
+    bx(g, "SignGold", -1.7, -0.7, YFI - 0.15, YFI + 0.35, LEDGE + 0.25, LEDGE + 0.32)
     g["Brass"].cyl(0.4, YFI - 0.6, LEDGE, 0.45, 0.5, 0.12, seg=12)
-    bx(g, "Brass", 1.3, 2.1, YFI - 0.1, YFI + 0.45, LEDGE, LEDGE + 0.5)
-    bx(g, "Iron", 1.55, 1.85, YFI - 0.3, YFI + 0.2, LEDGE + 0.5, LEDGE + 0.9)
+    P.coin_stack(g, 0.3, YFI - 0.6, LEDGE + 0.12, n=2, r=0.15)
+    # 표 찍개: 무쇠 받침 · 놋쇠 몸 · 위 지레(손잡이 공) · 앞 표 내미는 홈
+    bx(g, "Iron", 1.2, 2.2, YFI - 0.15, YFI + 0.5, LEDGE, LEDGE + 0.15)
+    bx(g, "Brass", 1.35, 2.05, YFI - 0.05, YFI + 0.4, LEDGE + 0.15, LEDGE + 0.75)
+    g["Iron"].obox(1.7, YFI + 0.2, LEDGE + 1.0, 0.12, 0.12, 0.7, rx=-0.5)
+    g["SignRed"].cyl(1.7, YFI + 0.4, LEDGE + 1.25, 0.14, 0.14, 0.14, seg=8)
+    bx(g, "Paint", 1.45, 1.95, YFI - 0.12, YFI - 0.05, LEDGE + 0.2, LEDGE + 0.32)
     NPC(0.0, 2.0, FB, 0.0)
-    # 뒷벽 표 꽂이(칸 격자) — 문 양옆
+    P.stool(g, -2.8, 1.1, FB, h=2.4, r=0.5)
+    P.strongbox(g, 3.0, YFI + 0.85, FB, w=1.2, d=0.9, h=1.1, rz=0.0)
+    # 뒷벽 표 꽂이(칸 격자) — 문 양옆, 칸마다 표 다발(두 색 겹)
     for x0, x1 in ((-XI + 0.1, -2.2), (2.2, XI - 0.1)):
         bx(g, "Wood", x0, x1, YBI - 0.5, YBI, FB + 3.0, FB + 7.5)
+        bx(g, "DarkLog", x0 - 0.05, x1 + 0.05, YBI - 0.6, YBI, FB + 7.5, FB + 7.8)
         for k in range(4):
             z = FB + 3.3 + k * 1.05
             bx(g, "Timber", x0 + 0.1, x1 - 0.1, YBI - 0.55, YBI - 0.45, z, z + 0.08)
             for j in range(3):
                 xx = x0 + 0.3 + j * (x1 - x0 - 0.6) / 2.5
-                bx(g, ("Canvas", "SignGold", "Paint")[(j + k) % 3], xx, xx + 0.35, YBI - 0.5, YBI - 0.2, z + 0.08, z + 0.6)
+                m = ("Canvas", "SignGold", "Paint")[(j + k) % 3]
+                bx(g, m, xx, xx + 0.35, YBI - 0.5, YBI - 0.2, z + 0.08, z + 0.6)
+                bx(g, "SignRed" if (j + k) % 2 else "SignBlue", xx + 0.04, xx + 0.31, YBI - 0.22, YBI - 0.18, z + 0.4, z + 0.55)
         cbox(x0, x1, YBI - 0.5, YBI, FB, FB + 7.5)
+    # 뒷문 위 벽시계(놋쇠 테 · 흰 판 · 바늘)
+    g["DarkLog"].hcyl(0.0, YBI - 0.1, FB + 8.9, 0.85, 0.2, axis="y", seg=16)
+    g["Brass"].hcyl(0.0, YBI - 0.25, FB + 8.9, 0.75, 0.12, axis="y", seg=16)
+    g["Dial"].hcyl(0.0, YBI - 0.33, FB + 8.9, 0.62, 0.06, axis="y", seg=16)
+    g["Iron"].obox(0.12, YBI - 0.38, FB + 9.05, 0.07, 0.03, 0.42, ry=0.7)
+    g["Iron"].obox(-0.1, YBI - 0.38, FB + 8.85, 0.07, 0.03, 0.3, ry=-1.9)
     K.lantern(g, 0.0, 1.7, Z_PLATE - 0.9, FB + 7.8)
+
+
+def timetable(g, x, face_y):
+    """시간표 판(앞벽 바깥, 창구 양옆 — 손님이 줄 서며 본다): 짙은 틀 · 검은 판 · 줄 여섯(놋쇠 칸 + 흰 패 + 색 표지) · 위 작은 시계 · 비행선 그림 · 눈 턱"""
+    y = face_y - 0.3                                   # 0.3 앞으로(비평 1차: 통나무 끝이 판 가장자리를 덮음) + 뒤 받침
+    bx(g, "DarkLog", x - 0.45, x + 0.45, y, face_y, 3.6, 7.2)
+    bx(g, "DarkLog", x - 0.65, x + 0.65, y - 0.25, y, 3.2, 7.6)
+    bx(g, "Char", x - 0.52, x + 0.52, y - 0.3, y - 0.25, 3.4, 7.0)
+    for k in range(6):
+        z = 3.65 + k * 0.55
+        bx(g, "Brass", x - 0.47, x + 0.47, y - 0.34, y - 0.3, z - 0.03, z)
+        bx(g, "Paint", x - 0.42, x - 0.04, y - 0.36, y - 0.3, z + 0.05, z + 0.38)
+        bx(g, "Paint", x + 0.04, x + 0.26, y - 0.36, y - 0.3, z + 0.05, z + 0.38)
+        bx(g, ("SignRed", "SignTeal", "SignGold")[k % 3], x + 0.31, x + 0.44, y - 0.37, y - 0.3, z + 0.12, z + 0.3)
+    g["Brass"].hcyl(x, y - 0.3, 8.1, 0.5, 0.15, axis="y", seg=14)
+    g["Dial"].hcyl(x, y - 0.4, 8.1, 0.4, 0.06, axis="y", seg=14)
+    g["Iron"].obox(x + 0.08, y - 0.45, 8.2, 0.05, 0.03, 0.3, ry=0.5)
+    bx(g, "SnowCap", x - 0.7, x + 0.7, y - 0.35, y, 7.6, 7.72)
+
+
+def luggage(g):
+    """처마 밑 오른쪽(빈 땅 밖): 증기 트렁크(쇠 모서리 · 놋쇠 띠 · 가죽 손잡이) + 가방 둘 · 왼쪽: 바깥 옆벽에 등 댄 긴 의자"""
+    A = P.At(g, 6.6, -2.6, 0.15, 0.25)
+    A.box("Leather", -1.1, 1.1, -0.65, 0.65, 0, 1.4)
+    A.box("Wood", -1.15, 1.15, -0.7, 0.7, 1.4, 1.6)
+    for xx in (-0.7, 0.7):
+        A.box("Brass", xx - 0.1, xx + 0.1, -0.72, 0.72, 0.0, 1.62)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            A.box("Iron", sx * 1.15 - 0.15, sx * 1.15 + 0.15, sy * 0.7 - 0.15, sy * 0.7 + 0.15, 0.0, 0.3)
+            A.box("Iron", sx * 1.15 - 0.15, sx * 1.15 + 0.15, sy * 0.7 - 0.15, sy * 0.7 + 0.15, 1.35, 1.62)
+    A.box("Brass", -0.2, 0.2, -0.75, -0.7, 1.0, 1.35)
+    A.coll(-1.15, 1.15, -0.7, 0.7, 0, 1.62)
+    B = P.At(g, 6.5, -2.7, 1.77, -0.15)
+    B.box("SignBlue", -0.75, 0.75, -0.4, 0.4, 0, 0.9)
+    B.box("Leather", -0.15, 0.15, -0.08, 0.08, 0.9, 1.15)
+    B.box("Brass", -0.78, -0.6, -0.42, 0.42, 0.1, 0.8)
+    C = P.At(g, 7.4, -0.9, 0.15, 1.2)
+    C.box("Banner", -0.6, 0.6, -0.35, 0.35, 0, 1.6)
+    C.box("Leather", -0.12, 0.12, -0.06, 0.06, 1.6, 1.85)
+    C.coll(-0.6, 0.6, -0.35, 0.35, 0, 1.6)
+    P.wall_bench(g, -HALF, 1, 0.0, 3.4, 0.0)
 
 
 def porch(g, R):
@@ -115,7 +189,7 @@ def porch(g, R):
         K.lantern(g, x * 0.72, TRUSS_Y, ztb, 7.6)
     # 오른 옆 작은 증기 통(창구 난방) → 관이 옆벽으로
     tx, ty = HALF + 1.0, 2.6
-    K.steam_bundle(g, tx, ty, 0.0, h=5.0, r=0.7, gauge_face=-1, pipe_pts=[(tx, ty + 0.7, 5.6), (tx, YB + T / 2 - 0.3, 5.6), (HALF - 0.3, YB + T / 2 - 0.3, 5.6)])
+    K.steam_bundle(g, tx, ty, 0.0, h=5.0, r=0.7, gauge_face=-1, vent=False, pipe_pts=[(tx, ty + 0.7, 5.6), (tx, YB + T / 2 - 0.3, 5.6), (HALF - 0.3, YB + T / 2 - 0.3, 5.6)])
 
 
 def build(g):
@@ -128,6 +202,13 @@ def build(g):
     K.roof_gable(g, R)
     wicket(g)
     inside(g)
+    for x in (-3.45, 3.45):
+        timetable(g, x, YF - T / 2)
+    luggage(g)
+    # 창구 옆 종(놋쇠 종 + 쇠 받침 팔): 줄 선 손님을 부른다
+    bx(g, "Iron", 2.75, 2.95, YF - T / 2 - 0.9, YF - T / 2, 8.7, 8.85)
+    g["Brass"].cyl(2.85, YF - T / 2 - 0.85, 7.9, 0.4, 0.15, 0.6, seg=12)
+    g["Brass"].cyl(2.85, YF - T / 2 - 0.85, 8.5, 0.08, 0.08, 0.25, seg=6)
     CLEAR(-4.9, 4.9, -12.0, YF - T / 2 - 1.5, 0.15, 5.4)
 
 
@@ -142,4 +223,5 @@ INFO = {
     "door_view": (0.0, YF),                     # 1인칭 "문" 시점 = 창구
     "forge_look": (0.0, 3.0),
     "plan_scale": 24,
+    "hole_seeds": [(0.0, 1.7, FB + 4.5)],          # holes.py 눈 자리: 매표소 안(손님 자리에서는 쇠살 너머라 안 보임)
 }

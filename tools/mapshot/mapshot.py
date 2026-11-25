@@ -131,6 +131,7 @@ class Scene:
         self.walk = None
         self.nobj = 0
         self.rects = []            # rock 발자국 (x0, x1, z0, z1)
+        self.region_area = None    # 열림 비율 분모(스터드²). None = bounds 넓이(마을 3판 그대로). 필드처럼 바다·다른 지역이 bounds 에 많이 들면 그 지역 땅 넓이를 준다
 
     # -- 모으기
     def _grp(self, kind, color, emit):
@@ -617,7 +618,7 @@ def roblox_yaw(heading):
 
 def region_metrics(S, H):
     x0, x1, z0, z1 = S.bounds
-    area = (x1 - x0) * (z1 - z0)
+    area = S.region_area or (x1 - x0) * (z1 - z0)
     wx0, wz0, cell, _ = S.walk
     opn = float((~np.isnan(H)).sum() * cell * cell / area * 100)
     out = dict(open=opn, open_ok=30 <= opn <= 50)
@@ -663,7 +664,7 @@ def region_metrics(S, H):
     return out
 
 
-def run(S, out_dir, seed=20261114, lattice=8.0, sky=None, fog=0.0):
+def run(S, out_dir, seed=20261114, lattice=8.0, sky=None, fog=0.0, dump=None):
     t00 = time.time()
     os.makedirs(out_dir, exist_ok=True)
     name = S.name
@@ -714,6 +715,9 @@ def run(S, out_dir, seed=20261114, lattice=8.0, sky=None, fog=0.0):
         if n % 400 == 0:
             log("지도 %d/%d (%.0fs)" % (n, len(pos), time.time() - t))
     T["꽉참 지도 재기(%d자리 x 8방향 x %dx%d)" % (len(pos), NXc, NYc)] = time.time() - t
+    if dump:   # 자리별 값(로블록스 x, 바닥 y, z, 랜드마크 보임, 가린 것 종류, 자리 지수) — 2026-11-25 기획 부서, 기본은 안 씀
+        with open(dump, "w", encoding="utf-8") as f:
+            json.dump([[round(r["x"], 1), round(r["y"], 2), round(r["z"], 1), bool(r["lm"]), r["blk"], round(r["index"], 1)] for r in rec], f)
 
     # 3. 사진 자리 고르기
     rng = random.Random(seed)

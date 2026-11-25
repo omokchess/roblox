@@ -75,7 +75,7 @@ def gable_x(g, R, xc, yc=0.0, holes=()):
 
 
 # ------------------------------------------------------------------ 난로
-def iron_stove(g, x, y, z0, z_pipe, face=-1, r=1.1):
+def iron_stove(g, x, y, z0, z_pipe, face=-1, r=1.1, vent=True):
     """무쇠 난로(G1 가운데 난로): 돌 깔판 · 다리 넷 · 둥근 몸(놋쇠 띠) · 앞 불 문(불빛 틈) · 진짜 불 · 뚜껑 · 연통(z_pipe 까지, 지붕을 뚫는 쪽은 roof openings 로)"""
     bx(g, "Stone", x - 1.7, x + 1.7, y - 1.7, y + 1.7, z0, z0 + 0.2)
     zb = z0 + 0.2
@@ -99,7 +99,8 @@ def iron_stove(g, x, y, z0, z_pipe, face=-1, r=1.1):
     for k in range(3):
         a = k * 2.09
         bx(g, "Iron", x + 0.6 * math.cos(a) - 0.05, x + 0.6 * math.cos(a) + 0.05, y + 0.6 * math.sin(a) - 0.05, y + 0.6 * math.sin(a) + 0.05, z_pipe - 0.4, z_pipe + 0.1)
-    K.S.vent(g, x, y, z_pipe + 0.9)
+    if vent:
+        K.S.vent(g, x, y, z_pipe + 0.9)
     cbox(x - r, x + r, y - r, y + r, z0, zb + 3.7)
 
 

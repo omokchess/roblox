@@ -20,6 +20,7 @@ b_clock.py — 2026-11-14. 설원 마을 3판: 시계탑(광장 가운데 — �
 import math
 
 import lib as K
+import lib_int1 as P
 import lib_b as KB
 from lib import FZ, LOG, CEIL, MAIN_W, MAIN_H, WIN_W, WIN_H, WIN_SILL, bx, cbox, CLEAR
 
@@ -34,7 +35,9 @@ I1 = W1 - T / 2                           # 1단 안쪽 면 8.6
 Z1, Z2, Z3 = 22.0, 44.0, 62.0             # 단 벽 윗면
 STONE_TO = FZ + 12.0                      # 돌 밑단 높게(레퍼런스 3절 "8" 을 1단 방 천장 위까지 — 단단한 탑 밑동)
 CLOCK_Z, CLOCK_R = 53.5, 4.6
-COUNTER = (-2.5, 2.5, 5.0, 8.0)           # 이동 탑 받침(카운터 자리)
+COUNTER = (-2.5, 2.5, 5.0, 7.0)           # 이동 탑 받침(카운터 자리) — 2026-11-19 1팀: 뒤 1 을 줄여 뒷벽 톱니 장치 자리를 냄
+GEAR16 = (3.4, 8.05, FZ + 5.6)            # 도는 톱니(옛 키트 Gear_16 반지름 4.99 · Gear_10 3.12, 판이 -y 를 봄) 가운데
+GEAR10 = (3.4 - 7.21 * 0.9659, 8.05, FZ + 5.6 + 7.21 * 0.2588)     # 맞물림 거리 4.99 + 3.12 - 0.9 = 7.21, 165°
 FREE = (-5.0, 5.0, -5.4, 4.6)
 TANK = (-6.4, 6.4)
 
@@ -92,21 +95,26 @@ def room(g):
     bx(g, "StoneTrim", x0 - 0.2, x1 + 0.2, y0 - 0.2, y1 + 0.2, FZ, FZ + 0.4)
     bx(g, "StoneTrim", x0 - 0.15, x1 + 0.15, y0 - 0.15, y1 + 0.15, FZ + 2.6, FZ + 2.9)
     zt = FZ + 2.9
-    g["Brass"].cyl(cx, cy, zt, 2.0, 2.0, 0.35, seg=28)                 # 지도 원판(놋쇠 테)
-    g["Dial"].cyl(cx, cy, zt + 0.35, 1.75, 1.75, 0.1, seg=28)
-    for k, (dx, dy) in enumerate(((-1.0, 0.5), (0.6, 0.9), (1.1, -0.6), (-0.4, -0.9), (0.0, 0.0))):   # 이동 자리 빛 점
+    g["Brass"].cyl(cx, cy, zt, 1.45, 1.45, 0.35, seg=28)               # 지도 원판(놋쇠 테) — 받침 깊이 2 안
+    g["Dial"].cyl(cx, cy, zt + 0.35, 1.25, 1.25, 0.1, seg=28)
+    for k, (dx, dy) in enumerate(((-0.7, 0.35), (0.45, 0.65), (0.8, -0.45), (-0.3, -0.65), (0.0, 0.0))):   # 이동 자리 빛 점
         g["GlowTeal"].cyl(cx + dx, cy + dy, zt + 0.45, 0.2, 0.2, 0.12, seg=8)
     # 위 놋쇠 고리(아스트롤라베) — 받침 뒤 기둥 둘이 받침
     for s in (-1, 1):
         bx(g, "Iron", cx + s * 2.3 - 0.15, cx + s * 2.3 + 0.15, y1 - 0.5, y1 - 0.2, zt, zt + 4.0)
-    g["Brass"].hcyl(cx, y1 - 0.35, zt + 3.6, 2.45, 0.2, axis="y", seg=28)
-    g["Iron"].hcyl(cx, y1 - 0.3, zt + 3.6, 2.15, 0.25, axis="y", seg=28)
-    K.S.gear(g, "Brass", cx, y1 - 0.45, zt + 3.6, 1.0, 12, 0.2)
+    for k in range(20):                               # 고리(바깥 2.45 · 안 1.85) — 뒤 톱니 맞물림이 고리 안으로 보인다(비평 1차)
+        a = 2 * math.pi * (k + 0.5) / 20
+        g["Brass"].obox(cx + 2.15 * math.cos(a), y1 - 0.35, zt + 3.6 + 2.15 * math.sin(a), 0.71, 0.22, 0.6, ry=-a + math.pi / 2)
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        g["Iron"].obox(cx + 1.15 * math.cos(a), y1 - 0.3, zt + 3.6 + 1.15 * math.sin(a), 1.5, 0.14, 0.18, ry=-a)
+    K.S.gear(g, "Brass", cx, y1 - 0.4, zt + 3.6, 0.6, 10, 0.2)
+    bx(g, "Iron", cx - 2.3, cx + 2.3, y1 - 0.42, y1 - 0.28, zt + 3.5, zt + 3.7)
     g["LampPt"].box(cx, cy, zt + 1.4, 0.3, 0.3, 0.3)
     cbox(x0 - 0.2, x1 + 0.2, y0 - 0.2, y1, FZ, FZ + 3.4)
     # 왼 뒤 증기 통 → 관: 뒷벽을 뚫고 나가 바깥면을 타고 올라 2단 기계실로
     tx, ty = TANK
-    K.steam_bundle(g, tx, ty, FZ, h=6.0, r=1.1, gauge_face=-1,
+    K.steam_bundle(g, tx, ty, FZ, h=6.0, r=1.1, gauge_face=-1, vent=False,        # 방 안 — 김 빼기(holes.py 김 검사)
                    pipe_pts=[(tx, ty + 1.1, FZ + 4.6), (tx, O1 + 0.5, FZ + 4.6), (tx, O1 + 0.5, 30.0), (tx, O2 - 0.4, 30.0)])
     for z in (FZ + 8.0, 15.0, 19.0, 26.0):          # 관 띠쇠(벽에 박음 — 2단 쪽은 띠지붕 위 2단 벽까지)
         yw = O1 if z < Z1 else O2
@@ -119,6 +127,60 @@ def room(g):
     g["SignRed"].hcyl(I1 - 0.48, 0.2, FZ + 5.5, 0.22, 0.06, axis="x", seg=8)
     for x, y in ((-4.5, -4.3), (4.5, -4.3), (0.0, 0.0)):        # 천장 보(y -4.3 · 0)에 매닮
         K.lantern(g, x, y, FZ + CEIL, FZ + 8.4)
+    clockwork(g)
+
+
+def clockwork(g):
+    """뒷벽 시계 장치(문에서 이동 받침 너머로 보이는 초점, 레퍼런스 T3·TI1~TI3): 도는 톱니 둘(PROP — Studio 가 돌림) · 뒤 쇠 틀판 ·
+    오른 구석 세로 굴대(천장을 뚫고 시계 단으로) + 누운 맞물림 톱니 · 왼 위 놋쇠 톱니 무리(고정) · 추(흔들이) · 대기 긴 의자 둘 · 바닥 놋쇠 고리 · 벽등"""
+    K.I.PROP("Gear_16", *GEAR16, 0.0, 1.0, speed=12)
+    K.I.PROP("Gear_10", *GEAR10, 0.0, 1.0, speed=-19.2)
+    for (x, y, z), r in ((GEAR16, 4.99), (GEAR10, 3.12)):           # 축받이: 벽에 박은 쇠 판 + 놋쇠 통(톱니 뒤)
+        bx(g, "Iron", x - 0.9, x + 0.9, I1 - 0.08, I1, z - 0.9, z + 0.9)
+        g["Brass"].hcyl(x, y + 0.6, z, 0.4, 0.4, axis="y", seg=10)
+        for a in range(4):                                         # 쇠 틀(벽 판 → 축받이 버팀 넷)
+            aa = a * math.pi / 2 + math.pi / 4
+            g["Iron"].obox(x + 0.75 * math.cos(aa), I1 - 0.05, z + 0.75 * math.sin(aa), 0.22, 0.1, 1.0, ry=-aa)
+    sx, sy = 7.9, 7.0                                              # 세로 굴대(바닥 상자 → 천장)
+    bx(g, "Iron", sx - 0.6, sx + 0.6, sy - 0.6, sy + 0.6, FZ, FZ + 1.4)
+    bx(g, "Brass", sx - 0.65, sx + 0.65, sy - 0.65, sy + 0.65, FZ + 1.4, FZ + 1.55)
+    g["Steel"].cyl(sx, sy, FZ + 1.55, 0.2, 0.2, CEIL - 1.55 + 1.2, seg=8)
+    for z in (FZ + 3.2, FZ + 8.2, FZ + 10.6):
+        g["Brass"].cyl(sx, sy, z, 0.32, 0.32, 0.25, seg=8)
+        bx(g, "Iron", sx - 0.12, sx + 0.12, sy, I1, z - 0.1, z + 0.35)        # 굴대 받침 팔(뒷벽에 박음)
+    K.S.gear(g, "Brass", sx, sy, FZ + 5.6, 0.9, 10, 0.25, axis="z")
+    for x, z, r, n, m in ((-6.9, FZ + 9.6, 1.25, 12, "Brass"), (-5.2, FZ + 10.3, 0.7, 8, "Copper"), (-7.4, FZ + 7.9, 0.6, 8, "Brass")):
+        K.S.gear(g, m, x, I1 - 0.25, z, r, n, 0.2)
+        g["Iron"].hcyl(x, I1 - 0.15, z, 0.18, 0.3, axis="y", seg=6)
+    # 추(흔들이): 천장 판 → 쇠 막대 → 놋쇠 추(앞을 보는 원판 두 겹)
+    px, py = -4.0, 5.8
+    bx(g, "Iron", px - 0.3, px + 0.3, py - 0.3, py + 0.3, FZ + CEIL + 0.6, FZ + CEIL + 0.9)
+    g["Iron"].cyl(px, py, FZ + 4.3, 0.06, 0.06, CEIL + 0.6 - 2.3, seg=6)
+    g["Brass"].hcyl(px, py, FZ + 3.6, 0.85, 0.3, axis="y", seg=16)
+    g["Iron"].hcyl(px, py - 0.18, FZ + 3.6, 0.55, 0.06, axis="y", seg=16)
+    # 대기 긴 의자(왼 벽 · 오른 벽 앞 — 오른 벽 지도 판 밑은 비움)
+    P.wall_bench(g, -I1, -1, -7.6, -2.6, FZ)
+    P.wall_bench(g, I1, 1, -8.1, -5.0, FZ)
+    # 바닥 놋쇠 고리(이동 탑 길잡이) · 앞벽 벽등 둘
+    for i in range(4):                                     # 큰 돌판 두 톤(4.3, 높이 0.05 — 충돌 없음, 비평 1차 맨바닥)
+        for j in range(4):
+            bx(g, "Stone" if (i + j) % 2 else "DarkStone", -I1 + i * 4.3, -I1 + (i + 1) * 4.3, -I1 + j * 4.3, -I1 + (j + 1) * 4.3, FZ, FZ + 0.05)
+    K.S.ring(g, "Brass", 0.0, -0.4, FZ + 0.05, 3.6, 3.9, 0.03, n=24)
+    for k in range(4):
+        g["Brass"].obox(0.0, -0.4, FZ + 0.065, 0.2, 7.6 if k % 2 == 0 else 6.0, 0.03, rz=k * math.pi / 4)
+    for x in (-7.0, 7.0):
+        P.sconce(g, "x", -I1, x, FZ + 7.4, face=1)
+    # 문 옆 행선지 판(앞벽 안쪽, 문 왼쪽): 짙은 틀 · 검은 판 · 행선지 패 다섯 줄 + 놋쇠 화살 · 위 놋쇠 머리판(비평 1차: 앞벽이 휑함)
+    yf = -I1
+    bx(g, "Timber", -8.3, -5.7, yf, yf + 0.2, FZ + 2.6, FZ + 6.3)
+    bx(g, "Char", -8.1, -5.9, yf + 0.2, yf + 0.25, FZ + 2.8, FZ + 6.1)
+    for k in range(5):
+        z = FZ + 3.0 + k * 0.62
+        bx(g, "Paint", -7.95, -6.75, yf + 0.25, yf + 0.3, z, z + 0.4)
+        bx(g, ("SignTeal", "SignGold", "SignRed", "PaintGreen", "SignBlue")[k], -6.65, -6.45, yf + 0.25, yf + 0.31, z + 0.05, z + 0.35)
+        g["Brass"].obox(-6.2, yf + 0.29, z + 0.2, 0.32, 0.05, 0.12, ry=0.0)
+        g["Brass"].obox(-6.0, yf + 0.29, z + 0.2, 0.14, 0.05, 0.14, ry=0.785)
+    bx(g, "Brass", -8.4, -5.6, yf, yf + 0.3, FZ + 6.3, FZ + 6.55)
 
 
 def tier2(g):
@@ -207,7 +269,7 @@ INFO = {
     "forge_look": (0.0, 6.5),
     "plan_scale": 30,
     # 순간이동 UI 자리(받침 위 지도 원판 가운데) — 블렌더 좌표, 로블록스 로컬 = (-x, z, y)
-    "teleport": (0.0, 6.5, FZ + 3.35),
+    "teleport": (0.0, 6.0, FZ + 3.35),
     # 시계 바늘 달 자리: (판 가운데 x, y, z, 바라보는 쪽, 반지름) — 블렌더 좌표. 메시에 10:10 고정 바늘이 그려져 있다(Studio 바늘을 달면 메시 바늘은 Iron 덩이에서 지울 것)
     "clock_faces": [(0.0, -O3 - 1.15, CLOCK_Z, "-y", CLOCK_R), (0.0, O3 + 1.15, CLOCK_Z, "+y", CLOCK_R),
                     (-O3 - 1.15, 0.0, CLOCK_Z, "-x", CLOCK_R), (O3 + 1.15, 0.0, CLOCK_Z, "+x", CLOCK_R)],

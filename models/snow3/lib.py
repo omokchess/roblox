@@ -82,6 +82,9 @@ PITCH = {"A": 40.0, "B": 50.0}            # 지붕 물매(도) — A 통나무(�
 
 PAL = dict(T.PAL)
 PAL.update({"DarkLog": "#3B2A1F"})        # 새 재질: 짙은 통나무(사양 4절 "짙은 원목") — Studio SKIN 에 넣을 것(보고서)
+PAL.update({"WoodFloor": "#7E5232"})      # 1팀 2026-11-24 새 재질: 마루 널 한 톤 짙은 쪽(Wood #8A5A36 과 한 톤 차 — 얼룩말 줄무늬 없게)
+PAL.update({"CanvasDark": "#6E5E48"})     # (3팀 2026-11-24) 비행선 짙은 천(기낭 갈빗대·방향타) — SKIN 에도 한 줄
+PAL.update({"FloorWood": "#654631"})      # (2팀 2026-11-24) 널 마루 둘째 톤 — Timber(#5A3E2C)보다 한 톤 밝게(비평 1차: 줄무늬 없이 널 이음만 보이게). SKIN 에도 한 줄
 # 자연 키트(n_*.py, 2026-11-17 아트): 바늘잎 두 톤 · 줄기 · 자작 · 잔가지 · 죽은 나무 · 바위 세 톤(맵 Slate 두 톤 + 짙은 밑 톤)
 NATURE = {"Needle": "#283A32", "NeedleLit": "#384E40", "Bark": "#584030", "BirchBark": "#D6D2C6", "BirchMark": "#34302E",
           "Twig": "#5E4A44", "DeadWood": "#786C62", "RockA": "#646E6A", "RockB": "#58615F", "RockC": "#4A5250"}
@@ -202,38 +205,49 @@ def log_wall(g, ax, c, u0, u1, z0, z1, holes=(), parity=0, t=LOG, mat="DarkLog",
 def frame_wall(g, ax, c, u0, u1, z0, z1, holes=(), stone_to=None, t=LOG, post_gap=4.0, coll=True, face=1):
     """
     검은 숲식 벽: (stone_to 까지) 돌 아랫벽 → 그 위 문턱보(sill) → 기둥(모서리·구멍 양옆·4 간격) → 머리보 → 세로 판(Timber)을 뼈대 안쪽으로 0.2 들여 채움,
-    모서리 기둥 옆에 가새. holes 는 log_wall 과 같다(문 구멍은 돌벽도 끊는다). face = 바깥 쪽 부호(가새·판 들임 방향)
+    모서리 기둥 옆에 가새. holes 는 log_wall 과 같다. face = 바깥 쪽 부호(가새·판 들임 방향)
+    (1팀 2026-11-18) 구멍은 그 높이만큼만 끊는다: 옛 것은 돌벽 아래에서 시작하는 창이 돌벽을 바닥부터 돌벽 끝까지 통째로 끊어
+    창 밑·창 위에 틈이 났고(은행 창 밑 2~5.5, 시계탑 창 위 10~14.9), 기둥 칸 하나에 구멍이 둘이면 첫 구멍만 보고 메웠다(시계탑 문 위 12~14.9).
+    이제 돌 켜·문턱보·머리보는 띠마다 겹치는 구멍만 빼고 구멍 위·아래 남는 조각을 메우며, 칸은 구멍 가장자리로 세로로 나눠 조각마다 빈 높이를 판으로 채운다
     """
     zs = z0 if stone_to is None else stone_to
-    segs_full = [(u0 - t / 2, u1 + t / 2)]
+    full = (u0 - t / 2, u1 + t / 2)
+
+    def over(za, zb):
+        return [h for h in holes if h[2] < zb - 0.01 and h[3] > za + 0.01]
+
+    def band(za, zb):
+        """띠 [za, zb] 에서 막을 자리: (u0, u1, za, zb) 조각들 — 겹친 구멍 폭은 빼고, 구멍이 띠 안에서 끝나면 그 위·아래 조각을 더한다"""
+        segs, out = [full], []
+        for h0, h1, hz0, hz1 in over(za, zb):
+            segs = _minus(segs, h0, h1)
+            if hz0 > za + 0.01:
+                out.append((h0, h1, za, hz0))
+            if hz1 < zb - 0.01:
+                out.append((h0, h1, hz1, zb))
+        return [(s0, s1, za, zb) for s0, s1 in segs] + out
     if stone_to is not None:
-        segs = list(segs_full)
-        for h0, h1, hz0, hz1 in holes:
-            if hz0 < zs - 0.01:
-                segs = _minus(segs, h0, h1)
-        for s0, s1 in segs:
-            wbox(g, "StoneTrim", ax, c, t + 0.1, s0, s1, z0, zs)
-            u = s0
-            k = int(abs(s0) * 7) % len(_STONES)
-            rows = max(1, int(round((zs - z0) / 1.1)))
-            rh = (zs - z0) / rows
-            for r in range(rows):
-                u, k = s0, k + 3
+        rows = max(1, int(round((zs - z0) / 1.1)))
+        rh = (zs - z0) / rows
+        k = int(abs(full[0]) * 7) % len(_STONES)
+        for s0, s1, za, zb in band(z0, zs):
+            wbox(g, "StoneTrim", ax, c, t + 0.1, s0, s1, za, zb)          # 줄눈 심
+        for r in range(rows):
+            ra, rb = z0 + r * rh, z0 + (r + 1) * rh
+            k += 3
+            for s0, s1, za, zb in band(ra, rb):
+                u = s0
                 while u < s1 - 0.3:
                     ln = min(_STONES[k % len(_STONES)] * 0.8, s1 - u)
                     k += 1
-                    wbox(g, "Stone", ax, c, t + 0.3, u + 0.05, u + ln - 0.05, z0 + r * rh + 0.05, z0 + (r + 1) * rh - 0.05)
+                    wbox(g, "Stone", ax, c, t + 0.3, u + 0.05, u + ln - 0.05, za + 0.05, zb - 0.05)
                     u += ln
-    # 문턱보(돌벽 위 / 바닥 위)
+    # 문턱보(돌벽 위 / 바닥 위) · 머리보
     sw = 0.9
-    sill_segs = list(segs_full)
-    for h0, h1, hz0, hz1 in holes:
-        if hz0 <= zs + sw:
-            sill_segs = _minus(sill_segs, h0, h1)
-    for s0, s1 in sill_segs:
-        wbox(g, "DarkLog", ax, c, t, s0, s1, zs, zs + sw)
     head = z1 - sw
-    wbox(g, "DarkLog", ax, c, t, u0 - t / 2, u1 + t / 2, head, z1)
+    for za, zb in ((zs, zs + sw), (head, z1)):
+        for s0, s1, ya, yb in band(za, zb):
+            wbox(g, "DarkLog", ax, c, t, s0, s1, ya, yb)
     # 기둥 자리: 모서리 + 구멍 양옆 + 사이 간격
     ps = {round(u0, 2), round(u1, 2)}
     for h0, h1, hz0, hz1 in holes:
@@ -246,37 +260,44 @@ def frame_wall(g, ax, c, u0, u1, z0, z1, holes=(), stone_to=None, t=LOG, post_ga
     ps = sorted(set(ps) | {round(p, 2) for p in fill})
     pw = 0.9
     for p in ps:
-        inside = any(h0 < p < h1 and hz0 < head and hz1 > zs + sw for h0, h1, hz0, hz1 in holes)
-        if inside:
-            continue
         # 문 구멍 옆 기둥은 바닥(z0)부터 — 문턱보가 끊긴 곳
         door_side = any(abs(p - (h0 - 0.45)) < 0.01 or abs(p - (h1 + 0.45)) < 0.01 for h0, h1, hz0, hz1 in holes if hz0 <= zs + sw)
         pz0 = z0 if door_side else zs + sw
+        if any(h0 < p < h1 and hz0 < head and hz1 > pz0 for h0, h1, hz0, hz1 in holes):
+            continue
         wbox(g, "DarkLog", ax, c, t, p - pw / 2, p + pw / 2, pz0, head)
-    # 띠장(창턱·창 머리 높이) + 판
+    # 칸 채우기: 기둥 사이 칸을 구멍 가장자리로 세로로 나누고, 조각마다 [문턱보 위, 머리보 밑] 에서 구멍을 뺀 높이를 띠장 + 판으로
+    zlo = zs + sw
     for a, b in zip(ps, ps[1:]):
         a1, b1 = a + pw / 2, b - pw / 2
         if b1 - a1 < 0.3:
             continue
-        hole = [h for h in holes if h[0] < b1 and h[1] > a1]
-        if hole:
-            h0, h1, hz0, hz1 = hole[0]
-            if hz0 > zs + sw + 0.1:
-                wbox(g, "DarkLog", ax, c, t * 0.9, a1, b1, hz0 - 0.5, hz0)
-                _boards(g, ax, c, t, a1, b1, zs + sw, hz0 - 0.5, face)
-            if hz1 < head - 0.1:
-                wbox(g, "DarkLog", ax, c, t * 0.9, a1, b1, hz1, hz1 + 0.6)
-                _boards(g, ax, c, t, a1, b1, hz1 + 0.6, head, face)
-            continue
-        mid = (zs + sw + head) / 2
-        wbox(g, "DarkLog", ax, c, t * 0.9, a1, b1, mid - 0.35, mid + 0.35)
-        _boards(g, ax, c, t, a1, b1, zs + sw, mid - 0.35, face)
-        _boards(g, ax, c, t, a1, b1, mid + 0.35, head, face)
-    # 모서리 가새(아래 띠장 ~ 머리보, 모서리 기둥 안쪽 칸)
+        cuts = sorted({a1, b1} | {e for h0, h1, hz0, hz1 in holes for e in (h0, h1) if a1 < e < b1})
+        for sa, sb in zip(cuts, cuts[1:]):
+            if sb - sa < 0.05:
+                continue
+            hs = sorted((hz0, hz1) for h0, h1, hz0, hz1 in holes if h0 < sb - 0.01 and h1 > sa + 0.01 and hz0 < head and hz1 > zlo)
+            if not hs:
+                mid = (zlo + head) / 2
+                wbox(g, "DarkLog", ax, c, t * 0.9, sa, sb, mid - 0.35, mid + 0.35)
+                _boards(g, ax, c, t, sa, sb, zlo, mid - 0.35, face)
+                _boards(g, ax, c, t, sa, sb, mid + 0.35, head, face)
+                continue
+            z = zlo
+            for hz0, hz1 in hs:
+                if hz0 > z + 0.1:                       # 구멍 아래: 판 + 창턱 띠장
+                    wbox(g, "DarkLog", ax, c, t * 0.9, sa, sb, max(z, hz0 - 0.5), hz0)
+                    _boards(g, ax, c, t, sa, sb, z, max(z, hz0 - 0.5), face)
+                z = max(z, hz1)
+            if z < head - 0.1:                          # 마지막 구멍 위: 인방 띠장 + 판
+                wbox(g, "DarkLog", ax, c, t * 0.9, sa, sb, z, min(head, z + 0.6))
+                _boards(g, ax, c, t, sa, sb, min(head, z + 0.6), head, face)
+    # 모서리 가새(아래 띠장 ~ 머리보, 모서리 기둥 안쪽 칸) — 그 칸에 구멍이 있으면 구멍을 가로지르니 뺀다
     for p, s in ((ps[0], 1), (ps[-1], -1)):
         nxt = ps[1] if s > 0 else ps[-2]
         span = abs(nxt - p) - pw
-        if span < 1.5:
+        lo_, hi_ = sorted((p, nxt))
+        if span < 1.5 or any(h0 < hi_ and h1 > lo_ and hz1 > zlo and hz0 < head for h0, h1, hz0, hz1 in holes):
             continue
         mid = (zs + sw + head) / 2
         L_ = math.hypot(span, head - mid)
@@ -321,34 +342,88 @@ def _wall_coll(ax, c, t, a, b, z0, z1, holes):
             cbox(c - t / 2, c + t / 2, s0, s1, z0, z1)
 
 
-def gable_logs(g, ax, c, half, z0, ztop_at, t=LOG, mat="DarkLog", holes=()):
-    """통나무 박공: z0(벽 윗면)부터 켜마다 지붕 밑선(ztop_at(u) = 그 자리 서까래 밑)까지만 짧아진다. 맨 위는 마룻대 밑"""
+def _clip_hp(poly, a, b, c0):
+    """볼록 다각형(벽 평면 (u, z))을 반평면 a·u + b·z ≤ c0 로 자른다"""
+    out = []
+    for i in range(len(poly)):
+        p, q = poly[i], poly[(i + 1) % len(poly)]
+        fp, fq = a * p[0] + b * p[1] - c0, a * q[0] + b * q[1] - c0
+        if fp <= 1e-9:
+            out.append(p)
+        if (fp <= 1e-9) != (fq <= 1e-9):
+            k = fp / (fp - fq)
+            out.append((p[0] + k * (q[0] - p[0]), p[1] + k * (q[1] - p[1])))
+    return out
+
+
+def _poly_area(poly):
+    return abs(sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1] for i in range(len(poly)))) / 2
+
+
+def wall_prism(g, mat, ax, c, th, poly):
+    """벽 평면(u, z) 볼록 다각형을 두께 th 로 세운 덩이(끝이 지붕선 따라 비스듬한 박공 켜·막이판)"""
+    q = []
+    for p in poly:
+        if not q or abs(p[0] - q[-1][0]) + abs(p[1] - q[-1][1]) > 1e-5:
+            q.append(p)
+    if len(q) > 1 and abs(q[0][0] - q[-1][0]) + abs(q[0][1] - q[-1][1]) < 1e-5:
+        q.pop()
+    n = len(q)
+    if n < 3 or _poly_area(q) < 1e-3:
+        return
+
+    def P(u, z, d):
+        return (u, c + d, z) if ax == "x" else (c + d, u, z)
+    v = [P(u, z, -th / 2) for u, z in q] + [P(u, z, th / 2) for u, z in q]
+    f = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))] + [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
+    g[mat].add_mesh(v, f)
+
+
+def _gable_line(ztop_at, half, rafter_h):
+    """박공 윗선 = 개판 밑(서까래 밑선 ztop_at + 0.05 + 서까래 높이/cos) + 0.02 → (꼭대기 A, 기울기 m): z = A − m·|u|"""
+    lo, hi = 0.6, max(0.7, half - 0.2)
+    m = (ztop_at(lo) - ztop_at(hi)) / (hi - lo)
+    p = math.atan(m)
+    A = ztop_at(0.0) + 0.05 + rafter_h / math.cos(p) + 0.02
+    return A, m
+
+
+def gable_logs(g, ax, c, half, z0, ztop_at, t=LOG, mat="DarkLog", holes=(), rafter_h=0.9):
+    """
+    통나무 박공: z0(벽 윗면)부터 켜를 쌓고, 켜 끝을 지붕선 따라 비스듬히 잘라(실제 통나무 박공) 개판 밑까지 채운다.
+    ztop_at(u) = 서까래 밑선 − 0.05(부르는 쪽이 넘기는 값 그대로). rafter_h = 서까래 높이(RoofFrame 0.9).
+    (1팀 2026-11-18) 옛 것은 켜 끝이 계단으로 끊기고 서까래 밑에서 멈춰 '벽 윗선과 지붕 사이' 세모 틈 + 서까래 칸 띠 틈으로
+    하늘이 보였다(총괄 Studio: 잡화점 안에서 위를 보면 빛 줄). 이제 켜 = 벽 띠 [-half, half] 를 지붕선 두 반평면으로 자른 볼록 다각형.
+    holes = [(a, b, za, zb)] 박공 창: 켜를 끊고 log_wall 처럼 위 인방·아래 창턱 판·문설주 판(Timber)으로 메운다
+    """
+    A, m = _gable_line(ztop_at, half, rafter_h)
+
+    def roofcut(poly):
+        return _clip_hp(_clip_hp(poly, m, 1.0, A), -m, 1.0, A)
     k = 0
-    while True:
+    while z0 + k * LOG < A - 0.05:
         za, zb = z0 + k * LOG, z0 + (k + 1) * LOG
-        # 켜 윗면이 지붕 밑에 닿는 |u|
-        lo, hi = 0.0, half
-        for _ in range(30):
-            m = (lo + hi) / 2
-            if ztop_at(m) > zb + 0.05:
-                lo = m
-            else:
-                hi = m
-        w = lo
-        if w < 0.6:
-            break
-        segs = [(-w, w)]
+        pieces = [roofcut([(-half, za), (half, za), (half, zb), (-half, zb)])]
         for h0, h1, hz0, hz1 in holes:
-            if hz0 < zb and hz1 > za:
-                segs = _minus(segs, h0, h1)
+            if hz0 < zb - 0.01 and hz1 > za + 0.01:
+                pieces = [q for pc in pieces for q in (_clip_hp(pc, 1.0, 0.0, h0), _clip_hp(pc, -1.0, 0.0, -h1))]
         tt = t if k % 2 == 0 else t * 0.84
-        for s0, s1 in segs:
-            wbox(g, mat, ax, c, tt, s0, s1, za, zb)
+        for pc in pieces:
+            wall_prism(g, mat, ax, c, tt, pc)
         k += 1
+    for h0, h1, hz0, hz1 in holes:
+        top = z0 + math.ceil((hz1 - z0) / LOG - 1e-6) * LOG
+        bot = z0 + math.floor((hz0 - z0) / LOG + 1e-6) * LOG
+        if top - hz1 > 0.02:
+            wall_prism(g, "Timber", ax, c, t * 0.9, roofcut([(h0 - 0.3, hz1), (h1 + 0.3, hz1), (h1 + 0.3, top), (h0 - 0.3, top)]))
+        if hz0 - bot > 0.02:
+            wbox(g, "Timber", ax, c, t * 0.9, h0 - 0.3, h1 + 0.3, bot, hz0)
+        for e0, e1 in ((h0 - 0.3, h0), (h1, h1 + 0.3)):
+            wall_prism(g, "Timber", ax, c, t + 0.1, roofcut([(e0, max(bot, z0)), (e1, max(bot, z0)), (e1, top), (e0, top)]))
     return z0 + k * LOG
 
 
-def gable_boards(g, ax, c, half, z0, ztop_at, t=LOG, face=1):
+def gable_boards(g, ax, c, half, z0, ztop_at, t=LOG, face=1, rafter_h=0.9):
     """판 박공: 머리보 위 세로 판(폭 1)이 지붕 밑선까지. 판 사이 덧판"""
     n = int(half * 2 / 1.0)
     w = half * 2 / n
@@ -360,17 +435,22 @@ def gable_boards(g, ax, c, half, z0, ztop_at, t=LOG, face=1):
         th = t * 0.6 + (0.15 if i % 2 else 0.0)
         wbox(g, "Timber", ax, c + face * (t / 2 - th / 2), th, a, b, z0, zt)
     wbox(g, "DarkLog", ax, c, t * 0.5, -half, half, z0, z0 + 0.3)
-    # 지붕선 따라 비스듬한 박공 테(판 윗끝의 계단을 덮는다) — 서까래 밑선 바로 아래, 처마도리 위에서 마룻대 밑까지
+    # 지붕선 따라 비스듬한 박공 테(판 윗끝의 계단을 덮는다) — 처마도리 위에서 마룻대 밑까지.
+    # (1팀 2026-11-18) 테 윗선을 서까래 밑이 아니라 개판 밑까지 올려 서까래 칸 사이 띠 틈(하늘이 보이던 줄)을 막는다
+    A, m = _gable_line(ztop_at, half, rafter_h)
     for s in (-1, 1):
         lo, hi = 0.6, half - 0.2
         p = math.atan2(ztop_at(lo) - ztop_at(hi), hi - lo)
         Ln = (hi - lo) / math.cos(p)
         um = s * (lo + hi) / 2
-        zm = (ztop_at(lo) + ztop_at(hi)) / 2 - 0.45
+        zbot = (ztop_at(lo) + ztop_at(hi)) / 2 - 1.15         # 옛 테 아랫선(판 계단을 덮던 높이) 그대로
+        ztop = A - m * (lo + hi) / 2                           # 개판 밑
+        hp = (ztop - zbot) * math.cos(p)
+        zm = (zbot + ztop) / 2
         if ax == "x":
-            g["DarkLog"].obox(um, c + face * (t / 2 - 0.35), zm, Ln, 0.7, 0.9, ry=s * p)
+            g["DarkLog"].obox(um, c + face * (t / 2 - 0.35), zm, Ln, 0.7, hp, ry=s * p)
         else:
-            g["DarkLog"].obox(c + face * (t / 2 - 0.35), um, zm, 0.7, Ln, 0.9, rx=-s * p)
+            g["DarkLog"].obox(c + face * (t / 2 - 0.35), um, zm, 0.7, Ln, hp, rx=-s * p)
 
 
 # ------------------------------------------------------------------ 3. 기둥·보
@@ -528,7 +608,7 @@ def tie_truss(g, y, R, t=1.0, posts=True, mat="DarkLog"):
 
 
 # ------------------------------------------------------------------ 5. 굴뚝
-def chimney(g, x0, x1, y0, y1, ztop, mat="Stone", coll=True, z0=0.0):
+def chimney(g, x0, x1, y0, y1, ztop, mat="Stone", coll=True, z0=0.0, vent=True):
     """땅(z0)에서 올라가는 굴뚝: 아래 넓은 몸(밑 1/3) → 띠돌 → 위 몸 → 갓 돌 + 쇠 갓 + 김 표지. 위 몸 둘레 눈은 얹지 않는다(열기)"""
     zs = z0 + (ztop - z0) * 0.35
     bx(g, mat, x0, x1, y0, y1, z0, zs)
@@ -545,7 +625,8 @@ def chimney(g, x0, x1, y0, y1, ztop, mat="Stone", coll=True, z0=0.0):
         bx(g, "Iron", cx + s * (x1 - x0) * 0.32 - 0.15, cx + s * (x1 - x0) * 0.32 + 0.15, cy - 0.15, cy + 0.15, ztop + 0.5, ztop + 1.6)
     bx(g, "Iron", x0 + 0.1, x1 - 0.1, y0 + 0.1, y1 - 0.1, ztop + 1.6, ztop + 1.85)
     bx(g, "SnowCap", x0 + 0.2, x1 - 0.2, y0 + 0.2, y1 - 0.2, ztop + 1.85, ztop + 2.05)
-    S.vent(g, cx, cy, ztop + 1.1)
+    if vent:
+        S.vent(g, cx, cy, ztop + 1.1)
     if coll:
         cbox(x0, x1, y0, y1, z0, ztop)
 
@@ -679,12 +760,15 @@ def hang_sign(g, x, y, z, along="x", icon=None, arm=3.0, board=(2.8, 2.0), face_
         raise NotImplementedError("along='y' 간판은 필요할 때 추가")
 
 
-def steam_bundle(g, x, y, z0, h=7.0, r=1.3, pipe_pts=None, gauge_face=-1):
-    """증기 묶음: 돌 받침 → 놋쇠 띠 구리 통 → 위 안전밸브(김) · 앞 압력계(쇠 테·흰 판·바늘) · 손잡이 밸브 → 벽으로 드는 관(pipe_pts, 직각 꺾임)"""
+def steam_bundle(g, x, y, z0, h=7.0, r=1.3, pipe_pts=None, gauge_face=-1, vent=True):
+    """증기 묶음: 돌 받침 → 놋쇠 띠 구리 통 → 위 안전밸브(김) · 앞 압력계(쇠 테·흰 판·바늘) · 손잡이 밸브 → 벽으로 드는 관(pipe_pts, 직각 꺾임)
+    vent=False — 김 표지를 빼다(1팀 2026-11-18): Studio 는 건물의 Vent 덩이 하나에 김 이미터 하나를 달고 입자는 그 메시 '상자 전체'에서
+    나온다. 김 자리가 둘 이상 떨어져 있으면 상자가 방을 덮어 방 안에 김이 핀다 → 건물마다 김 자리는 하나(굴뚝·연통 꼭대기)만"""
     bx(g, "Stone", x - r - 0.4, x + r + 0.4, y - r - 0.4, y + r + 0.4, z0, z0 + 0.6)
     S.banded_cyl(g, "Copper", x, y, z0 + 0.6, r, h, every=2.2)
     g["Brass"].cyl(x, y, z0 + 0.6 + h + 0.8, 0.25, 0.25, 0.9, seg=10)
-    S.vent(g, x, y, z0 + h + 2.5)
+    if vent:
+        S.vent(g, x, y, z0 + h + 2.5)
     gy = y + gauge_face * (r + 0.25)
     gz = z0 + 0.6 + h * 0.62
     g["Brass"].hcyl(x, y + gauge_face * (r + 0.05), gz, 0.12, 0.5, axis="y", seg=8)

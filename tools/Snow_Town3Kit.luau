@@ -55,6 +55,9 @@ local SKIN = {
 	WinGlass = { RGB(191, 217, 230), M.Glass },
 	LampPt = { RGB(255, 255, 255), M.SmoothPlastic },
 	DarkLog = { RGB(59, 42, 31), M.Wood }, -- 3판 새 재질(통나무 짙은 색)
+	WoodFloor = { RGB(126, 82, 50), M.Wood }, -- 1팀 2026-11-24 마루 널(Wood 와 한 톤 차)
+	CanvasDark = { RGB(110, 94, 72), M.Fabric }, -- 비행선 짙은 천(3팀 2026-11-24, 기낭 갈빗대·방향타)
+	FloorWood = { RGB(101, 70, 49), M.Wood }, -- 3판 널 마루 둘째 톤(2팀 2026-11-24, Timber 보다 한 톤 밝게)
 	-- 자연 키트(models/snow3/n_*.py, 2026-11-17 아트)
 	Needle = { RGB(40, 58, 50), M.Grass }, -- 바늘잎 짙은 톤(층 아랫면)
 	NeedleLit = { RGB(56, 78, 64), M.Grass }, -- 바늘잎 밝은 톤(층 윗면·처진 끝)

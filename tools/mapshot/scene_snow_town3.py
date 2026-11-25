@@ -4,6 +4,8 @@ scene_snow_town3.py — 설원 마을 3판 어댑터 (2026-11-14). snow_plan4 �
 돌리기: "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" -b -P tools/mapshot/scene_snow_town3.py
 출력: C:\\claude\\맵사진\\설원마을3판\\  (환경변수 MAPSHOT_OUT 으로 바꿈)
 건물: models/snow3/b_*.py 가 지어지면 진짜 모델, 없거나 오류면 회색 상자 + 지붕. 남는 건물 셋은 옛 키트(build_steam_town.JOBS)를 20초 안에 지으면 진짜.
+배치 3판(2026-11-23): 특수 건물 셋은 P.KEEP(= snow_plan4.KEEP_MOVE, 사용자 자리 + 다듬기)의 새 자리·yaw, 연병장은 P.CHESS 새 자리.
+  지하 입구는 땅 위 정자만(땅 밑 경매장은 화면에 안 보임).
 미리보기와 Studio 가 다른 점: 바위 흔들기(jit) 없음, 건물 안 충돌·창유리 없음, 둘레 지형은 json 4 스터드 칸을 합친 상자, 나무는 세모 덩어리.
 """
 import importlib
@@ -335,7 +337,7 @@ notes.append("소품: 가스등 %d, 나무 %d" % (lamps, trees))
 
 # 비행선 계류탑 쪽 비행선은 생략(미리보기용 큰 덩어리 아님)
 notes.append("장면 짓기 %.0fs, 상자 %d" % (time.time() - t0, S.nobj))
-res = ms.run(S, OUT)
+res = ms.run(S, OUT, dump=os.environ.get("MAPSHOT_DUMP"))   # MAPSHOT_DUMP = 자리별 랜드마크·지수 json(선택)
 with open(os.path.join(OUT, "설원마을3판_어댑터메모.txt"), "w", encoding="utf-8") as f:
     f.write("\n".join(notes) + "\n")
 print("\n".join(notes))
