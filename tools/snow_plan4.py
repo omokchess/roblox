@@ -1267,7 +1267,7 @@ HEADER = """-- Snow_Town3_data.luau — tools/snow_plan4.py 가 뽑는다(손으
 -- D.ROCKS     { x0, x1, z0, z1, 윗면 y, 무리 번호, 본보기 번호 }   바위 상자. 밑 59.2 → 윗면 y. 바위 재질(Slate/Rock 짙은 회색) + 윗면만 눈(두께 0.6 판)
 -- D.SLABS     { x0, x1, z0, z1, 윗면 y }               넓적한 눈 판(Snow). 밑 59.2
 -- D.PROPS     { 틀, x, z, 바닥 y, yaw, 배율 }          Gas_Lamp = ServerStorage.SnowKit, Pine_A/Pine_B/Birch_A = ServerStorage.ForestKit(눈 색으로 — Snow_City2 나무와 같게)
--- D.AIRSHIP   { x, z, yaw, 떠 있는 높이(계류탑 바닥 위) }  선택 — 옛 SnowKit.Airship 을 새 계류탑 뒤(남)에 띄운다
+-- D.AIRSHIP   { x, y, z }  비행선 원점 = 계류탑 피벗 기준 로블록스 로컬(블렌더 (0, 41, 49) → (-x, z, y)), 돌림 없음. SnowKit3.Sn3_Airship 을 이 자리에 놓는다
 -- D.KEEP_FOLDERS / D.REMOVE_FOLDERS / D.BACKUP           Workspace.Schneereich.마을 정리 — 남기는 것 / ServerStorage.Snow_Town2_Backup 으로 옮길 것
 """
 
@@ -1300,8 +1300,8 @@ def emit(g, path):
         q = g.at(u, v)
         props.append((k,) + to_world(u, v) + (BASE + (g.G[q[1]][q[0]] if q else 0.0), yaw, s))
     table("PROPS", props)
-    mast = [p for p in PADS if p[0] == "Sn3_Mast"][0]
-    lines.append("D.AIRSHIP = %s" % lua(list(to_world(mast[1], mast[2] + 38.0)) + [mast[3], 25.4]))
+    # 비행선 원점 블렌더 (0, 41, 49)(models/snow3/lib_int3.py SHIP_Y · HP) → 탑 로컬 (-x, z, y)
+    lines.append("D.AIRSHIP = %s" % lua([0, 49, 41]))
     lines.append("D.KEEP_FOLDERS = %s" % lua([k for k, _ in KEEP_FOLDERS]))
     lines.append("D.REMOVE_FOLDERS = %s" % lua(REMOVE_FOLDERS))
     lines.append('D.BACKUP = "%s"' % BACKUP)

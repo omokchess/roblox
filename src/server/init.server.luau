@@ -59,6 +59,18 @@ end
 -- 설원 굴 광차 타기(태그 MineCart 광차의 ProximityPrompt)
 require(script.MineCartService).Start(remoteFolder:FindFirstChild(Constants.REMOTES.MineCart) :: RemoteEvent)
 
+-- 설원 계류탑 비행선·승강기(Snow_Town3 가 지은 태그 SnowAirship / SnowMastLift 모델)
+for _, name in { "AirshipService", "MastLiftService" } do
+	task.spawn(function()
+		local ok, err = pcall(function()
+			require(script[name]).Start()
+		end)
+		if not ok then
+			warn(name .. " 시작 실패: " .. tostring(err))
+		end
+	end)
+end
+
 local plaza = PlazaService.new()
 local sessionProfiles: { [number]: any } = {}
 local creatingCharacters: { [Player]: boolean } = {}

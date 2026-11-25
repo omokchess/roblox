@@ -13,7 +13,7 @@
 -- D.ROCKS     { x0, x1, z0, z1, 윗면 y, 무리 번호, 본보기 번호 }   바위 상자. 밑 59.2 → 윗면 y. 바위 재질(Slate/Rock 짙은 회색) + 윗면만 눈(두께 0.6 판)
 -- D.SLABS     { x0, x1, z0, z1, 윗면 y }               넓적한 눈 판(Snow). 밑 59.2
 -- D.PROPS     { 틀, x, z, 바닥 y, yaw, 배율 }          Gas_Lamp = ServerStorage.SnowKit, Pine_A/Pine_B/Birch_A = ServerStorage.ForestKit(눈 색으로 — Snow_City2 나무와 같게)
--- D.AIRSHIP   { x, z, yaw, 떠 있는 높이(계류탑 바닥 위) }  선택 — 옛 SnowKit.Airship 을 새 계류탑 뒤(남)에 띄운다
+-- D.AIRSHIP   { x, y, z }  비행선 원점 = 계류탑 피벗 기준 로블록스 로컬(블렌더 (0, 41, 49) → (-x, z, y)), 돌림 없음. SnowKit3.Sn3_Airship 을 이 자리에 놓는다
 -- D.KEEP_FOLDERS / D.REMOVE_FOLDERS / D.BACKUP           Workspace.Schneereich.마을 정리 — 남기는 것 / ServerStorage.Snow_Town2_Backup 으로 옮길 것
 local D = {}
 D.PADS = {
@@ -2367,7 +2367,7 @@ D.PROPS = {
 	{"Pine_A", -5140.5, -4019.5, 59.7, 0, 0.5},
 	{"Pine_A", -5148.5, -3617.5, 59.7, 0, 0.5},
 }
-D.AIRSHIP = {-4933, -3630, 0, 25.4}
+D.AIRSHIP = {0, 49, 41}
 D.KEEP_FOLDERS = {"천문대", "경매장", "체스판/Figuren_HQ", "돌/연병장", "톱니 중 Figuren_HQ 시계 바늘"}
 D.REMOVE_FOLDERS = {"돌(연병장 빼고)", "길", "광장", "공방", "학교", "공장", "계류탑", "남쪽전망", "동문", "서비스구역", "바깥고리", "북쪽거리", "뒷골목", "변환로마당", "서북거리", "공방골목", "동쪽거리", "동문길", "남쪽거리", "남서거리", "석탄마당", "공방마당", "놀이터", "연못", "난방관", "가스등", "나무", "톱니(본부 시계 바늘 빼고)", "체스판(본부 빼고)"}
 D.BACKUP = "ServerStorage.Snow_Town2_Backup"

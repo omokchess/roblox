@@ -49,6 +49,13 @@ local SIZE = {
 	Sn3_Potion = { 28, 28 }, Sn3_Hospital = { 40, 32 }, Sn3_General = { 28, 28 }, Sn3_Ticket = { 14, 10 }, Sn3_Mast = { 10, 10 },
 	Sn3_Gate = { 26, 6 },
 }
+-- 비행선 앉는 자리 { 로컬 x, y(방석 윗면), z, 보는 쪽 dx, dz } · 프로펠러 굴대 { x, y, z } — 비행선 원점 기준 로블록스 로컬(models/snow3/b_airship.py SEATS · PROP_HUBS, 블렌더 (x,y,z) → (-x, z, y))
+local SHIP_SEATS = {
+	{ 6.05, 2.00, -6.35, 0, 1 }, { 6.05, 2.00, 0.45, 0, 1 }, { 6.05, 2.00, 7.25, 0, 1 },
+	{ 6.05, 2.00, -2.45, 0, -1 }, { 6.05, 2.00, 4.35, 0, -1 }, { 6.05, 2.00, 11.15, 0, -1 },
+	{ -6.15, 2.00, 1.20, -1, 0 }, { -6.15, 2.00, 4.00, -1, 0 }, { -6.15, 2.00, 7.20, -1, 0 }, { -6.15, 2.00, 10.00, -1, 0 },
+}
+local SHIP_PROPS = { { -18.841, 16.480, 26.150 }, { 18.841, 16.480, 26.150 }, { -16.939, 17.966, 56.150 }, { 16.939, 17.966, 56.150 } }
 local BOTTOM = 59.2 -- 땅 눈 윗면 59.7 에 0.5 묻는다
 local GROUND = 59.7
 
@@ -457,10 +464,12 @@ local okRun, errRun = pcall(function()
 
 	local placedN, emptyN, missing = 0, 0, {}
 	local padY = {}
+	local padCF = {}
 	for _, pad in ipairs(D.PADS) do
 		local kind, x, z, yaw, y = pad[1], pad[2], pad[3], pad[4], pad[5]
 		padY[kind] = y
 		local cf = CFrame.new(x, y, z) * CFrame.Angles(0, math.rad(yaw), 0)
+		padCF[kind] = cf
 		local src = kit3 and kit3:FindFirstChild(kind)
 		if src then
 			local m = src:Clone()
@@ -566,16 +575,121 @@ local okRun, errRun = pcall(function()
 		end
 		say("소품: 가스등 %d, 자연(나무·바위 등) %d, 틀 없어 못 놓은 종류: %s", nLamps, nTrees, #lostL > 0 and table.concat(lostL, ", ") or "없음")
 		if D.AIRSHIP then
+			-- 비행선·승강기(2026-11-25): 계류탑 피벗 기준 자리. 서버 AirshipService·MastLiftService 가 태그(SnowAirship·SnowMastLift)로 받아 움직인다.
 			local a = D.AIRSHIP
-			local src = kitOld and kitOld:FindFirstChild("Airship")
-			if src and padY.Sn3_Mast then
-				local ship = src:Clone()
-				ship.Name = "Airship"
-				ship:PivotTo(CFrame.new(a[1], padY.Sn3_Mast + a[4], a[2]) * CFrame.Angles(0, math.rad(a[3]), 0))
-				ship.Parent = fProp
-				say("비행선: 계류탑 바닥 %.1f + %.1f", padY.Sn3_Mast, a[4])
+			local mastCF = padCF.Sn3_Mast
+			local function anchorAll(m, collide)
+				for _, p in ipairs(m:GetDescendants()) do
+					if p:IsA("BasePart") then
+						p.Anchored = true
+						if collide == false and p:IsA("MeshPart") then
+							p.CanCollide = false
+						end
+					end
+				end
+			end
+			local function invis(name, cf, size, parent, collide)
+				local p = Instance.new("Part")
+				p.Name = name
+				p.Anchored = true
+				p.Size = size
+				p.CFrame = cf
+				p.Transparency = 1
+				p.CanCollide = collide
+				p.CanQuery = false
+				p.CastShadow = false
+				p.Parent = parent
+				return p
+			end
+			local shipSrc = kit3 and kit3:FindFirstChild("Sn3_Airship")
+			if shipSrc and mastCF then
+				local holder = Instance.new("Model")
+				holder.Name = "Airship"
+				holder.Parent = fProp
+				CSi:AddTag(holder, "SnowAirship")
+				local shipCF = mastCF * CFrame.new(a[1], a[2], a[3])
+				local ship = shipSrc:Clone()
+				ship.Name = "Sn3_Airship"
+				ship:PivotTo(shipCF)
+				ship.Parent = holder
+				applyInside(ship, "Sn3_Airship")
+				anchorAll(ship)
+				-- 앉는 자리: 방석 윗면 y 의 Seat(보이지 않음). { 로컬 x, y, z, 보는 쪽 dx, dz }  (b_airship.SEATS → 로블록스 로컬 = (-x, z, y))
+				local fSeat = Instance.new("Folder")
+				fSeat.Name = "Seats"
+				fSeat.Parent = ship
+				for i, sd in ipairs(SHIP_SEATS) do
+					local at = Vector3.new(sd[1], sd[2], sd[3])
+					local seat = Instance.new("Seat")
+					seat.Name = "Seat" .. i
+					seat.Anchored = true
+					seat.Size = Vector3.new(2.4, 0.4, 2.4)
+					seat.CFrame = shipCF * CFrame.lookAt(at, at + Vector3.new(sd[4], 0, sd[5]))
+					seat.Transparency = 1
+					seat.CanCollide = false
+					seat.CanQuery = false
+					seat.CastShadow = false
+					seat.Parent = fSeat
+				end
+				invis("DepartPad", shipCF * CFrame.new(-6.5, 4, -12.8), Vector3.new(1, 1, 1), ship, false)
+				-- 미닫이 옆문(열린 자리 — 닫힘은 -Z 로 8.6)
+				local doorSrc = kit3:FindFirstChild("Sn3_AirDoor")
+				local propSrc = kit3:FindFirstChild("Sn3_AirProp")
+				if doorSrc then
+					local door = doorSrc:Clone()
+					door.Name = "Sn3_AirDoor"
+					local doorCF = shipCF * CFrame.new(-9.35, 0.1, -12.8 + 8.6)
+					door:PivotTo(doorCF)
+					door:SetAttribute("Travel", 8.6)
+					door.Parent = holder
+					anchorAll(door, false)
+					for _, p in ipairs(door:GetDescendants()) do
+						if p:IsA("MeshPart") then
+							p.CanCollide = false
+						end
+					end
+					invis("DoorColl", doorCF * CFrame.new(0, 4.625, 0), Vector3.new(0.5, 9.25, 8.8), door, true)
+				else
+					say("비행선 문 틀 Sn3_AirDoor 없음 — 옆문이 뚫린 채")
+				end
+				if propSrc then
+					for i, h in ipairs(SHIP_PROPS) do
+						local prop = propSrc:Clone()
+						prop.Name = "Sn3_AirProp"
+						prop:PivotTo(shipCF * CFrame.new(h[1], h[2], h[3]))
+						prop.Parent = holder
+						anchorAll(prop, false)
+						for _, p in ipairs(prop:GetDescendants()) do
+							if p:IsA("MeshPart") then
+								p.CanCollide = false
+							end
+						end
+					end
+				else
+					say("프로펠러 틀 Sn3_AirProp 없음")
+				end
+				say("비행선: 탑 로컬 (%.1f, %.1f, %.1f), 자리 %d, 충돌 %s", a[1], a[2], a[3], #SHIP_SEATS, INSIDE.Sn3_Airship and "있음" or "없음(전체 빌드 후 생김)")
 			else
-				say("비행선 못 놓음 (Airship 틀 %s, 계류탑 자리 %s)", src and "있음" or "없음", padY.Sn3_Mast and "있음" or "없음")
+				say("비행선 못 놓음 (Sn3_Airship 틀 %s, 계류탑 자리 %s)", shipSrc and "있음" or "없음", mastCF and "있음" or "없음")
+			end
+			local liftSrc = kit3 and kit3:FindFirstChild("Sn3_MastLift")
+			if liftSrc and mastCF then
+				local holder = Instance.new("Model")
+				holder.Name = "MastLift"
+				holder:SetAttribute("Rise", 48)
+				holder.Parent = fProp
+				CSi:AddTag(holder, "SnowMastLift")
+				local cab = liftSrc:Clone()
+				cab.Name = "Sn3_MastLift"
+				cab:PivotTo(mastCF * CFrame.new(0, 1.0, 0))
+				cab.Parent = holder
+				applyInside(cab, "Sn3_MastLift")
+				anchorAll(cab)
+				invis("Call_Bottom", mastCF * CFrame.new(0, 3.5, -4.5), Vector3.new(1, 1, 1), holder, false)
+				invis("Call_Top", mastCF * CFrame.new(-5, 51.5, 0), Vector3.new(1, 1, 1), holder, false)
+				say("승강기: 1층 1.0 ↔ 승강장 49")
+			else
+				say("승강기 못 놓음 (Sn3_MastLift 틀 %s)", liftSrc and "있음" or "없음")
 			end
 		end
 	end
