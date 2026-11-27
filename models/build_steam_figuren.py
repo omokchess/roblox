@@ -35,7 +35,8 @@ TOWERS = ((-36.0, -26.0), (36.0, -26.0), (-36.0, 30.0), (36.0, 30.0))
 RT = 5.5
 GX, GY0, GY1 = 10.0, -34.0, -24.0                           # 관문 탑 x ±10, y -34..-24
 CLOCK = (GY0 - 0.9, 41.0)                                   # 시계 판 앞면 y, 가운데 z (Snow_City2 바늘과 같아야 함)
-SW = 6.0                                                    # 날개 계단 폭(2026-11-25 사용자 "폭 4 → 넓힌다" — 날개 안 폭 12.3 이라 8 이면 옆 길이 4.3, 그래서 6)
+SW = 6.15                                                   # 날개 꺾인 계단 한 마디 폭(2026-11-25 사용자 "폭 4 → 넓힌다" → 2026-11-27 비평 본부_2차: 두 마디가 날개 안 폭 12.3 을 다 써 옆 길이 없다)
+SA, SB, NA, NB = 10.6, 18.4, 10, 11                         # 계단 발치 y(아래층 홀 문 y 1.8~10.2 뒤) · 계단참 y · 아래(A)·위(B) 마디 단 수
 
 
 def wall_holes(g, mat, axis, f0, f1, a0, a1, z0, z1, holes, coll=True):
@@ -180,8 +181,8 @@ def figuren_shell(g):
                     continue
                 S.window(g, s * X1, y, z0, 2.8, h, face="+x" if s > 0 else "-x", cross=True, frame="Timber")
                 S.window(g, s * IX1, y, z0, 2.8, h, face="-x" if s > 0 else "+x", cross=True, frame="Timber", sill=False)
-        for x in (s * 27.5,):
-            for z0, h in ((ZF + 2.4, 6.4), (Z1 + 2.0, 7.0)):
+        for x in (s * 27.5,):              # 아래 창은 계단참(높이 ZF + 6.57) 위로 — 2026-11-27 꺾인 계단
+            for z0, h in ((ZF + NA * (Z1 - ZF) / (NA + NB) + 0.9, 4.8), (Z1 + 2.0, 7.0)):
                 S.window(g, x, Y1, z0, 2.8, h, face="+y", cross=True, frame="Timber")
                 S.window(g, x, IY1, z0, 2.8, h, face="-y", cross=True, frame="Timber", sill=False)
     gate_tower(g)
@@ -296,10 +297,11 @@ def gate_tower(g):
     for x0, x1, z0, z1 in ((-GX, -4.0, ZB, Z2), (4.0, GX, ZB, Z2), (-4.0, 4.0, ZF + 9.0, Z2)):
         box2(g, "Stone", x0, x1, GY0, GY0 + t, z0, z1)
     g["Cut"].hcyl(0, GY0 + t / 2, ZF + 9.0, 4.0, t + 0.04, axis="y", seg=24)
-    for s in (-1, 1):     # 옆벽: 아래층(ZB..ZS)은 로비 쪽 끝을 0.8 들여 로비 앞뒤 길을 8.3 으로(2026-11-24 — 통로 8), 위층은 그대로 탑 몸을 받친다
-        box2(g, "Stone", *sorted((s * GX, s * (GX - t))), GY0 + t, GY1 - 0.8, ZB, ZS)
+    for s in (-1, 1):     # 옆벽: 아래층(ZB..ZS)은 로비 앞벽 면(IY0)에서 끝 — 로비 앞뒤 길 10.3(2026-11-27 비평 본부_2차 4번: 길 10), 위층은 그대로 탑 몸(GY1 까지)
+        box2(g, "Stone", *sorted((s * GX, s * (GX - t))), GY0 + t, IY0, ZB, ZS)
         box2(g, "Stone", *sorted((s * GX, s * (GX - t))), GY0 + t, GY1, ZS, Z2)
-        g["StoneTrim"].box(s * (GX - t / 2), GY1 - 0.4, ZS - 0.4, t + 0.2, 0.8, 0.8)      # 들인 자리 위 받침돌
+        for za, zb, dep in ((ZS - 2.1, ZS - 1.4, 0.95), (ZS - 1.4, ZS - 0.7, 1.9), (ZS - 0.7, ZS, GY1 - IY0)):   # 내민 위벽(2.8)을 받는 층층 받침돌(머리 위 13.3~)
+            box2(g, "StoneTrim", *sorted((s * (GX + 0.1), s * (GX - t - 0.1))), IY0, IY0 + dep, za, zb, coll=False)
     # 위(지붕 위로): 속 찬 덩이 + 띠 + 흉벽 + 깃대
     g["Stone"].box(0, (GY0 + GY1) / 2, (Z2 + zt) / 2, 2 * GX, GY1 - GY0, zt - Z2)
     for z in (ZS - 0.2, ZW - 0.8, zt - 1.0):
@@ -393,9 +395,10 @@ def figuren_in(g):
         x0, x1 = sorted((s * (HX - 0.5), s * (HX + 0.5)))
         for y0, y1, z in ((-25.8, -17.4, ZF), (1.8, 10.2, ZF), (-25.8, -17.4, Z1), (-2.2, 6.2, Z1)):
             DOORWAY(x0, x1, y0, y1, z, 9.0)
-        xa, xb = sorted((s * IX1, s * (IX1 - SW)))
-        CLEAR(xa + 0.7, xb - 0.7, 1.5, 3.9, ZF + 0.15, ZF + 5.8)
-        CLEAR(xa + 0.7, xb - 0.7, 22.1, 24.3, Z1 + 0.15, Z1 + 5.8)
+        xa, xb = sorted((s * (HX + 0.5), s * (HX + 0.5 + SW)))          # A 발치 앞(아래층)
+        CLEAR(xa + 0.7, xb - 0.7, SA - 2.4, SA - 0.15, ZF + 0.15, ZF + 5.8)
+        xa, xb = sorted((s * (HX + 0.5 + SW), s * IX1))                 # B 머리 앞(위층)
+        CLEAR(xa + 0.7, xb - 0.7, SA - 2.4, SA - 0.4, Z1 + 0.15, Z1 + 5.8)
 
 
 def potted_plant(g, x, y, z0, h=3.0):
@@ -461,9 +464,9 @@ def lobby(g):
         g["Canvas"].obox(-12.4 + (k % 3) * 2.2, HY0 - 0.74, ZF + 7.2 - (k // 3) * 2.6, 1.6, 0.03, 2.0, ry=0.05 * (k % 2))
         g["Brass"].box(-12.4 + (k % 3) * 2.2, HY0 - 0.77, ZF + 8.1 - (k // 3) * 2.6, 0.12, 0.03, 0.12)
     # 걸상 넷(앞벽 아래 창 사이) · 화분 넷 · 샹들리에
-    for x in (-17.0, 17.0):
-        for dx in (-3.2, 3.2):
-            lobby_bench(g, x + dx, IY0 + 0.75)        # 벽 쪽으로 — 넓힌 날개 문 비울 자리(y -25.4~)를 비킨다
+    for x, mat in ((-17.0, "SignBlue"), (17.0, "Banner")):     # 2026-11-27: 걸상 넷 → 앞벽 창 사이 계급 깃발(로비 앞뒤 길 10 — 비평 본부_2차 4번)
+        L.transformed(_gb(g), Matrix.Translation((x, IY0, 0)) @ Matrix.Rotation(math.pi, 4, "Z"),
+                      lambda q, mat=mat: rank_banner(q, 0.0, 0.0, ZF + 11.6, mat))
     for x in (-12.0, 12.0):
         hang_chandelier(g, x, (IY0 + HY0) / 2, ZS, ZF + 9.2, 2.0)
     hang_chandelier(g, 0, (GY0 + HY0) / 2, ZS, ZF + 10.6, 1.6)
@@ -679,48 +682,115 @@ def war_room(g):
 
 
 def stair(g, s):
-    """날개 바깥벽 따라 계단(폭 SW — 2026-11-25 사용자 "폭 4 → 넓힌다"): y 4 → 22, 21 단 + 가운데 계단참(길이 2.4, 열째 단 뒤) ·
-    열린 쪽 난간(두 마디 + 참) + 위 구멍 둘레 난간. 꼭대기가 뒤 모서리 탑 몸(반지름 5.5)에 닿지 않게 y 22 에서 끝난다"""
-    x_out, x_in = s * IX1, s * (IX1 - SW)
-    xa, xb = sorted((x_out, x_in))
-    n, ya, yb, lm, nl = 21, 4.0, 22.0, 2.4, 10
-    run, rise = (yb - ya - lm) / n, (Z1 - ZF) / n
-    for i in range(n):
-        y0 = ya + i * run + (lm if i >= nl else 0.0)
-        y1 = y0 + run + (lm if i == nl - 1 else 0.0)
-        box2(g, "Stone" if i % 2 else "StoneTrim", xa, xb, y0, y1, ZF, ZF + (i + 1) * rise)
-        g["Banner"].box((xa + xb) / 2, (y0 + y1) / 2, ZF + (i + 1) * rise + 0.02, SW - 1.6, y1 - y0, 0.04)
+    """날개 꺾인 계단(2026-11-27 비평 본부_2차: 바깥벽 계단 6 + 옆 길 6 → 날개 안 폭 12.3 을 계단이 다 쓴다. 옆 길 없음):
+    아래 마디 A(홀 벽 쪽 u 0~SW) y SA → SB 오름(NA 단) · 계단참(날개 폭 전부, y SB → 뒷벽 — 뒤 모서리 탑 몸은 그대로 묻힌다) ·
+    위 마디 B(바깥벽 쪽 u SW~12.3) y SB → SA 오름(NB 단) → 위층 바닥(y < SA)으로 바로 나온다. 위층 바닥은 SA 에서 끝(계단실은 뒷벽까지 트임).
+    단 = 속 찬 돌 받침 + 띠돌 디딤(코 0.1) + 붉은 깔개(한 단 0.657 ≤ 1). 난간은 B 안쪽 가장자리(디딤 위)·위층 바닥 끝(A 위)에만, 기둥은 디딤·바닥 위."""
+    xh, xo = s * (HX + 0.5), s * IX1
+    xw = sorted((xh, xo))
 
-    def zt(y):                       # 디딤 앞 끝 높이(난간 기준)
-        if y < ya + nl * run:
-            return ZF + max(0.0, y - ya) / run * rise
-        if y < ya + nl * run + lm:
-            return ZF + nl * rise
-        return min(Z1, ZF + nl * rise + (y - ya - nl * run - lm) / run * rise)
-    for k in range(14):
-        yy = ya + 0.5 + k * (yb - ya - 1.0) / 13
-        g["Iron"].cyl(x_in, yy, zt(yy), 0.07, 0.07, 3.0, seg=5)
-    for y0, y1 in ((ya, ya + nl * run), (ya + nl * run, ya + nl * run + lm), (ya + nl * run + lm, yb)):
-        z0_, z1_ = zt(y0) + 3.1, zt(y1 - 1e-6) + 3.1 if y1 < yb else Z1 + 3.1
-        g["BrassB"].obox(x_in, (y0 + y1) / 2, (z0_ + z1_) / 2, 0.2, math.hypot(y1 - y0, z1_ - z0_), 0.2, rx=math.atan2(z1_ - z0_, y1 - y0))
-    C(x_in, (ya + yb) / 2, (ZF + Z1) / 2 + 1.5, 0.3, yb - ya, Z1 - ZF + 3.0)
-    # 위층 판(계단 구멍 비움) + 구멍 둘레 난간
-    x_hall = s * (HX + 0.5)
-    xh0, xh1 = sorted((x_in, x_hall))
-    box2(g, "Wood", xh0, xh1, IY0, IY1, ZS, Z1)
-    box2(g, "Wood", xa, xb, IY0, ya, ZS, Z1)
-    box2(g, "Wood", xa, xb, yb, IY1, ZS, Z1)
-    for (x0, y0), (x1, y1) in (((x_in, ya), (x_in, yb)), ((xa, ya), (xb, ya))):
-        lnr = math.hypot(x1 - x0, y1 - y0)
-        for k in range(int(lnr / 0.9) + 1):
-            f = k / max(1, int(lnr / 0.9))
-            g["Iron"].cyl(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, Z1, 0.07, 0.07, 3.0, seg=5)
-        g["Brass"].box((x0 + x1) / 2, (y0 + y1) / 2, Z1 + 3.05, max(abs(x1 - x0), 0.25), max(abs(y1 - y0), 0.25), 0.22)
-        C((x0 + x1) / 2, (y0 + y1) / 2, Z1 + 1.6, max(abs(x1 - x0), 0.3), max(abs(y1 - y0), 0.3), 3.2)
-    # 장선(위층 판 밑): 홀 벽에서 2.8 · 5.5 는 끝까지, 9.3 은 계단 구멍(y 4..22)을 비켜 두 토막
-    for u, spans in ((2.8, ((IY0, IY1),)), (5.5, ((IY0, IY1),)), (9.3, ((IY0, ya), (yb, IY1)))):
-        for y0, y1 in spans:
-            g["Timber"].box(x_hall + s * u, (y0 + y1) / 2, ZS - 0.5, 0.6, y1 - y0, 0.6)
+    def X(u):
+        return xh + s * u
+
+    rise = (Z1 - ZF) / (NA + NB)
+    zl = ZF + NA * rise                               # 계단참 높이
+    ra, rb = (SB - SA) / NA, (SB - SA) / NB
+
+    def step(ua, ub, y0, y1, top, nose):
+        x0, x1 = sorted((X(ua), X(ub)))
+        box2(g, "Stone", x0, x1, y0, y1, ZF, top - 0.3, coll=False)
+        n0, n1 = (y0 - 0.1, y1) if nose < 0 else (y0, y1 + 0.1)
+        box2(g, "StoneTrim", x0, x1, n0, n1, top - 0.3, top, coll=False)
+        g["Banner"].box((x0 + x1) / 2, (y0 + y1) / 2, top + 0.02, SW - 1.6, y1 - y0, 0.04)
+        C((x0 + x1) / 2, (y0 + y1) / 2, (ZF + top) / 2, x1 - x0, y1 - y0, top - ZF)
+    for i in range(NA):                                # A: 홀 벽 쪽, +y 로 오름
+        step(0.0, SW, SA + i * ra, SA + (i + 1) * ra, ZF + (i + 1) * rise, -1)
+    for j in range(NB):                                # B: 바깥벽 쪽, -y 로 오름(A 와 0.05 겹쳐 맞댄 면을 없앤다)
+        step(SW - 0.05, IX1 - HX - 0.5, SB - (j + 1) * rb, SB - j * rb, zl + (j + 1) * rise, 1)
+    # 계단참(받침 돌 + 띠돌 판 + 깔개)
+    box2(g, "Stone", xw[0], xw[1], SB, IY1, ZF, zl - 0.3, coll=False)
+    box2(g, "StoneTrim", xw[0], xw[1], SB, IY1, zl - 0.3, zl, coll=False)
+    C((xw[0] + xw[1]) / 2, (SB + IY1) / 2, (ZF + zl) / 2, xw[1] - xw[0], IY1 - SB, zl - ZF)
+    _P().rug(g, *sorted((X(0.8), X(11.5))), SB + 0.6, SB + 5.6, zl, "Banner", "SignGold", "SignGold")
+    # 난간: B 안쪽 가장자리(계단참 → 위층) · 위층 바닥 끝(A 위, y SA). 기둥은 디딤·바닥 위에만, 놋쇠 손잡이는 기둥머리를 잇는다
+    xr = X(SW + 0.2)
+    for k in range(NB):
+        yy = SB - (k + 0.5) * rb
+        g["Iron"].cyl(xr, yy, zl + (k + 1) * rise, 0.07, 0.07, 3.0, seg=5)
+    za_, zb_ = zl + rise + 3.05, Z1 + 3.05
+    ya_, yb_ = SB - 0.5 * rb, SA + 0.5 * rb
+    g["BrassB"].obox(xr, (ya_ + yb_) / 2, (za_ + zb_) / 2, 0.2, math.hypot(ya_ - yb_, zb_ - za_), 0.2, rx=-math.atan2(zb_ - za_, ya_ - yb_))
+    C(xr, (SA + SB) / 2, (zl + Z1) / 2 + 1.5, 0.3, SB - SA, Z1 - zl + 3.0)
+    for k in range(8):
+        g["Iron"].cyl(X(0.4 + k * (SW - 0.6) / 7), SA - 0.15, Z1, 0.07, 0.07, 3.0, seg=5)
+    x0, x1 = sorted((X(0.0), X(SW + 0.25)))
+    g["BrassB"].box((x0 + x1) / 2, SA - 0.15, Z1 + 3.05, x1 - x0, 0.25, 0.22)
+    C((x0 + x1) / 2, SA - 0.15, Z1 + 1.6, x1 - x0, 0.3, 3.2)
+    # 위층 판(y < SA) + 장선(홀 벽에서 2.8 · 5.5 · 9.3) + 판 끝 받침 보(SA — 홀 벽과 바깥벽에 걸친다)
+    box2(g, "Wood", xw[0], xw[1], IY0, SA, ZS, Z1)
+    for u in (2.8, 5.5, 9.3):
+        g["Timber"].box(X(u), (IY0 + SA - 0.6) / 2, ZS - 0.5, 0.6, SA - 0.6 - IY0, 0.6)
+    g["Timber"].box((xw[0] + xw[1]) / 2, SA - 0.4, ZS - 0.45, xw[1] - xw[0], 0.8, 0.9)
+
+
+def stair_face(g, s):
+    """아래층 B 마디 앞면(y SA, 높이 13.8 · 폭 6.15 — 받침 벽): 짙은 돌 겉판·줄눈 + 가운데 높은 진열장(나무 틀 · 유리 · 선반 둘 · 트로피) + 위 현수막(금 문장)"""
+    xh = s * (HX + 0.5)
+
+    def X(u):
+        return xh + s * u
+    u0, u1 = sorted((X(SW), X(IX1 - HX - 0.5)))
+    xc = X((SW + IX1 - HX - 0.5) / 2)
+    finish_wall(g, "y", SA, -1, u0, u1, ZF, ZS - 0.1, [(xc - 1.6, xc + 1.6, ZF, ZF + 6.4)], wain=0.0, seed=51 + s, fm="StoneB")
+    y = SA - 0.7                                      # 진열장(받침 벽에 등, 얼굴 -y)
+    g["Wood"].box(xc, y, ZF + 0.9, 3.0, 1.2, 1.8)
+    g["Glass"].box(xc, y, ZF + 3.6, 2.7, 1.0, 3.6)
+    for dx in (-1.4, 1.4):
+        g["Wood"].box(xc + dx, y - 0.5, ZF + 3.6, 0.2, 0.2, 3.6)
+    for zz in (ZF + 1.84, ZF + 3.6):
+        g["Wood"].box(xc, y, zz, 2.8, 1.05, 0.08)
+    g["Wood"].box(xc, y, ZF + 5.55, 3.3, 1.35, 0.3)
+    g["SignGold"].box(xc, y - 0.69, ZF + 5.55, 1.2, 0.04, 0.16)
+    g["SignGold"].cyl(xc - 0.8, y, ZF + 1.88, 0.2, 0.3, 0.8, seg=10)          # 우승 잔
+    g["SignGold"].cyl(xc - 0.8, y, ZF + 2.68, 0.36, 0.24, 0.4, seg=10)
+    sphere(g, "SignGold", (xc + 0.7, y, ZF + 2.3), 0.4, sub=1)
+    for dx in (-0.6, 0.0, 0.6):                                                 # 두루마리
+        g["Canvas"].hcyl(xc + dx, y, ZF + 3.8, 0.16, 0.9, axis="y", seg=8)
+    S.gear(g, "SignGold", xc + 0.5, y, ZF + 4.6, 0.45, 10, 0.1, axis="y")
+    C(xc, y, ZF + 2.9, 3.0, 1.2, 5.8)
+    banner(_gb(g), "y", SA, -1, xc, ZF + 12.6, 5.4, w=3.0, d=0.25, emblem=1.2)
+
+
+def landing_dress(g, s):
+    """계단참 뒷벽 창 밑 창가 걸상 + 홀 벽 쪽 말 진열장"""
+    xh = s * (HX + 0.5)
+    zl = ZF + NA * (Z1 - ZF) / (NA + NB)
+    xb = s * 27.5                                     # 뒷벽 창(계단참 높이로 옮김 — figuren_shell)
+    P = _P()
+    P.prism(g, "Wood", P.chamfer_pts(xb - 2.0, xb + 2.0, IY1 - 1.2, IY1, 0.12), zl + 1.3, zl + 1.55)
+    for e in (-1.8, 1.8):
+        g["Timber"].box(xb + e, IY1 - 0.6, zl + 0.65, 0.3, 1.0, 1.3)
+    g["Leather"].box(xb, IY1 - 0.62, zl + 1.62, 3.6, 1.0, 0.14)
+    C(xb, IY1 - 0.6, zl + 0.78, 4.0, 1.2, 1.56)
+    L.transformed(_gb(g), Matrix.Translation((xh, 26.5, 0)) @ Matrix.Rotation(-s * math.pi / 2, 4, "Z"),
+                  lambda q: piece_case_mesh(q, zl))
+    C(xh + s * 0.55, 26.5, zl + 2.6, 1.0, 1.7, 5.3)
+
+
+def piece_case_mesh(g, z0):
+    """piece_case 의 몸만(PROP 없이 — 돌려 놓을 때 소품 자리는 따로): 나무 받침 · 유리 몸 · 놋쇠 기둥 넷 · 선반 둘 · 머리 판 · 금 패"""
+    y = 0.55
+    g["Wood"].box(0, y, z0 + 0.9, 1.7, 1.0, 1.8)
+    g["Glass"].box(0, y, z0 + 3.45, 1.5, 0.85, 3.3)
+    for dx in (-0.78, 0.78):
+        for dy in (-0.45, 0.45):
+            g["Brass"].box(dx, y + dy, z0 + 3.45, 0.12, 0.12, 3.3)
+    for zz in (z0 + 1.8, z0 + 3.45):
+        g["Wood"].box(0, y, zz + 0.04, 1.6, 0.9, 0.08)
+    g["SignGold"].cyl(0, y, z0 + 1.88, 0.18, 0.26, 0.7, seg=10)
+    sphere(g, "SignGold", (0, y, z0 + 3.9), 0.36, sub=1)
+    g["Wood"].box(0, y, z0 + 5.2, 1.85, 1.1, 0.2)
+    g["SignGold"].box(0, y + 0.56, z0 + 5.2, 0.8, 0.04, 0.14)
 
 
 def _P():
@@ -729,22 +799,6 @@ def _P():
     sys.path.insert(0, os.path.join(HERE, "snow3"))
     import lib_int1 as P
     return P
-
-
-def lobby_bench(g, x, y):
-    """로비 등받이 긴 의자(앞 = +y, 벽에 등): 따낸 자리 · 무쇠 옆틀(다리 + 팔걸이) · 등판 가로대 둘 + 세로 살 다섯"""
-    P = _P()
-    P.prism(g, "Wood", P.chamfer_pts(x - 2.0, x + 2.0, y - 0.5, y + 0.5, 0.15), ZF + 1.3, ZF + 1.52)
-    for e in (-1.8, 1.8):
-        g["Iron"].box(x + e, y + 0.3, ZF + 0.65, 0.22, 0.22, 1.3)
-        g["Iron"].box(x + e, y - 0.35, ZF + 1.4, 0.22, 0.22, 2.8)
-        g["Iron"].obox(x + e, y, ZF + 2.1, 0.2, 1.1, 0.2, rx=-0.15)
-    g["Iron"].box(x, y, ZF + 0.5, 3.6, 0.15, 0.15)
-    for zz in (ZF + 2.0, ZF + 3.0):
-        g["Wood"].box(x, y - 0.42, zz, 3.9, 0.12, 0.3)
-    for k in range(5):
-        g["Timber"].box(x - 1.6 + k * 0.8, y - 0.4, ZF + 2.5, 0.25, 0.1, 0.9)
-    C(x, y, ZF + 1.0, 4.0, 1.2, 2.0)
 
 
 def strategy_table(g, tx, ty, z0):
@@ -894,6 +948,8 @@ def dummy(g, x, y, z0):
 def wing(g, s):
     """날개(s = -1 왼 / +1 오른): 계단 + 아래(왼 훈련장 / 오른 쉼터·식당) + 위(왼 기록 서고 / 오른 길드장 방) + 등"""
     stair(g, s)
+    stair_face(g, s)
+    landing_dress(g, s)
     xo, xh = s * IX1, s * (HX + 0.5)          # 바깥벽 안면, 홀 벽 겉면
     xmid = (xo + xh) / 2
 
@@ -933,11 +989,12 @@ def wing(g, s):
             for sx in (-1, 1):
                 chair(g, X(6.0) + sx * 2.3, y + 0.8, z0, rz=sx * math.pi / 2)
             g["LampPt"].box(X(6.0), y, z0 + 4.4, 0.3, 0.3, 0.3)
-        g["Wood"].obox(X(4.0), 12.0, z0 + 3.6, 1.6, 1.2, 0.2, rx=-0.4)
-        g["Wood"].box(X(4.0), 12.3, z0 + 1.7, 0.6, 0.6, 3.4)
-        g["Leather"].obox(X(4.0), 11.9, z0 + 3.75, 1.4, 1.0, 0.25, rx=-0.4)
-        g["Canvas"].obox(X(4.0), 11.85, z0 + 3.88, 1.3, 0.9, 0.02, rx=-0.4)
-        C(X(4.0), 12.2, z0 + 1.9, 1.6, 1.4, 3.8)
+        ly = 8.4                       # 2026-11-27: 꺾인 계단 계단실(y 10.6~)에서 앞으로
+        g["Wood"].obox(X(4.0), ly, z0 + 3.6, 1.6, 1.2, 0.2, rx=-0.4)
+        g["Wood"].box(X(4.0), ly + 0.3, z0 + 1.7, 0.6, 0.6, 3.4)
+        g["Leather"].obox(X(4.0), ly - 0.1, z0 + 3.75, 1.4, 1.0, 0.25, rx=-0.4)
+        g["Canvas"].obox(X(4.0), ly - 0.15, z0 + 3.88, 1.3, 0.9, 0.02, rx=-0.4)
+        C(X(4.0), ly + 0.2, z0 + 1.9, 1.6, 1.4, 3.8)
     else:
         # ── 아래: 쉼터(앞) — 벽난로(바깥벽) · 안락의자 넷 · 체스 탁자 둘 / 식당(뒤) — 긴 탁자 + 걸상
         fy = -14.0
@@ -946,7 +1003,7 @@ def wing(g, s):
         g["Soot"].box(xo - s * 0.45, fy, ZF + 1.6, 0.06, 2.9, 2.7)
         fire_logs(g, xo - s * 1.0, fy, ZF + 0.25, 2.5, 1.0, axis="y", size=0.9)
         g["Stone"].box(xo - s * 2.1, fy, ZF + 0.08, 1.0, 4.0, 0.16)
-        g["StoneTrim"].box(xo - s * 1.0, fy, ZF + 3.6, 2.4, 6.6, 0.4)
+        g["Wood"].box(xo - s * 1.0, fy, ZF + 3.6, 2.4, 6.6, 0.4)
         S.gear(g, "Brass", xo - s * 1.65, fy, ZF + 6.4, 1.2, 12, 0.15, axis="x")
         g["Banner"].box(X(6.0), fy, ZF + 0.04, 7.0, 8.0, 0.06)
         for u, y, rz in ((6.5, fy - 3.0, 0.0), (6.5, fy + 3.0, math.pi), (3.5, fy - 2.0, 0.4), (3.5, fy + 2.4, math.pi - 0.4)):
@@ -963,25 +1020,7 @@ def wing(g, s):
             C(x, y, ZF + 1.4, 2.6, 2.6, 2.8)
             for sy in (-1, 1):
                 chair(g, x, y + sy * 2.2, ZF, rz=0.0 if sy > 0 else math.pi, mat="Leather")
-        # 식당: 긴 탁자(y 11..23 — 홀 문 y 4..8 앞 비움, 계단 x 32.8..36.8 피함) + 걸상 둘 + 촛대
-        mx, my, ml = X(3.15), 16.5, 9.0          # 2026-11-27: 계단 폭 6(x 30.8~) 이라 홀 벽 쪽으로 · 짧게
-        P = _P()
-        P.table(g, mx - 1.4, mx + 1.4, my - ml / 2, my + ml / 2, ZF, h=2.85)
-        for sx in (-1, 1):
-            xb = mx + sx * 2.2
-            P.prism(g, "Wood", P.chamfer_pts(xb - 0.5, xb + 0.5, my - ml / 2 + 0.3, my + ml / 2 - 0.3, 0.15), ZF + 1.45, ZF + 1.7)
-            for y in (my - ml / 2 + 1.0, my, my + ml / 2 - 1.0):
-                for dx in (-0.3, 0.3):
-                    g["Timber"].box(xb + dx, y, ZF + 0.72, 0.18, 0.3, 1.45)
-                g["Timber"].box(xb, y, ZF + 0.5, 0.6, 0.15, 0.15)
-            g["Timber"].box(xb, my, ZF + 0.5, 0.15, ml - 2.0, 0.15)
-            C(xb, my, ZF + 0.85, 1.0, ml, 1.7)
-        for k in range(3):
-            y = my - 3.0 + k * 3.0
-            g["Brass"].cyl(mx, y, ZF + 2.85, 0.15, 0.1, 0.8, seg=6)
-            g["Glow"].box(mx, y, ZF + 3.75, 0.15, 0.15, 0.25)
-            for sx in (-0.8, 0.8):
-                g["Iron"].cyl(mx + sx, y + 1.2, ZF + 2.85, 0.35, 0.3, 0.12, seg=10)
+        # 식당(긴 탁자 · 걸상 · 촛대)은 2026-11-27 꺾인 계단이 날개 뒤(y 10.6~)를 다 써서 뺐다 — 계단 앞면은 진열장(stair_face)
         # ── 위: 길드장 방 — 큰 책상 · 의자 · 벽난로(아래 굴뚝 위) · 트로피 장 · 체스 받침 · 깃발 · 책장
         z0 = Z1
         box2(g, "Stone", xo - s * 1.6, xo, fy - 3.0, fy + 3.0, z0, Z2)
@@ -989,7 +1028,7 @@ def wing(g, s):
         g["Soot"].box(xo - s * 0.45, fy, z0 + 1.5, 0.06, 2.5, 2.5)
         fire_logs(g, xo - s * 1.0, fy, z0 + 0.25, 2.2, 1.0, axis="y", size=0.8)
         g["Stone"].box(xo - s * 2.1, fy, z0 + 0.08, 1.0, 3.6, 0.16)
-        g["StoneTrim"].box(xo - s * 1.0, fy, z0 + 3.4, 2.4, 6.6, 0.4)
+        g["Wood"].box(xo - s * 1.0, fy, z0 + 3.4, 2.4, 6.6, 0.4)
         dx, dy = X(6.0), -9.0          # 책상을 앞으로 물려 홀 문(y -2..6) 앞을 연다(2026-11-27: 넓힌 계단 구멍 모서리 y 4 와 9.5 띄움)
         _P().prism(g, "Wood", _P().chamfer_pts(dx - 1.7, dx + 1.7, dy - 3.5, dy + 3.5, 0.25), z0 + 2.65, z0 + 2.95)
         for sy in (-1, 1):
@@ -1007,7 +1046,7 @@ def wing(g, s):
         C(dx, dy, z0 + 1.5, 3.4, 7.0, 3.0)
         chair(g, dx + s * 2.4, dy, z0, rz=s * math.pi / 2, mat="Leather")
         g["Leather"].box(dx + s * 2.6, dy, z0 + 3.4, 0.4, 1.4, 2.6)
-        for y0, y1 in ((8.0, 12.0),):
+        for y0, y1 in ((6.7, 10.3),):          # 2026-11-27: 계단실 앞(위층 바닥 끝 y 10.6)
             bookcase(g, xh, y0, y1, z0, 9.0, s, levels=6, seed=77)
         for k, y in enumerate((-14.0, -11.0)):     # 진열장(2026-11-27 비평: 흰 유리 덩이 → 짙은 나무 틀 · 맑은 유리 앞·옆 · 선반 · 트로피)
             xc = X(1.2)
@@ -1031,7 +1070,7 @@ def wing(g, s):
                 for dy in (-0.5, 0.0, 0.5):
                     g["Canvas"].hcyl(xc + 0.1 * s, y + dy, z0 + 3.0, 0.16, 1.0, axis="x", seg=8)
             C(xc, y, z0 + 2.9, 1.6, 2.2, 5.8)
-        qx, qy = X(2.5), 16.5          # 계단 구멍(x 32.8..36.8)에 떠 있던 것을 홀 벽 쪽 바닥 위로
+        qx, qy = X(10.3), 2.0          # 2026-11-27: 꺾인 계단 계단실(y 10.6~) 밖 — 바깥벽 창 둘(y -2 · 6) 사이
         g["Marble"].cyl(qx, qy, z0, 0.8, 0.6, 3.0, seg=12)
         for i in range(4):
             for j in range(4):
@@ -1041,7 +1080,7 @@ def wing(g, s):
         g["Banner"].box(X(0.12), -9.0, z0 + 6.0, 0.1, 3.0, 7.0)
         g["SignGold"].box(X(0.18), -9.0, z0 + 7.0, 0.05, 1.4, 1.4)
     # 등(날개 아래·위)
-    for y in (-18.0, -4.0, 12.0):
+    for y in (-18.0, -4.0, 5.0):
         lantern(g, xmid, y, ZS - 0.4, ZF + 8.6)
     for y in (-18.0, -4.0, 14.0):
         lantern(g, xmid, y, Z2 - 0.4, Z1 + 8.6)
@@ -1163,7 +1202,9 @@ def closed_door(g, ax, c, sgn, u, w, h, steps=2, lamp_u=None, lamp_d=0.0, step_w
     zc = ZF + h                                   # 반원 가운데
     for e in (-1, 1):                             # 문짝 둘(가운데 틈 0.1) + 놋쇠 띠 셋 + 고리
         uc = u + e * (r / 2 + 0.025)
-        _bxy(g, "DarkLog", ax, c, sgn, uc, 0.2, ZF + h / 2, r - 0.05, 0.2, h)
+        _bxy(g, "Timber", ax, c, sgn, uc, 0.2, ZF + h / 2, r - 0.05, 0.2, h)     # 2026-11-27 비평 2차 3번: 회색 쇠문처럼 보임 → 나무 문짝 + 널 틈
+        for k in (-1, 0, 1):
+            _bxy(g, "Char", ax, c, sgn, uc + k * (r - 0.05) / 3, 0.31, ZF + h / 2, 0.08, 0.03, h - 0.1)
         for f in (0.15, 0.5, 0.85):
             _bxy(g, "BrassB", ax, c, sgn, uc, 0.33, ZF + h * f, r - 0.25, 0.06, 0.28)
         x, y = _pt(ax, c, sgn, u + e * 0.55, 0.42)
@@ -1372,7 +1413,7 @@ def chimney_top(g, s):
 def back_face(g):
     """뒤(+y): 닫힌 뒷문(폭 8, 7 + 반원 4) · 계단 · 등 둘 / 위 돌 발코니(폭 10 · 내밈 3 · 받침돌 · 놋쇠 난간 — 난간 위 기둥 없음) + 유리문 /
     현수막 둘 / 장미창 돌 테(쐐기돌 16) / 박공 문장 방패(룩) / 증기 장치(버팀벽 x 12.75)"""
-    closed_door(g, "y", Y1, 1, 0.0, 8.0, 7.0, steps=2, lamp_u=6.4, step_w=12.0)
+    closed_door(g, "y", Y1, 1, 0.0, 8.0, 7.0, steps=3, lamp_u=6.4, step_w=12.0)
     # 발코니
     w, dep = 10.0, 3.0
     box2(g, "TrimB", -w / 2, w / 2, Y1, Y1 + dep, ZS - 0.1, Z1 + 0.1)
@@ -1467,9 +1508,9 @@ def exterior3(g):
 
 
 # ------------------------------------------------------------------ 3차 — 안
-def finish_wall(g, ax, c, face, u0, u1, z0, z1, holes, wain=4.0, blk=4.8, seed=0, no_wain=(), jm="Mortar"):
+def finish_wall(g, ax, c, face, u0, u1, z0, z1, holes, wain=4.0, blk=4.8, seed=0, no_wain=(), jm="Mortar", fm="TrimB"):
     """방 벽 마감: 아래 짙은 나무 판벽(높이 wain · 세로 널 · 걸레받이 · 놋쇠 윗테 — 창 밑은 창턱까지) + 위 밝은 돌 겉판(TrimB) + 줄눈(Mortar).
-    face = 방 쪽(±1). holes = 문·창·벽난로 자리(비움). no_wain = 판벽 없이 겉판만 둘 u 구간(계단 옆)"""
+    face = 방 쪽(±1). holes = 문·창·벽난로 자리(비움). no_wain = 판벽 없이 겉판만 둘 u 구간(계단 옆). fm = 겉판 재질(굴뚝 가슴은 짙은 StoneB)"""
     zw = z0 + wain
     cuts = sorted({u0, u1} | {v for h in holes for v in h[:2] if u0 < v < u1} | {v for p in no_wain for v in p if u0 < v < u1})
     for a, b in zip(cuts, cuts[1:]):
@@ -1489,7 +1530,7 @@ def finish_wall(g, ax, c, face, u0, u1, z0, z1, holes, wain=4.0, blk=4.8, seed=0
                     _plate(g, "DarkLog", ax, c, face, uu - 0.1, uu + 0.1, z0 + 0.35, top - 0.18, 0.1, 0.15)
         for hz0, hz1 in hs + [(z1, z1)]:
             if hz0 > z + 0.04:
-                _plate(g, "TrimB", ax, c, face, a, b, z, min(hz0, z1), 0.0, 0.1)
+                _plate(g, fm, ax, c, face, a, b, z, min(hz0, z1), 0.0, 0.1)
             z = max(z, hz1)
             if z >= z1:
                 break
@@ -1497,15 +1538,26 @@ def finish_wall(g, ax, c, face, u0, u1, z0, z1, holes, wain=4.0, blk=4.8, seed=0
     ashlar(g, ax, c, face, u0, u1, _zs(zw, z1, n), holes + [(p0, p1, z0, zw) for p0, p1 in no_wain], hm=jm, vm=jm, tone=None, blk=blk, seed=seed, d=0.1)
 
 
-def bulge_finish(g, cx, cy, z0, z1, wain=4.0):
-    """방 안으로 불룩 든 모서리 탑 몸 마감(방 쪽 부채꼴만): 판벽 + 놋쇠 테 + 밝은 돌 겉판 + 줄눈 고리"""
+def bulge_finish(g, cx, cy, z0, z1, wain=4.0, seed=0):
+    """방 안으로 불룩 든 모서리 탑 몸 마감(방 쪽 부채꼴만): 판벽 + 놋쇠 테(wain 0 이면 없음 — 계단실) +
+    위는 짙은 두 톤 돌 블록(켜 약 2 · 길이 약 4 · 줄눈 0.1 — 줄눈 바탕 위에 블록을 띄워 놓는다. 비평 본부_2차 1번: 연회색 민 원통 → 돌 켜)"""
     a0, a1 = _quadrant(cx, cy)
-    r = _rt((z0 + z1) / 2)
-    _arc(g, "DarkLog", cx, cy, z0, z0 + wain, r + 0.15, r + 0.25, a0, a1)
-    _arc(g, "BrassB", cx, cy, z0 + wain - 0.18, z0 + wain, r + 0.15, r + 0.32, a0, a1)
-    _arc(g, "TrimB", cx, cy, z0 + wain, z1, r + 0.15, r + 0.25, a0, a1)
-    for zz in _zs(z0 + wain, z1, max(1, int(round((z1 - z0 - wain) / 2.4))))[1:-1]:
-        _arc(g, "Mortar", cx, cy, zz - 0.06, zz + 0.06, r + 0.2, r + 0.31, a0, a1)
+    r = _rt(z0)                                  # 맨 아래(가장 굵은) 반지름 — 위로 갈수록 탑이 0.1 남짓 가늘어지는 틈은 바탕이 가린다
+    zb = z0 + wain
+    if wain:
+        _arc(g, "DarkLog", cx, cy, z0, zb, r + 0.15, r + 0.25, a0, a1)
+        _arc(g, "BrassB", cx, cy, zb - 0.18, zb, r + 0.15, r + 0.36, a0, a1)
+    _arc(g, "Mortar", cx, cy, zb, z1, r + 0.08, r + 0.16, a0, a1, n=12)
+    span = R(a1 - a0) * (r + 0.3)
+    nb = max(2, int(round(span / 4.0)))
+    jt = math.degrees(0.1 / (r + 0.3))           # 줄눈 0.1 의 각
+    zs = _zs(zb, z1, max(1, int(round((z1 - zb) / 2.0))))
+    for i, (za, zc) in enumerate(zip(zs, zs[1:])):
+        cuts = [a0] + [a0 + (a1 - a0) * (k + 0.5 * (i % 2)) / nb for k in range(1, nb)] + [a1]   # 켜마다 반 돌 엇갈림
+        for k, (ua, ub) in enumerate(zip(cuts, cuts[1:])):
+            m = "Stone" if TONE[(i * 3 + k + seed) % len(TONE)] else "StoneB"
+            _arc(g, m, cx, cy, za + 0.05, zc - 0.05, r + 0.17, r + 0.3,
+                 ua + (jt / 2 if ua > a0 else 0.0), ub - (jt / 2 if ub < a1 else 0.0), n=3)
 
 
 def hearth_left(g):
@@ -1517,22 +1569,31 @@ def hearth_left(g):
         g["Soot"].box(xo + 0.45, FY, z0 + zc, 0.06, w - 0.1, h - 0.1)
         fire_logs(g, xo + 1.0, FY, z0 + 0.25, w - 0.5, 1.0, axis="y", size=0.85)
         g["Stone"].box(xo + 2.1, FY, z0 + 0.08, 1.0, 4.0, 0.16)
-        g["TrimB"].box(xo + 1.0, FY, z0 + mz, 2.4, 6.6, 0.4)
+        g["Wood"].box(xo + 1.0, FY, z0 + mz, 2.4, 6.6, 0.4)                  # 나무 선반(2026-11-27 비평 2차: 찬 돌 테 → 따뜻하게)
 
 
 def hearth_dress(g, s, z0, z1, w, h, mz, over):
     """벽난로 앞 꾸밈: 돌 문설주·인방(TrimB) · 굴뚝 가슴 겉판·줄눈 · 양옆 벽등 · 선반 위 초점(over: 'shield' 방패와 교차 칼 / 'antler' 사냥 트로피 / 'spear' 둥근 방패와 창 / 'paint' 풍경화)"""
     xf = s * (IX1 - 1.6)                       # 굴뚝 가슴 면
     f = -s
-    _plate(g, "TrimB", "x", xf, f, FY - w / 2 - 0.9, FY - w / 2, z0, z0 + h + 0.2, 0.0, 0.3)
-    _plate(g, "TrimB", "x", xf, f, FY + w / 2, FY + w / 2 + 0.9, z0, z0 + h + 0.2, 0.0, 0.3)
-    _plate(g, "TrimB", "x", xf, f, FY - w / 2 - 0.9, FY + w / 2 + 0.9, z0 + h + 0.2, z0 + h + 0.75, 0.0, 0.35)
-    _plate(g, "TrimB", "x", xf, f, FY - 0.35, FY + 0.35, z0 + h - 0.1, z0 + h + 0.95, 0.0, 0.45)
+    # 2026-11-27 비평 본부_2차 1·2번: 굴뚝 가슴(앞·옆)은 짙은 돌(StoneB + 줄눈) · 화구 테는 더 짙은 돌 · 선반은 나무 · 옆 모서리에 띠돌 받침(1)·머리(0.8)
+    _plate(g, "DarkStone", "x", xf, f, FY - w / 2 - 0.9, FY - w / 2, z0, z0 + h + 0.2, 0.0, 0.3)
+    _plate(g, "DarkStone", "x", xf, f, FY + w / 2, FY + w / 2 + 0.9, z0, z0 + h + 0.2, 0.0, 0.3)
+    _plate(g, "DarkStone", "x", xf, f, FY - w / 2 - 0.9, FY + w / 2 + 0.9, z0 + h + 0.2, z0 + h + 0.75, 0.0, 0.35)
+    _plate(g, "DarkStone", "x", xf, f, FY - 0.35, FY + 0.35, z0 + h - 0.1, z0 + h + 0.95, 0.0, 0.45)
     ztop = z0 + mz + 0.2
-    hole = [(FY - w / 2 - 1.0, FY + w / 2 + 1.0, z0, ztop)]
-    finish_wall(g, "x", xf, f, FY - 3.0, FY + 3.0, ztop, z1, hole, wain=0.0, seed=17)
+    hole = [(FY - w / 2 - 1.0, FY + w / 2 + 1.0, z0, ztop), (FY - 3.0, FY + 3.0, z0, z0 + 1.0), (FY - 3.0, FY + 3.0, z1 - 0.8, z1)]
+    finish_wall(g, "x", xf, f, FY - 3.0, FY + 3.0, z0, z1, hole, wain=0.0, seed=17, fm="StoneB")
+    xw = sorted((s * IX1, xf))
     for sy in (-1, 1):
-        _plate(g, "TrimB", "y", FY + sy * 3.0, sy, *sorted((s * IX1, xf)), z0, z1, 0.0, 0.08)
+        _plate(g, "StoneB", "y", FY + sy * 3.0, sy, *xw, z0 + 1.0, z1 - 0.8, 0.0, 0.08)
+        for za, zb_ in ((z0, z0 + 1.0), (z1 - 0.8, z1)):          # 띠돌 받침 · 머리(옆면 0.3 내밀고 앞 모서리를 감는다)
+            _plate(g, "TrimB", "y", FY + sy * 3.0, sy, *xw, za, zb_, 0.0, 0.3)
+            _plate(g, "TrimB", "x", xf, f, *sorted((FY + sy * (w / 2 + 1.0), FY + sy * 3.3)), za, zb_, 0.0, 0.3)
+            if zb_ > z1 - 1:
+                _plate(g, "TrimB", "x", xf, f, FY - w / 2 - 1.0, FY + w / 2 + 1.0, za, zb_, 0.0, 0.3)
+    for e, dy, dz in ((-1, -0.75, 0.0), (1, 0.15, 0.1), (-1, 0.85, 0.02)):   # 장작 사이 숯불(Neon) — 사진·멀리서도 불 땐 화덕으로 읽히게
+        g["Glow"].obox(s * (IX1 - 1.0) + e * 0.18, FY + dy, z0 + 0.5 + dz, 0.42, 0.34, 0.24, rz=0.5 * e)
     P = _P()
     for e in (-1, 1):
         P.sconce(_gb(g), "y", xf, FY + e * 2.4, ztop + 2.0, face=f)
@@ -1600,34 +1661,36 @@ def interior3(g):
     for s in (-1, 1):
         xo, xh = s * IX1, s * (HX + 0.5)
         xs = sorted((xo, xh))
-        stair_y = (4.0, 22.0)
-        # 마루(아래: 받침 2.0 → 2.2 널 + 충돌 / 위: 판 위 0.04 널)
-        P.plank_floor(g, xs[0], xs[1], IY0, IY1, ZB, th=ZF - ZB, mats=("WoodFloor", "Wood"))
+        zl = ZF + NA * (Z1 - ZF) / (NA + NB)             # 계단참 높이
+        # 마루(아래: 받침 2.0 → 2.2 널 + 충돌 / 위: 판 위 0.04 널) — 계단실(y SA~)은 계단·계단참 돌이 덮는다
+        P.plank_floor(g, xs[0], xs[1], IY0, SA, ZB, th=ZF - ZB, mats=("WoodFloor", "Wood"))
         C((xs[0] + xs[1]) / 2, (IY0 + IY1) / 2, (ZB + ZF) / 2, xs[1] - xs[0], IY1 - IY0, ZF - ZB)
-        xi = s * (IX1 - SW)
-        xa, xb = sorted((xh, xi))
-        P.plank_floor(g, xs[0], xs[1], IY0, stair_y[0], Z1, th=0.04, mats=("WoodFloor", "Wood"))
-        P.plank_floor(g, xa, xb, stair_y[0], stair_y[1], Z1, th=0.04, mats=("WoodFloor", "Wood"))
-        P.plank_floor(g, xs[0], xs[1], stair_y[1], IY1, Z1, th=0.04, mats=("WoodFloor", "Wood"))
+        P.plank_floor(g, xs[0], xs[1], IY0, SA, Z1, th=0.04, mats=("WoodFloor", "Wood"))
         for y0, y1 in ((-25.8, -17.4), (1.8, 10.2)):            # 날개 문 문턱(벽 두께 — 홀 바닥과 널 사이)
             box2(g, "TrimB", *sorted((s * (HX - 0.5), xh)), y0, y1, ZB, ZF + 0.02)
         stack = [(FY - 3.05, FY + 3.05, ZF - 1, Z2 + 1)]
         for z0, z1, doors in ((ZF, ZS, ((-25.8, -17.4), (1.8, 10.2))), (Z1, Z2, ((-25.8, -17.4), (-2.2, 6.2)))):
-            finish_wall(g, "x", xo, -s, IY0, IY1, z0, z1, _cuts(g, "x", xo, pad_in) + stack, seed=20 + s, no_wain=(stair_y,))
-            finish_wall(g, "x", xh, s, IY0, IY1, z0, z1, [(d0 - 0.4, d1 + 0.4, z0 - 0.5, z0 + 9.9) for d0, d1 in doors], seed=23 + s)
+            finish_wall(g, "x", xo, -s, IY0, SA, z0, z1, _cuts(g, "x", xo, pad_in) + stack, seed=20 + s)
+            finish_wall(g, "x", xh, s, IY0, SA, z0, z1, [(d0 - 0.4, d1 + 0.4, z0 - 0.5, z0 + 9.9) for d0, d1 in doors], seed=23 + s)
             finish_wall(g, "y", IY0, 1, xs[0], xs[1], z0, z1, _cuts(g, "y", IY0, pad_in), seed=26 + s)
-            finish_wall(g, "y", IY1, -1, xs[0], xs[1], z0, z1, _cuts(g, "y", IY1, pad_in), seed=29 + s)
-            for cy in (-26.0, 30.0):
-                bulge_finish(g, s * 36.0, cy, z0, z1)
-        # 계단 벽 쪽 놋쇠 손잡이(두 마디)
-        for (ya_, za_), (yb_, zb_) in (((4.4, ZF + 3.3), (11.4, ZF + 3.3 + 6.57)), ((13.8, ZF + 3.3 + 6.57), (21.6, Z1 + 3.0))):
+            bulge_finish(g, s * 36.0, -26.0, z0, z1, seed=3 + s + (z0 > ZF))
+        # 계단실(y SA~ 뒷벽, 계단참 위 ~ 위층 천장 한 통): 판벽 없이 겉판·줄눈만, 뒤 모서리 탑 몸은 돌 켜
+        finish_wall(g, "x", xo, -s, SA, IY1, zl, Z2, _cuts(g, "x", xo, pad_in), wain=0.0, seed=55 + s)
+        finish_wall(g, "x", xh, s, SA, SB, ZF, Z2, [], wain=0.0, seed=57 + s)
+        finish_wall(g, "x", xh, s, SB, IY1, zl, Z2, [], wain=0.0, seed=59 + s)
+        finish_wall(g, "y", IY1, -1, xs[0], xs[1], zl, Z2, _cuts(g, "y", IY1, pad_in), wain=0.0, seed=29 + s)
+        bulge_finish(g, s * 36.0, 30.0, zl, Z2, wain=0.0, seed=7 + s)
+        # 계단 벽 쪽 놋쇠 손잡이: A(홀 벽) · B(바깥벽)
+        rise = (Z1 - ZF) / (NA + NB)
+        for xwall, f, (ya_, za_), (yb_, zb_) in ((xh, s, (SA + 0.4, ZF + rise + 2.65), (SB - 0.4, zl + 2.65)),
+                                                 (xo, -s, (SB - 0.4, zl + rise + 2.65), (SA + 0.4, Z1 + 2.65))):
             ln, ang = math.hypot(yb_ - ya_, zb_ - za_), math.atan2(zb_ - za_, yb_ - ya_)
-            g["BrassB"].obox(xo - s * 0.3, (ya_ + yb_) / 2, (za_ + zb_) / 2, 0.16, ln, 0.16, rx=ang)
-            for yy, zz in ((ya_ + 0.4, za_), (yb_ - 0.4, zb_)):
-                g["Rail"].box(xo - s * 0.15, yy, zz - 0.15, 0.3, 0.12, 0.12)
+            g["BrassB"].obox(xwall + f * 0.3, (ya_ + yb_) / 2, (za_ + zb_) / 2, 0.16, ln, 0.16, rx=ang)
+            for t in (0.06, 0.94):                                   # 벽 받침쇠 둘
+                g["Rail"].box(xwall + f * 0.15, ya_ + (yb_ - ya_) * t, za_ + (zb_ - za_) * t - 0.15, 0.3, 0.12, 0.12)
         # 벽등(방마다 둘 이상 — 홀 쪽 벽, 문 사이)
-        for z0 in (ZF, Z1):
-            for y in (-14.5, 15.0):
+        for z0, ys in ((ZF, (-14.5, -3.0)), (Z1, (-14.5, 15.0))):     # 아래 y 15 는 계단 A 머리 위라 문 앞(-3)으로 · 위 y 15 는 계단실 등
+            for y in ys:
                 P.sconce(gb, "y", xh, y, z0 + 6.2, face=s)
         chimney_top(g, s)
     hearth_left(g)
@@ -1637,7 +1700,7 @@ def interior3(g):
     # 길드장 방: 큰 지도판(홀 쪽 벽) · 깔개 / 서고: 지구의 · 사다리 · 깔개
     map_board(g, "x", HX + 0.5, 1, -5.1, Z1 + 4.8)
     P.rug(g, 26.6, 34.4, -14.6, -3.4, Z1 + 0.04, "SignBlue", "SignGold", "SignGold")
-    globe(g, -27.6, 17.6, Z1 + 0.04)
+    globe(g, -27.6, -12.0, Z1 + 0.04)                 # 2026-11-27: 계단실 밖 — 책상 둘 사이
     L.transformed(_gb(g), Matrix.Translation((-34.3, -23.7, Z1 + 0.04)) @ Matrix.Rotation(-0.14, 4, "Y") @ Matrix.Rotation(math.pi / 2, 4, "Z"),
                   lambda q: _P2().ladder(q, 8.4))
     P.rug(g, -33.6, -27.4, -21.4, -2.6, Z1 + 0.04, "Banner", "SignGold", "SignGold")
@@ -1661,7 +1724,7 @@ def interior3(g):
                                                                   (-21.2, -6.8, ZF + 2.2, ZF + 10.4)], seed=39)
     for s in (-1, 1):
         P.sconce(gb, "x", IY0, s * 10.8, ZF + 6.6, face=1)
-        finish_wall(g, "x", s * (GX - T), -s, GY0 + T, GY1 - 0.8, ZF, ZS, [], seed=43 + s, jm="StoneB")      # 관문 통로 옆벽
+        finish_wall(g, "x", s * (GX - T), -s, GY0 + T, IY0, ZF, ZS, [], seed=43 + s, jm="StoneB")      # 관문 통로 옆벽
     hall3(g)
 
 
@@ -1694,10 +1757,10 @@ def hall3(g):
     e0 = e1 - SQ
     for x in [hx0 + 3.0 * n for n in range(1, int((hx1 - hx0) / 3.0) + 1)]:   # 바깥 바닥 줄눈(3 칸)
         for a, b in _free(hy0, hy1, ZF, ZF + 0.1, [(cy0 - e1, cy0 + e1, ZF, ZF + 0.1)] if abs(x) < e1 else []):
-            box2(g, "Mortar", x - 0.05, x + 0.05, a, b, ZF + 0.04, ZF + 0.055, coll=False)
+            box2(g, "Mortar", x - 0.05, x + 0.05, a, b, ZF + 0.02, ZF + 0.055, coll=False)   # 밑을 바닥 판(ZF..ZF+0.04) 속에 묻는다 — 맞댄 면 없음
     for y in [hy0 + 3.0 * n for n in range(1, int((hy1 - hy0) / 3.0) + 1)]:
         for a, b in _free(hx0, hx1, ZF, ZF + 0.1, [(-e1, e1, ZF, ZF + 0.1)] if abs(y - cy0) < e1 else []):
-            box2(g, "Mortar", a, b, y - 0.05, y + 0.05, ZF + 0.04, ZF + 0.055, coll=False)
+            box2(g, "Mortar", a, b, y - 0.05, y + 0.05, ZF + 0.02, ZF + 0.055, coll=False)   # 밑을 바닥 판(ZF..ZF+0.04) 속에 묻는다 — 맞댄 면 없음
 
 
 def detail3(g):

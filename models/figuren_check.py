@@ -6,7 +6,7 @@ figuren_check.py — 2026-11-24 아트 1팀. 기물군 본부(Figuren_HQ, 2판 �
    HOLES_MOD=models/figuren_check.py HOLES_OUT=models/render/figuren_holes.txt "$BL" -b -P models/snow3/holes.py
    (build 는 2판 키트와 같게 창을 벽 두께로 뚫는다 — build_steam_figuren.JOBS 의 job(cut=T) 와 같은 결과)
 2) 통로 폭: "$BL" -b -P models/figuren_check.py -- walk  → models/render/figuren_walk.txt
-   길·방 10 / 문 8 (총괄 2026-11-24 — 사용자 바이블 9절: 지나다니는 길 10, 문 8). 가장 좁은 자리가 문 안(문 둘레 1.5)이면 문 기준을 쓴다.
+   길·방 10 / 문 8 (사용자 바이블 9절: 지나다니는 길 10, 문 8). 가장 좁은 자리가 문 안(문 둘레 1.5)이면 문 기준을 쓴다.
 """
 import os
 import sys
@@ -47,6 +47,7 @@ LOWER = [("관문 → 로비", (0, -37.0), (0, -21.0)), ("로비 → 홀(큰 문
 # 날개 위 끝점 x ±27.5 → ±27.0(2026-11-27): 계단 폭 6(x ±30.8~)이라 ±27.5 칸은 계단 구멍 모서리 난간에서 3.7 — 문 가운데(y 2) 문 안 2.5 로
 UPPER = [("앞 회랑 → 왼 서고(뒤 문)", (-17.5, 6.0), (-27.0, 2.0)), ("앞 회랑 → 길드장 방(뒤 문)", (17.5, 6.0), (27.0, 2.0)),
          ("앞 회랑 → 작전실 문", (0, -9.5), (0, -17.5))]
+# 날개 계단(2026-11-27 꺾인 계단): 마디 폭 6.15 둘이 날개 안 폭 12.3 을 다 쓴다(옆 길 없음) — 마디 폭은 구조로 정해져 따로 재지 않는다
 # ponytail: 방 안 가구 사이는 재지 않는다(작전실은 탁자·의자가 문에서 4.2 — 보고의 남은 일)
 
 
@@ -62,7 +63,7 @@ def walk():
     g = TOWN.G(PREFIX)
     K.I.job(NAME, build)(g)
     hall_void = (-11.2, 11.2, -4.1, 19.5)          # 위층: 홀 가운데(회랑 안쪽)는 바닥이 없다
-    stairs = [(36.8 - FIG.SW, 36.8, 4.0, 22.0), (-36.8, -36.8 + FIG.SW, 4.0, 22.0)]      # 계단 폭 SW(2026-11-27: 6)
+    stairs = [(24.5, 36.8, FIG.SA, 30.8), (-36.8, -24.5, FIG.SA, 30.8)]      # 2026-11-27 꺾인 계단: 위층 바닥은 y SA 에서 끝(계단실은 날개 폭 전부)
     lines, bad = ["figuren_check.py walk — 기물군 본부 통로 폭(길 10 / 문 8, 0.5 격자)"], 0
     for floor, paths, voids in ((ZF, LOWER, []), (Z1, UPPER, [hall_void] + stairs)):
         for label, a, b in paths:
@@ -70,7 +71,7 @@ def walk():
                     "free": (b[0] - 2.5, b[0] + 2.5, b[1] - 0.5, b[1] + 4.5), "voids": voids}
             w, at, _ = A["walk_width"](NAME, info)
             near_door = any(math.hypot(at[0] - p[0], at[1] - p[1]) < max(1.5, dw / 2 + 0.5) for p, dw in DOORS)
-            need = 8.0                           # 본부는 총괄 지시(2026-11-23) "통로 8 · 문 8×9"
+            need = 8.0 if near_door else 10.0    # 바이블 9절: 지나다니는 길 10 · 문 8(비평 본부_2차 4번 — 2026-11-27 길 기준 8 → 10)
             ok = w >= need - 0.5 - 1e-6             # 0.5 격자: 칸 가운데가 최대 0.25 어긋나 폭이 최대 0.5 작게 재진다
             bad += not ok
             lines.append("%-26s 바닥 %.1f  폭 %.1f  (가장 좁은 자리 x %.1f y %.1f — %s 기준 %.0f) → %s" % (

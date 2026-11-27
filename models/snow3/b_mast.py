@@ -41,15 +41,18 @@ SI, SO = 3.6, 9.6                # 계단 안 · 바깥 선
 COL_U, COL_V = 3.85, 9.7         # 계단 기둥(옆마다 둘)
 NFL = 12                         # 계단 판 수(4 단씩 = 48)
 PX0, PX1, PY0, PY1 = -18.0, 18.5, -18.0, 16.0      # 승강장
-GW_X0, GW_X1, GW_Y1 = 9.7, 17.7, 33.7              # 비행선 다리 바닥(바깥 난간 17.7..18.3)
+GW_X0, GW_X1, GW_Y1 = 9.7, 19.7, 33.7              # 비행선 다리 바닥 폭 10(2026-11-27 비평 비행선_1차 3번: 길 10 — 바깥 난간 19.7..20.3)
 GW_IN_Y = 21.9                                     # 다리 안쪽 난간 끝(그 뒤로는 곤돌라 옆벽이 0.7 틈으로 붙는다)
-HEAD_TOP = 77.5
-TUR_R = 2.1
+HEAD_TOP = 77.0                  # 계류 머리 사각 트러스 꼭대기(2026-11-27 2판: 몸통 다리를 지붕 위로 올려 12 폭으로 좁힘)
+HW_TOP = 6.0                     # 꼭대기 다리 가운데 반폭(폭 12)
+TUR_R = 2.5                      # 도는 원통 머리 반지름(지름 5 · 높이 6)
+LFOOT, FOOT_Z = 16.5, 3.45       # 벌어진 바깥 다리 발(땅 34×34) · 발 받침 윗면(돌 받침 높이 3)
+SKIRT = 18.5                     # 돌 밑단 판 반폭(37×37, 높이 0.5 — 1층 바닥 1.0 앞 한 단)
 LIFT_BOTTOM = (0.0, 0.0, F0)     # 승강기 칸 바닥 윗면 자리(아래 · 위)
 LIFT_TOP = (0.0, 0.0, HP)
 
 # holes.py: 일부러 트인 자리 — 탑 전체(벽 없는 격자탑 · 승강장 · 다리)
-OPEN_ZONES = [(-19.5, 19.5, -19.5, 35.0, 0.0, 90.0, "쇠 격자 계류탑 · 둘레 트인 승강장 · 비행선 다리(K4~K6 · AS5)")]
+OPEN_ZONES = [(-21.0, 21.0, -19.5, 35.0, 0.0, 90.0, "쇠 격자 계류탑 · 둘레 트인 승강장 · 비행선 다리(K4~K6 · AS5)")]
 
 
 # ------------------------------------------------------------------ 계단 좌표(옆 s: 0 동 · 1 남 · 2 서 · 3 북, 90° 씩 돈다)
@@ -119,6 +122,64 @@ def frame(g):
     bx(g, "Iron", -LEG + 0.5, LEG - 0.5, -COL_V - 0.25, -COL_V + 0.25, GIRD[0][0], GIRD[0][1])
 
 
+# ================================================================== 1b. 벌어진 바깥 다리 · 돌 발 받침 · 돌 밑단 판
+def _lf(z):
+    """바깥 다리 가운데 반폭(z): 발(FOOT_Z) 에서 LFOOT → 승강장 밑(GIRD 맨 위) 에서 몸통 다리 LEG"""
+    return LFOOT + (LEG - LFOOT) * (z - FOOT_Z) / (GIRD[-1][1] - FOOT_Z)
+
+
+def splay(g):
+    """2026-11-27 비평 비행선_1차 1번(곧은 다리 · 얇은 밑 → 붙잡을 구조로 안 보임): 땅에서 34×34 로 벌어져 승강장 밑에서 몸통 다리와 만나는 바깥 다리 넷 ·
+    다리마다 돌 발 받침(4×4 · 높이 3 · 띠돌 테 · 쇠 신) · 둘레 돌 밑단 판(37×37 · 0.5 — 포장돌, 1층 바닥 앞 한 단) ·
+    층(12 · 24 · 36)마다 둘레 띠보 + 몸통 다리로 잇는 가로대 · 면마다 ʌ 가새(정문 쪽 아래 칸은 트임). 몸통(계단 틀)은 그대로 안에 선다"""
+    ring = ((-SKIRT, SKIRT, -SKIRT, -11.05), (-SKIRT, SKIRT, 11.05, SKIRT), (-SKIRT, -11.05, -11.05, 11.05), (11.05, SKIRT, -11.05, 11.05))
+    for x0, x1, y0, y1 in ring:
+        bx(g, "Stone", x0, x1, y0, y1, 0.0, 0.42)
+        cbox(x0, x1, y0, y1, 0.0, 0.5)
+        nx, ny = max(1, round((x1 - x0) / 3.7)), max(1, round((y1 - y0) / 3.7))
+        for i in range(nx):
+            for j in range(ny):
+                a, b = x0 + (x1 - x0) * i / nx, y0 + (y1 - y0) * j / ny
+                bx(g, "StoneTrim", a + 0.06, a + (x1 - x0) / nx - 0.06, b + 0.06, b + (y1 - y0) / ny - 0.06, 0.4, 0.5)
+    zt = GIRD[-1][1]
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            x, y = sx * LFOOT, sy * LFOOT
+            bx(g, "Stone", x - 2.0, x + 2.0, y - 2.0, y + 2.0, 0.3, 2.85)
+            bx(g, "StoneTrim", x - 2.2, x + 2.2, y - 2.2, y + 2.2, 2.85, 3.25)
+            bx(g, "IronLight", x - 1.2, x + 1.2, y - 1.2, y + 1.2, 3.25, FOOT_Z)
+            cbox(x - 2.2, x + 2.2, y - 2.2, y + 2.2, 0.0, FOOT_Z)
+            A.lattice_leg(g, (x, y, FOOT_Z - 0.1), (sx * LEG, sy * LEG, zt), s=1.3)
+            for z0, z1 in ((FOOT_Z, 8.0), (8.0, 12.5)):                     # 사람 키 높이까지만 충돌
+                w = _lf((z0 + z1) / 2)
+                cbox(sx * w - 0.65, sx * w + 0.65, sy * w - 0.65, sy * w + 0.65, z0, z1)
+            for z in (7.4, 17.4, 29.4, 41.4):                               # 덧판(띠보 사이)
+                w = _lf(z + 0.25)
+                bx(g, "IronLight", sx * w - 0.85, sx * w + 0.85, sy * w - 0.85, sy * w + 0.85, z, z + 0.5)
+            bx(g, "IronLight", sx * LEG - 1.0, sx * LEG + 1.0, sy * LEG - 1.0, sy * LEG + 1.0, 46.6, 48.35)   # 만나는 자리 이음 덩이
+    lv = [FOOT_Z + 1.5] + [(a + b) / 2 for a, b in GIRD]
+    for za, zb in GIRD[:3]:
+        zc = (za + zb) / 2
+        w = _lf(zc)
+        for s in (-1, 1):
+            bx(g, "Iron", -w + 0.3, w - 0.3, s * w - 0.35, s * w + 0.35, zc - 0.45, zc + 0.45)
+            bx(g, "Iron", s * w - 0.35, s * w + 0.35, -w, w, zc - 0.4, zc + 0.4)
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                A.lattice_leg(g, (sx * (w - 0.3), sy * (w - 0.3), zc), (sx * (LEG + 0.6), sy * (LEG + 0.6), zc), s=0.7)
+    for k, (za, zb) in enumerate(zip(lv, lv[1:])):
+        wa, wb = _lf(za), _lf(zb)
+        for face in range(4):
+            if k == 0 and face == 0:                                        # 정문(북) 아래 칸은 트임
+                continue
+            sg = -1 if face in (0, 2) else 1
+            for e in (-1, 1):
+                p0, p1 = (e * (wa - 0.8), sg * wa, za + 0.3), (e * 0.5, sg * wb, zb - 0.5)
+                if face >= 2:
+                    p0, p1 = (p0[1], p0[0], p0[2]), (p1[1], p1[0], p1[2])
+                A.lattice_leg(g, p0, p1, s=0.55)
+
+
 # ------------------------------------------------------------------ 1층 둘레 리벳 쇠판 벽 · 정문 · 쇠살 창
 def ground_walls(g):
     z0, z1 = F0, GIRD[0][0]
@@ -173,9 +234,7 @@ def ground_walls(g):
     A.airship_icon(g, 0.0, -LEG - 0.4, F0 + 9.45, face=-1, s=0.28)
     bx(g, "StoneTrim", -4.0, 4.0, -LEG - 0.45, -LEG + 0.45, F0 - 0.05, F0 + 0.03)
     Q.door_mark("x", -LEG, 0.0, 8.0, 9.0, F0, -1)
-    # 문 앞 돌 디딤(땅 0 → 바닥 1.0 사이 한 단 — 넓은 디딤 판)
-    bx(g, "StoneTrim", -5.0, 5.0, -LEG - 2.6, -LEG - 0.35, 0.0, 0.5)
-    cbox(-5.0, 5.0, -LEG - 2.6, -LEG - 0.35, 0.0, 0.5)
+    # 문 앞 디딤: 둘레 돌 밑단 판(splay — 높이 0.5)이 땅 → 바닥 1.0 사이 한 단이 된다
 
 
 # ================================================================== 2. 승강로
@@ -224,7 +283,7 @@ def stairs(g):
         z0 = F0 + 4.0 * k
         if 0 < k < NFL:
             # 쉼참(모서리 6×6): 무늬판 + 아래 보 넷(다리 · 계단 기둥 · 승강로 기둥 사이)
-            box_uv(g, "IronLight", s, -SO, -SI, SI, SO, z0 - 0.3, z0, coll=True)
+            box_uv(g, "Iron", s, -SO, -SI, SI, SO, z0 - 0.3, z0, coll=True)          # 2026-11-27 비평 4번: 연회색 → 짙은 쇠
             box_uv(g, "Iron", s, -SO, -SI + 0.05, SI, SI + 0.4, z0 - 0.9, z0 - 0.3)       # 안 보(승강로 기둥 → 북 계단 기둥)
             box_uv(g, "Iron", s, -SI - 0.4, -SI, SI, SO + 0.3, z0 - 0.9, z0 - 0.3)       # 안 보(승강로 기둥 → 이 옆 계단 기둥)
             box_uv(g, "Iron", s, -LEG + 0.5, -COL_U + 0.25, COL_V - 0.25, COL_V + 0.25, z0 - 0.9, z0 - 0.3)   # 바깥 보(다리 → 계단 기둥)
@@ -249,7 +308,8 @@ def stairs(g):
         for j in range(1, 4):
             ua, ub = -SI + (j - 1) * 2.4, -SI + j * 2.4
             top = z0 + j
-            box_uv(g, "IronLight", s, ua, ub, SI + 0.35, SO - 0.35, top - 0.3, top)
+            box_uv(g, "Iron", s, ua, ub, SI + 0.35, SO - 0.35, top - 0.3, top)
+            box_uv(g, "Brass", s, ua - 0.05, ua + 0.3, SI + 0.45, SO - 0.45, top - 0.05, top + 0.03)       # 놋쇠 코
             box_uv(g, "Iron", s, ua, ua + 0.15, SI + 0.35, SO - 0.35, top - 1.0, top - 0.3)
             a, b = R(s, ua, SI), R(s, ub, SO)
             cbox(min(a[0], b[0]), max(a[0], b[0]), min(a[1], b[1]), max(a[1], b[1]), top - 1.0, top)
@@ -295,13 +355,12 @@ def platform(g):
         bx(g, "Iron", x - 0.4, x + 0.4, y - 0.4, y + 0.4, HP, zp)
         bx(g, "Brass", x - 0.5, x + 0.5, y - 0.5, y + 0.5, HP, HP + 0.35)
         cbox(x - 0.4, x + 0.4, y - 0.4, y + 0.4, HP, zp)
-    cut = 13.0
-    zb, zbf = LB.hip_roof(g, A_, B_, zp, 20.0, eave=0.4, cut=cut, cx=cx, cy=cy)
+    cut, eave = 13.0, 0.4
+    zb, zbf = LB.hip_roof(g, A_, B_, zp, 20.0, eave=eave, cut=cut, cx=cx, cy=cy, snow=False)
     hx0, hx1, hy0, hy1 = cx - (A_ - cut), cx + (A_ - cut), cy - (B_ - cut), cy + (B_ - cut)
-    hw = head_hw(zb) + 0.35
-    for x0, x1, y0, y1 in ((hx0, hx1, hy0, -hw), (hx0, hx1, hw, hy1), (hx0, -hw, -hw, hw), (hw, hx1, -hw, hw)):
-        bx(g, "RoofMetal", x0, x1, y0, y1, zb, zb + 0.45)
-        bx(g, "SnowCap", x0 + 0.1, x1 - 0.1, y0 + 0.1, y1 - 0.1, zb + 0.45, zb + 0.9)
+    bx(g, "RoofMetal", hx0, hx1, hy0, hy1, zb, zb + 0.45)                 # 잘린 단 덮개(2판: 머리 트러스는 비탈을 뚫어 단 가운데는 막힘)
+    bx(g, "SnowCap", hx0 + 0.1, hx1 - 0.1, hy0 + 0.1, hy1 - 0.1, zb + 0.45, zb + 0.9)
+    zsurf = roof_dress(g, A_, B_, cx, cy, cut, eave, zbf)
     # 둘레 난간(기둥 사이 — 다리 들머리 9.2..18.0 은 트임)
     xs = (-17.6, -8.7, cx, 9.2, 18.0)
     for a, b in zip(xs, xs[1:]):
@@ -313,7 +372,7 @@ def platform(g):
         for x in (-17.6, 18.0):
             A.rail_between(g, "y", x, a + 0.4, b - 0.4, HP, h=3.4, gap=1.0, mat="Rail")
     # 계단 구멍 둘레 난간(기둥 + 기둥 사이) — 동쪽 끝은 계단이 올라오는 곳(트임)
-    hp = [(-SO - 0.3, -SO - 0.3), (SI - 0.3, -SO - 0.3), (-SO - 0.3, 1.5), (-SI - 0.3, 1.5), (-3.0 - 0.3, -SO - 0.3)]
+    hp = [(SI - 0.3, -SO - 0.3), (-SO - 0.3, 1.5), (-SI - 0.3, 1.5), (-3.0 - 0.3, -SO - 0.3)]       # 북서 모(-9.9, -9.9)는 머리 트러스 다리가 기둥(2026-11-27)
     for x, y in hp:
         bx(g, "Iron", x - 0.3, x + 0.3, y - 0.3, y + 0.3, HP, HP + 3.8)
         cbox(x - 0.3, x + 0.3, y - 0.3, y + 0.3, HP, HP + 3.8)
@@ -325,16 +384,80 @@ def platform(g):
     for x, y in ((cx, -16.6), (-16.6, 0.0), (17.0, -8.5), (-8.7, 14.6)):
         K.lantern(g, x, y, zp, zp - 2.2)
     K.hang_sign(g, 18.0 - 0.4, 15.6, zp - 1.4, along="x", icon=A.airship_icon, arm=4.2, board=(3.6, 2.4), face_sign=-1)
+    return zsurf
+
+
+def roof_dress(g, A_, B_, cx, cy, cut, e, zbf):
+    """차양 지붕(2026-11-27 비평 비행선_1차 5번: 넓은 연회색 민짜 판 → 본부 지붕처럼): 눈은 처마 띠(2.0)만 · 위는 쇠 덮개가 보이고
+    판 줄눈(서 있는 이음, 2.4 간격 — 처마에서 추녀·잘린 단까지) · 추녀마루와 잘린 단 테에 띠돌 덮개(0.6). 겉면 높이 함수를 돌려준다"""
+    cp = math.cos(math.radians(20.0))
+    top = (0.9 + 0.75) / cp                     # 서까래 밑 → 덮개 윗면(lib_b.hip_roof 의 층: 개판 0.35 + 덮개 0.4)
+
+    def ii(x, y):
+        return min(A_ - abs(x - cx), B_ - abs(y - cy), cut)
+
+    def zsurf(x, y):
+        return zbf(ii(x, y)) + top
+
+    def zf(x, y):
+        return zbf(ii(x, y)) + 0.9 / cp
+    w = 2.0
+    bands = [[(cx - A_ - e, cy - B_ - e), (cx + A_ + e, cy - B_ - e), (cx + A_ - w, cy - B_ + w), (cx - A_ + w, cy - B_ + w)],
+             [(cx + A_ + e, cy + B_ + e), (cx - A_ - e, cy + B_ + e), (cx - A_ + w, cy + B_ - w), (cx + A_ - w, cy + B_ - w)],
+             [(cx + A_ + e, cy - B_ - e), (cx + A_ + e, cy + B_ + e), (cx + A_ - w, cy + B_ - w), (cx + A_ - w, cy - B_ + w)],
+             [(cx - A_ - e, cy + B_ + e), (cx - A_ - e, cy - B_ - e), (cx - A_ + w, cy - B_ + w), (cx - A_ + w, cy + B_ - w)]]
+    for pts in bands:
+        LB.plane_slab(g, "SnowCap", pts, zf, 0.75 / cp, K.SNOW_T / cp)
+    i0 = w + 0.15
+    for s in (-1, 1):
+        u = cx - A_ + 1.2
+        while u < cx + A_ - 1.0:                    # ±y 면(처마 = x 를 따라): x = u 줄
+            im = min(cut, A_ - abs(u - cx)) - 0.3
+            if im - i0 > 0.8:
+                p0, p1 = (u, cy + s * (B_ - i0), 0.0), (u, cy + s * (B_ - im), 0.0)
+                Q.member(g, "Rail", (p0[0], p0[1], zsurf(*p0[:2]) + 0.06), (p1[0], p1[1], zsurf(*p1[:2]) + 0.06), 0.22, 0.22)
+            u += 2.4
+        u = cy - B_ + 1.2
+        while u < cy + B_ - 1.0:                    # ±x 면: y = u 줄
+            im = min(cut, B_ - abs(u - cy)) - 0.3
+            if im - i0 > 0.8:
+                p0, p1 = (cx + s * (A_ - i0), u, 0.0), (cx + s * (A_ - im), u, 0.0)
+                Q.member(g, "Rail", (p0[0], p0[1], zsurf(*p0[:2]) + 0.06), (p1[0], p1[1], zsurf(*p1[:2]) + 0.06), 0.22, 0.22)
+            u += 2.4
+    for sx in (-1, 1):                              # 추녀마루 띠돌
+        for sy in (-1, 1):
+            a = (cx + sx * (A_ + e), cy + sy * (B_ + e))
+            b = (cx + sx * (A_ - cut), cy + sy * (B_ - cut))
+            Q.member(g, "StoneTrim", (a[0], a[1], zbf(-e) + top + 0.12), (b[0], b[1], zbf(cut) + top + 0.12), 0.6, 0.45)
+    zr = zbf(cut) + top                             # 잘린 단 테
+    hx0, hx1, hy0, hy1 = cx - (A_ - cut), cx + (A_ - cut), cy - (B_ - cut), cy + (B_ - cut)
+    for y in (hy0, hy1):
+        bx(g, "StoneTrim", hx0 - 0.3, hx1 + 0.3, y - 0.3, y + 0.3, zr - 0.3, zr + 0.3)
+    for x in (hx0, hx1):
+        bx(g, "StoneTrim", x - 0.3, x + 0.3, hy0 - 0.25, hy1 + 0.25, zr - 0.32, zr + 0.28)
+    return zsurf
 
 
 def gangway(g):
+    """비행선 다리(2026-11-27 비평 비행선_1차 3번: 폭 8 → 10 · 민짜 회색 바닥 → 짙은 널 마루(엇갈린 이음, 널 틈으로 밑 쇠판이 보임) + 놋쇠 끝 띠):
+    옆 보 둘 + 가로보 · 바깥 난간(x 20) · 등 기둥 · 탑 남면에서 비스듬한 버팀대 셋. 승강장 동쪽 끝(18.5)과 바깥 난간 사이는 짧은 난간으로 막음"""
     z0 = HP - 0.3
     zt = GIRD[-1][1] - 0.3
     y0 = PY1
-    bx(g, "IronLight", GW_X0, GW_X1 + 0.6, y0, GW_Y1, z0, HP)
+    xo = GW_X1 + 0.3                                   # 바깥 난간 줄
+    bx(g, "Iron", GW_X0, GW_X1 + 0.6, y0, GW_Y1, z0, HP - 0.12)
     cbox(GW_X0, GW_X1 + 0.6, y0, GW_Y1, HP - 1.0, HP)
-    bx(g, "IronLight", 8.9, GW_X0, y0, GW_IN_Y, z0, HP)          # 들머리 안쪽 덧바닥(곤돌라 앞 모가 깎인 자리 — 난간이 길을 좁히지 않게)
+    bx(g, "Iron", 8.9, GW_X0, y0, GW_IN_Y, z0, HP - 0.12)        # 들머리 안쪽 덧바닥(곤돌라 앞 모가 깎인 자리 — 난간이 길을 좁히지 않게)
     cbox(8.9, GW_X0, y0, GW_IN_Y, HP - 1.0, HP)
+    # 널 마루(y 를 따라 뻗은 널 폭 1.0 · 틈 0.06 · 이음은 손 표로 엇갈림)
+    cuts = (4.0, 9.5, 6.5, 12.0, 2.5, 8.0, 11.0, 5.0, 10.0, 3.5, 7.5)
+    xs = [GW_X0 + k * (GW_X1 + 0.6 - GW_X0) / 10 for k in range(11)]
+    strips = [(8.9, GW_X0, GW_IN_Y)] + [(a, b, GW_Y1) for a, b in zip(xs, xs[1:])]
+    for k, (a, b, yb) in enumerate(strips):
+        yc = y0 + cuts[k % len(cuts)]
+        for p0, p1 in ((y0, min(yc, yb)), (min(yc, yb), yb)):
+            if p1 - p0 > 0.2:
+                bx(g, "DarkLog", a + 0.03, b - 0.03, p0 + 0.03, p1 - 0.03, HP - 0.14, HP)
     for x0, x1 in ((GW_X0, GW_X0 + 0.6), (GW_X1 - 0.2, GW_X1 + 0.6)):
         bx(g, "Iron", x0, x1, y0 - 0.5, GW_Y1, zt, z0)
     y = y0 + 1.5
@@ -348,56 +471,94 @@ def gangway(g):
         A.lattice_leg(g, base, (x, y, zt - 0.2), s=0.7)
     A.lattice_leg(g, (GW_X0 + 0.3, GW_Y1 - 0.3, zt - 0.2), (GW_X1 + 0.2, 24.0, zt - 0.2), s=0.4)
     bx(g, "IronLight", LEG - 0.9, LEG + 0.9, LEG + 0.3, LEG + 0.6, base[2] - 1.0, base[2] + 1.0)
-    # 기둥: 바깥 줄(18.0) + 끝 + 안쪽 들머리(곤돌라 앞 모가 깎여 틈이 넓은 16..22.3)
-    outer = [(18.0, 22.0), (18.0, 28.0), (18.0, GW_Y1 - 0.35)]
+    # 기둥: 바깥 줄(xo) + 끝 + 안쪽 들머리(곤돌라 앞 모가 깎여 틈이 넓은 16..22.3) + 승강장 모 잇는 기둥
+    outer = [(xo, y0 + 0.3), (xo, 22.0), (xo, 28.0), (xo, GW_Y1 - 0.35)]
     inner = [(9.2, GW_IN_Y - 0.3)]
     endp = [(GW_X0 + 0.3, GW_Y1 - 0.35)]
     for x, y in outer + inner + endp:
-        tall = (x, y) in ((18.0, 22.0), (18.0, GW_Y1 - 0.35))
+        tall = (x, y) in ((xo, 22.0), (xo, GW_Y1 - 0.35))
         h = 6.6 if tall else 3.8
         bx(g, "Iron", x - 0.3, x + 0.3, y - 0.3, y + 0.3, HP, HP + h)
         cbox(x - 0.3, x + 0.3, y - 0.3, y + 0.3, HP, HP + h)
         if tall:
             K.lantern(g, x, y, HP + h + 1.9, HP + h + 0.75)
             bx(g, "Iron", x - 0.45, x + 0.45, y - 0.45, y + 0.45, HP + h, HP + h + 0.25)
-    ys = [15.6] + [p[1] for p in outer]
+    A.rail_between(g, "x", y0 + 0.3, 18.0 + 0.4, xo - 0.3, HP, h=3.4, gap=1.0, mat="Rail")     # 승강장 동쪽 모(18.0) ↔ 다리 바깥 난간
+    ys = [p[1] for p in outer]
     for a, b in zip(ys, ys[1:]):
-        A.rail_between(g, "y", 18.0, a + 0.4, b - 0.3, HP, h=3.4, gap=1.0, mat="Rail")
+        A.rail_between(g, "y", xo, a + 0.3, b - 0.3, HP, h=3.4, gap=1.0, mat="Rail")
     A.rail_between(g, "y", 9.2, 16.0, GW_IN_Y - 0.6, HP, h=3.4, gap=1.0, mat="Rail")
-    A.rail_between(g, "x", GW_Y1 - 0.35, GW_X0 + 0.6, 17.7, HP, h=3.4, gap=1.0, mat="Rail")
+    A.rail_between(g, "x", GW_Y1 - 0.35, GW_X0 + 0.6, xo - 0.3, HP, h=3.4, gap=1.0, mat="Rail")
     # 다리 바닥 놋쇠 끝 띠(곤돌라 쪽 가장자리 — 틈 0.7 표시)
-    bx(g, "Brass", GW_X0, GW_X0 + 0.3, GW_IN_Y, GW_Y1, HP, HP + 0.05)
+    bx(g, "Brass", GW_X0, GW_X0 + 0.3, GW_IN_Y, GW_Y1, HP - 0.02, HP + 0.05)
 
 
-# ================================================================== 5. 머리 돛대 · 기계 바닥 · 원통 머리 · 계류 팔
-MDECK = 58.4                     # 머리 돛대 기계 바닥(그 밑은 곧은 칸 — 승강기 칸이 선다)
+# ================================================================== 5. 계류 머리(사각 트러스 · 도는 원통 머리 · 계류 팔) · 승강기 위 칸 · 기계 바닥
+MDECK = 58.4                     # 기계 바닥(그 밑은 곧은 칸 — 승강기 칸이 선다)
+HLV = (59.0, 67.0, 72.5, HEAD_TOP)   # 머리 트러스 띠보 높이(59 = 차양 지붕 밑 · 67 위로 가새)
 
 
 def head_hw(z):
-    """머리 돛대 다리 가운데 반폭(z): 기계 바닥까지 곧게, 그 위로 좁아짐"""
-    if z <= MDECK:
-        return SP
-    return SP - (SP - 1.6) * (z - MDECK) / (HEAD_TOP - MDECK)
+    """머리 트러스 다리 가운데 반폭(z): 몸통 다리 머리(GIRD 맨 위, LEG) → 꼭대기 HEAD_TOP 에서 HW_TOP"""
+    zt = GIRD[-1][1]
+    return LEG + (HW_TOP - LEG) * (max(z, zt) - zt) / (HEAD_TOP - zt)
 
 
-def head(g):
-    zl = (HP, 58.4, 65.5, 72.0, HEAD_TOP)
+def _roof_cross(sx, sy, zsurf):
+    """다리(sx, sy)가 차양 지붕 겉면을 지나는 높이 — zsurf(x, y) 와 다리 높이가 같아지는 곳(반으로 나눠 찾기)"""
+    lo, hi = HP, HEAD_TOP
+    for _ in range(40):
+        z = (lo + hi) / 2
+        w = head_hw(z)
+        if z < zsurf(sx * w, sy * w):
+            lo = z
+        else:
+            hi = z
+    return (lo + hi) / 2
+
+
+def head(g, zsurf=None):
+    """2026-11-27 비평 비행선_1차 1번(배를 붙잡는 머리가 가는 기둥 하나 → 안테나·쇠꼬챙이로 읽힘): 몸통 다리 넷을 승강장 · 차양 지붕을 뚫고 올려
+    폭 21.7 → 12(꼭대기 77)로 좁힌 사각 트러스 + 띠보 넷 + 지붕 위 두 칸 ʌ 가새 · 지붕 뚫는 자리 쇠 깃 →
+    꼭대기 판 · 도는 고리(놋쇠 톱니 테 + 굴림 바퀴 여덟) · 원통 머리(지름 5 · 높이 6, 놋쇠 띠) · 위 갓 · 붉은 경고등 ·
+    남쪽 계류 팔(굵은 상자 보) + 꼭대기 판 앞 모에서 받치는 팔 둘 + 머리 위에서 당기는 보 → 컵(입 = Q.CUP_Y · Q.CUP_Z 그대로).
+    가운데 승강기 위 칸(HP..MDECK 쇠살 · 동쪽 트임)과 기계 바닥(감개 북 · 실린더 · 보일러)은 그대로"""
+    zt = GIRD[-1][1]
+    # 승강기 위 칸 기둥(승강로 기둥 그대로 HP → MDECK) + 기계 바닥 테 보
     for sx in (-1, 1):
         for sy in (-1, 1):
             bx(g, "Iron", sx * SP - SPS / 2, sx * SP + SPS / 2, sy * SP - SPS / 2, sy * SP + SPS / 2, HP, MDECK)
-            A.lattice_leg(g, (sx * SP, sy * SP, MDECK - 0.3), (sx * 1.6, sy * 1.6, HEAD_TOP + 0.3), s=0.6)
-    for z in zl[1:]:
+    for s in (-1, 1):
+        bx(g, "Iron", -SP, SP, s * SP - 0.22, s * SP + 0.22, MDECK - 0.45, MDECK)
+        bx(g, "Iron", s * SP - 0.22, s * SP + 0.22, -SP + 0.25, SP - 0.25, MDECK - 0.45, MDECK - 0.02)
+    # 머리 트러스 다리(몸통 다리 머리 → 꼭대기) + 승강장 안 충돌 + 지붕 깃
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            A.lattice_leg(g, (sx * LEG, sy * LEG, zt - 0.3), (sx * HW_TOP, sy * HW_TOP, HEAD_TOP + 0.2), s=1.1)
+            for z0, z1 in ((HP, HP + 4.5), (HP + 4.5, HP + 9.0)):
+                w = head_hw((z0 + z1) / 2)
+                cbox(sx * w - 0.6, sx * w + 0.6, sy * w - 0.6, sy * w + 0.6, z0, z1)
+            if zsurf:
+                zc = _roof_cross(sx, sy, zsurf)
+                w = head_hw(zc)
+                bx(g, "Iron", sx * w - 0.95, sx * w + 0.95, sy * w - 0.95, sy * w + 0.95, zc - 0.7, zc + 0.45)
+                bx(g, "Brass", sx * w - 1.05, sx * w + 1.05, sy * w - 1.05, sy * w + 1.05, zc + 0.45, zc + 0.7)
+    for k, z in enumerate(HLV):
         w = head_hw(z)
+        th = 0.7 if k == len(HLV) - 1 else 0.5
         for s in (-1, 1):
-            bx(g, "Iron", -w, w, s * w - 0.22, s * w + 0.22, z - 0.45, z)
-            bx(g, "Iron", s * w - 0.22, s * w + 0.22, -w, w, z - 0.45, z)
-    for za, zb in zip(zl[1:], zl[2:]):
-        wa, wb = head_hw(za), head_hw(zb - 0.45)
-        for s in (-1, 1):
-            A.lattice_leg(g, (-wa, s * wa, za), (wb, s * wb, zb - 0.45), s=0.32)
-            A.lattice_leg(g, (wa, s * wa, za), (-wb, s * wb, zb - 0.45), s=0.32)
-            A.lattice_leg(g, (s * wa, -wa, za), (s * wb, wb, zb - 0.45), s=0.32)
-            A.lattice_leg(g, (s * wa, wa, za), (s * wb, -wb, zb - 0.45), s=0.32)
+            bx(g, "Iron", -w + 0.25, w - 0.25, s * w - 0.3, s * w + 0.3, z - th, z)
+            bx(g, "Iron", s * w - 0.3, s * w + 0.3, -w, w, z - th - 0.05, z + 0.01)
+    for za, zb in zip(HLV[1:], HLV[2:]):
+        wa, wb = head_hw(za), head_hw(zb)
+        for face in range(4):
+            sg = -1 if face in (0, 2) else 1
+            for e in (-1, 1):
+                p0, p1 = (e * (wa - 0.7), sg * wa, za + 0.1), (e * 0.4, sg * wb, zb - 0.6)
+                if face >= 2:
+                    p0, p1 = (p0[1], p0[0], p0[2]), (p1[1], p1[0], p1[2])
+                A.lattice_leg(g, p0, p1, s=0.5, mat="Rail")
+    # 기계 바닥(58.4): 무늬판 · 감개 북(쇠 + 감긴 줄 띠) · 증기 실린더 둘 · 톱니 · 작은 구리 보일러 · 압력계 · 북에서 칸으로 내리는 줄
     # 아래 칸(승강기 칸이 서는 곳) 쇠살 — 북 · 서 · 남. 동쪽은 타는 곳(놋쇠 머리보)
     for face, (ax, sgn) in enumerate((("x", -1), ("x", 1), ("y", -1))):
         for k in range(-2, 3):
@@ -409,12 +570,11 @@ def head(g):
         else:
             bx(g, "Rail", sgn * w - 0.12, sgn * w + 0.12, -w, w, HP + 3.9, HP + 4.15)
             cbox(sgn * SP - 0.3, sgn * SP + 0.3, -SP, SP, HP, 57.6)
-    w = head_hw(57.9)
+    w = SP
     bx(g, "Brass", w - 0.1, w + 0.35, -w, w, 57.5, 58.0)
     g["Brass"].hcyl(w + 0.45, 0.0, 56.9, 0.6, 0.2, axis="x", seg=12)
     g["Dial"].hcyl(w + 0.58, 0.0, 56.9, 0.47, 0.06, axis="x", seg=12)
-    # 기계 바닥(58.4): 무늬판 · 감개 북(쇠 + 감긴 줄 띠) · 증기 실린더 둘 · 톱니 · 작은 구리 보일러 · 압력계 · 북에서 칸으로 내리는 줄
-    w = head_hw(58.4) - 0.2
+    w = SP - 0.2
     bx(g, "IronLight", -w, w, -w, w, 58.4, 58.7)
     for s in (-1, 1):
         bx(g, "IronLight", s * 1.6 - 0.3, s * 1.6 + 0.3, -0.5, 0.5, 58.7, 59.6)
@@ -429,22 +589,31 @@ def head(g):
     g["Brass"].cyl(1.2, -1.4, 60.7, 0.62, 0.4, 0.35, seg=10)
     Q.gauge(g, 1.2, -1.95, 59.9, face_y=-1, r=0.32)
     A.lattice_leg(g, (0.0, -0.75, 59.4), (0.0, -0.75, 58.1), s=0.3, mat="Iron")
-    # 원통 머리 · 밑판 · 위 갓 · 쇠 바늘 · 붉은 경고등
-    bx(g, "IronLight", -2.4, 2.4, -2.4, 2.4, HEAD_TOP - 0.2, HEAD_TOP + 0.3)
-    K.S.banded_cyl(g, "Iron", 0.0, 0.0, HEAD_TOP + 0.3, TUR_R, 5.0, band="Brass", every=1.6, seg=16, cap=None)
-    g["Brass"].cyl(0.0, 0.0, HEAD_TOP + 5.3, TUR_R + 0.35, 0.8, 1.3, seg=16)
-    g["Iron"].cyl(0.0, 0.0, HEAD_TOP + 6.6, 0.35, 0.25, 1.4, seg=8)
-    g["Iron"].cyl(0.0, 0.0, HEAD_TOP + 8.0, 0.75, 0.75, 0.25, seg=10)
-    g["Core"].cyl(0.0, 0.0, HEAD_TOP + 8.25, 0.55, 0.45, 0.7, seg=10)
-    g["Brass"].cyl(0.0, 0.0, HEAD_TOP + 8.95, 0.6, 0.2, 0.3, seg=10)
-    g["LampPt"].box(0.0, 0.0, HEAD_TOP + 8.6, 0.3, 0.3, 0.3)
-    # 계류 팔(남쪽, 상자 보 + 아래 버팀 + 위 당김) + 컵(놋쇠 나팔 — 입 = +y)
+    # 꼭대기 판 · 도는 고리(놋쇠 톱니 테 + 굴림 바퀴) · 원통 머리 · 위 갓 · 쇠 바늘 · 붉은 경고등
+    zd = HEAD_TOP + 0.35
+    bx(g, "IronLight", -HW_TOP - 0.5, HW_TOP + 0.5, -HW_TOP - 0.5, HW_TOP + 0.5, HEAD_TOP - 0.05, zd)
+    K.S.gear(g, "Brass", 0.0, 0.0, zd, 4.0, 28, 0.45, axis="z")                 # 톱니 테(판 위 0.225)
+    for k in range(8):                                                           # 굴림 바퀴(고리 밑)
+        a = 2 * math.pi * (k + 0.5) / 8
+        g["Iron"].hcyl(3.15 * math.cos(a), 3.15 * math.sin(a), zd + 0.5, 0.24, 0.6, axis="x", seg=8, rz=a)
+    K.S.ring(g, "Iron", 0.0, 0.0, zd + 0.78, 2.6, 3.7, 0.5, n=24)                 # 도는 고리
+    K.S.banded_cyl(g, "Iron", 0.0, 0.0, zd + 0.2, TUR_R, 6.0, band="Brass", every=1.5, seg=16, cap=None)
+    zh = zd + 6.2
+    g["Brass"].cyl(0.0, 0.0, zh, TUR_R + 0.4, 1.6, 0.9, seg=16)
+    g["Iron"].cyl(0.0, 0.0, zh + 0.9, 0.5, 0.35, 1.2, seg=8)
+    g["Iron"].cyl(0.0, 0.0, zh + 2.1, 0.8, 0.8, 0.25, seg=10)
+    g["Core"].cyl(0.0, 0.0, zh + 2.35, 0.55, 0.45, 0.7, seg=10)
+    g["Brass"].cyl(0.0, 0.0, zh + 3.05, 0.6, 0.2, 0.3, seg=10)
+    g["LampPt"].box(0.0, 0.0, zh + 2.7, 0.3, 0.3, 0.3)
+    # 계류 팔(남쪽 굵은 상자 보) + 받치는 팔 둘(꼭대기 판 앞 모 → 팔 끝) + 당기는 보(원통 위 → 팔 끝) · 컵
     zc = Q.CUP_Z
-    yc0 = TUR_R - 0.2
-    bx(g, "Iron", -0.55, 0.55, yc0, Q.CUP_Y - 1.3, zc - 0.55, zc + 0.55)
-    bx(g, "IronLight", -0.7, 0.7, Q.CUP_Y - 1.5, Q.CUP_Y - 1.1, zc - 0.75, zc + 0.75)
-    A.lattice_leg(g, (0.0, TUR_R - 0.3, HEAD_TOP + 0.6), (0.0, Q.CUP_Y - 1.6, zc - 0.5), s=0.45)
-    A.lattice_leg(g, (0.0, TUR_R - 0.3, HEAD_TOP + 5.0), (0.0, Q.CUP_Y - 1.6, zc + 0.5), s=0.35)
+    ye = Q.CUP_Y - 1.3
+    bx(g, "Iron", -0.65, 0.65, TUR_R - 0.3, ye, zc - 0.65, zc + 0.65)
+    bx(g, "IronLight", -0.85, 0.85, ye - 0.4, ye, zc - 0.85, zc + 0.85)
+    for e in (-1, 1):
+        A.lattice_leg(g, (e * 3.6, HW_TOP + 0.2, zd + 0.1), (e * 0.55, ye - 0.3, zc - 0.55), s=0.6)
+        bx(g, "Brass", e * 3.6 - 0.5, e * 3.6 + 0.5, HW_TOP - 0.3, HW_TOP + 0.5, zd, zd + 0.3)
+    A.lattice_leg(g, (0.0, TUR_R - 0.4, zd + 6.6), (0.0, ye - 0.3, zc + 0.55), s=0.5)
     _cup(g, Q.CUP_Y, zc)
 
 
@@ -489,12 +658,13 @@ def ground_props(g):
 
 def build(g):
     frame(g)
+    splay(g)
     ground_walls(g)
     shaft(g)
     stairs(g)
-    platform(g)
+    zsurf = platform(g)
     gangway(g)
-    head(g)
+    head(g, zsurf)
     ground_props(g)
 
 

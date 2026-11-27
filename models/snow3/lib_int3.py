@@ -375,7 +375,7 @@ def compose(what):
         _build("b_airdoor", Ms @ T(dr.OPEN))
         ms = importlib.import_module("b_mast")
         _build("b_mastlift", T(ms.LIFT_TOP if os.environ.get("LIFT_TOP") else ms.LIFT_BOTTOM))
-        for x, y, z, rz in ((-2.0, -16.0, 0.0, 0.0), (13.0, 26.0, HP, math.pi / 2), (2.5, -4.0, 1.0, 0.6)):
+        for x, y, z, rz in ((-2.0, -16.0, 0.0, 0.0), (13.0, 26.0, HP, math.pi / 2), (-5.0, -6.8, 1.0, 0.6)):   # 셋째(1층 안)는 승강기 · 계단 시점을 가리지 않게 지레 옆(2026-11-27 — 비평 6번 '흰 안내판'이 이 잣대 사람이었다)
             _mannequin(x, y, z, rz)
         _ground("terrace", -27, 27, -97.5, 35, -0.02)
         _ground("plaza", -200, 200, -400, -97.5, -5.62)
@@ -414,6 +414,7 @@ def shots():
         ("Sn3_Airship_top", "ship", (0.01, 33, 300), (0, 33, 0), ("ortho", 150), True),
         ("Sn3_Airship_front", "ship", (0, -170, 25), (0, 0, 24), 40, True),
         ("Sn3_Airship_gondola", "ship", (34, -42, 14), (0, -4, 8), 24, True),
+        ("Sn3_Airship_tail", "ship", (62.0, 50.0, 52.0), (0.0, 82.0, 31.0), 30, True),
         ("Sn3_Airship_compare", "compare", (-8, -230, 30), (-8, 20, 22), ("ortho", 200), True),
         # 탑에 매인 모습
         ("Sn3_Mast_moored34", "moored", (-150, -135, 60), (0, 50, 55), 28, True),
@@ -422,11 +423,14 @@ def shots():
         ("Sn3_Mast_plaza_eye_se", "moored", (38.0, -112.0, -5.6 + E), (0.0, 40.0, 55.0), 24, True),
         ("Sn3_Mast_terrace_eye", "moored", (-14.0, -60.0, E), (0.0, 20.0, 55.0), 17, True),
         ("Sn3_Mast_top34", "moored", (48, -40, 72), (6, 16, 52), 24, True),
+        # 2026-11-27 2판 확인용: 계류 머리 가까이 · 벌어진 다리 밑 · 꼬리날개
+        ("Sn3_Mast_head", "moored", (-34.0, -30.0, 90.0), (0.0, 3.0, 74.0), 30, True),
+        ("Sn3_Mast_base", "moored", (-44.0, -58.0, 9.0), (0.0, 0.0, 16.0), 24, True),
         # 탑 1인칭(눈높이 4.5)
         ("Sn3_Mast_fp_door", "moored", (0.0, -22.0, E), (0.0, 0.0, 5.0), 17, False),
         ("Sn3_Mast_fp_lift", "moored", (-2.0, -8.0, 1.0 + E), (0.0, -2.0, 3.5), 17, False),
         ("Sn3_Mast_fp_stair", "moored", (6.6, -2.0, 17.0 + E), (6.6, 6.0, 22.5), 17, False),
-        ("Sn3_Mast_fp_stair_up", "moored", (-6.6, 6.0, 1.0 + E), (-2.0, 0.0, 30.0), 17, False),
+        ("Sn3_Mast_fp_stair_up", "moored", (-2.5, -7.5, 1.0 + E), (6.5, 2.5, 9.0), 17, False),      # 2026-11-27: 1층에서 첫 계단(동쪽)을 봄(옛 시점은 쉼참 밑판만 보였다)
         ("Sn3_Mast_fp_platform", "moored", (-8.0, -9.0, HP + E), (12.0, 20.0, HP + 6.0), 17, False),
         ("Sn3_Mast_fp_gangway", "moored", (13.6, 15.0, HP + E), (11.0, 30.0, HP + 4.0), 17, False),
         # 곤돌라 안 1인칭(비행선 원점 = 탑 (0, SHIP_Y, HP))
@@ -492,8 +496,8 @@ def sheet():
 
 
 _SHOT_NAMES = [("Sn3_Airship_ext34",), ("Sn3_Airship_ext34r",), ("Sn3_Airship_side",), ("Sn3_Airship_top",), ("Sn3_Airship_front",),
-               ("Sn3_Airship_gondola",), ("Sn3_Airship_compare",), ("Sn3_Mast_moored34",), ("Sn3_Mast_moored_side",), ("Sn3_Mast_plaza_eye",),
-               ("Sn3_Mast_terrace_eye",), ("Sn3_Mast_top34",), ("Sn3_Mast_fp_door",), ("Sn3_Mast_fp_lift",), ("Sn3_Mast_fp_stair",),
+               ("Sn3_Airship_gondola",), ("Sn3_Airship_tail",), ("Sn3_Airship_compare",), ("Sn3_Mast_moored34",), ("Sn3_Mast_moored_side",), ("Sn3_Mast_plaza_eye",),
+               ("Sn3_Mast_terrace_eye",), ("Sn3_Mast_top34",), ("Sn3_Mast_head",), ("Sn3_Mast_base",), ("Sn3_Mast_fp_door",), ("Sn3_Mast_fp_lift",), ("Sn3_Mast_fp_stair",),
                ("Sn3_Mast_fp_stair_up",), ("Sn3_Mast_fp_platform",), ("Sn3_Mast_fp_gangway",), ("Sn3_Airship_fp_door",),
                ("Sn3_Airship_fp_cockpit",), ("Sn3_Airship_fp_cabin",), ("Sn3_Airship_fp_cabin_back",), ("Sn3_Airship_fp_cargo",),
                ("Sn3_Airship_fp_window",)]

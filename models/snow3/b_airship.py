@@ -137,8 +137,46 @@ def _cone_y(g, mat, x, y, z, r0, r1, h):
 
 
 # ------------------------------------------------------------------ 꼬리날개
+def _clip_d(poly, a, b):
+    """볼록 다각형 (d, s) 을 a ≤ d ≤ b 로 자른 것(서덜랜드-호지먼 두 번)"""
+    def cut(pts, keep, edge):
+        out = []
+        for k, p in enumerate(pts):
+            q = pts[(k + 1) % len(pts)]
+            if keep(p):
+                out.append(p)
+            if keep(p) != keep(q):
+                t = (edge - p[0]) / (q[0] - p[0])
+                out.append((edge, p[1] + (q[1] - p[1]) * t))
+        return out
+    return cut(cut(poly, lambda p: p[0] >= a, a), lambda p: p[0] <= b, b)
+
+
+def _span_at(poly, d):
+    """볼록 다각형 (d, s) 를 d 줄로 자른 s 범위"""
+    ss = []
+    for k, p in enumerate(poly):
+        q = poly[(k + 1) % len(poly)]
+        if (p[0] - d) * (q[0] - d) <= 0 and p[0] != q[0]:
+            ss.append(p[1] + (q[1] - p[1]) * (d - p[0]) / (q[0] - p[0]))
+    return (min(ss), max(ss)) if ss else None
+
+
+def _d_at(poly, s):
+    """볼록 다각형 (d, s) 를 s 줄로 자른 d 범위"""
+    ds = []
+    for k, p in enumerate(poly):
+        q = poly[(k + 1) % len(poly)]
+        if (p[1] - s) * (q[1] - s) <= 0 and p[1] != q[1]:
+            ds.append(p[0] + (q[0] - p[0]) * (s - p[1]) / (q[1] - p[1]))
+    return (min(ds), max(ds)) if ds else None
+
+
 def fins(g):
-    """십자 꼬리날개 넷: 고정판(천 + 쇠 앞전) · 경첩 줄(놋쇠) · 방향타/승강타(짙은 천). 뿌리는 기낭 속으로 0.6 묻힌 곧은 줄"""
+    """십자 꼬리날개 넷(2026-11-27 비평 비행선_1차 2번: 배에서 가장 큰 민짜 면 · 따로 붙인 짙은 방향타 → 기낭과 같은 밀도):
+    고정판 = 천 판 넷(놋쇠 갈비 셋 사이 — 천 · 짙은 천 두 톤, 갈비 자리마다 0.1 틈) · 앞전·바깥 끝 쇠 테 · 뒤 경첩 쇠 보(고정판과 방향타를 잇는 0.35 틈을 메움) ·
+    방향타/승강타 = 같은 두 톤 천 판 둘 + 짙은 나무 테(바깥 끝 · 뒤 끝) · 경첩 놋쇠 판 셋(틈을 가로질러 둘을 한 몸으로) · 짙은 천 이음 띠 둘(기낭 갈빗대처럼 앞뒤로 — 고정판에서 방향타까지 이어짐).
+    넷 모두 같은 코드 · 같은 밀도. 테·갈비는 판보다 두꺼워 양면에 다 보인다(세로 날개도 같은 두께가 되게 단면 방향을 맞춤)"""
     d0, d1, dh = 97.0, 128.0, 118.0
     s0, s1 = Q.r_at(d0) - 0.7, 0.5
 
@@ -146,22 +184,50 @@ def fins(g):
         return s0 + (s1 - s0) * (d - d0) / (d1 - d0)
     fixed = [(d0, root(d0)), (107.0, 20.5), (dh, 20.8), (dh, root(dh))]
     rud = [(dh + 0.35, root(dh + 0.35)), (dh + 0.35, 20.8), (124.0, 21.0), (d1, 18.4), (d1, root(d1))]
+    ribs = (102.5, 108.0, 113.0)
     for phi in (0.0, math.pi / 2, math.pi, 1.5 * math.pi):
         u = (math.cos(phi), math.sin(phi))
         v = (-math.sin(phi), math.cos(phi))
+        vert = abs(u[1]) > 0.5                           # 세로 날개(위 · 아래)
 
         def P(d, s, off):
             return (s * u[0] + off * v[0], Q.Y_TIP + d, Q.ZC + s * u[1] + off * v[1])
-        for poly, mat, th in ((fixed, "Canvas", 1.0), (rud, "CanvasDark", 0.8)):
-            Q.slab(g, mat, [P(d, s, -th / 2) for d, s in poly], (v[0] * th, 0.0, v[1] * th))
-        # 앞전 쇠 띠(0.3 두껍게) · 바깥 끝 띠
-        Q.member(g, "Iron", P(d0 + 0.4, root(d0) + 0.6, 0), P(107.0, 20.5, 0), 0.7, 1.3)
-        Q.member(g, "Iron", P(107.0, 20.5, 0), P(dh, 20.8, 0), 0.6, 1.3)
-        # 경첩 놋쇠 셋 + 방향타 뿔(조종줄 받이)
+
+        def M(mat, a, b, inplane, thick):
+            """날개 면 위 각재(a, b = (d, s)): 단면 = 면 안 폭 inplane × 두께 thick(세로 · 가로 날개 모두 같게)"""
+            radial = abs(a[0] - b[0]) < 1e-6
+            w, h = (inplane, thick) if (radial or not vert) else (thick, inplane)
+            Q.member(g, mat, P(a[0], a[1], 0), P(b[0], b[1], 0), w, h)
+        # 천 판: 고정판(갈비 사이 넷) · 방향타(둘) — 두 톤 번갈아, 갈비 자리 0.1 틈
+        cuts = [d0] + list(ribs) + [dh]
+        for k, (a, b) in enumerate(zip(cuts, cuts[1:])):
+            pc = _clip_d(fixed, a + (0.05 if k else 0.0), b - (0.05 if b < dh else 0.0))
+            Q.slab(g, "Canvas" if k % 2 == 0 else "CanvasDark", [P(d, s, -0.5) for d, s in pc], (v[0], 0.0, v[1]))
+        for k, (a, b) in enumerate(((dh + 0.35, 123.0), (123.0, d1))):
+            pc = _clip_d(rud, a + (0.05 if k else 0.0), b - (0.05 if k == 0 else 0.0))
+            Q.slab(g, "CanvasDark" if k == 0 else "Canvas", [P(d, s, -0.45) for d, s in pc], (v[0] * 0.9, 0.0, v[1] * 0.9))
+        # 테: 앞전 · 바깥 끝(쇠) · 뒤 경첩 보(쇠, 틈을 메움) · 방향타 바깥 끝 · 뒤 끝(짙은 나무)
+        M("Iron", (d0 + 0.4, root(d0) + 0.6), (107.0, 20.5), 0.7, 1.35)
+        M("Iron", (107.0, 20.5), (dh, 20.8), 0.6, 1.35)
+        M("Iron", (dh + 0.17, root(dh + 0.17) + 0.3), (dh + 0.17, 20.75), 0.55, 1.3)
+        M("DarkLog", (dh + 0.35, 20.8), (124.0, 21.0), 0.6, 1.2)
+        M("DarkLog", (124.0, 21.0), (d1, 18.4), 0.6, 1.2)
+        M("DarkLog", (d1 - 0.25, 18.4), (d1 - 0.25, root(d1) + 0.3), 0.5, 1.2)
+        # 놋쇠 갈비 셋(뿌리 → 끝, 면 양쪽으로 0.2 씩)
+        for d in ribs:
+            lo, hi = _span_at(fixed, d)
+            M("Brass", (d, lo + 0.3), (d, hi - 0.25), 0.55, 1.4)
+        # 짙은 천 이음 띠 둘(앞뒤로 — 고정판 앞전에서 방향타 뒤 끝까지)
+        whole = [(d0, root(d0)), (107.0, 20.5), (dh, 20.8), (124.0, 21.0), (d1, 18.4), (d1, root(d1))]
+        for s in (13.5, 17.2):
+            r = _d_at(whole, s)
+            if r and r[1] - r[0] > 2.0:
+                M("CanvasDark", (r[0] + 0.5, s), (r[1] - 0.4, s), 0.5, 1.12)
+        # 경첩 놋쇠 판 셋(틈을 가로지름) + 방향타 뿔(조종줄 받이)
         for f in (0.25, 0.55, 0.85):
             s = root(dh) + (20.8 - root(dh)) * f
             c = P(dh + 0.17, s, 0)
-            g["Brass"].box(c[0], c[1], c[2], 1.3, 0.8, 1.3)
+            g["Brass"].box(c[0], c[1], c[2], 1.6, 1.9, 1.6)
         c = P(dh + 1.6, root(dh + 1.6) + 2.2, 0)
         Q.rod(g, "Brass", (c[0] - v[0] * 0.4, c[1], c[2] - v[1] * 0.4), (c[0] + v[0] * 1.4, c[1], c[2] + v[1] * 1.4), 0.4)
 
@@ -271,20 +337,35 @@ def gondola_shell(g):
     Q.on_wall(g, "Brass", POLY, 0, 3.2, 6.8, 1.0, 2.4, -0.3, 0.05)
     Q.on_wall(g, "DarkLog", POLY, 0, 3.45, 6.55, 1.2, 2.2, -0.42, -0.25)
     g["Brass"].hcyl(0.0, GY0 - 0.55, 1.7, 0.42, 0.2, axis="y", seg=10)
-    # 뒤 기관실(밖에 붙은 쇠 칸 — 안은 막힘): 구리 몸 · 놋쇠 띠 · 둥근 창 셋 · 환기 살 · 뒤 등
-    bx(g, "Iron", -5.5, 5.5, GY1 - 0.05, GY1 + 6.0, -1.6, 9.2)
-    bx(g, "Copper", -5.8, 5.8, GY1 + 0.6, GY1 + 5.4, -1.3, 8.6)
-    bx(g, "RoofMetal", -6.0, 6.0, GY1 - 0.05, GY1 + 6.4, 9.2, 9.8)
-    for z in (1.0, 6.4):
-        bx(g, "Brass", -6.0, 6.0, GY1 + 1.2, GY1 + 1.7, z, z + 0.45)
-        bx(g, "Brass", -6.0, 6.0, GY1 + 4.3, GY1 + 4.8, z, z + 0.45)
-    for x in (-3.2, 0.0, 3.2):
-        g["Brass"].hcyl(x, GY1 + 6.05, 4.2, 0.85, 0.3, axis="y", seg=12)
-        g["Glow"].hcyl(x, GY1 + 6.2, 4.2, 0.6, 0.12, axis="y", seg=12)
-    for s in (-1, 1):
+    # 뒤 짐칸(밖에 붙은 칸 — 안은 막힘. 2026-11-27 비평 비행선_1차 8번: 녹슨 쇠 상자처럼 튐 → 곤돌라와 같은 짙은 나무 + 놋쇠 테 + 접이 짐칸 문 둘)
+    y0, y1 = GY1 - 0.05, GY1 + 6.0
+    bx(g, "Timber", -5.5, 5.5, y0, y1, -1.6, 9.2)
+    for x in (-5.5, 5.5):                                                       # 모서리 기둥(짙은 나무)
+        bx(g, "DarkLog", x - 0.35, x + 0.35, y1 - 0.7, y1 + 0.05, -1.7, 9.25)
+    for z0, z1 in ((-1.75, -1.25), (4.0, 4.4), (8.75, 9.25)):                   # 놋쇠 띠(아래 · 허리 · 위 — 옆 · 뒤 둘레)
+        bx(g, "Brass", -5.65, 5.65, y1 - 0.02, y1 + 0.12, z0, z1)
+        for x in (-5.5, 5.5):
+            bx(g, "Brass", *sorted((x - (0.05 if x > 0 else -0.05), x + (0.15 if x > 0 else -0.15))), GY1 + 0.6, y1 - 0.65, z0, z1)
+    for k in range(3):                                                          # 옆 널 이음(짙은 나무 세로 띠)
+        y = GY1 + 1.6 + k * 1.6
+        for x in (-5.5, 5.5):
+            bx(g, "DarkLog", *sorted((x - (0.05 if x > 0 else -0.05), x + (0.1 if x > 0 else -0.1))), y - 0.12, y + 0.12, -1.25, 8.75)
+    for e in (-1, 1):                                                           # 접이 짐칸 문 둘(뒷면): 문짝 · 놋쇠 띠 셋 · 경첩 · 고리
+        xa, xb = sorted((e * 0.06, e * 4.4))
+        bx(g, "DarkLog", xa, xb, y1 - 0.05, y1 + 0.25, -0.88, 7.58)
+        for z in (0.4, 3.3, 6.3):
+            bx(g, "Brass", xa + 0.15, xb - 0.15, y1 + 0.25, y1 + 0.33, z, z + 0.32)
+        for z in (0.0, 3.3, 6.6):
+            g["Iron"].cyl(e * 4.55, y1 + 0.2, z, 0.16, 0.16, 0.8, seg=8)
+        g["Brass"].hcyl(e * 0.5, y1 + 0.42, 3.7, 0.22, 0.18, axis="y", seg=10)
+    bx(g, "DarkLog", -4.7, 4.7, y1 - 0.05, y1 + 0.3, 7.6, 8.1)                  # 문 머리 · 문지방
+    bx(g, "DarkLog", -4.7, 4.7, y1 - 0.05, y1 + 0.35, -1.25, -0.9)
+    bx(g, "RoofMetal", -6.0, 6.0, GY1 - 0.05, GY1 + 6.4, 9.15, 9.8)
+    for s in (-1, 1):                                                           # 옆 환기 살(짙은 쇠)
         for k in range(4):
-            bx(g, "IronLight", *sorted((s * 5.8, s * 6.05)), GY1 + 1.9 + k * 0.6, GY1 + 2.2 + k * 0.6, 2.0, 6.0)
-    g["Glow"].box(0.0, GY1 + 6.55, 8.3, 0.6, 0.3, 0.6)
+            bx(g, "Iron", *sorted((s * 5.45, s * 5.75)), GY1 + 1.9 + k * 0.6, GY1 + 2.2 + k * 0.6, 5.0, 7.6)
+    g["Brass"].box(0.0, y1 + 0.3, 8.65, 1.0, 0.3, 0.7)                          # 뒤 등
+    g["Glow"].box(0.0, y1 + 0.5, 8.65, 0.6, 0.3, 0.5)
     cbox(-6.0, 6.0, GY1, GY1 + 6.4, -1.6, 9.8)
 
 
@@ -484,8 +565,8 @@ def cabin(g):
     N.put(g, 7.88, -4.4, 4.2, -math.pi / 2, N.painting, 4.4, 3.0)
     for y in (-0.9, 5.8):
         _wall_lamp(g, -7.88, y, 6.2, 1)
-    for y in (-3.0, 7.0):
-        Q.lamp_hang(g, 0.0, y, 10.1, 8.0)
+    for y in (-3.0, 7.0):                      # 매단 등(2026-11-27 비평 7번 "천장 가운데 검은 상자" = 이 등의 쇠 밑판 — 0.6 올려 머리 위로)
+        Q.lamp_hang(g, 0.0, y, 10.1, 8.6)
 
 
 def partition(g):
