@@ -59,6 +59,7 @@ local SKIN = {
 	DarkLog = { RGB(59, 42, 31), M.Wood }, -- 짙은 나무(판벽·문짝 — 3판과 같은 색)
 	WoodFloor = { RGB(126, 82, 50), M.Wood }, -- 마루 널(Wood 와 한 톤 차 — 3판과 같은 색)
 	StoneB = { RGB(75, 76, 82), M.Slate }, -- 두 톤 돌 켜(Stone 보다 한 톤 짙게)
+	WallB = { RGB(110, 112, 118), M.Slate }, -- 본부 방 윗벽 겉판(2026-11-28 TrimB 보다 한 톤 짙게)
 	Mortar = { RGB(46, 46, 51), M.Slate }, -- 돌 줄눈
 }
 -- 지붕과 눈은 껍데기, 불빛은 부딪히지 않는다. 나머지는 모양대로 잡는다.

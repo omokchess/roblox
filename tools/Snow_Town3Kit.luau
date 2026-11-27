@@ -57,6 +57,7 @@ local SKIN = {
 	BrassB = { RGB(184, 145, 63), M.Metal }, -- 2026-11-27 (2판 PAL 을 물려받음) Brass 와 같은 모습
 	TrimB = { RGB(140, 139, 138), M.Concrete }, -- StoneTrim 과 같은 모습
 	StoneB = { RGB(75, 76, 82), M.Slate }, -- 두 톤 돌(대장간 바닥 등)
+	WallB = { RGB(110, 112, 118), M.Slate }, -- 본부 방 윗벽 겉판(2026-11-28 TrimB 보다 한 톤 짙게)
 	Mortar = { RGB(46, 46, 51), M.Slate }, -- 돌 줄눈
 	DarkLog = { RGB(59, 42, 31), M.Wood }, -- 3판 새 재질(통나무 짙은 색)
 	WoodFloor = { RGB(126, 82, 50), M.Wood }, -- 1팀 2026-11-24 마루 널(Wood 와 한 톤 차)

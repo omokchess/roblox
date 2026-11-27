@@ -47,7 +47,7 @@ HEAD_TOP = 77.0                  # 계류 머리 사각 트러스 꼭대기(2026
 HW_TOP = 6.0                     # 꼭대기 다리 가운데 반폭(폭 12)
 TUR_R = 2.5                      # 도는 원통 머리 반지름(지름 5 · 높이 6)
 LFOOT, FOOT_Z = 16.5, 3.45       # 벌어진 바깥 다리 발(땅 34×34) · 발 받침 윗면(돌 받침 높이 3)
-SKIRT = 18.5                     # 돌 밑단 판 반폭(37×37, 높이 0.5 — 1층 바닥 1.0 앞 한 단)
+SKIRT = 18.5                     # 돌 밑단 판 반폭(37×37, 높이 1.0 = 1층 바닥)
 LIFT_BOTTOM = (0.0, 0.0, F0)     # 승강기 칸 바닥 윗면 자리(아래 · 위)
 LIFT_TOP = (0.0, 0.0, HP)
 
@@ -97,7 +97,7 @@ def frame(g):
             z = 4.0
             while z < GIRD[-1][0] - 1.0:
                 if not any(a - 0.8 < z < b + 0.3 for a, b in GIRD):
-                    bx(g, "IronLight", x - LS / 2 - 0.08, x + LS / 2 + 0.08, y - LS / 2 - 0.08, y + LS / 2 + 0.08, z, z + 0.45)
+                    bx(g, "Iron", x - LS / 2 - 0.08, x + LS / 2 + 0.08, y - LS / 2 - 0.08, y + LS / 2 + 0.08, z, z + 0.45)
                 z += 4.0
     # 면 가운데 기둥(북면은 정문 위 띠보에서 시작)
     for x, y in ((0.0, -LEG), (0.0, LEG), (-LEG, 0.0), (LEG, 0.0)):
@@ -109,8 +109,8 @@ def frame(g):
             bx(g, "Iron", -LEG, LEG, s * LEG - 0.28, s * LEG + 0.28, za, zb)
             bx(g, "Iron", s * LEG - 0.28, s * LEG + 0.28, -LEG, LEG, za, zb)
             for u in (-LEG, 0.0, LEG):
-                bx(g, "IronLight", u - 0.85, u + 0.85, *sorted((s * (LEG + 0.28), s * (LEG + 0.4))), za - 0.5, zb + 0.5)
-                bx(g, "IronLight", *sorted((s * (LEG + 0.28), s * (LEG + 0.4))), u - 0.85, u + 0.85, za - 0.5, zb + 0.5)
+                bx(g, "Iron", u - 0.85, u + 0.85, *sorted((s * (LEG + 0.28), s * (LEG + 0.4))), za - 0.5, zb + 0.5)
+                bx(g, "Iron", *sorted((s * (LEG + 0.28), s * (LEG + 0.4))), u - 0.85, u + 0.85, za - 0.5, zb + 0.5)
     # X 가새(2~4 층, 면마다 두 칸) — 띠보 · 다리 · 가운데 기둥 사이
     for (za, zb), (zc, zd) in zip(GIRD, GIRD[1:]):
         for s in (-1, 1):
@@ -130,17 +130,28 @@ def _lf(z):
 
 def splay(g):
     """2026-11-27 비평 비행선_1차 1번(곧은 다리 · 얇은 밑 → 붙잡을 구조로 안 보임): 땅에서 34×34 로 벌어져 승강장 밑에서 몸통 다리와 만나는 바깥 다리 넷 ·
-    다리마다 돌 발 받침(4×4 · 높이 3 · 띠돌 테 · 쇠 신) · 둘레 돌 밑단 판(37×37 · 0.5 — 포장돌, 1층 바닥 앞 한 단) ·
+    다리마다 돌 발 받침(4×4 · 높이 3 · 띠돌 테 · 쇠 신) · 둘레 돌 밑단 판(37×37 · 높이 F0=1.0 — 1층 바닥과 한 면, 바깥 띠돌 테 · 정문 앞 계단 2단) ·
     층(12 · 24 · 36)마다 둘레 띠보 + 몸통 다리로 잇는 가로대 · 면마다 ʌ 가새(정문 쪽 아래 칸은 트임). 몸통(계단 틀)은 그대로 안에 선다"""
     ring = ((-SKIRT, SKIRT, -SKIRT, -11.05), (-SKIRT, SKIRT, 11.05, SKIRT), (-SKIRT, -11.05, -11.05, 11.05), (11.05, SKIRT, -11.05, 11.05))
     for x0, x1, y0, y1 in ring:
-        bx(g, "Stone", x0, x1, y0, y1, 0.0, 0.42)
-        cbox(x0, x1, y0, y1, 0.0, 0.5)
+        bx(g, "Stone", x0, x1, y0, y1, 0.0, F0 - 0.1)
+        cbox(x0, x1, y0, y1, 0.0, F0)
         nx, ny = max(1, round((x1 - x0) / 3.7)), max(1, round((y1 - y0) / 3.7))
         for i in range(nx):
             for j in range(ny):
                 a, b = x0 + (x1 - x0) * i / nx, y0 + (y1 - y0) * j / ny
-                bx(g, "StoneTrim", a + 0.06, a + (x1 - x0) / nx - 0.06, b + 0.06, b + (y1 - y0) / ny - 0.06, 0.4, 0.5)
+                bx(g, "StoneTrim", a + 0.06, a + (x1 - x0) / nx - 0.06, b + 0.06, b + (y1 - y0) / ny - 0.06, F0 - 0.1, F0)
+    # 2026-11-28 비평 비행선_2차 2번: 밑단을 1층 바닥 높이(F0)로 올리고 바깥 모에 띠돌 테(0.3 내밈) + 정문(북, -y) 앞 폭 10 계단 2단(발 앞에서 한 단 0.33)
+    o = SKIRT + 0.3
+    bx(g, "StoneTrim", -o, o, SKIRT, o, 0.0, 0.55)
+    bx(g, "StoneTrim", -o, -5.0, -o, -SKIRT, 0.0, 0.55)
+    bx(g, "StoneTrim", 5.0, o, -o, -SKIRT, 0.0, 0.55)
+    bx(g, "StoneTrim", -o, -SKIRT, -SKIRT, SKIRT, 0.0, 0.55)
+    bx(g, "StoneTrim", SKIRT, o, -SKIRT, SKIRT, 0.0, 0.55)
+    for top, y0, y1 in ((0.66, -SKIRT - 1.2, -SKIRT), (0.33, -SKIRT - 2.4, -SKIRT - 1.2)):
+        bx(g, "Stone", -5.0, 5.0, y0, y1, 0.0, top - 0.1)
+        bx(g, "StoneTrim", -5.0, 5.0, y0, y1, top - 0.1, top)
+        cbox(-5.0, 5.0, y0, y1, 0.0, top)
     zt = GIRD[-1][1]
     for sx in (-1, 1):
         for sy in (-1, 1):
