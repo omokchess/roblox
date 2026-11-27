@@ -38,7 +38,9 @@ PAL.update({"SignBlue": "#3A5FA8", "SignGold": "#C9A23A", "SignTeal": "#3E9C93",
             "Felt": "#2E6B45", "GlowTeal": "#4FE0C8",
             # 진짜 창(2026-10-10): WinGlass = 맑은 창유리, Cut·Pane = 구멍·유리 표지(apply_cuts 가 비우고 옮긴다 — 내보내지 않음)
             "WinGlass": "#BFD9E6", "Paint": "#E6E2D6", "Cut": "#FF00FF", "Pane": "#00FFFF",
-            "Steel": "#B4BCC6", "PaintGreen": "#3E6E5A", "SnowDrift": "#EEF3F7", "Rail": "#3A3C42"})   # Rail = 뜰 울타리 쇠 난간(Iron 과 같은 색, 삼각형 한도 때문에 따로)   # PaintGreen = 녹색 칠 나무(Verdigris 는 Studio 에서 부식 금속 무늬)   # 칼날(2026-10-18: IronLight 는 Studio 에서 줄무늬 철판이라 칼날이 체크무늬로 보였다)
+            "Steel": "#B4BCC6", "PaintGreen": "#3E6E5A", "SnowDrift": "#EEF3F7", "Rail": "#3A3C42",
+            # 2026-11-27 기물군 본부 3차(비평 본부_1차): 덩이 한도 10000 이 찬 Brass·StoneTrim 과 같은 모습의 짝 + 3판 나무 둘 + 두 톤 돌·줄눈
+            "BrassB": "#B8913F", "TrimB": "#8C8B8A", "DarkLog": "#3B2A1F", "WoodFloor": "#7E5232", "StoneB": "#4B4C52", "Mortar": "#2E2E33"})   # Rail = 뜰 울타리 쇠 난간(Iron 과 같은 색, 삼각형 한도 때문에 따로)   # PaintGreen = 녹색 칠 나무(Verdigris 는 Studio 에서 부식 금속 무늬)   # 칼날(2026-10-18: IronLight 는 Studio 에서 줄무늬 철판이라 칼날이 체크무늬로 보였다)
 
 
 def G(prefix):

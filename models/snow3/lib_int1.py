@@ -560,7 +560,7 @@ def plank_floor(g, x0, x1, y0, y1, z0, w=1.6, th=0.05, mats=("Wood", "WoodFloor"
             y = yb
 
 
-def slab_floor(g, x0, x1, y0, y1, z0, rows, mats, th=0.05):
+def slab_floor(g, x0, x1, y0, y1, z0, rows, mats, th=0.05, gap=0.0):
     """돌판 바닥(충돌 없음): rows = [(줄 깊이, [판 폭...])] 손 표, mats 를 판마다 돌려 쓴다(같은 줄 이웃은 다른 톤). 마지막 판은 끝까지"""
     y, k = y0, 0
     for depth, widths in rows:
@@ -571,7 +571,7 @@ def slab_floor(g, x0, x1, y0, y1, z0, rows, mats, th=0.05):
         for j, w_ in enumerate(widths):
             xb = x1 if j == len(widths) - 1 else min(x1, x + w_)
             if xb - x > 0.05:
-                bx(g, mats[k % len(mats)], x, xb, y, yb, z0, z0 + th)
+                bx(g, mats[k % len(mats)], x + gap / 2, xb - gap / 2, y + gap / 2, yb - gap / 2, z0, z0 + th)   # gap = 줄눈(밑에 짙은 판을 깔 것)
             k += 1
             x = xb
             if x >= x1:

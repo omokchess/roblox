@@ -142,7 +142,9 @@ def guard_post(g):
     g["DarkLog"].obox(cxs, 0.0, czs, 0.18, gw + 0.3, L_, ry=-a)
     for y in (-gw / 2, gw / 2):
         g["Iron"].box(xs + 0.15, y, hz + 0.1, 0.3, 0.14, 0.2)
-        A.lattice_leg(g, (xs + 0.05, y, gz + 0.6), (xs + 0.12 + math.sin(a) * L_ * 0.9, y, hz + 0.12 - math.cos(a) * L_ * 0.9), s=0.09, mat="Iron")
+        p1 = (xs + 0.12 + math.sin(a) * L_ * 0.9, y, hz + 0.12 - math.cos(a) * L_ * 0.9)
+        A.lattice_leg(g, (xs + 0.05, y, gz + 0.6), p1, s=0.3, mat="Timber")      # 0.3 각재 버팀(2026-11-27 비평 2팀 사소 A: 쇠막대가 철사처럼)
+        g["Iron"].box(p1[0], p1[1], p1[2], 0.4, 0.4, 0.4)                          # 끝 쇠 걸쇠
     bx(g, "DarkLog", xs, xs + 0.18, 1.75, 2.95, PLINTH + 2.2, PLINTH + 5.2)       # 알림판(창구 옆)
     bx(g, "Timber", xs + 0.18, xs + 0.24, 1.88, 2.82, PLINTH + 2.35, PLINTH + 5.05)
     for y, zz, ang, mat in ((2.1, 4.4, 0.1, "Paint"), (2.6, 4.2, -0.08, "Canvas"), (2.3, 3.0, -0.06, "Canvas")):

@@ -221,13 +221,13 @@ def enhance_corner(g):
     N.put(g, ax, ay, FL, 0.0, N.crystal_altar)
     cbox(ax - 1.6, ax + 1.6, ay - 1.6, ay + 1.6, FZ, FL + 6.0)
     g["LampPt"].box(ax + 1.2, ay - 1.2, FL + 5.2, 0.3, 0.3, 0.3)
-    N.put(g, ax - 3.2, ay - 0.6, FL, 0.3, N.rune_anvil)                         # 모루: 받침 왼쪽(길 폭 10 지킴)
-    cbox(ax - 4.4, ax - 2.0, ay - 1.8, ay + 0.6, FZ, FL + 2.6)
+    N.put(g, ax - 4.2, ay - 0.6, FL, 0.3, N.rune_anvil)                         # 모루: 받침 왼쪽(길 폭 10 지킴) — 룬 고리 밖으로 1.0(2026-11-27 비평 2팀 사소 B)
+    cbox(ax - 5.4, ax - 3.0, ay - 1.8, ay + 0.6, FZ, FL + 2.6)
     N.put(g, -7.0, -4.2, FL, 0.0, N.ore_display, 4.0, 2.0, 2.0)
     cbox(-9.0, -5.0, -5.2, -3.2, FZ, FL + 2.0)
     N.put(g, -10.4, -7.6, FL, math.pi / 2, N.grindstone)
     cbox(-11.4, -9.4, -8.7, -6.5, FZ, FL + 3.8)
-    K.lantern(g, ax - 3.2, ay - 2.4, Z_PLATE - 0.9, FZ + 8.4)
+    K.lantern(g, ax - 4.2, ay - 2.4, Z_PLATE - 0.9, FZ + 8.4)
 
 
 def crystal_crate(g):

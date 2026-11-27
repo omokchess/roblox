@@ -669,17 +669,25 @@ def door_open(g, ax, c, u, w, h, z0, face=-1, t=LOG, open_deg=95.0, leaves=2, ou
 
 
 def _leaf(g, cx, cy, rz, z0, w, h):
-    """널문 한 짝: 가운데 (cx, cy), 문짝 폭 방향 각 rz. 세로 널(두 색 번갈아) + 가로 띠 셋 + 쇠 경첩 띠"""
+    """널문 한 짝: 가운데 (cx, cy), 문짝 폭 방향 각 rz. 세로 널(두 색 번갈아, 틈 0) + 앞면 가로 띠 셋 + 쇠 경첩 띠 /
+    뒷면(2026-11-27 비평 1팀 2차 사소 10: 열어 둔 문짝 안쪽이 민짜) 가로 띠 둘 · Z 가새 · 놋쇠 빗장"""
     cr, sr = math.cos(rz), math.sin(rz)
 
-    def O(mat, du, dn, z, su, sn, sz):
-        g[mat].obox(cx + du * cr - dn * sr, cy + du * sr + dn * cr, z, su, sn, sz, rz=rz)
+    def O(mat, du, dn, z, su, sn, sz, ry=0.0):
+        g[mat].obox(cx + du * cr - dn * sr, cy + du * sr + dn * cr, z, su, sn, sz, rz=rz, ry=ry)
     nb = max(3, int(round(w / 1.1)))
     for i in range(nb):
-        O("DarkLog" if i % 2 else "Timber", -w / 2 + w * (i + 0.5) / nb, 0, z0 + h / 2, w / nb - 0.04, 0.35, h)
+        O("DarkLog" if i % 2 else "Timber", -w / 2 + w * (i + 0.5) / nb, 0, z0 + h / 2, w / nb, 0.35, h)
     for zz in (0.18, 0.5, 0.82):
         O("Timber", 0, 0.3, z0 + h * zz, w, 0.25, 0.6)
         O("Iron", 0, 0.47, z0 + h * zz, w * 0.7, 0.08, 0.28)
+    za, zb = z0 + h * 0.22, z0 + h * 0.78
+    for zz in (za, zb):
+        O("Timber", 0, -0.3, zz, w - 0.1, 0.25, 0.6)
+    dz, du = zb - za - 0.6, w - 0.7
+    O("Timber", 0, -0.3, (za + zb) / 2, math.hypot(du, dz), 0.22, 0.5, ry=-math.atan2(dz, du))
+    O("Brass", w / 2 - 0.55, -0.48, z0 + h * 0.5, 0.9, 0.1, 0.2)
+    O("Brass", w / 2 - 0.25, -0.5, z0 + h * 0.5 + 0.18, 0.12, 0.12, 0.3)
 
 
 def window(g, ax, c, u, z0, w=WIN_W, h=WIN_H, face=-1, t=LOG, frame="Paint", shutters=True, sill_snow=True):

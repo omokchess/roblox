@@ -54,6 +54,12 @@ local SKIN = {
 	Paint = { RGB(230, 226, 214), M.SmoothPlastic }, -- 흰 칠 나무 창틀(학교)
 	WinGlass = { RGB(191, 217, 230), M.Glass }, -- 진짜 창유리(들어가는 건물). 더 맑게(skin 아래)
 	LampPt = { RGB(255, 255, 255), M.SmoothPlastic },
+	BrassB = { RGB(184, 145, 63), M.Metal }, -- 2026-11-27 본부 3차: Brass 와 같은 모습(삼각형 한도 짝)
+	TrimB = { RGB(140, 139, 138), M.Concrete }, -- StoneTrim 과 같은 모습(삼각형 한도 짝)
+	DarkLog = { RGB(59, 42, 31), M.Wood }, -- 짙은 나무(판벽·문짝 — 3판과 같은 색)
+	WoodFloor = { RGB(126, 82, 50), M.Wood }, -- 마루 널(Wood 와 한 톤 차 — 3판과 같은 색)
+	StoneB = { RGB(75, 76, 82), M.Slate }, -- 두 톤 돌 켜(Stone 보다 한 톤 짙게)
+	Mortar = { RGB(46, 46, 51), M.Slate }, -- 돌 줄눈
 }
 -- 지붕과 눈은 껍데기, 불빛은 부딪히지 않는다. 나머지는 모양대로 잡는다.
 -- 조각 여럿이 든 메시를 상자로 잡으면 굴뚝까지 한 덩이 벽이 된다

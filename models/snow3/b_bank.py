@@ -384,7 +384,7 @@ def _leaf_local(q):
         a = math.pi / 2 + 2 * math.pi * k / 9
         zz = zc + 4.45 * math.sin(a)
         if zz > 0.7:
-            q["Steel"].obox(cu + 4.45 * math.cos(a), 0.6, zz, 0.9, 0.5, 0.5, ry=-a)
+            q["Iron"].obox(cu + 4.45 * math.cos(a), 0.6, zz, 0.9, 0.5, 0.5, ry=-a)      # 짙은 쇠(2026-11-27 비평 사소 3: 밝은 강철 빗장이 홀에서 가장 밝은 점)
             q["Brass"].obox(cu + 4.95 * math.cos(a), 0.6, zc + 4.95 * math.sin(a), 0.12, 0.56, 0.56, ry=-a)
     q["Brass"].hcyl(cu, -1.15, zc, 3.6, 0.1, axis="y", seg=32)
     q["Iron"].hcyl(cu, -1.2, zc, 3.3, 0.1, axis="y", seg=32)

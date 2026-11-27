@@ -155,7 +155,10 @@ def clockwork(g):
     # 추(흔들이): 천장 판 → 쇠 막대 → 놋쇠 추(앞을 보는 원판 두 겹)
     px, py = -4.0, 5.8
     bx(g, "Iron", px - 0.3, px + 0.3, py - 0.3, py + 0.3, FZ + CEIL + 0.6, FZ + CEIL + 0.9)
-    g["Iron"].cyl(px, py, FZ + 4.3, 0.06, 0.06, CEIL + 0.6 - 2.3, seg=6)
+    bx(g, "Brass", px - 0.15, px + 0.15, py - 0.15, py + 0.15, FZ + 4.3, FZ + CEIL + 0.1)        # 놋쇠 막대 0.3 각(비평 사소 7: 가는 선)
+    bx(g, "Iron", px - 0.6, px + 0.6, py - 0.2, py + 0.2, FZ + CEIL + 0.1, FZ + CEIL + 0.6)      # 매다는 쇠 받침(칼날 받침 + 볼 둘)
+    for e in (-1, 1):
+        bx(g, "Iron", px + e * 0.45 - 0.1, px + e * 0.45 + 0.1, py - 0.3, py + 0.3, FZ + CEIL - 0.3, FZ + CEIL + 0.1)
     g["Brass"].hcyl(px, py, FZ + 3.6, 0.85, 0.3, axis="y", seg=16)
     g["Iron"].hcyl(px, py - 0.18, FZ + 3.6, 0.55, 0.06, axis="y", seg=16)
     # 대기 긴 의자(왼 벽 · 오른 벽 앞 — 오른 벽 지도 판 밑은 비움)
@@ -166,8 +169,13 @@ def clockwork(g):
         for j in range(4):
             bx(g, "Stone" if (i + j) % 2 else "DarkStone", -I1 + i * 4.3, -I1 + (i + 1) * 4.3, -I1 + j * 4.3, -I1 + (j + 1) * 4.3, FZ, FZ + 0.05)
     K.S.ring(g, "Brass", 0.0, -0.4, FZ + 0.05, 3.6, 3.9, 0.03, n=24)
-    for k in range(4):
-        g["Brass"].obox(0.0, -0.4, FZ + 0.065, 0.2, 7.6 if k % 2 == 0 else 6.0, 0.03, rz=k * math.pi / 4)
+    # 시계판 꼴(비평 사소 6: 은행 금고실과 같은 8살 바퀴 → 살 빼고 눈금 12 · 바늘 둘(3.0 / 2.2) · 가운데 꼭지)
+    for k in range(12):
+        th = k * math.pi / 6
+        g["Brass"].obox(3.0 * math.sin(th), -0.4 + 3.0 * math.cos(th), FZ + 0.065, 0.4, 1.0 if k % 3 == 0 else 0.6, 0.03, rz=-th)
+    for th, ln in ((math.pi / 3, 3.0), (-math.pi / 3, 2.2)):                                 # 분침(2시) · 시침(10시)
+        g["Iron"].obox(ln / 2 * math.sin(th), -0.4 + ln / 2 * math.cos(th), FZ + 0.068, 0.4, ln, 0.035, rz=-th)
+    g["Brass"].cyl(0.0, -0.4, FZ + 0.05, 0.35, 0.35, 0.06, seg=12)
     for x in (-7.0, 7.0):
         P.sconce(g, "x", -I1, x, FZ + 7.4, face=1)
     # 문 옆 행선지 판(앞벽 안쪽, 문 왼쪽): 짙은 틀 · 검은 판 · 행선지 패 다섯 줄 + 놋쇠 화살 · 위 놋쇠 머리판(비평 1차: 앞벽이 휑함)
