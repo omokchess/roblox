@@ -55,6 +55,15 @@ task.spawn(BattleSpectator.Start, remotes)
 task.spawn(require(script.RegionAtmosphere).Start)
 -- 설원 굴 광차 타기(서버가 길을 보내면 제 캐릭터를 레일 따라)
 task.spawn(require(script.MineCartClient).Start, remotes)
+-- 필드 1인칭 고정(ALT 로 커서, 회전 관성). 전투·컷신이 카메라를 Scriptable 로 잡는 동안은 비킨다
+task.spawn(function()
+	local ok, err = pcall(function()
+		require(script.FirstPersonCamera).Start()
+	end)
+	if not ok then
+		warn("FirstPersonCamera:", err)
+	end
+end)
 -- 구독자를 다 붙인 뒤에 상태를 받기 시작한다(늦게 붙은 쪽도 마지막 상태를 받는다)
 BattleStore.Init(remotes)
 
