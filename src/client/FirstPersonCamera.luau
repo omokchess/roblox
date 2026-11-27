@@ -42,6 +42,15 @@ function FirstPersonCamera.Start()
 	RunService:BindToRenderStep("FirstPersonCamera", Enum.RenderPriority.Camera.Value + 1, function(dt)
 		local camera = workspace.CurrentCamera
 		if not camera or camera.CameraType ~= Enum.CameraType.Custom then
+			if active then
+				-- 전투·컷신이 카메라를 가져갔다: 잠갔던 마우스·몸 회전을 돌려준다(안 그러면 전투 화면에서 커서가 안 보이고 격자를 못 누른다)
+				UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+				UserInputService.MouseIconEnabled = true
+				local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					humanoid.AutoRotate = true
+				end
+			end
 			active, free = false, false
 			return
 		end
@@ -52,7 +61,8 @@ function FirstPersonCamera.Start()
 			targetYaw, targetPitch, yaw, pitch = yawNow, pitchNow, yawNow, pitchNow
 			UserInputService:GetMouseDelta() -- 쌓인 이동량 버림
 		end
-		if free or UserInputService:GetFocusedTextBox() then
+		-- 창이 열려 있으면 커서를 푼다(F2 패널 등: LocalPlayer 속성 FreeCursor = true)
+		if free or player:GetAttribute("FreeCursor") == true or UserInputService:GetFocusedTextBox() then
 			UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 			UserInputService.MouseIconEnabled = true
 			UserInputService:GetMouseDelta() -- 풀린 동안 이동량은 회전에 쓰지 않는다

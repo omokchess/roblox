@@ -47,6 +47,7 @@ local CombatMotions = require(ReplicatedStorage.Shared.Combat.CombatMotions)
 local EnemyDefinitions = require(ReplicatedStorage.Shared.EnemyDefinitions)
 local GridBattle = require(ReplicatedStorage.Shared.GridBattle)
 local GroggyGauge = require(ReplicatedStorage.Shared.GroggyGauge)
+local PartyDefinitions = require(ReplicatedStorage.Shared.PartyDefinitions)
 local PartyPresetStore = require(script.Parent.PartyPresetStore)
 local SlimeMotions = require(ReplicatedStorage.Shared.Combat.Motions.Slime)
 local PlayerProfile = require(ReplicatedStorage.Shared.PlayerProfile)
@@ -100,6 +101,7 @@ export type Session = {
 	SpectatePacket: any?,
 	-- 파티 전투(2026-11-08): 이 전투가 파티 세션인가 · 턴 시작 뒤 서버가 순서대로 해소하는 중인가
 	PartyMode: boolean?,
+	LastParty: any?, -- 마지막으로 연 파티 편성 요청(재시작용)
 	Turning: boolean?,
 	-- 편성 레벨(디버그 세션 값, 저장하지 않는다): 파티 유닛의 실제 레벨 = 유닛 레벨 + 이 값. 파티 승리마다 +1
 	PartyLevel: number,
@@ -414,6 +416,9 @@ function BattleService:_publish(player: Player, message: string?)
 	end
 
 	local classes = {}
+	-- 주인공(고를 수 있는 직업 목록 밖): 편성 창이 늘 넣어 두고 뺄 수 없다. 창이 직업 목록에서 거른다(Protagonist = true)
+	local hero = CharacterDefinitions.Get("Protagonist")
+	table.insert(classes, { Id = hero.Id, Name = hero.Name, Role = hero.Role, Color = hero.Color, BasicPower = hero.BasicPower, Conditional = false, Protagonist = true })
 	for _, definition in CharacterDefinitions.All() do
 		table.insert(classes, {
 			Id = definition.Id,
@@ -747,7 +752,7 @@ function BattleService:StartBattle(player: Player, fieldAt: CFrame?, enemyIds: {
 	GridBattle.EnemyPlan(battle, function()
 		return session.Rng:NextNumber()
 	end)
-	self:_publish(player, string.format("%s 전투 시작 — %s", if arenaKind == "Sky" then "하늘" else "필드", class.Name))
+	self:_publish(player, string.format("%s 전투 시작 — %s", if arenaKind == "Sky" then "하늘" else "필드", if party then "파티" else class.Name))
 	self:_publishBattle(player)
 	return true, nil
 end
@@ -930,6 +935,10 @@ function BattleService:_buildParty(player: Player, party: any): ({ GridBattle.Pa
 	if not clean then
 		return nil, why
 	end
+	-- 주인공이 첫 유닛("player" Id = 플레이어 자신의 캐릭터)이다
+	table.sort(clean, function(left, right)
+		return left.ClassId == PartyDefinitions.PROTAGONIST_ID and right.ClassId ~= PartyDefinitions.PROTAGONIST_ID
+	end)
 	for _, unit in clean do
 		local class = CharacterDefinitions.Get(unit.ClassId)
 		-- 실제 레벨 = 유닛 레벨(없으면 세션 레벨) + 편성 레벨. 스탯은 유닛이 정한 것만(없으면 0 — 자동 분배 없음)
@@ -979,6 +988,7 @@ function BattleService:StartParty(player: Player, request: any): (boolean, strin
 	if session.Battle then
 		self:_closeBattle(player, 0)
 	end
+	session.LastParty = request.Party -- 재시작이 같은 편성으로 다시 연다
 	return self:StartBattle(player, nil, nil, members)
 end
 
@@ -1260,10 +1270,16 @@ function BattleService:HandleAction(player: Player, request: any)
 			return
 		end
 	elseif kind == "Restart" then
+		local lastParty = if session.PartyMode then session.LastParty else nil
 		if battle then
 			self:_closeBattle(player, 0)
 		end
-		local ok, reason = self:StartBattle(player)
+		local ok, reason
+		if lastParty then
+			ok, reason = self:StartParty(player, { Party = lastParty })
+		else
+			ok, reason = self:StartBattle(player)
+		end
 		if not ok then
 			message = reason
 		else

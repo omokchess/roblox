@@ -718,6 +718,17 @@ local function box(x0: number, x1: number, y0: number, y1: number): { { X: numbe
 end
 
 local classSkills: { [string]: { Skill } } = {
+	-- 주인공(2026-11-28): 직업·스킬 미정 — 자리 표시 평타 하나. 자기 행 맨 앞의 적 한 칸을 벤다.
+	Protagonist = {
+		{
+			Id = "ProtagonistStrike",
+			Name = "평타",
+			Description = "- 앞의 적을 벤다. (직업·스킬은 미정)",
+			Damage = 14,
+			Range = "Melee",
+			Shape = { Kind = "Line", Radius = 1 },
+		},
+	},
 	Musician = {
 		{
 			Id = "Veloce",

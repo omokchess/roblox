@@ -7,13 +7,11 @@
 	F2 또는 왼쪽 위 버튼으로 연다. 지금은 모든 유저에게 보인다(BattleService OPEN_DEBUG_TO_ALL). 서버가 CanDebug 로 알려 주고,
 	명령도 서버가 다시 막는다).
 
+	2026-11-28 사용자: "전투 디버그 패널도 솔플은 빼고, 지금은 파티 편성중이니까 파티 편성 기능, 몹 배치 뭐 이런 것들만 두자."
+	솔로 전투(직업 하나 고르기·솔로 시작·필드 몹 세우기·성장 탭·카드 탭·QTE 자동)는 뺐다.
 	탭
-	  편성    직업 · 전장(하늘/필드) · 적 수·종류·배치(격자 클릭) · 체력/공격 배율 · 무기 공격력
-	          무적 · 쿨타임 없음 · 아군 피해 배율 · 자동 QTE → 전투 시작 / 필드 만남 몹 세우기
-	  전투 중 즉시 승리·패배 · 재시작 · 그만두기 · 턴 넘기기 · 쿨타임 초기화 · 회복
-	          적마다 체력 조절·처치 · 직업 자원 주기 · 상태이상 걸기(나 / 적 전체)
-	  성장    레벨 정하기 · 레벨 업(승리 판정 → 카드 제시) · 스탯 찍기/되돌리기 · 코스트 · 빌드 처음으로
-	  카드    이 직업 카드 전부 — 레벨 올리고 내리기·빼기, 무작위 빌드, 등급 거르기, 마우스 올리면 카드 미리보기
+	  파티·적 편성  파티 편성 창 열기(주인공 + 3명) · 전장 · 적 수·종류·배치(격자 클릭) · 체력/공격 배율 · 무기 공격력 · 무적 · 쿨타임 없음 · 아군 피해 배율
+	  전투 중       즉시 승리·패배 · 재시작(같은 편성) · 그만두기 · 쿨타임 초기화 · 회복 · 적·아군 체력 · 직업 자원 · 상태이상
 
 	모든 것은 서버에 **의도만** 보낸다(BattleAction). 판정·값 검사는 `BattleService` 가 한다.
 
@@ -34,10 +32,6 @@ local UserInputService = game:GetService("UserInputService")
 local AbilityCardDefinitions = require(ReplicatedStorage.Shared.AbilityCardDefinitions)
 local AbilityCards = require(ReplicatedStorage.Shared.AbilityCards)
 local BattleGrid = require(ReplicatedStorage.Shared.BattleGrid)
-local BattleSkills = require(ReplicatedStorage.Shared.BattleSkills)
-local CardAxes = require(ReplicatedStorage.Shared.CardAxes)
-local CharacterDefinitions = require(ReplicatedStorage.Shared.CharacterDefinitions)
-local ClassPassives = require(ReplicatedStorage.Shared.ClassPassives)
 local ClassResources = require(ReplicatedStorage.Shared.ClassResources)
 local Keywords = require(ReplicatedStorage.Shared.Keywords)
 local PartyBalance = require(ReplicatedStorage.Shared.PartyBalance)
@@ -64,7 +58,7 @@ local GOOD = C(64, 160, 104)
 local BAD = C(170, 58, 64)
 local BLUE = C(52, 110, 190)
 
-local TABS = { { Id = "Setup", Name = "편성" }, { Id = "Battle", Name = "전투 중" }, { Id = "Grow", Name = "성장" }, { Id = "Cards", Name = "카드" } }
+local TABS = { { Id = "Setup", Name = "파티·적 편성" }, { Id = "Battle", Name = "전투 중" } }
 
 -- 서버에 의도만 보낸다(판정·검사는 BattleService). _build 의 빠른 줄도 쓰므로 위에 둔다.
 local function send(request: { [string]: any })
@@ -95,6 +89,7 @@ function DebugBattlePanel.new(remotes: Folder)
 	self.party = { Units = {}, Brush = nil, Selected = nil, Lifted = false, Data = nil, PresetKey = nil, Confirm = nil, Msg = "", Valid = false, ServerMsg = "" } :: any
 	-- 클라이언트에도 카드 풀을 등록한다(순수 자료). 카드 탭이 직업 카드 전부를 보여 준다.
 	AbilityCards.Register()
+	self:_partyEnsureHero(self.party.Units)
 	self:_build()
 	RunService.RenderStepped:Connect(function()
 		self:_pollHover()
@@ -232,7 +227,7 @@ function DebugBattlePanel:_build()
 	self.tabButtons = {}
 	for index, tab in TABS do
 		local button = make("TextButton", {
-			Size = UDim2.new(0.25, -5, 1, 0),
+			Size = UDim2.new(0.5, -3, 1, 0),
 			BackgroundColor3 = CARD,
 			BorderSizePixel = 0,
 			Text = tab.Name,
@@ -280,7 +275,7 @@ function DebugBattlePanel:_build()
 	local quick = make("Frame", {
 		Name = "QuickBar",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Size = UDim2.fromOffset(566, 34),
+		Size = UDim2.fromOffset(500, 34),
 		Position = UDim2.new(0.5, 0, 0, 8),
 		BackgroundColor3 = BG,
 		BackgroundTransparency = 0.15,
@@ -295,14 +290,13 @@ function DebugBattlePanel:_build()
 		{ "승리", "Win", GOOD },
 		{ "패배", "Lose", BAD },
 		{ "재시작", "Restart" },
-		{ "턴 넘기기", "SkipTurn" },
 		{ "쿨 초기화", "ClearCooldowns" },
 		{ "회복", "HealAll" },
 		{ "그만두기", "End" },
 		{ "패널 F2", "Panel", C(70, 56, 110) },
 	} do
 		local b = make("TextButton", {
-			Size = UDim2.new(0, if index == 8 then 76 else 64, 1, 0),
+			Size = UDim2.new(0, if index == 7 then 76 else 64, 1, 0),
 			BackgroundColor3 = entry[3] or C(44, 48, 62),
 			BorderSizePixel = 0,
 			Text = entry[1],
@@ -346,6 +340,8 @@ end
 
 function DebugBattlePanel:SetOpen(open: boolean)
 	self.open = open
+	-- 1인칭 고정(FirstPersonCamera)이 커서를 풀도록: 패널이 열려 있는 동안 FreeCursor
+	Players.LocalPlayer:SetAttribute("FreeCursor", open)
 	self.panel.Visible = open
 	self.partyOpen = false
 	self.pw.Win.Visible = false
@@ -355,6 +351,10 @@ function DebugBattlePanel:SetOpen(open: boolean)
 	self.hoverGui = nil
 	if open then
 		self:_refresh(true)
+		-- 지금은 파티 편성 시험 중 — 전투 중이 아니면 편성 창부터 연다(닫으면 적 편성·시험 편의 탭이 보인다)
+		if self.state and not self.state.InBattle then
+			self:SetPartyOpen(true)
+		end
 	end
 end
 
@@ -500,19 +500,10 @@ function DebugBattlePanel:_refresh(resetScroll: boolean?)
 	for id, b in self.tabButtons do
 		b.BackgroundColor3 = if id == self.tab then C(70, 56, 110) else CARD
 	end
-	local class = nil
-	for _, entry in state.Classes or {} do
-		if entry.Id == state.Config.ClassId then
-			class = entry
-		end
-	end
 	self.subtitle.Text = string.format(
-		'%s  ·  Lv.<font color="rgb(255,205,90)">%d</font>  ·  %d승  ·  체력 %d  ·  무기 %d%s',
-		class and class.Name or state.Config.ClassId,
-		state.Level,
+		'파티 전투 시험  ·  편성 레벨 <font color="rgb(255,205,90)">%d</font>  ·  %d승%s',
+		state.PartyLevel or 0,
 		state.Wins,
-		state.MaxHealth,
-		state.Power,
 		if state.InBattle then '  ·  <font color="rgb(255,120,120)">전투 중</font>' else ""
 	)
 
@@ -524,12 +515,8 @@ function DebugBattlePanel:_refresh(resetScroll: boolean?)
 	local section = column(self.body)
 	if self.tab == "Setup" then
 		self:_setupTab(section)
-	elseif self.tab == "Battle" then
-		self:_battleTab(section)
-	elseif self.tab == "Grow" then
-		self:_growTab(section)
 	else
-		self:_cardsTab(section)
+		self:_battleTab(section)
 	end
 	if not resetScroll then
 		task.defer(function()
@@ -548,50 +535,22 @@ function DebugBattlePanel:_setupTab(section: (string?, number?) -> Frame)
 	local state = self.state
 	local config = state.Config
 
-	-- 시작 버튼을 맨 위에(가장 자주 누른다)
+	-- 파티 편성 창(주인공 + 3명 · 프리셋)이 전투를 여는 유일한 길이다(솔로 전투 시작은 2026-11-28 뺐다)
 	local top = section(nil)
-	local go = row(top, 1, 40)
-	button(go, if state.InBattle then "재시작" else "전투 시작", 196, BAD, function()
-		send({ Kind = if state.InBattle then "Restart" else "Start" })
-	end, 1)
-	button(go, string.format("필드 몹 세우기 (%d)", state.Encounters or 0), 130, C(60, 110, 70), function()
-		send({ Kind = "SpawnEncounter" })
-	end, 2)
-	button(go, "몹 치우기", 66, nil, function()
-		send({ Kind = "ClearEncounters" })
-	end, 3)
-	local partyLine = row(top, 2, 34)
-	button(partyLine, "파티 편성 — 직업·배치·카드·프리셋 (화면 가운데 창)", PANEL_WIDTH - 60, C(70, 56, 110), function()
+	local partyLine = row(top, 1, 40)
+	button(partyLine, "파티 편성 열기 — 주인공 + 3명 · 배치 · 카드 · 프리셋 · 전투 시작", PANEL_WIDTH - 60, BAD, function()
 		self:SetPartyOpen(true)
 	end, 1)
-
-	-- 직업 세 칸씩(조건부 획득 직업은 자물쇠 — 디버그로는 고를 수 있다)
-	local classes = section("직업  <font color=\"rgb(150,154,170)\" size=\"12\">바꾸면 카드 빌드가 비워진다 · 🔒 조건부 획득(디버그로 열림)</font>")
-	local rows = math.ceil(#(state.Classes or {}) / 3)
-	local grid = make("Frame", { Size = UDim2.new(1, 0, 0, rows * 46 + (rows - 1) * 5), BackgroundTransparency = 1, LayoutOrder = 1 }, classes)
-	make("UIGridLayout", { CellSize = UDim2.new(1 / 3, -4, 0, 46), CellPadding = UDim2.fromOffset(5, 5), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
-	for index, entry in state.Classes or {} do
-		local picked = entry.Id == config.ClassId
-		-- 고른 직업은 어두운 바탕에 직업색을 조금 섞고 테두리를 직업색으로(밝은 직업색 위 흰 글자는 안 읽힌다)
-		local b = button(grid, string.format('%s%s\n<font size="11" color="rgb(170,174,190)">%s</font>', if entry.Conditional then "🔒 " else "", entry.Name, if entry.Conditional then (entry.Hall or "조건부 획득") else (entry.Role or "")), 0, if picked then CARD:Lerp(entry.Color, 0.28) else nil, function()
-			patch({ ClassId = entry.Id })
-		end, index)
-		if picked then
-			make("UIStroke", { Color = entry.Color, Thickness = 2 }, b)
-		end
-		-- 올리면 곁 창이 그 직업 정보로(떼면 고른 직업으로 돌아온다)
-		table.insert(self.hoverTargets, {
-			Gui = b,
-			Key = "class:" .. entry.Id,
-			Show = function()
-				self:_showClass(entry.Id)
-			end,
-		})
+	if state.InBattle then
+		local line = row(top, 2, 30)
+		button(line, "재시작 (같은 편성)", 196, nil, function()
+			send({ Kind = "Restart" })
+		end, 1)
 	end
 
 	-- 전장
 	local arena = section("전장")
-	choice(arena, 1, { { "Sky", "하늘 전장 (혼자)" }, { "Field", "필드 (지금 서 있는 앞)" } }, config.Arena, function(value)
+	choice(arena, 1, { { "Sky", "하늘 전장" }, { "Field", "필드 (지금 서 있는 앞)" } }, config.Arena, function(value)
 		patch({ Arena = value })
 	end)
 
@@ -681,13 +640,6 @@ function DebugBattlePanel:_setupTab(section: (string?, number?) -> Frame)
 	toggle(cheats, 2, "재사용 대기 없음", config.NoCooldown, function(value)
 		patch({ NoCooldown = value })
 	end)
-	local qteLine = row(cheats, 3)
-	label(qteLine, "QTE", 60, 1)
-	for index, option in { { "Off", "직접" }, { "Success", "자동 성공" }, { "Partial", "자동 부분" }, { "Fail", "자동 실패" } } do
-		button(qteLine, option[2], 82, if config.AutoQte == option[1] then BLUE else nil, function()
-			patch({ AutoQte = option[1] })
-		end, 1 + index)
-	end
 end
 
 function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
@@ -695,8 +647,8 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 	if not state.InBattle then
 		local box = section("전투 중이 아닙니다")
 		local line = row(box, 1, 38)
-		button(line, "전투 시작", 200, BAD, function()
-			send({ Kind = "Start" })
+		button(line, "파티 편성 열기", 200, BAD, function()
+			self:SetPartyOpen(true)
 		end, 1)
 		return
 	end
@@ -717,18 +669,15 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 		send({ Kind = "End" })
 	end, 4)
 	local b = row(flow, 2, 34)
-	button(b, "턴 넘기기", 100, nil, function()
-		send({ Kind = "SkipTurn" })
-	end, 1)
-	button(b, "재사용 대기 초기화", 110, nil, function()
+	button(b, "재사용 대기 초기화", 130, nil, function()
 		send({ Kind = "ClearCooldowns" })
-	end, 2)
-	button(b, "나 회복", 80, nil, function()
+	end, 1)
+	button(b, "아군 회복", 90, nil, function()
 		send({ Kind = "HealAll" })
-	end, 3)
-	button(b, "적도 회복", 80, nil, function()
+	end, 2)
+	button(b, "적도 회복", 90, nil, function()
 		send({ Kind = "HealAll", Enemies = true })
-	end, 4)
+	end, 3)
 
 	-- 파티 세션: 아군 유닛 고르기 줄(행동 순서대로 ①②③). 자원 주기 · 상태이상 '고른 유닛' · 체력이 이 유닛에 걸린다
 	local members: { any } = {}
@@ -770,7 +719,6 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 	local pickedId: string? = pickedMember and pickedMember.Id
 
 	if snapshot then
-		local me = if #members == 0 then snapshot.Units and snapshot.Units.player else nil
 		local foes = section(string.format("적  <font size=\"12\" color=\"rgb(150,154,170)\">%d턴</font>", snapshot.Turn or 0))
 		local ids = {}
 		for id, unit in snapshot.Units or {} do
@@ -820,22 +768,11 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 				end, 6)
 			end
 		end
-		if me then
-			local mine = section(string.format("나  체력 %d/%d · 스테미나 %d", me.Health, me.MaxHealth, snapshot.AllyStamina or 0))
-			local line = row(mine, 1, 28)
-			for index, value in { { 1, "체력 1" }, { 0.5, "절반" }, { 1.0, "가득" } } do
-				button(line, value[2], 90, nil, function()
-					local target = if value[2] == "체력 1" then 1 else math.floor(me.MaxHealth * value[1])
-					send({ Kind = "SetHealth", Id = "player", Value = target })
-				end, index)
-			end
-		end
-
 		-- 직업 자원
-		local resources = ClassResources.ForClass(if pickedMember then pickedMember.ClassId else (snapshot.AllyClassId or state.Config.ClassId))
+		local resources = if pickedMember then ClassResources.ForClass(pickedMember.ClassId) else {}
 		if #resources > 0 then
 			local box = section("자원 주기")
-			local stacks = if pickedMember then (pickedMember.Status and pickedMember.Status.Stacks or {}) else (snapshot.AllyStatus and snapshot.AllyStatus.Stacks or {})
+			local stacks = pickedMember.Status and pickedMember.Status.Stacks or {}
 			for index, id in resources do
 				local line = row(box, index, 26)
 				label(line, ClassResources.Label(id), 110, 1)
@@ -850,9 +787,7 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 	end
 
 	local status = section("상태이상 걸기")
-	local targetOptions = if pickedId
-		then { { "Enemies", "적 전체" }, { "Ally", "고른 유닛" }, { "AllAllies", "아군 전체" } }
-		else { { "Enemies", "적 전체" }, { "Ally", "나" } }
+	local targetOptions = { { "Enemies", "적 전체" }, { "Ally", "고른 유닛" }, { "AllAllies", "아군 전체" } }
 	choice(status, 1, targetOptions, self.statusTarget, function(value)
 		self.statusTarget = value
 		self:_refresh()
@@ -877,223 +812,15 @@ function DebugBattlePanel:_battleTab(section: (string?, number?) -> Frame)
 	end
 end
 
-function DebugBattlePanel:_growTab(section: (string?, number?) -> Frame)
-	local state = self.state
-	local level = section("레벨")
-	stepper(level, 1, "레벨", tostring(state.Level), { { -5, "−5" }, { -1, "−1" }, { 1, "+1" }, { 5, "+5" } }, function(step)
-		send({ Kind = "SetLevel", Level = state.Level + step })
-	end)
-	local up = row(level, 2, 34)
-	button(up, "레벨 업 (승리 판정 → 카드)", 230, C(120, 90, 30), function()
-		send({ Kind = "LevelUp" })
-	end, 1)
-	label(up, string.format("%d승 · 최대 %d", state.Wins, state.MaxLevel or 60), 150, 2, DIM)
-
-	local stats = section(string.format('스탯  <font color="rgb(255,205,90)">포인트 %d</font>', state.Points))
-	for index, id in StatDefinitions.Order do
-		local definition = StatDefinitions.Get(id)
-		local points = state.Stats[id] or 0
-		local line = stepper(stats, index, definition and definition.Name or id, tostring(points), { { -5, "−5" }, { -1, "−1" }, { 1, "+1" }, { 5, "+5" } }, function(step)
-			send({ Kind = "SpendStat", StatId = id, Amount = step })
-		end)
-		-- 올리면 곁 창에 이 스탯의 효과와 영향 받는 직업(카드 줄과 같은 칠)
-		line.BackgroundColor3 = C(70, 58, 112)
-		make("UICorner", { CornerRadius = UDim.new(0, 5) }, line)
-		local lit = make("UIStroke", { Color = GOLD, Thickness = 1.5, Enabled = false }, line)
-		table.insert(self.hoverTargets, {
-			Gui = line,
-			Key = string.format("stat:%s:%d", id, points),
-			Show = function()
-				self:_showStat(id, points)
-			end,
-			Paint = function(on: boolean)
-				line.BackgroundTransparency = if on then 0.2 else 1
-				lit.Enabled = on
-			end,
-		})
-	end
-	local reset = row(stats, 10, 30)
-	button(reset, "스탯 되돌리기", 140, nil, function()
-		send({ Kind = "ResetStats" })
-	end, 1)
-
-	local economy = section(string.format("코스트 %d", if state.Offer then state.Offer.Cost else 0))
-	local line = row(economy, 1, 30)
-	button(line, "코스트 +30", 110, nil, function()
-		send({ Kind = "GiveCost", Amount = 30 })
-	end, 1)
-	button(line, "코스트 +300", 110, nil, function()
-		send({ Kind = "GiveCost", Amount = 300 })
-	end, 2)
-	local wipe = row(economy, 2, 34)
-	button(wipe, "빌드 처음으로 (레벨·스탯·카드·승수)", 330, BAD, function()
-		send({ Kind = "ResetBuild" })
-	end, 1)
-end
-
-function DebugBattlePanel:_cardsTab(section: (string?, number?) -> Frame)
-	local state = self.state
-	local classId = state.Config.ClassId
-	local owned: { [string]: any } = {}
-	local axisCount: { [string]: number } = {}
-	for _, card in state.Owned or {} do
-		owned[card.Id] = card
-		for _, tag in card.Tags or {} do
-			axisCount[tag] = (axisCount[tag] or 0) + 1
-		end
-	end
-
-	local top = section(string.format("내 빌드  %d장", #(state.Owned or {})))
-	local axes = make("Frame", { Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, LayoutOrder = 1 }, top)
-	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 5) }, axes)
-	for _, axis in CardAxes.ForClass(classId) do
-		local chip = make("TextLabel", {
-			AutomaticSize = Enum.AutomaticSize.X,
-			Size = UDim2.fromOffset(0, 22),
-			BackgroundColor3 = axis.Color,
-			BackgroundTransparency = 0.8,
-			BorderSizePixel = 0,
-			Text = string.format("%s <b>%d</b>", axis.Name, axisCount[axis.Id] or 0),
-			RichText = true,
-			TextColor3 = axis.Color,
-			Font = Enum.Font.GothamBold,
-			TextSize = 12,
-		}, axes)
-		make("UICorner", { CornerRadius = UDim.new(0, 11) }, chip)
-		make("UIPadding", { PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9) }, chip)
-	end
-	local buttons = row(top, 2, 30)
-	button(buttons, "무작위 빌드", 110, C(60, 110, 70), function()
-		send({ Kind = "RandomBuild" })
-	end, 1)
-	button(buttons, "모두 빼기", 100, BAD, function()
-		send({ Kind = "ClearCards" })
-	end, 2)
-	label(buttons, "다음 전투부터 적용", 150, 3, DIM)
-
-	local filterBox = section(nil)
-	choice(filterBox, 1, { { "All", "전체" }, { "Essential", "필수" }, { "Rare", "희귀" }, { "Common", "일반" }, { "Owned", "보유" } }, self.cardFilter, function(value)
-		self.cardFilter = value
-		self:_refresh(true)
-	end)
-
-	local grades = { "Essential", "Rare", "Common" }
-	for _, grade in grades do
-		if self.cardFilter ~= "All" and self.cardFilter ~= "Owned" and self.cardFilter ~= grade then
-			continue
-		end
-		local pool = AbilityCardDefinitions.GetPool(classId, grade :: any)
-		local style = CardView.GRADE_STYLE[grade]
-		local box = section(string.format('<font color="#%s">%s</font>  %d장', style.Edge:ToHex(), style.Name, #pool))
-		local sorted = table.clone(pool)
-		table.sort(sorted, function(x, y)
-			return x.Name < y.Name
-		end)
-		for index, card in sorted do
-			local have = owned[card.Id]
-			if self.cardFilter == "Owned" and not have then
-				continue
-			end
-			local maxLevel = AbilityCardDefinitions.MaxLevelFor(card)
-			local level = have and have.Level or 0
-			local line = row(box, index, 30)
-			-- 마우스를 올린 줄: 보라 바탕 + 금색 테두리(곁 창에 뜬 카드가 어느 줄인지)
-			line.BackgroundColor3 = C(70, 58, 112)
-			make("UICorner", { CornerRadius = UDim.new(0, 5) }, line)
-			local lit = make("UIStroke", { Color = GOLD, Thickness = 1.5, Enabled = false }, line)
-			local thumbHolder = make("Frame", { Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, LayoutOrder = 1 }, line)
-			CardView.Thumb(thumbHolder, card, 28)
-			-- ✎ 그림 있음 · 파 파티 전제 · 배 전직 배타(함께 못 드는 필수가 있다)
-			local marks = (if card.Art then ' <font color="rgb(150,154,170)" size="11">✎</font>' else "")
-				.. (if card.Party then ' <font color="rgb(110,170,240)" size="11">파</font>' else "")
-				.. (if card.Excludes and #card.Excludes > 0 then ' <font color="rgb(230,110,120)" size="11">배</font>' else "")
-			local name = label(line, card.Name .. marks, 158, 2, if have then TEXT else DIM)
-			label(line, if have then string.format("Lv %d/%d", level, maxLevel) else string.format("−/%d", maxLevel), 52, 3, if have then GOLD else DIM, Enum.TextXAlignment.Center)
-			button(line, "−", 30, nil, function()
-				if level <= 1 then
-					send({ Kind = "RemoveCard", CardId = card.Id })
-				else
-					send({ Kind = "AddCard", CardId = card.Id, Level = level - 1 })
-				end
-			end, 4)
-			button(line, "+", 30, nil, function()
-				send({ Kind = "AddCard", CardId = card.Id, Level = math.min(level + 1, maxLevel) })
-			end, 5)
-			button(line, "최대", 44, nil, function()
-				send({ Kind = "AddCard", CardId = card.Id, Level = maxLevel })
-			end, 6)
-			-- 줄 전체(− + 최대 버튼 포함)가 호버 자리. 레벨이 바뀌면 키가 달라져 곁 창을 다시 그린다
-			table.insert(self.hoverTargets, {
-				Gui = line,
-				Key = string.format("card:%s:%d", card.Id, level),
-				Show = function()
-					self:_showCard(card, level, maxLevel)
-				end,
-				Paint = function(on: boolean)
-					line.BackgroundTransparency = if on then 0.2 else 1
-					lit.Enabled = on
-					name.TextColor3 = if on then Color3.new(1, 1, 1) elseif have then TEXT else DIM
-				end,
-			})
-		end
-	end
-end
-
---=== 곁 창 ===--
-
 local function inside(gui: GuiObject, point: Vector2): boolean
 	local at, size = gui.AbsolutePosition, gui.AbsoluteSize
 	return point.X >= at.X and point.X < at.X + size.X and point.Y >= at.Y and point.Y < at.Y + size.Y
 end
 
--- 매 프레임: 마우스 아래 호버 대상을 칠하고, 곁 창에 보일 것(키)이 바뀌면 다시 그린다
+-- 매 프레임: 파티 편성 창의 마우스 아래 직업(코스트 근거)·카드(미리보기)를 보인다
 function DebugBattlePanel:_pollHover()
-	if not self.open then
-		return
-	end
-	if self.partyOpen then
+	if self.open and self.partyOpen then
 		self:_pollPartyHover()
-		return
-	end
-	-- AbsolutePosition 은 IgnoreGuiInset 이어도 상단바 아래가 원점이고, GetMouseLocation 은 화면 맨 위가 원점이다 —
-	-- 상단바 높이를 빼야 같은 기준이 된다(2026-10-31 사용자: "마우스를 올리면 2~3칸 아래 카드가 호버된다")
-	local mouse = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
-	local found = nil
-	if inside(self.body, mouse) then
-		for _, target in self.hoverTargets do
-			if target.Gui.Parent and inside(target.Gui, mouse) then
-				found = target
-				break
-			end
-		end
-	end
-	local gui = found and found.Gui
-	if gui ~= self.hoverGui then
-		if self.hoverPaint then
-			self.hoverPaint(false)
-		end
-		self.hoverGui = gui
-		self.hoverPaint = found and found.Paint
-		if self.hoverPaint then
-			self.hoverPaint(true)
-		end
-	end
-	local key, show = nil, nil
-	if found then
-		key, show = found.Key, found.Show
-	elseif self.tab == "Setup" and self.state then
-		local classId = self.state.Config.ClassId
-		key, show = "class:" .. classId, function()
-			self:_showClass(classId)
-		end
-	end
-	if key ~= self.sideKey then
-		self.sideKey = key
-		if show then
-			show()
-		else
-			self.side.Visible = false
-		end
 	end
 end
 
@@ -1153,10 +880,6 @@ local function tile(parent: Instance, order: number, accent: Color3): Frame
 	return box
 end
 
-local function heading(parent: Instance, content: string, order: number)
-	text(parent, content, order, 14, GOLD, true)
-end
-
 local function hexOf(color: Color3): string
 	return "#" .. color:ToHex()
 end
@@ -1165,81 +888,7 @@ local function dim(content: string): string
 	return string.format('<font color="%s">%s</font>', hexOf(DIM), content)
 end
 
--- 스킬·패시브 글: [키워드] 하늘색 · `스킬` 굵게 · 숫자 노랑(CardView 와 같은 칠)
-local function rich(content: string): string
-	return CardView.Highlight(content)
-end
-
 -- 직업 정보: 액티브(1·2·3번 · 강화 · [집중력] 변형) · 패시브 · 전용 상태
-function DebugBattlePanel:_showClass(classId: string)
-	if not CharacterDefinitions.IsValid(classId) then
-		self.side.Visible = false
-		return
-	end
-	local def = CharacterDefinitions.Get(classId)
-	local body = self:_sideReset()
-	local picked = self.state and self.state.Config.ClassId == classId
-	text(body, string.format('<font color="%s">%s</font>  <font size="13" color="%s">%s</font>', hexOf(def.Color), def.Name, hexOf(DIM), def.Role), 1, 20, TEXT, true)
-	text(body, string.format("%s체력 %d · 무기 %d%s", if picked then "" else dim("(미리보기) "), def.MaxHealth, def.BasicPower, if def.Conditional then dim(" · 🔒 " .. (def.Hall or "조건부 획득")) else ""), 2, 12, DIM)
-	text(body, def.Description, 3, 13, TEXT)
-
-	local skills: { { any } } = {}
-	for index, skill in BattleSkills.ForClass(classId) do
-		table.insert(skills, { skill, string.format("%d번", index) })
-	end
-	for _, skill in BattleSkills.Upgrades() do
-		if skill.ClassId == classId then
-			table.insert(skills, { skill, "강화" })
-		end
-	end
-	for _, skill in BattleSkills.Focus() do
-		if skill.ClassId == classId then
-			table.insert(skills, { skill, "변형" })
-		end
-	end
-	heading(body, string.format("액티브  %s", dim(string.format("%d개", #skills))), 10)
-	for index, entry in skills do
-		local skill = entry[1]
-		local box = tile(body, 10 + index, def.Color)
-		text(box, string.format('<font color="%s">%s</font>  %s', hexOf(def.Color), entry[2], skill.Name), 1, 14, TEXT, true)
-		local stats = { BattleSkills.RangeLabel(skill), BattleSkills.ShapeText(skill) }
-		if (skill.Damage or 0) > 0 then
-			table.insert(stats, string.format('피해 <font color="%s"><b>%s</b></font>%s', hexOf(GOLD), fmt(skill.Damage), if skill.HitWeights then string.format(" (%d연타)", #skill.HitWeights) else ""))
-		end
-		if (skill.Cooldown or 0) > 0 then
-			table.insert(stats, string.format("재사용 %d턴", skill.Cooldown))
-		end
-		if ((skill :: any).Stamina or 0) > 0 then
-			table.insert(stats, string.format("스테미나 %d", (skill :: any).Stamina))
-		end
-		text(box, table.concat(stats, "  ·  "), 2, 12, DIM)
-		if skill.Description and skill.Description ~= "" then
-			text(box, rich(skill.Description), 3, 13, TEXT)
-		end
-	end
-
-	local kit = ClassPassives.Get(classId)
-	local passives = kit and kit.Passives or {}
-	heading(body, string.format("패시브  %s", dim(string.format("%d개", #passives))), 100)
-	for index, passive in passives do
-		local box = tile(body, 100 + index, GOLD)
-		text(box, passive.Name, 1, 14, TEXT, true)
-		text(box, rich(passive.Description), 2, 13, TEXT)
-	end
-
-	local statuses = kit and kit.StatusKeywords or {}
-	if #statuses > 0 then
-		heading(body, "전용 상태", 200)
-		for index, id in statuses do
-			local keyword = Keywords.Get(id)
-			if keyword then
-				local box = tile(body, 200 + index, C(120, 200, 255))
-				text(box, keyword.Name, 1, 13, C(120, 200, 255), true)
-				text(box, keyword.Description, 2, 12, DIM)
-			end
-		end
-	end
-end
 
 --[[
 	카드 글을 칠한다: 지금 레벨 값은 노랑, 다음 레벨 값은 초록 "▸값", [키워드] 하늘색, `스킬` 굵게.
@@ -1741,6 +1390,35 @@ end
 
 --=== 편성 상태 ===--
 
+-- 주인공(0코스트 · 플레이어 캐릭터)은 늘 편성에 있다. 없으면 빈 칸(가운데 행 앞쪽부터)에 넣는다
+function DebugBattlePanel:_partyEnsureHero(units: { any })
+	for _, unit in units do
+		if unit.ClassId == PartyDefinitions.PROTAGONIST_ID then
+			return
+		end
+	end
+	local taken: { [string]: boolean } = {}
+	for _, unit in units do
+		taken[unit.X .. "," .. unit.Y] = true
+	end
+	for _, y in { 2, 1, 3 } do
+		for x = 3, 1, -1 do
+			if not taken[x .. "," .. y] then
+				table.insert(units, { ClassId = PartyDefinitions.PROTAGONIST_ID, X = x, Y = y, Level = DEFAULT_UNIT_LEVEL, Cards = {}, Stats = {} })
+				return
+			end
+		end
+	end
+	for y = 1, BattleGrid.DEFAULT_HEIGHT do
+		for x = 1, BattleGrid.DEFAULT_WIDTH do
+			if not taken[x .. "," .. y] then
+				table.insert(units, { ClassId = PartyDefinitions.PROTAGONIST_ID, X = x, Y = y, Level = DEFAULT_UNIT_LEVEL, Cards = {}, Stats = {} })
+				return
+			end
+		end
+	end
+end
+
 function DebugBattlePanel:_partyUnitAt(x: number, y: number): any
 	for _, unit in self.party.Units do
 		if unit.X == x and unit.Y == y then
@@ -1785,6 +1463,9 @@ function DebugBattlePanel:_partyCell(x: number, y: number)
 		local existing = self:_partyUnitOf(p.Brush)
 		if existing then
 			existing.X, existing.Y = x, y
+		elseif #p.Units >= PartyDefinitions.PARTY_SIZE then
+			self:_partyMsg(string.format("파티는 %d명까지입니다(주인공 포함) — 다른 유닛을 먼저 빼세요.", PartyDefinitions.PARTY_SIZE), true)
+			return
 		else
 			table.insert(p.Units, { ClassId = p.Brush, X = x, Y = y, Level = DEFAULT_UNIT_LEVEL, Cards = {} })
 		end
@@ -1811,6 +1492,10 @@ end
 
 function DebugBattlePanel:_partyRemove(classId: string)
 	local p = self.party
+	if classId == PartyDefinitions.PROTAGONIST_ID then
+		self:_partyMsg("주인공은 뺄 수 없습니다 — 칸만 옮길 수 있습니다.", true)
+		return
+	end
 	for index, unit in p.Units do
 		if unit.ClassId == classId then
 			table.remove(p.Units, index)
@@ -2131,9 +1816,11 @@ function DebugBattlePanel:_partyEditor()
 		unit.Cards = {}
 		self:_partyRefresh()
 	end, 2)
-	button(actions, "유닛 빼기", 84, BAD, function()
-		self:_partyRemove(unit.ClassId)
-	end, 3)
+	if unit.ClassId ~= PartyDefinitions.PROTAGONIST_ID then
+		button(actions, "유닛 빼기", 84, BAD, function()
+			self:_partyRemove(unit.ClassId)
+		end, 3)
+	end
 
 	local have: { [string]: number } = {}
 	for _, card in unit.Cards do
@@ -2335,9 +2022,26 @@ function DebugBattlePanel:_partyLoad()
 		return
 	end
 	p.Units = copyUnits(entry.Units)
+	-- 옛 프리셋(2026-11-28 이전)엔 주인공이 없고 4명이 넘을 수 있다 — 주인공을 넣고, 넘치면 뒤쪽 유닛부터 뺀다
+	local added = #p.Units
+	self:_partyEnsureHero(p.Units)
+	added = #p.Units - added
+	local dropped = 0
+	while #p.Units > PartyDefinitions.PARTY_SIZE do
+		for index = #p.Units, 1, -1 do
+			if p.Units[index].ClassId ~= PartyDefinitions.PROTAGONIST_ID then
+				table.remove(p.Units, index)
+				dropped += 1
+				break
+			end
+		end
+	end
 	local first = PartyDefinitions.ActionOrder(p.Units)[1]
 	p.Selected, p.Brush, p.Lifted, p.Confirm = if first then first.ClassId else nil, nil, false, nil
-	self:_partyMsg(string.format("'%s' 을 불러왔습니다.", entry.Name), false)
+	self:_partyMsg(
+		string.format("'%s' 을 불러왔습니다.%s%s", entry.Name, if added > 0 then " 주인공을 넣었습니다." else "", if dropped > 0 then string.format(" 4명을 넘어 %d명을 뺐습니다.", dropped) else ""),
+		false
+	)
 	self:_partyRefresh()
 end
 

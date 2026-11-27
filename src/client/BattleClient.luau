@@ -1709,9 +1709,6 @@ local CALLISTO_CAM = { Eye = Vector3.new(-61, 31, 19), Aim = Vector3.new(7, 0, -
 local function callistoPlane(layout: BattleArena.Layout): CFrame
 	return layout.Origin + Vector3.new(0, (layout.FlatY or layout.Origin.Y) - layout.Origin.Y, 0)
 end
-local function callistoCamera(layout: BattleArena.Layout): CFrame
-	return callistoPlane(layout) * CFrame.lookAt(CALLISTO_CAM.Eye, CALLISTO_CAM.Aim)
-end
 
 function BattleClient:_lockCamera()
 	local camera = workspace.CurrentCamera
@@ -1719,25 +1716,22 @@ function BattleClient:_lockCamera()
 		return
 	end
 	camera.CameraType = Enum.CameraType.Scriptable
-	if self.snapshot and self.snapshot.Callisto then
-		camera.CFrame = callistoCamera(self.layout)
-	else
-		camera.CFrame = BattleArena.FitCameraCFrame(
-			self.layout,
-			GRID_WIDTH,
-			GRID_HEIGHT,
-			camera.FieldOfView,
-			camera.ViewportSize.X / math.max(camera.ViewportSize.Y, 1),
-			CAMERA_PITCH
-		)
-	end
+	-- 2026-11-28 사용자: "캠은 이제 일반 전투 캠 위치 고정이야. 보스전 할 때에도." — 칼리스토·디버그 보스 카메라·떠다님·컷신 카메라 모두 끔
+	camera.CFrame = BattleArena.FitCameraCFrame(
+		self.layout,
+		GRID_WIDTH,
+		GRID_HEIGHT,
+		camera.FieldOfView,
+		camera.ViewportSize.X / math.max(camera.ViewportSize.Y, 1),
+		CAMERA_PITCH
+	)
 	-- 화면 흔들림은 연출이 이 자리를 기준으로 더한다
 	if self.director then
 		self.director:SetCamera(camera.CFrame)
 	end
 	-- 디버그전: 같은 구도에서 천천히 살짝 흔들린다(RenderStepped 가 매 프레임 _bossCamera 로 옮긴다)
-	self.bossCamBase = if self.snapshot and (self.snapshot.Boss or self.snapshot.Callisto) then camera.CFrame else nil
-	self.bossCamStart = if self.bossCamBase then os.clock() else nil
+	self.bossCamBase = nil -- 고정 카메라: 보스 카메라·떠다님 없음
+	self.bossCamStart = nil
 	self:_scanOccluders()
 end
 

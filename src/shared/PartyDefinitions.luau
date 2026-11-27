@@ -7,7 +7,7 @@
 	  HOMING_PER_TURN 매 턴 받는 유도 수(3, 이월 없음)
 	  Cost(classId)   직업 코스트(표에 없으면 nil)
 	  ActionOrder     행동 순서 — 행(y) 1순위(위 → 아래), 열(x) 2순위(화면 왼쪽 = 뒤열 x=6 → 앞열 x=1)
-	  Validate        파티 구성 검사(코스트 합 · 같은 직업 중복 · 칸 범위 · 칸 겹침)
+	  Validate        파티 구성 검사(주인공 필수 · 정확히 4명 · 코스트 합 · 같은 직업 중복 · 칸 범위 · 칸 겹침)
 	  Examples        예시 프리셋(PartyBalance.EXAMPLES)
 
 	사용자(2026-11-08): "제일 위쪽 행에, 제일 왼쪽 열부터 차례대로 세자. 세는 순서는 행이 1순위, 열이 2순위."
@@ -21,6 +21,9 @@ local PartyDefinitions = {}
 
 PartyDefinitions.COST_LIMIT = 8
 PartyDefinitions.HOMING_PER_TURN = 3
+-- 2026-11-28 사용자: 파티는 4인 고정, 0코스트 주인공 유닛(플레이어가 직접 싸우는 캐릭터)이 필수. 주인공이 첫 유닛("player" Id)이다.
+PartyDefinitions.PARTY_SIZE = 4
+PartyDefinitions.PROTAGONIST_ID = "Protagonist"
 
 export type Member = { ClassId: string, X: number, Y: number }
 
@@ -62,9 +65,22 @@ end
 	파티 구성 검사. ok, 사유(한국어).
 	막힌 칸 금지는 상태(GridBattle.PlaceUnit / NewParty)가 본다 — 여기는 구성만.
 ]]
-function PartyDefinitions.Validate(units: { Member }): (boolean, string?)
+function PartyDefinitions.Validate(units: { Member }, engineOnly: boolean?): (boolean, string?)
 	if #units == 0 then
 		return false, "유닛이 한 명도 없습니다."
+	end
+	-- engineOnly(전투 엔진 GridBattle.NewParty 가 씀): 4인·주인공 규칙은 건너뛴다 — 엔진은 유닛 몇 명이든 돌아야 하고, 이 규칙은 편성(패널·서버·프리셋)의 것
+	if not engineOnly then
+		local hasProtagonist = false
+		for _, unit in units do
+			hasProtagonist = hasProtagonist or unit.ClassId == PartyDefinitions.PROTAGONIST_ID
+		end
+		if not hasProtagonist then
+			return false, "주인공이 편성에 없습니다."
+		end
+		if #units ~= PartyDefinitions.PARTY_SIZE then
+			return false, string.format("파티는 %d명이어야 합니다 (지금 %d명).", PartyDefinitions.PARTY_SIZE, #units)
+		end
 	end
 	local total = 0
 	local seenClass: { [string]: boolean } = {}

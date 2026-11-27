@@ -280,6 +280,31 @@ local definitions: { [string]: CharacterDefinition } = {
 		Conditional = true,
 		Hall = "슈네라이히 대장간",
 	},
+	--[[
+		주인공(2026-11-28): 플레이어가 직접 싸우는 0코스트 유닛 — 파티 편성에 늘 들어간다. 직업·스킬은 미정이라 평타 하나뿐.
+		`order`(고를 수 있는 직업 목록)에는 넣지 않는다 — 편성 화면이 자동으로 넣고 빼지 못하게 한다.
+	]]
+	Protagonist = {
+		Id = "Protagonist",
+		Name = "주인공",
+		Role = "플레이어",
+		Description = "플레이어의 캐릭터. 직업과 스킬은 아직 정해지지 않았다.",
+		MaxHealth = 100,
+		MoveSpeed = 1.0,
+		BasicPower = 14,
+		BasicMotionId = "BasicSlash",
+		Skill = {
+			Id = "ProtagonistStrike",
+			Name = "평타",
+			Description = "앞의 적을 벤다.",
+			Power = 14,
+			CooldownTurns = 0,
+			Target = "Enemy",
+			Effect = "Damage",
+			MotionId = "BasicSlash",
+		},
+		Color = Color3.fromRGB(238, 238, 244),
+	},
 }
 
 local order = {

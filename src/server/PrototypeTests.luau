@@ -1205,11 +1205,23 @@ local function runParty()
 		end
 	end
 	expect(total > PartyDefinitions.COST_LIMIT, "test classes must be able to exceed the cost limit")
-	local okOver, whyOver = PartyDefinitions.Validate(over)
+	local okOver, whyOver = PartyDefinitions.Validate(over, true)
 	expect(not okOver and whyOver ~= nil and string.find(whyOver, "코스트", 1, true) ~= nil, "a party over the cost limit must be rejected")
 	expect(not pcall(GridBattle.NewParty, 1, over, { Enemies = { "Slime" } }), "NewParty must refuse an over-cost party")
 	table.remove(over)
-	expect(PartyDefinitions.Validate(over), "the same party without the last class must fit the limit")
+	expect(PartyDefinitions.Validate(over, true), "the same party without the last class must fit the limit")
+	-- 2026-11-28: 편성은 4인 고정 + 0코스트 주인공 필수(엔진 NewParty 는 인원을 안 따진다)
+	local four = {
+		{ ClassId = "Protagonist", X = 3, Y = 2 },
+		{ ClassId = "Pulsar", X = 1, Y = 1 },
+		{ ClassId = "WallMason", X = 2, Y = 1 },
+		{ ClassId = "WallBreaker", X = 3, Y = 1 },
+	}
+	expect(PartyDefinitions.Validate(four), "protagonist + three classes must be a valid party")
+	expect(PartyDefinitions.Cost("Protagonist") == 0, "protagonist costs 0")
+	expect(not PartyDefinitions.Validate({ four[1], four[2], four[3] }), "three units must be rejected (party is fixed at four)")
+	expect(not PartyDefinitions.Validate({ four[2], four[3], four[4], { ClassId = "Alchemist", X = 4, Y = 1 } }), "a party without the protagonist must be rejected")
+	expect(not PartyDefinitions.Validate({ four[1], four[2], four[3], four[4], { ClassId = "Alchemist", X = 4, Y = 1 } }), "five units must be rejected")
 	expect(
 		not PartyDefinitions.Validate({ { ClassId = "Pulsar", X = 1, Y = 1 }, { ClassId = "Pulsar", X = 2, Y = 1 } }),
 		"the same class twice must be rejected"
@@ -1341,6 +1353,17 @@ local function runParty()
 		end
 	end
 	expect(run.Round.Phase == "Enemy" and GridBattle.NextActor(run) == nil, "after the last unit the enemy phase starts")
+
+	--=== 주인공(2026-11-28): 첫 유닛("player")으로 들어가 다른 유닛처럼 평타로 싸운다 ===--
+	local hero = party({ member("Protagonist", 6, 1), member("Pulsar", 5, 1), member("WallMason", 4, 1), member("WallBreaker", 3, 1) })
+	expect(hero.Units.player.ClassId == "Protagonist" and hero.AllyClassId == "Protagonist", "the protagonist is the first unit (player)")
+	expect(require(ReplicatedStorage.Shared.BattleSkills).ForClass("Protagonist")[1].Id == "ProtagonistStrike", "the protagonist has a placeholder basic attack")
+	local heroEnemy = GridBattle.AliveEnemies(hero)[1]
+	local heroHealth = heroEnemy.Health
+	GridBattle.BeginTurn(hero)
+	local heroOk, _, heroActed = GridBattle.ResolveUnitSkill(hero, "player", noCrit)
+	expect(heroOk and heroActed == true, "the protagonist must act")
+	expect(heroEnemy.Health < heroHealth, "the protagonist's basic attack must damage the enemy in its row")
 
 	--=== 앞 유닛이 건 디버프가 뒤 유닛 피해에 먹는다 ===--
 	local function followUpDamage(quasarSkill: string?): number

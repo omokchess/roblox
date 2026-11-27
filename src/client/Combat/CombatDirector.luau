@@ -561,6 +561,7 @@ function CombatDirector:_targetPoint(id: string): Vector3?
 end
 
 -- stage: 단계 스킬의 단계(1 = 기본). 2단계부터 이펙트를 단계마다 35%씩 키우고 Fx 가 ctx.Stage 로 연출을 고른다
+local CAMERA_FIXED = true -- 전투 카메라 고정(컷신 카메라 끔)
 local STAGE_GROW = 0.35
 function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 	local points = {}
@@ -619,7 +620,8 @@ function CombatDirector:_ctx(a: Actor, targets: { string }?, stage: number?)
 	-- 컷신 카메라: fn(진행도 0~1, 지난 초) → 카메라 CFrame. fn 없이 부르면 전투 카메라로 돌려준다(모션이 끝나도 돌려준다)
 	local director = self
 	function ctx.Shot(d: number?, fn: ((number, number) -> CFrame)?)
-		if director.Quiet then
+		-- 2026-11-28 사용자: 전투 카메라는 고정 — 컷신 카메라를 끈다(연출 코드는 그대로 부르되 아무 일도 안 일어남)
+		if director.Quiet or CAMERA_FIXED then
 			return
 		end
 		if fn then

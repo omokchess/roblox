@@ -1709,7 +1709,7 @@ export type PartyMember = {
 ]]
 function GridBattle.NewParty(floor: number, members: { PartyMember }, encounter: Encounter?, opts: { SkipValidate: boolean?, Qte: boolean? }?): State
 	if not (opts and opts.SkipValidate) then
-		local ok, reason = PartyDefinitions.Validate(members)
+		local ok, reason = PartyDefinitions.Validate(members, true)
 		if not ok then
 			error("[GridBattle.NewParty] " .. tostring(reason), 2)
 		end

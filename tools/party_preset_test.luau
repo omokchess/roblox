@@ -52,8 +52,12 @@ end
 
 local examples = PartyDefinitions.Examples()
 check(#examples == 3, "예시가 3개여야 한다")
+-- 예시의 첫 유닛은 주인공(카드 없음) — 아래 시험이 u[1]·u[2] 의 카드를 만지므로 주인공을 맨 뒤로 보낸다
 local function exampleUnits(i: number): any
-	return deepCopy(examples[i].Units)
+	local units = deepCopy(examples[i].Units)
+	check(units[1].ClassId == "Protagonist" and #units == 4, "예시는 주인공 + 3명이어야 한다")
+	table.insert(units, table.remove(units, 1))
+	return units
 end
 
 -- 1) 메모리 대체(Backend 없음): 저장·목록·덮어쓰기·지우기
@@ -65,7 +69,7 @@ do
 	reply = store:Handle(1, { Op = "Save", Name = "  내 파티  ", Units = exampleUnits(1) })
 	check(reply.Error == nil and #reply.Presets == 1 and reply.Presets[1].Name == "내 파티", "저장(이름 공백 다듬기): " .. tostring(reply.Error))
 	reply = store:Handle(1, { Op = "Save", Name = "내 파티", Units = exampleUnits(2) })
-	check(reply.Error == nil and #reply.Presets == 1 and #reply.Presets[1].Units == 5, "같은 이름은 덮어쓴다")
+	check(reply.Error == nil and #reply.Presets == 1 and #reply.Presets[1].Units == 4, "같은 이름은 덮어쓴다")
 	check(#store:Handle(2, { Op = "List" }).Presets == 0, "사람마다 따로")
 	reply = store:Handle(1, { Op = "Delete", Name = "없는 이름" })
 	check(reply.Error ~= nil, "없는 이름 지우기는 오류")
@@ -103,7 +107,10 @@ do
 	rejected("같은 직업 중복", function(u) u[2].ClassId = u[1].ClassId; u[2].Cards = {} end)
 	rejected("같은 칸", function(u) u[2].X = u[1].X; u[2].Y = u[1].Y end)
 	rejected("격자 밖", function(u) u[1].X = 7 end)
-	rejected("코스트 초과", function(u) table.insert(u, { ClassId = "Attuner", X = 1, Y = 1, Cards = {} }) end)
+	rejected("코스트 초과", function(u) u[1].ClassId = "Attuner"; u[2].ClassId = "Berserker"; u[3].ClassId = "WallPilgrim"; for _, unit in u do unit.Cards = {} end end)
+	rejected("5명", function(u) table.insert(u, { ClassId = "Attuner", X = 1, Y = 3, Cards = {} }) end)
+	rejected("3명", function(u) table.remove(u, 1) end)
+	rejected("주인공 없음", function(u) u[4].ClassId = "Attuner"; u[4].Cards = {} end)
 	rejected("유닛 없음", function(u) for i = #u, 1, -1 do u[i] = nil end end)
 	rejected("이름 41자", function() end, string.rep("가", 41))
 	rejected("이름 없음", function() end, "   ")
@@ -181,7 +188,7 @@ do
 	check(ok.Error == nil and ok.Presets[1].Units[1].Stats[ids[1]] == 10 and ok.Presets[1].Units[1].Stats[ids[3]] == nil, "0 점은 저장 안 하고 값은 그대로 저장")
 	-- BattleService.StartParty 도 쓰는 같은 검사 함수
 	local units, why = Store.CleanUnits(deps(nil), exampleUnits(2), { LevelBonus = 3, DefaultLevel = 5 })
-	check(units and #units == 5, "CleanUnits 가 예시를 통과시킨다: " .. tostring(why))
+	check(units and #units == 4, "CleanUnits 가 예시를 통과시킨다: " .. tostring(why))
 	check(select(1, Store.CleanUnits(deps(nil), withStats(nil, { [ids[1]] = 7 }), { DefaultLevel = 3 })) == nil, "Level 없으면 DefaultLevel(3 → 6점) 기준으로 7점 거절")
 end
 
