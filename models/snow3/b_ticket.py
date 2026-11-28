@@ -92,12 +92,27 @@ def inside(g):
     bx(g, "SignGold", -1.7, -0.7, YFI - 0.15, YFI + 0.35, LEDGE + 0.25, LEDGE + 0.32)
     g["Brass"].cyl(0.4, YFI - 0.6, LEDGE, 0.45, 0.5, 0.12, seg=12)
     P.coin_stack(g, 0.3, YFI - 0.6, LEDGE + 0.12, n=2, r=0.15)
-    # 표 찍개: 무쇠 받침 · 놋쇠 몸 · 위 지레(손잡이 공) · 앞 표 내미는 홈
-    bx(g, "Iron", 1.2, 2.2, YFI - 0.15, YFI + 0.5, LEDGE, LEDGE + 0.15)
-    bx(g, "Brass", 1.35, 2.05, YFI - 0.05, YFI + 0.4, LEDGE + 0.15, LEDGE + 0.75)
-    g["Iron"].obox(1.7, YFI + 0.2, LEDGE + 1.0, 0.12, 0.12, 0.7, rx=-0.5)
-    g["SignRed"].cyl(1.7, YFI + 0.4, LEDGE + 1.25, 0.14, 0.14, 0.14, seg=8)
-    bx(g, "Paint", 1.45, 1.95, YFI - 0.12, YFI - 0.05, LEDGE + 0.2, LEDGE + 0.32)
+    # 표 발권기(2026-11-28 사용자 4차: '표가 나오는 구멍·손잡이·숫자판'): 무쇠 받침 · 놋쇠 몸 · 위 표 두루마리(굴대 받침 둘) ·
+    # 앞 숫자판(검은 창 + 흰 숫자 패 셋) · 아래 표 나오는 구멍(쇠 입술) + 반쯤 나온 표 · 옆 돌리는 손잡이(굴대 · 팔 · 나무 쥘대) · 뒤 찍개 지레
+    bx(g, "Iron", 1.15, 2.25, YFI - 0.2, YFI + 0.5, LEDGE, LEDGE + 0.15)
+    bx(g, "Brass", 1.3, 2.1, YFI - 0.1, YFI + 0.45, LEDGE + 0.15, LEDGE + 1.0)
+    bx(g, "Iron", 1.25, 2.15, YFI - 0.15, YFI + 0.5, LEDGE + 1.0, LEDGE + 1.08)
+    for xx in (1.4, 2.0):
+        bx(g, "Iron", xx - 0.06, xx + 0.06, YFI + 0.05, YFI + 0.3, LEDGE + 1.08, LEDGE + 1.38)
+    g["Canvas"].hcyl(1.7, YFI + 0.18, LEDGE + 1.38, 0.28, 0.5, axis="x", seg=12)
+    g["Iron"].hcyl(1.7, YFI + 0.18, LEDGE + 1.38, 0.07, 0.72, axis="x", seg=6)
+    bx(g, "DarkStone", 1.38, 2.02, YFI - 0.16, YFI - 0.1, LEDGE + 0.52, LEDGE + 0.88)
+    for k, ch in enumerate("042"):
+        x = 1.5 + k * 0.2
+        bx(g, "Paint", x - 0.08, x + 0.08, YFI - 0.19, YFI - 0.16, LEDGE + 0.58, LEDGE + 0.82)
+        P.digit(g, ch, x, YFI - 0.19, LEDGE + 0.7, 0.18, "DarkStone")
+    bx(g, "Iron", 1.42, 1.98, YFI - 0.22, YFI - 0.1, LEDGE + 0.24, LEDGE + 0.36)
+    bx(g, "Paint", 1.5, 1.9, YFI - 0.45, YFI - 0.1, LEDGE + 0.27, LEDGE + 0.33)
+    g["Iron"].hcyl(2.2, YFI + 0.2, LEDGE + 0.6, 0.08, 0.2, axis="x", seg=6)
+    g["Iron"].obox(2.32, YFI + 0.2, LEDGE + 0.4, 0.12, 0.12, 0.55)
+    g["Wood"].hcyl(2.42, YFI + 0.2, LEDGE + 0.17, 0.1, 0.3, axis="x", seg=8)
+    g["Iron"].obox(1.7, YFI + 0.55, LEDGE + 1.25, 0.14, 0.14, 0.6, rx=-0.5)
+    g["SignRed"].cyl(1.7, YFI + 0.7, LEDGE + 1.48, 0.15, 0.15, 0.15, seg=8)
     NPC(0.0, 2.0, FB, 0.0)
     P.stool(g, -2.8, 1.1, FB, h=2.4, r=0.5)
     P.strongbox(g, 3.0, YFI + 0.85, FB, w=1.2, d=0.9, h=1.1, rz=0.0)

@@ -44,7 +44,7 @@ SHOP_WIN = (3.6, 5.5, FZ + 2.0)
 FL = FZ + 0.08
 STILL = (8.0, 0.1)                         # 증류솥 가운데(화덕 위)
 TUB = (8.0, 4.4)                           # 냉각 통
-CAUL = (-7.6, -2.0)                        # 끓는 솥(왼쪽 — 안으로 연 문짝에 안 가림, 후드 관이 천장 따라 화덕 연통으로)
+CAUL = (-8.4, 5.2)                         # 끓는 솥(왼 뒤 구석 — 2026-11-28: 앞 진열단과 5 · 작업대와 3.4 틈이 나서 옮김. 후드 다리는 평보 y 7 에)
 FLUE = (7.3, 2.7)                          # 화덕 쇠 연통(뒤, 지붕 위로)
 
 
@@ -150,7 +150,7 @@ def cabinet(g):
 
 def counter(g):
     """카운터(앞면 = 이름표 서랍 격자, 녹색 칠 틀) + 상판 위 낮은 유리 진열함 · 천칭 · 막자사발 · 큰 약병 둘(P1) · 촛대 · NPC"""
-    zt = N.drawer_counter(g, -5.0, 5.0, 5.8, 8.3, FZ)
+    zt = N.drawer_counter(g, -6.3, 5.0, 5.8, 8.3, FZ)                          # 왼 끝 -5 → -6.3(솥과 1.3 — 3~9 틈 금지)
     N.put(g, 0.0, 7.0, zt, 0.0, N.glass_case_low, 3.2, 1.3, 1.1)
     N.scale(g, -2.9, 6.9, zt)
     N.mortar(g, 2.6, 7.1, zt)
@@ -219,23 +219,28 @@ def distillery(g):
 
 
 def herb_corner(g):
-    """왼쪽: 뒤 약초 작업대(벽에 붙음) + 위 벽 선반 · 평보에 매단 약초 건조대 둘(막대 + 다발 일곱씩) · 앞 약초 통·자루(옛 솥 자리)"""
-    N.put(g, -9.7, 4.5, FL, math.pi / 2, N.table, 6.4, 2.0, 3.0)                 # 약초 작업대
-    cbox(-10.8, -8.6, 1.3, 7.7, FZ, FL + 3.0)
+    """왼쪽(2026-11-28 다시 놓음): 앞 약초 작업대(벽에 붙음) · 약초 통·자루(작업대 ~ 솥 사이) · 위 벽 선반 · 평보(y 1)에 매단 약초 건조대 · 왼 뒤 구석 끓는 솥"""
+    N.put(g, -9.8, -4.2, FL, math.pi / 2, N.table, 6.4, 2.0, 3.0)                # 약초 작업대(진열단과 1.6 · 약초 통과 0.4)
+    cbox(-10.8, -8.8, -7.4, -1.0, FZ, FL + 3.0)
     zt = FL + 3.0
-    N.mortar(g, -9.6, 2.2, zt)
-    bx(g, "Wood", -10.3, -9.0, 3.4, 5.0, zt, zt + 0.15)                         # 도마 + 썬 약초
+    N.mortar(g, -9.6, -6.6, zt)
+    bx(g, "Wood", -10.3, -9.0, -5.4, -3.8, zt, zt + 0.15)                       # 도마 + 썬 약초
     for k, (dx, dy) in enumerate(((0.0, 0.0), (0.25, 0.4), (-0.2, 0.7))):
-        g["Felt"].obox(-9.65 + dx, 4.0 + dy, zt + 0.22, 0.5, 0.3, 0.12, rz=k * 0.6)
-    for k, (y, liq) in enumerate(((5.7, "SignPurple"), (6.3, "Verdigris"), (6.9, "SignRed"))):
+        g["Felt"].obox(-9.65 + dx, -5.0 + dy, zt + 0.22, 0.5, 0.3, 0.12, rz=k * 0.6)
+    for k, (y, liq) in enumerate(((-3.0, "SignPurple"), (-2.4, "Verdigris"), (-1.8, "SignRed"))):
         N.bottle(g, -9.9, y, zt, liq, r=0.24, h=0.95 + 0.15 * k)
-    N.book(g, -9.4, 6.4, zt, cover="Leather", open_=True)
+    N.book(g, -9.4, -7.0 + 0.4, zt, cover="Leather", open_=True)
+    N.put(g, -10.0, 0.5, FL, 0.0, N.barrel, 0.75, 2.1, "Wood", "Iron", "DarkLog", 10, False)    # 약초 통(뚜껑 열림 — 마른 잎) + 자루 둘
+    g["Felt"].cyl(-10.0, 0.5, FL + 2.1, 0.6, 0.25, 0.35, seg=8)
+    for x, y, r in ((-9.4, -0.3, 0.4), (-9.35, 1.25, -0.5)):
+        N.put(g, x, y, FL, r, N.sack, 0.8, "Canvas")
+    cbox(-10.8, -8.6, -0.6, 1.6, FZ, FL + 2.4)
     N.put(g, -XI, 2.0, FZ + 6.2, math.pi / 2, N.wall_shelf, 2.6)                # 벽 선반(창 옆) + 단지
     for k, y in enumerate((1.1, 1.9, 2.8)):
         N.jar(g, -10.3, y, FZ + 6.2, r=0.34, h=0.9 + 0.1 * k, band=("SignTeal", "SignGold", "SignRed")[k])
     zt0 = Z_PLATE - 0.9                                                          # 건조대: 평보(y 7 · y 1)에서 쇠 막대 둘 → 막대(길이 5) → 다발 일곱
     mats = ("Felt", "SignPurple", "SignGold", "Twig", "Felt", "SignPurple", "Twig")
-    for r, (y, x0) in enumerate(((7.0, -10.2), (1.0, -9.8))):
+    for r, (y, x0) in enumerate(((1.0, -9.8),)):                                # (y 7 건조대는 솥 후드 자리라 뺐다)
         zp = zt0 - 1.9
         for x in (x0 + 0.3, x0 + 4.7):
             bx(g, "Iron", x - 0.06, x + 0.06, y - 0.06, y + 0.06, zp, zt0)
@@ -328,7 +333,7 @@ INFO = {
     "variant": VARIANT,
     "floor": FZ,
     "ceiling": CEIL,
-    "counter": (-5.0, 5.0, 5.8, 8.3),
+    "counter": (-6.3, 5.0, 5.8, 8.3),
     "free": (-5.0, 5.0, -4.35, 5.65),
     "walk": ((0.0, YF - 1.5), (0.0, 0.0)),
     "inside": (-XI, XI, YF - T / 2 - 1.5, YBI),

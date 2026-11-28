@@ -23,6 +23,7 @@ from mathutils import Matrix
 
 import lib as K
 import lib_b as KB
+import lib_int1 as P
 import lib_int2 as N
 from lib import FZ, LOG, CEIL, MAIN_W, MAIN_H, WIN_W, WIN_H, WIN_SILL, bx, cbox, NPC, CLEAR
 
@@ -72,7 +73,7 @@ def walls(g, R):
         K.gable_boards(g, "x", c, HALF, Z_PLATE, top, face=face)
         N.gable_seal(g, "x", c, R, mat="Timber")              # (2팀) 박공 꼭대기 띠
     N.eave_block(g, R, YF, YB)                                # (2팀) 처마 막이판(서까래 사이)
-    K.door_open(g, "x", YF, 0.0, MAIN_W, MAIN_H, FZ, face=-1, open_deg=170.0)
+    K.door_open(g, "x", YF, 0.0, MAIN_W, MAIN_H, FZ, face=-1, open_deg=120.0)   # 120°: 170° 면 문짝이 앞 창 둘을 덮었다(2026-11-28 창 안팎 짝)
 
 
 def gable_sign(g):
@@ -133,8 +134,15 @@ def machine(g, R):
     bx(g, "Iron", hx1, hx1 + 1.3, 4.0, 7.2, FZ + 3.0, FZ + 3.4)
     for yy in (4.4, 6.8):
         bx(g, "Brass", hx1 + 0.4, hx1 + 0.9, yy - 0.25, yy + 0.25, FZ + 3.4, FZ + 3.9)
-    g["Steel"].box(hx1 + 0.65, 5.6, FZ + 3.95, 0.35, 3.6, 0.1)
-    g["GlowTeal"].box(hx1 + 0.65, 5.6, FZ + 4.02, 0.12, 2.2, 0.04)
+    K.L.transformed(g, Matrix.Translation((hx1 + 0.65, 3.95, FZ + 4.0)) @ Matrix.Rotation(-math.pi / 2, 4, "X") @ Matrix.Rotation(math.pi / 2, 4, "Z"),
+                    lambda q: P.sword(q, L=2.4, w=0.5))                          # 새기는 중인 칼(누움, 날 위 = +z)
+    for yy in (4.7, 5.15, 5.6):                                                # 칼 위 새긴 룬 셋
+        bx(g, "GlowTeal", hx1 + 0.55, hx1 + 0.75, yy - 0.12, yy + 0.12, FZ + 4.1, FZ + 4.14)
+    # 새기개(2026-11-28 사용자 4차: 무엇을 하는 기계인지 한눈에): 몸 위에서 내민 쇠 팔 → 놋쇠 머리 → 쇠 바늘 → 청록 끝이 칼 위 룬에 닿음
+    bx(g, "Iron", hx1 - 0.2, hx1 + 0.95, 5.95, 6.35, FZ + 4.9, FZ + 5.25)
+    bx(g, "Brass", hx1 + 0.45, hx1 + 0.85, 5.9, 6.4, FZ + 4.45, FZ + 4.95)
+    bx(g, "Steel", hx1 + 0.58, hx1 + 0.72, 6.08, 6.22, FZ + 4.2, FZ + 4.45)
+    bx(g, "GlowTeal", hx1 + 0.56, hx1 + 0.74, 6.06, 6.24, FZ + 4.1, FZ + 4.2)
     for yy in (3.6, 9.2):
         g["GlowTeal"].box(hx1 + 0.06, yy, FZ + 3.0, 0.08, 0.3, 1.6)
     # 놋쇠 관: 열기 통 → 몸 옆
@@ -151,9 +159,8 @@ def shop(g):
     zt = N.stone_counter(g, x0, x1, y0, y1, FZ)
     g["DarkStone"].obox(3.0, 4.2, zt + 0.12, 1.2, 0.8, 0.24, rz=0.3)          # 룬 돌판
     g["GlowTeal"].box(3.0, 4.2, zt + 0.25, 0.6, 0.1, 0.03)
-    g["Steel"].obox(7.6, 4.3, zt + 0.08, 3.0, 0.32, 0.12, rz=0.05)            # 맡긴 칼(날 · 코등이 · 손잡이)
-    g["Brass"].obox(5.95, 4.22, zt + 0.12, 0.2, 1.0, 0.2, rz=0.05)
-    g["Leather"].obox(5.45, 4.2, zt + 0.12, 0.8, 0.22, 0.22, rz=0.05)
+    K.L.transformed(g, Matrix.Translation((9.1, 4.3, zt + 0.1)) @ Matrix.Rotation(-math.pi / 2, 4, "Y"),
+                    lambda q: P.sword(q, L=2.0, w=0.44))                         # 맡긴 칼(날·등줄·코등이·손잡이·폼멜 — 2026-11-28 무기 품질)
     bx(g, "Banner", 4.0, 5.0, 3.6, 4.6, zt, zt + 0.25)                         # 벨벳 방석 + 작은 수정
     N.crystal(g, 4.5, 4.1, zt + 0.25, r=0.22, h=0.8, tilt=0.3)
     g["Brass"].cyl(9.8, 4.5, zt, 0.25, 0.2, 0.9, seg=10)                       # 확대경 받침
@@ -169,8 +176,8 @@ def shop(g):
     bx(g, "Timber", 0.6, 11.3, by0 + 0.1, by1, FZ + 0.6, FZ + 0.8)
     bx(g, "Wood", 0.5, 11.4, by0, by1, bt - 0.2, bt)
     bx(g, "Timber", 7.5, 11.0, by0 + 0.1, by1, bt - 1.3, bt - 0.2)            # 서랍 덩이
-    for xx in (8.4, 10.1):
-        bx(g, "Brass", xx - 0.2, xx + 0.2, by0 - 0.05, by0, bt - 0.85, bt - 0.65)
+    for xx in (8.4, 10.1):                                                     # 서랍 손잡이(서랍 앞면에 박음 — 2026-11-28: 0.1 떠 있었다)
+        bx(g, "Brass", xx - 0.2, xx + 0.2, by0 - 0.05, by0 + 0.14, bt - 0.85, bt - 0.65)
     bx(g, "Iron", 1.0, 1.6, by0 - 0.15, by0 + 0.6, bt, bt + 0.25)              # 바이스(몸 · 턱 둘 · 손잡이)
     for yy in (by0 - 0.1, by0 + 0.35):
         bx(g, "Iron", 1.05, 1.55, yy, yy + 0.22, bt + 0.25, bt + 0.75)
@@ -225,9 +232,14 @@ def enhance_corner(g):
     cbox(ax - 5.4, ax - 3.0, ay - 1.8, ay + 0.6, FZ, FL + 2.6)
     N.put(g, -7.0, -4.2, FL, 0.0, N.ore_display, 4.0, 2.0, 2.0)
     cbox(-9.0, -5.0, -5.2, -3.2, FZ, FL + 2.0)
+    P.crate(g, -7.9, -6.6, FL, w=2.0, d=2.0, h=1.6, rz=0.04)                  # 원석 상자 둘(진열대 앞 — 앞벽과 5.2 틈을 막음)
+    P.crate(g, -6.1, -6.5, FL, w=1.5, d=1.6, h=1.2, rz=-0.08)
+    for k, (dx, dy) in enumerate(((-0.4, -0.2), (0.3, 0.3), (0.0, -0.5))):
+        N.crystal(g, -7.9 + dx, -6.6 + dy, FL + 1.6, r=0.2, h=0.7 - 0.1 * k, mat=("GlowTeal", "SignPurple", "SignBlue")[k], tilt=0.4, rz=k * 2.0)
+    cbox(-8.9, -5.35, -7.6, -5.3, FZ, FL + 1.6)
     N.put(g, -10.4, -7.6, FL, math.pi / 2, N.grindstone)
     cbox(-11.4, -9.4, -8.7, -6.5, FZ, FL + 3.8)
-    K.lantern(g, ax - 4.2, ay - 2.4, Z_PLATE - 0.9, FZ + 8.4)
+    K.lantern(g, ax - 4.2, 0.5, Z_PLATE - 0.9, FZ + 8.4)                       # 평보(y 0.5)에 매닮(2026-11-28: 평보 없는 자리에 떠 있었다)
 
 
 def crystal_crate(g):
@@ -241,7 +253,7 @@ def crystal_crate(g):
 
 def steam(g):
     """왼 앞 바깥: 증기 통(압력계가 길을 봄) → 관이 앞벽 앞으로 → 벽을 타고 올라 → 벽 속으로(룬 기계 열기)"""
-    tx, ty = -10.3, -14.2
+    tx, ty = -10.3, -15.6                    # 앞 왼 창 앞 3 을 비움(창 안팎 짝)
     rx = -6.95
     N.no_vent(g, K.steam_bundle, tx, ty, 0.0, h=6.2, r=1.15, gauge_face=-1,
               pipe_pts=[(tx + 1.15, ty, 4.2), (rx, ty, 4.2), (rx, -12.35, 4.2), (rx, -12.35, 12.6), (rx, -11.3, 12.6)])

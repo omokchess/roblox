@@ -24,6 +24,7 @@ import math
 
 import lib as K
 import lib_a as A
+import lib_int1 as P
 import lib_int2 as N
 from lib import FZ, LOG, CEIL, MAIN_W, MAIN_H, DOOR_W, DOOR_H, WIN_SILL, bx, cbox, NPC, CLEAR
 
@@ -326,12 +327,12 @@ def hall(g):
     tx, ty = 8.3, 0.0                                                            # 둥근 탁자 + 의자 둘(불 보는 선 y -6..-2 밖)
     N.put(g, tx, ty, FL, 0.0, N.round_table, 1.6)
     cbox(tx - 1.6, tx + 1.6, ty - 1.6, ty + 1.6, FZ, FL + 2.8)
-    for (x, y, rz) in ((tx - 2.6, ty, -math.pi / 2), (tx, ty - 2.5, 0.0)):
+    for (x, y, rz) in ((tx - 1.7, ty - 2.4, 0.3), (tx + 1.0, ty - 2.5, -0.2)):     # 의자 둘 다 앞(긴 식탁 쪽 틈 2.8 — 3~9 틈 금지)
         N.put(g, x, y, FL, rz, N.chair, cushion="Banner")
         N.coll(x, y, FL, rz, -0.9, 0.9, -0.85, 0.85, -0.08, 1.95)
     N.mug(g, tx - 0.6, ty + 0.3, FL + 2.8)
     N.plate(g, tx + 0.4, ty - 0.4, FL + 2.8, food="Wood")
-    K.SVC.chandelier(g, tx, ty, Z1C, FZ + 8.6)
+    P.chandelier(g, tx, ty, Z1C + 0.8, FZ + 8.6)                                  # 사슬이 2층 마루 판까지(장선 사이)
     N.put(g, 11.0, -4.0, FL, 0.0, N.rug, 3.0, 6.6, "Banner", "SignGold", "Felt")   # 벽난로 앞 깔개(아가리 앞은 비움)
     for y, rz in ((-7.4, math.pi), (-0.5, 0.0)):                                  # 안락의자 둘: 아가리 양옆, 서로 마주 봄, 등 낮게
         N.put(g, 11.3, y, FL, rz, N.armchair, "Leather", "DarkLog", "Brass", 3.0)
@@ -357,8 +358,8 @@ def hall(g):
     for x, z, a, mat in ((-10.7, 7.6, 0.08, "Canvas"), (-9.4, 7.8, -0.1, "Paint"), (-10.2, 6.5, -0.05, "Paint"), (-9.1, 6.6, 0.12, "Canvas")):
         g[mat].obox(x, fy + 0.27, FZ + z, 0.9, 0.04, 1.1, ry=a)
         g["Brass"].box(x, fy + 0.31, FZ + z + 0.45, 0.12, 0.05, 0.12)
-    for x, y in ((7.6, -8.4), (-11.0, -5.6), (-11.0, 0.6), (0.0, -7.6)):        # 등(1층 보에 매닮)
-        K.lantern(g, x, y, Z1C, FZ + 8.4)
+    for x, y in ((7.6, -8.4), (-11.0, -5.6), (-11.0, 0.6), (0.0, -7.6)):        # 등(1층 장선 사이 → 2층 마루 판에 매닮 — 2026-11-28: 보 밑 0.3 에 떠 있었다)
+        K.lantern(g, x, y, Z1C + 0.8, FZ + 8.4)
 
 
 def rooms(g):
@@ -377,8 +378,8 @@ def rooms(g):
     N.put(g, -11.5, -4.5, F, 0.0, N.rug, 4.0, 3.0, "Felt", "SignGold", "Banner")
     N.put(g, 13.4, -8.95, F, -math.pi / 2, N.bed, 3.8, 6.6, "SignBlue")            # 오른 방
     cbox(10.1, 16.7, -10.85, -7.05, Z2F, F + 2.4)
-    N.put(g, 8.4, -10.05, F, math.pi, N.wardrobe)
-    cbox(6.9, 9.9, -10.9, -9.2, Z2F, F + 7.2)
+    N.put(g, 6.95, -9.4, F, -math.pi / 2, N.wardrobe)                           # 칸막이에 등을 댐(침대와 틈 2.2 — 3~9 틈 금지)
+    cbox(6.1, 7.9, -10.9, -7.9, Z2F, F + 7.2)
     N.put(g, 11.5, -4.5, F, 0.0, N.rug, 4.0, 3.0, "SignBlue", "Canvas", "Banner")
     N.put(g, 15.1, 7.7, F, 0.0, N.bed, 3.4, 6.6, "Felt", "Canvas", "DarkLog", "Wood", 3.3, 2.6)   # 뒤 오른 구석
     cbox(13.4, 16.8, 4.4, 11.0, Z2F, F + 2.4)
@@ -394,8 +395,8 @@ def rooms(g):
     N.put(g, 4.85, -8.4, F, math.pi, N.chair)
     N.coll(4.85, -8.4, F, math.pi, -0.9, 0.9, -0.85, 0.85, -0.06, 1.95)
     N.put(g, 0.0, -5.6, F, 0.0, N.rug, 7.0, 3.6, "Banner", "SignGold", "Felt")
-    N.put(g, -15.6, 10.25, F, math.pi, N.trunk)                                 # 계단참 뒤 왼 구석: 여행 궤짝(계단 윗단 둘레 5 는 비움 — 통로 폭)
-    cbox(-16.7, -14.5, 9.6, 10.95, Z2F, F + 2.0)
+    N.put(g, XI - 1.6, 0.0, F, 0.0, N.drawer_chest, 3.2, 1.2, 3.0, 2, 2)          # 오른 방 굴뚝 가슴 ~ 뒤 침대 머리맡 사이 서랍장(4.4 틈을 막음)
+    cbox(XI - 3.2, XI, -0.6, 0.6, Z2F, F + 3.0)
     for side in (-1, 1):                                                         # 옆벽 꾸밈(왼 방 = x -16.8, 오른 방 = x 16.8)
         wx, rz = side * XI, (math.pi / 2 if side < 0 else -math.pi / 2)
         N.put(g, wx, -8.95, F + 5.0, rz, N.painting, 3.0, 2.0)                     # 침대 머리 위 그림
@@ -413,7 +414,7 @@ def rooms(g):
         N.candle(g, wx - side * 0.5, shy + 0.6, F + 5.4, h=0.55)
         if side < 0:                                                             # 창 밑 작은 궤짝(무릎 밑 — 충돌 없음)
             N.put(g, -16.1, -6.0, F, math.pi / 2, N.trunk, 1.8, 1.1, 1.3)
-    for x, y in ((-12.0, -8.0), (0.0, -8.8), (12.0, -8.0), (-11.5, 7.0), (15.0, 6.0), (4.0, 0.0)):
+    for x, y in ((-12.0, -9.0), (0.0, -9.0), (12.0, -9.0), (-11.5, 9.0), (15.0, 9.0), (4.0, 3.0)):   # 평보(y -9 · 3 · 9)에 매닮
         K.lantern(g, x, y, zc, Z2F + 7.4)
 
 
@@ -439,8 +440,8 @@ def balcony(g, R):
     for x in (-17.5, 17.5):
         A.rail_between(g, "y", x, TRUSS_Y + 0.5, yb, Z2F, h=3.4)
     # 1층 마루 등(발코니 보에 매닮) · 바깥 걸상(I4)
-    for x in (-11.5, 11.5):
-        K.lantern(g, x, -13.8, zb0 - 0.3, FZ + 7.6)
+    for x in (-17.0 + 2 * 34.0 / 12, -17.0 + 10 * 34.0 / 12):                     # 발코니 장선 밑에 매닮(2026-11-28: 보 앞 허공에 떠 있었다)
+        K.lantern(g, x, -13.8, zb1, FZ + 7.6)
     K.SVC.bench(g, -11.0, -12.9, FZ, 6.0, axis="x", mat="Wood")
     # 앞 트러스 밑 큰 간판(맥주잔) + 오른 기둥 쇠 팔 간판
     for x in (-2.8, 2.8):

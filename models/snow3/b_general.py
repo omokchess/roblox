@@ -31,7 +31,7 @@ XI, YI, YFI = WX - T / 2, YB - T / 2, YF + T / 2     # 안쪽 면 11.4 · 10.4 �
 YC, HD = (YF + YB) / 2, (YB - YF) / 2 + T / 2   # 지붕 가운데 y · 반 깊이(바깥면)
 Z_PLATE = FZ + CEIL + 0.9
 LAND = YF - T / 2 - 1.4                   # 앞 돌 마루 앞 끝
-STOVE = (-4.5, -1.5)
+STOVE = (-5.3, -4.0)                      # 2026-11-28: 난롯가를 앞으로 2.5 — 뒷벽 선반 앞 빈 바닥 7.5 → 10(3~9 틈 금지)
 PIPE = (STOVE[0] - 0.45, STOVE[0] + 0.45, STOVE[1] - 0.45, STOVE[1] + 0.45)
 SHOP_WIN = (4.4, 6.0, FZ + 1.6)           # 진열창 폭·높이·창턱
 
@@ -180,24 +180,28 @@ def hung_goods(g):
     # 2026-11-27 비평 사소 4: 가운데 평보(x 0)에 등·양동이·바구니가 한 줄로 꿰여 '토템' → 가운데는 등만, 양동이·바구니·파는 등은 옆 평보로
     for x, y, kind in ((-7.5, -5.5, "bucket"), (-7.5, -3.0, "basket"), (-7.5, 1.6, "bucket"), (-7.5, 5.0, "rope"), (-7.5, 7.5, "lamp"),
                        (7.5, -2.0, "basket"), (7.5, -4.4, "lamp")):
-        bx(g, "Iron", x - 0.04, x + 0.04, y - 0.04, y + 0.04, FZ + 9.3, zt)
         z = FZ + 7.6
+        hook = {"bucket": 1.28, "basket": 1.2, "lamp": 1.34, "rope": 0.6}[kind]    # 매단 쇠막대 밑 = 물건 고리(2026-11-28 playcheck: 막대가 0.3 위에서 끝나 떠 있었다)
+        bx(g, "Iron", x - 0.06, x + 0.06, y - 0.06, y + 0.06, z + hook, zt)
+        bx(g, "Iron", x - 0.12, x + 0.12, y - 0.12, y + 0.12, zt - 0.25, zt)      # 평보 밑 쇠고리판
         if kind == "bucket":                                 # 양동이: 무쇠 몸(아래 좁게) · 테 · 손잡이
             g["Iron"].cyl(x, y, z, 0.42, 0.55, 0.9, seg=10)
             g["Brass"].cyl(x, y, z + 0.82, 0.57, 0.57, 0.1, seg=10)
-            g["Iron"].obox(x, y, z + 1.3, 0.08, 1.1, 0.08)
-            g["Iron"].obox(x, y - 0.55, z + 1.05, 0.08, 0.08, 0.5)
-            g["Iron"].obox(x, y + 0.55, z + 1.05, 0.08, 0.08, 0.5)
-        elif kind == "basket":                               # 바구니: 엮은 몸(Wood/Timber 띠) · 손잡이 고리
+            g["Iron"].obox(x, y, z + 1.3, 0.12, 1.22, 0.12)
+            g["Iron"].obox(x, y - 0.55, z + 1.05, 0.12, 0.12, 0.5)
+            g["Iron"].obox(x, y + 0.55, z + 1.05, 0.12, 0.12, 0.5)
+        elif kind == "basket":                               # 바구니: 엮은 몸(Wood/Timber 띠) · 손잡이(양옆 세움대 + 가로대)
             g["Wood"].cyl(x, y, z, 0.6, 0.75, 0.8, seg=10)
             for k in range(3):
                 g["Timber"].cyl(x, y, z + 0.1 + k * 0.25, 0.63 + k * 0.05, 0.66 + k * 0.05, 0.08, seg=10)
-            g["Timber"].obox(x, y, z + 1.2, 0.1, 1.3, 0.1)
+            for sy in (-1, 1):
+                bx(g, "Timber", x - 0.07, x + 0.07, y + sy * 0.62 - 0.07, y + sy * 0.62 + 0.07, z + 0.75, z + 1.27)
+            g["Timber"].obox(x, y, z + 1.2, 0.14, 1.38, 0.14)
         elif kind == "lamp":
             P.lantern_sale(g, x, y, z + 0.2, s=0.7)
         else:
             P.rope_coil(g, x, y, z + 0.6, r=0.55)
-            bx(g, "Iron", x - 0.3, x + 0.3, y - 0.05, y + 0.05, z + 0.55, z + 0.6)
+            bx(g, "Iron", x - 0.5, x + 0.5, y - 0.07, y + 0.07, z + 0.5, z + 0.6)
     # 뒤 박공 벽 큰 간판(나무 판 6×2 · 놋쇠 테 · 자루 그림)
     yb = YI - 0.1
     bx(g, "Timber", 1.0, 7.0, yb - 0.15, yb, FZ + 7.6, FZ + 9.6)
@@ -257,16 +261,16 @@ def inside(g):
     glass_case(g, -XI, -9.0, -6.0, 3.0)
     P.tool_board(g, "y", -XI, -1.1, 3.1, FZ + 4.6, FZ + 8.2, face=1)
     for y in (-0.3, 0.9):
-        P.snowshoe(g, -XI + 0.4, y, FZ + 6.6, rz=math.pi / 2)
+        P.snowshoe(g, -XI + 0.3, y, FZ + 6.6, rz=math.pi / 2)                   # 걸이판 면에 붙게(2026-11-28: 0.12 떠 있었다)
     for y, r in ((2.0, 0.25), (2.6, -0.2)):
         P.hammer(g, -XI + 0.35, y, FZ + 5.0, rz=math.pi / 2, ry=r, s=1.1)
     # 난롯가(G1): 무쇠 난로 · 장기 통 · 의자 둘 · 걸상 · 깔개
-    P.rug(g, -9.0, -3.2, -4.4, 2.4, FZ, "Felt", "Banner", "SignGold")
+    P.rug(g, -9.0, -4.0, -6.9, -0.1, FZ, "Felt", "Banner", "SignGold")
     A.iron_stove(g, *STOVE, FZ, R_TOP + 1.2)
-    checkers_barrel(g, -7.3, -1.0)
-    P.chair(g, -7.3, -2.9, FZ, rz=0.0)
-    P.chair(g, -7.3, 0.9, FZ, rz=math.pi)
-    P.stool(g, -4.4, 1.3, FZ, coll=True)
+    checkers_barrel(g, -8.1, -3.5)
+    P.chair(g, -8.1, -5.4, FZ, rz=0.0)
+    P.chair(g, -8.1, -1.6, FZ, rz=math.pi)
+
     # 오른 벽: 기댄 눈삽·빗자루 / 오른 앞: 상자 둘 · 자루 셋 / 왼 앞: 통 + 자루 둘
     for y, fn in ((0.6, P.shovel), (1.5, P.broom), (2.4, P.shovel), (3.3, P.broom)):
         fn(g, 10.55, y, FZ, rz=-math.pi / 2)
@@ -276,11 +280,15 @@ def inside(g):
         P.sack(g, x, y, FZ, s=sc, rz=rz)
     P.sack(g, 8.0, -6.4, FZ + 1.0, s=0.8, rz=1.1)
     cbox(7.3, 10.9, -7.7, -4.9, FZ, FZ + 3.4)
-    P.barrel(g, -7.6, -7.0, FZ, r=0.75, h=2.2)
-    for x, y, rz in ((-6.2, -6.6, 0.4), (-6.5, -7.8, -0.3)):
-        P.sack(g, x, y, FZ, s=0.8, rz=rz)
+    # 왼 벽 뒤(유리 진열장 ~ 뒷벽 선반 사이 6.3 틈을 막음): 통 · 자루 셋 · 상자 둘(벽에 붙여 쌓음)
+    P.barrel(g, -10.5, 4.2, FZ, r=0.75, h=2.2)
+    for x, y, sc, rz in ((-10.4, 5.8, 0.85, 0.4), (-10.5, 7.1, 0.8, -0.3)):
+        P.sack(g, x, y, FZ, s=sc, rz=rz)
+    P.crate(g, -10.4, 8.4, FZ, w=1.7, d=1.6, h=1.6, rz=0.06)
+    P.crate(g, -10.45, 8.35, FZ + 1.6, w=1.3, d=1.2, h=1.2, rz=-0.15)
+    cbox(-XI, -9.5, 3.3, 9.3, FZ, FZ + 2.8)
     # 진열창 안 낮은 단(창 밑) + 손 표 물건
-    for x0, x1 in ((-11.0, -6.4), (6.4, 11.0)):
+    for x0, x1 in ((-11.0, -5.8), (6.4, 11.0)):          # 왼 단을 문설주까지(난로와 4.8 틈 — 2026-11-28)
         K.I.box2(g, "Timber", x0, x1, YFI, YFI + 1.6, FZ, FZ + 1.4)
         bx(g, "Wood", x0, x1, YFI, YFI + 1.6, FZ + 1.4, FZ + 1.55)
     zw, yw = FZ + 1.55, YFI + 0.8

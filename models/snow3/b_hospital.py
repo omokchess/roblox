@@ -120,8 +120,8 @@ def canopy(g):
         bx(g, "Iron", cx + dx - 0.06, cx + dx + 0.06, y0 - 0.06, y0 + 0.06, zs - 1.6, zs)
     bx(g, "Timber", cx - 3.3, cx + 3.3, y0 - 0.15, y0 + 0.15, zs - 3.8, zs - 1.6)
     bx(g, "Brass", cx - 3.45, cx + 3.45, y0 - 0.2, y0 + 0.2, zs - 1.65, zs - 1.45)
-    for f in (-1, 1):
-        K.SVC.heart_icon(g, cx, y0 + f * 0.15, zs - 3.75, face=f, s=0.95)
+    for f in (-1, 1):                                                             # 녹십자(2026-11-28 사용자: 하트 → 녹십자)
+        N.green_cross(g, cx, y0 + f * 0.15, zs - 2.7, s=1.2, depth=0.2, plate=True, face=f)
     for x in (cx - 4.6, cx + 4.6):
         K.lantern(g, x, y0, zb_, zb_ - 2.0)
 
@@ -172,7 +172,8 @@ def gable_plaque(g):
     def local(gg):
         gg["Brass"].hcyl(0, -0.15, 0, 2.7, 0.3, axis="y", seg=24)
         gg["Timber"].hcyl(0, -0.3, 0, 2.4, 0.3, axis="y", seg=24)
-        K.SVC.heart_icon(gg, 0, -0.45, -1.7, face=-1, s=1.6)
+        gg["Paint"].hcyl(0, -0.5, 0, 2.15, 0.1, axis="y", seg=24)
+        N.green_cross(gg, 0, -0.55, 0, s=2.5, depth=0.3, face=-1)                 # 녹십자(2026-11-28)
     K.L.transformed(g, Matrix.Translation((OXL, 0, zc)) @ Matrix.Rotation(-math.pi / 2, 4, "Z"), local)
 
 
@@ -224,7 +225,7 @@ def reception(g):
     bx(g, "Brass", sx0 - 0.17, sx1 + 0.17, sy0 + 0.05, sy0 + 0.15, FZ + 8.5, FZ + 8.64)
     g["Brass"].hcyl(-12.0, sy0 + 0.12, FZ + 10.0, 1.42, 0.12, axis="y", seg=18)    # 머리 하트 판(1.5배)
     g["Paint"].hcyl(-12.0, sy0 + 0.05, FZ + 10.0, 1.28, 0.15, axis="y", seg=18)
-    N.heart(g, -12.0, sy0 - 0.06, FZ + 10.0, s=1.35, mat="SignRed", depth=0.12)
+    N.green_cross(g, -12.0, sy0 - 0.02, FZ + 10.0, s=1.5, depth=0.15, face=-1)   # 머리 녹십자 판(2026-11-28 하트 → 녹십자)
     cbox(sx0 - 0.15, sx1 + 0.15, sy0, sy1, FZ, FZ + 8.9)
     yy = sy0 + 0.75                                                              # 칸 안: 붕대 · 홑청 · 대야 · 병(1/4)
     for z, items in ((FZ + 3.2, ("roll", "linen", "basin", "bottle")), (FZ + 4.8, ("linen", "roll", "roll", "basin")),

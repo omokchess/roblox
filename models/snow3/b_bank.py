@@ -2,21 +2,16 @@
 """
 b_bank.py — 2026-11-14 아트 부서원 2 → 2026-11-18 아트 1팀 다시 지음. 설원 마을 3판: 은행(보관·환전). B 양식 — 벽 절반까지 돌.
 
-사용자(2026-11-18): "은행은 또 벽에 문만 달려있는 식이야." (2026-10-24 2판 때도: 금고 뒤 쌩 벽 → 뒤를 금고 공간으로, 양옆으로 추가 공간)
-→ 금고 문 그림 대신 **열린 둥근 금고 문(두께 2.6, 가장자리 빗장) + 그 뒤 진짜 금고실 + 양옆 회랑(붉은 융단)** 을 짓고, 발자국을 뒤로 늘렸다
-  (바닥 발자국 깊이 31.3 → 43.9, 폭 그대로 — 총괄 허락 44 이내). 문에 들어서면 쇠살 창구 너머로 금고 문과 불 켜진 금고실이 보인다.
+사용자(2026-11-28 4차 점검): "은행은 그냥 금고를 없애자" — 금고 문이 사방 뚫린 채 열려 있고 문짝이 땅에 박혀 있었다.
+→ 금고실·금고 문·회랑을 통째로 뺐다. 발자국 깊이 43.9 → 35.2(뒤 벽 y 25.6 → 20.4, 모임지붕이 반 깊이 ≥ 반 폭이어야 해서 이보다 못 줄임).
+  홀을 은행답게: 벽에서 벽까지 창구 줄(창구 넷 · 쇠살 · 창구 번호판 · 동전 접시 · 종) + 대기석(양 벽 긴 의자 셋) + 기입대 + 환율 판 + 괘종시계 + 동전 저울.
+  창구 뒤 직원 칸(손님은 못 들어감 — 양 끝은 닫힌 직원 문): 창구마다 서기 책상(장부·등·동전·작은 쇠 궤) + 의자 · 뒷벽 장부 책장 넷 · 서랍장 + 은행 문장 · 돈자루.
 
-레퍼런스(회사/설원마을_레퍼런스.md B·'내부 레퍼런스 — 1팀'): 뢰로스 은행(B1 돌 1층 + 짙은 목재), 1922 퀸즐랜드 은행 안(B2 쇠살 창구),
-은행 박물관 금고문(B3), 둥근 금고 문 + 대여 금고 서랍 벽(내부 레퍼런스 BI1~BI4).
+레퍼런스(회사/설원마을_레퍼런스.md B): 뢰로스 은행(B1 돌 1층 + 짙은 목재), 1922 퀸즐랜드 은행 안(B2 쇠살 창구 줄).
 
-배치(블렌더, 앞 = -y, 바닥 FZ = 2). 벽 가운데 선 x ±16.4 · y -13..25.6 → 안 31.6 × 37.4, 천장(평보 밑) 11.
-  홀      y -12.4..-0.5 : 문 → 붉은 깔개 → 창구 카운터(x -5..4 · y -0.5..2, 쇠살 칸막이 · 창구 둘) · 양옆 등받이 긴 의자 · 기입대 · 큰 괘종시계 · 증기 동전 저울
-  직원 칸  y 2..12.1    : 창구 NPC 둘 · 왼 벽 장부 책상(의자·장부 책장) · 금고 문으로 가는 길(폭 8 넘음) · 오른쪽은 열린 금고 문짝이 막 서 있는 자리
-  금고 벽  y 12.1..14.1 : 돌 벽(두께 2) + 둥근 구멍(반지름 4.4, 가운데 바닥 위 3.4 — 걷는 높이 폭 8.6) + 쇠 틀 · 문짝은 오른 경첩에서 밖으로 90° 열림(80° 면 길이 7.7)
-  금고실   x ±6.2 · y 14.1..25.0 (돌 천장 바닥 위 10.2): 앞 8.4 는 지나는 길(양옆 회랑 문 y 14.35..22.75, 폭 8.4, 쇠살문은 위로 들림),
-           뒤 2.25 에 대여 금고 서랍 벽(뒷벽) · 금괴 선반 둘(옆벽) · 장부 책상(가운데) · 돈자루
-  회랑     x ±(7.4..15.8) · y 12.1..25.0 (폭 8.4): 앞이 직원 칸으로 트임 · 붉은 융단 · 벽등 · 높은 쇠살 창 · 그림 액자 · 끝 벽 난방기 · 금고실 문 위 들림 감개
-  → 한 바퀴: 홀 → 왼 길 → 직원 칸 → 금고 문 → 금고실 → (왼·오른) 회랑 문 → 회랑 → 직원 칸 → 홀. 통로 폭은 int1_render.py check 가 잰다(8 이상).
+배치(블렌더, 앞 = -y, 바닥 FZ = 2). 벽 가운데 선 x ±16.4 · y -13..20.4 → 안 31.6 × 32.2, 천장(평보 밑) 11.
+  홀     y -12.4..3.8 : 문 → 붉은 깔개 → 창구 줄(y 4..6.5, x -13..13 + 양 끝 닫힌 직원 문) · 양 벽 대기석 · 기입대 · 환율 판 · 괘종시계 · 동전 저울
+  직원 칸 y 6.5..19.8 : 창구 NPC 넷(y 7.8) · 서기 책상 넷 · 뒷벽 책장·서랍장·문장 · 옆벽 서랍장·돈자루
 """
 import math
 
@@ -25,45 +20,38 @@ from mathutils import Matrix
 import lib as K
 import lib_b as KB
 import lib_int1 as P
+import lib_int2 as N
 from lib import FZ, LOG, CEIL, MAIN_W, MAIN_H, WIN_W, WIN_SILL, bx, cbox, NPC, CLEAR
 
 NAME = "Sn3_Bank"
 PREFIX = "Sn3Bank"
 VARIANT = "B"
 
-WX, YF, YB = 16.4, -13.0, 25.6
+WX, YF, YB = 16.4, -13.0, 20.4          # 2026-11-28: 금고 빼고 뒤 벽 25.6 → 20.4(반 깊이 17.3 ≥ 반 폭 17 — 모임지붕)
 T = LOG
 AX = WX + T / 2                          # 벽 바깥면 반폭 17.0
-AYF, AYB = YF - T / 2, YB + T / 2         # 앞 -13.6 · 뒤 26.4
-CY, HA = (AYF + AYB) / 2, (AYB - AYF) / 2     # 지붕 가운데 y 6.4 · 반 깊이 20.0
-XI, YI0, YI1 = WX - T / 2, YF + T / 2, YB - T / 2       # 15.8, -12.4, 25.2
+AYF, AYB = YF - T / 2, YB + T / 2         # 앞 -13.6 · 뒤 21.0
+CY, HA = (AYF + AYB) / 2, (AYB - AYF) / 2     # 지붕 가운데 y 3.7 · 반 깊이 17.3
+XI, YI0, YI1 = WX - T / 2, YF + T / 2, YB - T / 2       # 15.8, -12.4, 19.8
 Z_PLATE = FZ + CEIL + 0.9
 STONE_TO = FZ + 6.0
 PITCH = 40.0
-WIN_F, WIN_S = (-11.5, 11.5), (-6.5, 6.5)
-SLIT_Y = 19.0                            # 회랑 높은 쇠살 창(옆벽)
-COUNTER = (-5.0, 2.5, -0.5, 2.0)          # 1.5 줄임(비평 1차 — 열린 문짝 옆 오른 길)
-FREE = (-5.0, 5.0, -10.65, -0.65)
-TIES = (-9.0, -2.5, 4.0, 10.5, 17.0, 23.5)    # 평보(x 방향) 자리 — 금고 쪽 둘은 금고 돌 천장 위에 얹힌다
-# 금고
-VY0, VY1 = 12.1, 14.1                    # 금고 앞벽(직원 칸 쪽 면 · 금고실 쪽 면)
-VX, VXO = 4.4, 5.6                       # 금고실 안 반폭 · 옆벽 바깥 반폭 — 비평 1차(2026-11-24) 방법 B: 회랑 8.4 → 10.2(0.5 격자로 재도 10)
-VZC, VR = 3.4, 4.4                       # 둥근 구멍 가운데 높이(바닥 위) · 반지름
-VCEIL = FZ + 10.2                        # 금고 돌 천장 밑
-GATE = (14.35, 22.75)                    # 회랑 문(쇠살문 들림) y — 폭 8.4(0.5 격자로 재도 8 넘게)
-HINGE, OPEN = (4.45, VY0), 90.0           # 금고 문짝 경첩 · 연 각(80° 면 문짝이 구멍 앞을 비스듬히 가려 길이 7.7 — 90° 가 폭 8 을 지키는 가장 작은 각)
-NPCS = ((-3.25, 3.3), (-0.25, 3.3))
+WIN_F, WIN_S = (-11.5, 11.5), (-6.5, 6.5, 14.0)
+COUNTER = (-13.0, 13.0, 4.0, 6.5)        # 창구 줄(양 끝 x ±13..±15.8 은 닫힌 직원 문)
+FREE = (-5.0, 5.0, -6.35, 3.65)
+TIES = (-9.0, -2.5, 4.0, 10.5, 17.0)     # 평보(x 방향) 자리
+TELLERS = (-9.0, -3.0, 3.0, 9.0)         # 창구 가운데 x
+NPCS = tuple((t, 7.8) for t in TELLERS)
 
 
 # ------------------------------------------------------------------ 껍데기
 def walls(g):
     hole = lambda u, z0=FZ + WIN_SILL, w=WIN_W, h=K.WIN_H: (u - w / 2, u + w / 2, z0, z0 + h)     # noqa: E731
     door = (-MAIN_W / 2, MAIN_W / 2, FZ, FZ + MAIN_H)
-    slit = hole(SLIT_Y, FZ + 6.3, 2.2, 2.6)
     plan = (("x", YF, [door] + [hole(u) for u in WIN_F], -1),
             ("x", YB, [], 1),
-            ("y", -WX, [hole(u) for u in WIN_S] + [slit], -1),
-            ("y", WX, [hole(u) for u in WIN_S] + [slit], 1))
+            ("y", -WX, [hole(u) for u in WIN_S], -1),
+            ("y", WX, [hole(u) for u in WIN_S], 1))
     for ax, c, holes, face in plan:
         u0, u1 = (-WX, WX) if ax == "x" else (YF, YB)
         K.frame_wall(g, ax, c, u0, u1, FZ, Z_PLATE, holes, stone_to=STONE_TO, face=face)
@@ -117,10 +105,13 @@ def tall_clock(g, x, y, face_rz):
     A = P.At(g, x, y, FZ, face_rz)
     A.box("DarkLog", -0.95, 0.95, -0.7, 0.7, 0, 1.2)
     A.box("Timber", -0.8, 0.8, -0.6, 0.6, 1.2, 5.6)
-    A.box("Wood", -0.55, 0.55, -0.66, -0.6, 1.6, 5.2)
-    A.box("Glass", -0.32, 0.32, -0.7, -0.66, 2.4, 4.9)
-    A.cyl("Iron", 0, -0.45, 3.0, 0.04, 0.04, 1.8, seg=4)
-    A.hcyl("Brass", 0, -0.45, 2.75, 0.28, 0.08, axis="y", seg=12)
+    A.box("Wood", -0.55, 0.55, -0.84, -0.6, 1.6, 2.2)                     # 허리 문 틀(밑대 · 윗대 · 옆대) — 유리 속 추가 보이게(2026-11-28: 추가 몸 속에 묻혀 있었다)
+    A.box("Wood", -0.55, 0.55, -0.84, -0.6, 4.9, 5.2)
+    for sx in (-1, 1):
+        A.box("Wood", *sorted((sx * 0.36, sx * 0.55)), -0.84, -0.6, 2.2, 4.9)
+    A.box("Glass", -0.36, 0.36, -0.82, -0.78, 2.2, 4.9)
+    A.box("Iron", -0.06, 0.06, -0.74, -0.6, 3.0, 4.9)                     # 추 막대(몸 앞면에 붙음)
+    A.hcyl("Brass", 0, -0.69, 2.85, 0.3, 0.12, axis="y", seg=12)
     A.box("DarkLog", -1.0, 1.0, -0.75, 0.75, 5.6, 5.9)
     A.box("Timber", -0.9, 0.9, -0.65, 0.65, 5.9, 7.9)
     A.hcyl("Brass", 0, -0.66, 6.9, 0.78, 0.08, axis="y", seg=20)
@@ -184,7 +175,7 @@ def writing_desk(g, x, y):
         for q in range(2 + k % 2):                             # 바랜 크림 종이(Canvas) 두세 장 어긋나게(비평 1차: 가장 밝은 덩이)
             g["Canvas"].obox(x + xx + 0.08 * q, y - 0.05 * q, FZ + 0.8 + 0.07 * q, 0.8, 0.8, 0.06, rz=0.12 * (q - 1))
     for sy in (-1, 1):
-        g["Wood"].obox(x, y + sy * 0.55, FZ + 3.55, 3.8, 1.2, 0.14, rx=sy * 0.22)
+        g["Wood"].obox(x, y + sy * 0.55, FZ + 3.55, 3.8, 1.2, 0.14, rx=-sy * 0.22)      # 바깥(쓰는 사람 쪽)이 낮게
         bx(g, "Brass", x - 1.8, x + 1.8, y + sy * 1.1 - 0.06, y + sy * 1.1 + 0.06, FZ + 3.3, FZ + 3.45)
     bx(g, "DarkLog", x - 1.85, x + 1.85, y - 0.12, y + 0.12, FZ + 3.55, FZ + 3.85)
     for xx in (-1.1, 1.1):
@@ -195,289 +186,130 @@ def writing_desk(g, x, y):
     cbox(x - 1.8, x + 1.8, y - 0.9, y + 0.9, FZ, FZ + 3.6)
 
 
+def rate_board(q, w=4.4, h=3.3):
+    """환율 판(제 좌표: 벽 = y 0, 방 = -y, 아래 가운데 원점): 짙은 나무 판 · 놋쇠 테 · 위 붉은 띠 + 금화 · 줄 넷(동전 원판 + 흰 숫자 패 셋) · 벽 쇠못 둘"""
+    bx(q, "DarkLog", -w / 2, w / 2, -0.22, 0.0, 0.0, h)
+    bx(q, "Brass", -w / 2 - 0.15, w / 2 + 0.15, -0.38, -0.05, -0.12, 0.12)
+    bx(q, "Brass", -w / 2 - 0.15, w / 2 + 0.15, -0.38, -0.05, h - 0.12, h + 0.12)
+    for sx in (-1, 1):
+        bx(q, "Brass", *sorted((sx * (w / 2 - 0.1), sx * (w / 2 + 0.15))), -0.38, -0.05, 0.12, h - 0.12)
+        bx(q, "Iron", sx * 1.4 - 0.1, sx * 1.4 + 0.1, -0.5, 0.0, h + 0.12, h + 0.32)
+    bx(q, "Banner", -w / 2 + 0.25, w / 2 - 0.25, -0.3, -0.2, h - 0.75, h - 0.2)
+    q["SignGold"].hcyl(0, -0.36, h - 0.47, 0.3, 0.14, axis="y", seg=12)
+    for r, (mat, num) in enumerate((("SignGold", "125"), ("Steel", "080"), ("Copper", "017"), ("Brass", "340"))):
+        z = h - 1.2 - r * 0.62
+        q[mat].hcyl(-w / 2 + 0.6, -0.3, z, 0.24, 0.16, axis="y", seg=10)
+        bx(q, "Iron", -w / 2 + 1.0, -w / 2 + 1.35, -0.28, -0.2, z - 0.05, z + 0.05)          # 화살 막대
+        for k, ch in enumerate(num):
+            x = -w / 2 + 1.85 + k * 0.62
+            bx(q, "Paint", x - 0.25, x + 0.25, -0.3, -0.2, z - 0.27, z + 0.27)
+            P.digit(q, ch, x, -0.3, z, 0.4, "DarkStone")
+
+
+def staff_gate(g, s):
+    """창구 줄 끝(카운터 끝 ~ 옆벽) 닫힌 직원 문: 받침 · 세로 널 문짝 · 앞뒤 띠 둘 · 윗대 · 벽 쪽 놋쇠 경첩 둘 · 카운터 쪽 쇠 빗장"""
+    xa, xb = sorted((s * (COUNTER[1] + 0.15), s * XI))
+    y0, y1 = COUNTER[2], COUNTER[3]
+    bx(g, "DarkLog", xa, xb, y0 + 0.5, y1 - 0.5, FZ, FZ + 0.3)
+    n = 4
+    for i in range(n):
+        a, b_ = xa + 0.1 + (xb - xa - 0.2) * i / n, xa + 0.1 + (xb - xa - 0.2) * (i + 1) / n
+        bx(g, "Timber" if i % 2 else "DarkLog", a + 0.01, b_ - 0.01, 5.0, 5.5, FZ + 0.3, FZ + 3.2)
+    for zz in (FZ + 0.8, FZ + 2.4):
+        bx(g, "Wood", xa + 0.15, xb - 0.15, 4.85, 5.65, zz, zz + 0.35)
+    bx(g, "Wood", xa - 0.05, xb + 0.05, y0 + 0.4, y1 - 0.4, FZ + 3.2, FZ + K.COUNTER_H)
+    xw = xb if s > 0 else xa
+    for zz in (FZ + 0.85, FZ + 2.45):
+        bx(g, "Brass", *sorted((xw, xw - s * 0.6)), 4.75, 5.75, zz + 0.05, zz + 0.3)
+    xc = xa if s > 0 else xb
+    bx(g, "Iron", *sorted((xc, xc + s * 0.7)), 4.8, 4.9, FZ + 1.7, FZ + 1.95)
+    cbox(xa, xb, y0, y1, FZ, FZ + K.COUNTER_H)
+
+
 def hall(g):
-    """홀: 붉은 깔개 · 카운터 + 쇠살 + NPC + 카운터 위 물건 · 긴 의자 둘 · 기입대 · 괘종시계 · 동전 저울 · 벽등 · 매단 등"""
-    for i in range(16):                                      # 홀 바닥: 두 톤 돌 바둑판(판 2.0, 높이 0.04 — 충돌 없음, 비평 1차 맨바닥)
-        for j in range(6):
-            bx(g, "StoneTrim" if (i + j) % 2 else "Stone", -XI + i * 2.0 - 0.2 * (i == 0), -XI + (i + 1) * 2.0, YI0 + j * 1.96, YI0 + (j + 1) * 1.96, FZ, FZ + 0.04)
-    P.rug(g, -3.0, 3.0, YI0 + 0.3, COUNTER[2] - 0.6, FZ, "Banner", "SignGold", "SignGold")
+    """홀: 두 톤 돌 바둑판 · 붉은 깔개 · 창구 줄(카운터 + 쇠살 + 창구 넷 + 번호판 · 접시 · 종) + 양 끝 직원 문 · 대기석 셋 · 기입대 · 환율 판 · 그림 · 괘종시계 · 동전 저울 · 벽등 · 매단 등"""
+    rows = 8
+    dy = (COUNTER[2] - 0.2 - YI0) / rows
+    for i in range(16):
+        for j in range(rows):
+            bx(g, "StoneTrim" if (i + j) % 2 else "Stone", -XI + i * 2.0 - 0.2 * (i == 0), -XI + (i + 1) * 2.0, YI0 + j * dy, YI0 + (j + 1) * dy, FZ, FZ + 0.04)
+    P.rug(g, -3.0, 3.0, YI0 + 0.3, COUNTER[2] - 0.8, FZ, "Banner", "SignGold", "SignGold")
     x0, x1, y0, y1 = COUNTER
     zt = bank_counter(g, x0, x1, y0, y1)
-    KB.grille(g, x0, x1, (y0 + y1) / 2, zt, FZ + 9.0, gaps=((-4.5, -2.0), (-1.5, 1.0)))
+    yc = (y0 + y1) / 2
+    KB.grille(g, -XI + 0.3, XI - 0.3, yc, zt, FZ + 9.0, gaps=[(t - 1.25, t + 1.25) for t in TELLERS])
+    for s in (-1, 1):
+        staff_gate(g, s)
     for x, y in NPCS:
         NPC(x, y, FZ, 0.0)
-    # 카운터 위(손님 쪽): 창구마다 동전 접시 · 장부 · 놋쇠 갓 등 / 오른쪽 환전 천칭 · 동전 기둥
-    for xc in (-3.25, -0.25):
-        g["Brass"].cyl(xc, y0 + 0.5, zt, 0.42, 0.48, 0.1, seg=12)
-        P.coin_stack(g, xc + 0.15, y0 + 0.5, zt + 0.1, n=2, r=0.16)
-        bx(g, "Leather", xc - 1.0, xc - 0.45, y0 + 0.2, y0 + 1.0, zt, zt + 0.22)
-        bx(g, "Paint", xc - 0.95, xc - 0.5, y0 + 0.25, y0 + 0.95, zt + 0.22, zt + 0.26)
-    P.scale(g, 1.6, y0 + 0.55, zt, rz=0.0)
-    for k, xx in enumerate((-4.6, -4.2)):
-        P.coin_stack(g, xx, y0 + 0.4 + 0.3 * (k % 2), zt, n=3 + k, r=0.2)
-    for x in (-4.6, 2.1):
-        g["Brass"].cyl(x, y1 - 0.4, zt, 0.3, 0.2, 0.15, seg=10)
-        g["Iron"].cyl(x, y1 - 0.4, zt + 0.15, 0.06, 0.06, 1.3, seg=6)
-        g["Brass"].cyl(x, y1 - 0.4, zt + 1.1, 0.55, 0.2, 0.45, seg=12)
-        g["Glow"].box(x, y1 - 0.4, zt + 1.05, 0.28, 0.28, 0.1)
-    # 홀 양옆 긴 의자 · 의자 위 벽등
-    bench_wall(g, -1, -10.6, -5.6)       # 짧게 — 왼 길(벽 ~ 카운터 왼끝) 10 을 비움(비평 1차)
-    bench_wall(g, 1, -6.2, -4.0)         # 오른쪽은 짧게(둘 자리) — 앞에 동전 저울 · 괘종시계(오른 길 어귀를 비움)
+    zg = zt + 2.4
+    for i, t in enumerate(TELLERS):                       # 창구마다: 번호판(쇠살 위) · 동전 접시 · 동전 · 종 · 잉크병
+        bx(g, "Brass", t - 0.45, t + 0.45, yc - 0.34, yc - 0.02, zg + 0.35, zg + 1.15)       # 쇠살에 박은 번호판
+        bx(g, "DarkLog", t - 0.35, t + 0.35, yc - 0.4, yc - 0.34, zg + 0.45, zg + 1.05)
+        P.digit(g, str(i + 1), t, yc - 0.4, zg + 0.75, 0.5, "Paint")
+        g["Brass"].cyl(t - 0.6, y0 + 0.45, zt, 0.42, 0.48, 0.1, seg=12)
+        P.coin_stack(g, t - 0.45, y0 + 0.45, zt + 0.1, n=2 + i % 2, r=0.16)
+        g["Brass"].cyl(t + 0.75, y0 + 0.4, zt, 0.3, 0.2, 0.36, seg=10)           # 종
+        g["Iron"].cyl(t + 0.75, y0 + 0.4, zt + 0.36, 0.08, 0.08, 0.14, seg=6)
+        g["Brass"].cyl(t + 0.75, y0 + 0.4, zt + 0.5, 0.13, 0.13, 0.08, seg=8)
+        g["DarkStone"].cyl(t + 0.1, y0 + 0.9, zt, 0.16, 0.13, 0.3, seg=8)           # 잉크병 + 깃펜
+        g["Paint"].obox(t + 0.15, y0 + 0.95, zt + 0.55, 0.06, 0.12, 0.6, ry=0.3)
+    P.scale(g, -11.6, y0 + 0.55, zt, rz=0.0)               # 1번 창구 옆 환전 천칭
+    for k, xx in enumerate((11.4, 11.85)):
+        P.coin_stack(g, xx, y0 + 0.45 + 0.3 * (k % 2), zt, n=3 + k, r=0.2)
+    # 대기석(양 벽 긴 의자) · 벽등
+    bench_wall(g, -1, -10.6, -5.6)
+    bench_wall(g, -1, -3.6, 2.4)
+    bench_wall(g, 1, -5.4, 2.4)
     for s in (-1, 1):
         for yy in (-9.6, -3.4):
             P.sconce(g, "y", s * XI, yy, FZ + 7.2, face=-s)
-    writing_desk(g, -11.0, -10.8)         # 왼 앞(긴 의자 앞 — 왼 길(카운터 왼끝 ~ 벽, y 0 언저리)을 비움)
-    tall_clock(g, 14.5, -11.3, 0.0)      # 오른 앞 구석(창 옆)
-    coin_machine(g, XI, -8.4)            # 오른 벽 앞쪽(괘종시계와 짧은 긴 의자 사이 — 오른 길 어귀 y 0 언저리는 비움)
-    for x, y in ((-3.4, -9.0), (3.4, -9.0), (-3.4, -2.5), (3.4, -2.5)):
+    P.wall_weapon(g, "y", -XI, -0.4, FZ + 5.0, 1, rate_board)               # 왼 벽 환율 판(긴 의자 위)
+    N.put(g, XI, -1.4, FZ + 4.9, -math.pi / 2, N.painting, 4.4, 3.0)         # 오른 벽 그림(설산)
+    writing_desk(g, -11.0, -10.8)
+    tall_clock(g, 14.5, -11.3, 0.0)
+    coin_machine(g, XI, -8.4)
+    for x, y in ((-3.4, -9.0), (3.4, -9.0), (-3.4, -2.5), (3.4, -2.5), (-10.0, -2.5), (10.0, -2.5)):
         K.lantern(g, x, y, Z_PLATE - 0.9, FZ + 8.4)
 
 
-# ------------------------------------------------------------------ 직원 칸
 def staff(g):
-    """왼 벽: 장부 책상(창 밑) + 의자 · 장부 책장 / 금고 벽 앞 놋쇠 문장 · 벽등 둘 / 매단 등"""
-    xw = -XI
-    # (비평 1차 2026-11-24) 왼 벽 장부 책상·책장은 뺐다: 카운터 왼끝 ~ 금고 벽 모서리 ~ 회랑 어귀가 모두 10 이 되려면 이 벽은 비어야 한다.
-    # 장부 자리는 카운터 위(창구마다 장부)와 금고실 장부 책상이 맡는다. 벽에는 기대지 않는 높이(바닥 위 7 위)의 장부 선반 하나만
-    bx(g, "Wood", xw, xw + 0.9, 3.0, 11.0, FZ + 7.2, FZ + 7.4)
-    for k, y in enumerate((3.4, 5.4, 7.4, 9.4)):
-        brace(g, xw, y, FZ + 6.4)
-    K.L.transformed(g, Matrix.Translation((xw + 0.45, 0, 0)) @ Matrix.Rotation(math.pi / 2, 4, "Z"),
-                    lambda q: P.book_row(q, 3.1, 10.9, 0.0, FZ + 7.4, depth=0.8, start=2, face=-1))
-    # 금고 벽 앞(직원 칸 쪽 면) 장식: 위 놋쇠 문장(동전 + 열쇠 구멍) · 벽등 둘
-    g["Brass"].hcyl(0, VY0 - 0.25, FZ + 9.3, 0.95, 0.3, axis="y", seg=20)
-    g["Iron"].hcyl(0, VY0 - 0.4, FZ + 9.3, 0.7, 0.08, axis="y", seg=20)
-    g["Brass"].hcyl(0, VY0 - 0.45, FZ + 9.45, 0.18, 0.06, axis="y", seg=8)
-    g["Brass"].obox(0, VY0 - 0.45, FZ + 9.1, 0.18, 0.06, 0.35)
-    for x in (-5.8, 5.8):
-        P.sconce(g, "x", VY0, x * 5.3 / 5.8, FZ + 8.6, face=-1)
-    for x, y in ((-9.0, 4.0), (-9.0, 10.5), (10.8, 4.0), (10.8, 10.5)):
+    """창구 뒤 직원 칸(손님 못 들어감): 마루 · 창구마다 서기 책상(장부 · 등 · 동전 · 작은 쇠 궤 둘) + 의자 · 뒷벽 책장 넷 · 가운데 서랍장 + 은행 문장 ·
+    옆 서랍장 둘 · 오른 벽 돈자루·상자 · 매단 등"""
+    P.plank_floor(g, -XI, XI, COUNTER[3] + 0.15, YI1, FZ)
+    for i, t in enumerate(TELLERS):
+        zt = P.table(g, t - 1.7, t + 1.7, 10.2, 11.8, FZ, h=2.6)
+        P.chair(g, t, 12.9, FZ, rz=0.0)
+        P.ledger_open(g, t - 0.3, 10.95, zt, rz=math.pi)
+        g["Brass"].cyl(t + 1.2, 11.35, zt, 0.26, 0.2, 0.12, seg=10)             # 책상 등
+        g["Iron"].cyl(t + 1.2, 11.35, zt + 0.12, 0.06, 0.06, 1.1, seg=6)
+        g["Brass"].cyl(t + 1.2, 11.35, zt + 1.05, 0.5, 0.18, 0.4, seg=10)
+        g["Glow"].cyl(t + 1.2, 11.35, zt + 0.95, 0.16, 0.12, 0.16, seg=6)
+        P.coin_stack(g, t - 1.35, 10.6, zt, n=2 + i % 3, r=0.18)
+        if i in (1, 2):
+            P.strongbox(g, t - 1.05, 11.35, zt, w=0.9, d=0.7, h=0.6, coll=False)
+    for k, x in enumerate((-13.6, -11.3, 11.3, 13.6)):
+        N.put(g, x, YI1 - 0.55, FZ, 0.0, N.bookcase, 2.2, 1.1, 7.0, "DarkLog", "Wood", k)
+        K.cbox(x - 1.1, x + 1.1, YI1 - 1.1, YI1, FZ, FZ + 7.0)
+    for x in (-5.2, 0.0, 5.2):
+        N.put(g, x, YI1 - 0.6, FZ, 0.0, N.drawer_chest, 4.4, 1.2, 3.0)
+        K.cbox(x - 2.2, x + 2.2, YI1 - 1.2, YI1, FZ, FZ + 3.0)
+    g["Brass"].hcyl(0, YI1 - 0.15, FZ + 7.4, 1.35, 0.3, axis="y", seg=20)       # 은행 문장: 놋쇠 동전 + 쇠 테 + 열쇠 구멍
+    g["Iron"].hcyl(0, YI1 - 0.32, FZ + 7.4, 1.05, 0.08, axis="y", seg=20)
+    g["SignGold"].hcyl(0, YI1 - 0.4, FZ + 7.4, 0.95, 0.06, axis="y", seg=20)
+    g["Char"].hcyl(0, YI1 - 0.45, FZ + 7.6, 0.2, 0.06, axis="y", seg=8)
+    bx(g, "Char", -0.1, 0.1, YI1 - 0.48, YI1 - 0.42, FZ + 6.95, FZ + 7.5)
+    N.put(g, -XI + 0.6, 10.0, FZ, math.pi / 2, N.drawer_chest, 4.4, 1.2, 3.0)
+    K.cbox(-XI, -XI + 1.2, 7.8, 12.2, FZ, FZ + 3.0)
+    N.put(g, -XI + 0.6, 17.4, FZ, math.pi / 2, N.drawer_chest, 3.4, 1.2, 3.0, 2, 2)
+    K.cbox(-XI, -XI + 1.2, 15.7, 19.1, FZ, FZ + 3.0)
+    P.crate(g, XI - 1.2, 9.4, FZ, w=1.9, d=1.9, h=1.7, rz=0.05)
+    for k, (dx, dy, s_) in enumerate(((-1.0, 11.6, 1.0), (-1.1, 12.9, 0.9), (-2.4, 12.2, 0.85))):
+        P.sack(g, XI + dx, dy, FZ, s=s_, rz=0.4 * k)
+    P.crate(g, XI - 1.0, 17.6, FZ, w=1.7, d=1.7, h=1.6, rz=-0.1)
+    P.crate(g, XI - 1.05, 17.55, FZ + 1.6, w=1.3, d=1.3, h=1.2, rz=0.2)
+    for x, y in ((-8.0, 10.5), (8.0, 10.5), (-8.0, 17.0), (8.0, 17.0), (0.0, 17.0)):
         K.lantern(g, x, y, Z_PLATE - 0.9, FZ + 8.4)
-
-
-def brace(g, xw, y, z):
-    """벽 선반 까치발(벽 x = xw 에서 방 쪽으로 비스듬한 각재)"""
-    g["Timber"].obox(xw + 0.4, y, z + 0.4, 0.15, 0.15, 1.1, ry=0.7)
-
-
-def _books_y(g, x, y0, y1, z, start):
-    """y 를 따라 선 책장 한 단(등이 +x 를 봄) — book_row 를 90° 돌려 쓴다"""
-    K.L.transformed(g, Matrix.Translation((x, 0, 0)) @ Matrix.Rotation(math.pi / 2, 4, "Z"),
-                    lambda q: P.book_row(q, y0, y1, 0.0, z, depth=0.8, start=start, face=-1))
-
-
-# ------------------------------------------------------------------ 금고
-def _arc(cx, cz, r, n=32):
-    return [(cx + r * math.cos(2 * math.pi * k / n), cz + r * math.sin(2 * math.pi * k / n)) for k in range(n + 1)]
-
-
-def round_hole_wall(g, mat, ax, c, th, u0, u1, z0, z1, cu, cz, r, n=32):
-    """벽(u0..u1 × z0..z1, 두께 th)에 둥근 구멍: 구멍 위·아래를 세로 조각(볼록 다각형)으로 채우고 양옆 기둥. 바닥 밑 원은 잘림"""
-    pts = _arc(cu, cz, r, n)
-    for p, q in zip(pts, pts[1:]):
-        if p[1] >= cz - 1e-6 and q[1] >= cz - 1e-6:
-            poly = [p, q, (q[0], z1), (p[0], z1)]
-        else:
-            poly = K._clip_hp([(p[0], z0), (q[0], z0), q, p], 0.0, -1.0, -z0)
-        if len(poly) >= 3:
-            K.wall_prism(g, mat, ax, c, th, poly)
-    K.wall_prism(g, mat, ax, c, th, [(u0, z0), (cu - r, z0), (cu - r, z1), (u0, z1)])
-    K.wall_prism(g, mat, ax, c, th, [(cu + r, z0), (u1, z0), (u1, z1), (cu + r, z1)])
-
-
-def ring_prism(g, mat, ax, c, th, cu, cz, r0, r1, zmin, n=32):
-    """벽 면에 붙는 둥근 테(r0..r1, 바닥 zmin 밑은 잘림)"""
-    a, b = _arc(cu, cz, r0, n), _arc(cu, cz, r1, n)
-    for k in range(n):
-        poly = K._clip_hp([a[k], a[k + 1], b[k + 1], b[k]], 0.0, -1.0, -zmin)
-        if len(poly) >= 3:
-            K.wall_prism(g, mat, ax, c, th, poly)
-
-
-def vault_shell(g):
-    """금고 앞벽(둥근 구멍 + 쇠 안 테 + 쇠 겉 테 + 놋쇠 띠 + 빗장 구멍) · 옆벽 둘(회랑 문 + 들린 쇠살문) · 돌 천장 · 바닥 놋쇠 별"""
-    zc = FZ + VZC
-    yc = (VY0 + VY1) / 2
-    round_hole_wall(g, "Stone", "x", yc, VY1 - VY0, -VXO, VXO, FZ, VCEIL, 0.0, zc, VR + 0.3)
-    ring_prism(g, "Steel", "x", yc, VY1 - VY0, 0.0, zc, VR, VR + 0.32, FZ)             # 구멍 안 쇠 테(벽 두께 전부)
-    ring_prism(g, "Iron", "x", VY0 - 0.15, 0.3, 0.0, zc, VR + 0.3, VR + 1.0, FZ)       # 겉 쇠 테(직원 칸 쪽)
-    ring_prism(g, "Brass", "x", VY0 - 0.12, 0.42, 0.0, zc, VR + 1.0, VR + 1.18, FZ)
-    for k in range(10):                                                              # 빗장 구멍(문짝 빗장이 들어가는 자리)
-        a = math.pi / 2 + 2 * math.pi * k / 10
-        zz = zc + (VR + 0.15) * math.sin(a)
-        if zz > FZ + 0.6:
-            g["Char"].obox((VR + 0.15) * math.cos(a), VY0 + 0.3, zz, 0.5, 0.62, 0.5, ry=-a)
-    bx(g, "StoneTrim", -VXO - 0.15, VXO + 0.15, VY0 - 0.2, VY1, FZ, FZ + 0.6)          # 밑 띠돌
-    bx(g, "StoneTrim", -VXO - 0.2, VXO + 0.2, VY0 - 0.3, VY1, VCEIL - 0.3, VCEIL + 0.1)
-    for s in (-1, 1):                                                                # 앞벽 모서리 돌 기둥(벽보다 0.2 내밈)
-        bx(g, "StoneTrim", *sorted((s * VXO, s * (VXO - 0.9))), VY0 - 0.2, VY0, FZ, VCEIL - 0.3)
-    cbox(-VXO, -VR, VY0, VY1, FZ, VCEIL)
-    cbox(VR, VXO, VY0, VY1, FZ, VCEIL)
-    cbox(-VR, VR, VY0, VY1, zc + 3.0, VCEIL)
-    # 옆벽(회랑 문 GATE, 높이 8.4 — 위 돌 인방)
-    gz = FZ + 8.4
-    for s in (-1, 1):
-        xa, xb = sorted((s * VX, s * VXO))
-        for y0, y1 in ((VY1, GATE[0] - 0.4), (GATE[1] + 0.4, YI1)):     # 문설주 면은 문설주만(비평 1차 겹친 면)
-            bx(g, "Stone", xa, xb, y0, y1, FZ, VCEIL)
-            cbox(xa, xb, y0, y1, FZ, VCEIL)
-        cbox(xa, xb, GATE[0] - 0.4, GATE[0], FZ, VCEIL)
-        cbox(xa, xb, GATE[1], GATE[1] + 0.4, FZ, VCEIL)
-        bx(g, "Stone", xa, xb, GATE[0] - 0.4, GATE[1] + 0.4, gz + 0.4, VCEIL)
-        for y0, y1 in ((GATE[0] - 0.4, GATE[0]), (GATE[1], GATE[1] + 0.4)):            # 문설주 돌(양쪽 0.2 내밈)
-            bx(g, "StoneTrim", xa - 0.2, xb + 0.2, y0, y1, FZ, gz + 0.4)
-        bx(g, "StoneTrim", xa - 0.2, xb + 0.2, GATE[0] - 0.4, GATE[1] + 0.4, gz, gz + 0.4)
-        # 들린 쇠살문: 살 끝(창날)만 인방 밑으로 0.7 보인다 + 가로대
-        xm = s * (VX + VXO) / 2
-        y = GATE[0] + 0.35
-        while y < GATE[1] - 0.3:
-            bx(g, "Iron", xm - 0.1, xm + 0.1, y - 0.1, y + 0.1, gz - 0.55, gz + 0.1)
-            g["Iron"].obox(xm, y, gz - 0.62, 0.14, 0.14, 0.14, rx=0.785)
-            y += 0.8
-        bx(g, "Iron", xm - 0.12, xm + 0.12, GATE[0] + 0.1, GATE[1] - 0.1, gz - 0.35, gz - 0.15)
-        # 감개(회랑 쪽 벽 높이 — 머리 위): 쇠 바퀴 + 축 받침 + 사슬(쇠 띠)
-        xo = s * (VXO + 0.25)
-        g["Iron"].hcyl(xo, 13.4, FZ + 7.6, 0.85, 0.16, axis="x", seg=14)
-        g["Brass"].hcyl(xo, 13.4, FZ + 7.6, 0.3, 0.35, axis="x", seg=8)
-        for k in range(4):
-            a = k * math.pi / 4
-            g["Iron"].obox(xo, 13.4, FZ + 7.6, 0.1, 1.5, 0.1, rx=a)
-        bx(g, "Iron", *sorted((s * VXO, s * (VXO + 0.12))), 13.0, 13.8, FZ + 7.0, FZ + 8.2)
-        g["Iron"].obox(xo, (13.4 + GATE[0]) / 2 + 0.3, FZ + 8.3, 0.08, GATE[0] - 13.4 + 0.4, 0.08)
-    # 돌 천장(옆벽·앞벽 위) — 평보 둘이 그 위에 얹힌다
-    bx(g, "Stone", -VXO, VXO, VY0, YI1, VCEIL, FZ + 11.0)
-    for y in (16.8, 20.4):
-        bx(g, "StoneTrim", -VX, VX, y - 0.35, y + 0.35, VCEIL - 0.45, VCEIL)              # 천장 돌 들보
-    # 금고실 바닥: 놋쇠 별(바닥에 박은 테 + 네 갈래)
-    S = K.S
-    S.ring(g, "Brass", 0.0, 18.6, FZ, 1.6, 1.85, 0.03, n=20)
-    for k in range(4):
-        g["Brass"].obox(0.0, 18.6, FZ + 0.015, 0.22, 3.2, 0.03, rz=k * math.pi / 4)
-
-
-def _leaf_local(q):
-    """문짝(제 좌표: 경첩 축 = z 축, 닫히면 -x 로 뻗고 앞면이 -y). 바깥 판(쇠, 반지름 4.7, 두께 0.8) + 마개(Steel 4.2, 1.8) +
-    가장자리 빗장 9 · 놋쇠 테 · 바퀴 손잡이(살 셋 + 테 조각 12) · 다이얼 · 리벳 고리 · 경첩 팔·통"""
-    cu, zc = -HINGE[0], VZC
-    disc = K._clip_hp(_arc(cu, zc, 4.4, 36)[:-1], 0.0, -1.0, -0.05)
-    plug = K._clip_hp(_arc(cu, zc, 4.2, 36)[:-1], 0.0, -1.0, -0.1)
-    K.wall_prism(q, "Iron", "x", -0.7, 0.8, disc)
-    K.wall_prism(q, "Iron", "x", 0.6, 1.8, plug)          # 마개도 짙은 쇠(비평 1차: 흰 Steel 원판이 첫 초점이 됐다)
-    # 뒷면(마개 +y 면, 열면 홀 쪽) 빗장 장치: 놋쇠 기어 통 · 빗장 막대 9 · 시한 자물쇠 상자(유리 + 다이얼 둘) · 가로 띠 둘 · 리벳 16
-    q["Brass"].hcyl(cu, 1.7, zc, 0.8, 0.4, axis="y", seg=16)
-    K.S.gear(q, "Brass", cu, 1.95, zc, 0.55, 10, 0.12)
-    for k in range(9):
-        a = math.pi / 2 + 2 * math.pi * k / 9
-        if zc + 3.9 * math.sin(a) > 0.7:
-            q["Iron"].obox(cu + 2.3 * math.cos(a), 1.65, zc + 2.3 * math.sin(a), 3.1, 0.3, 0.3, ry=-a)
-    q["Iron"].box(cu + 1.6, 1.7, zc + 1.7, 1.4, 0.4, 1.0)
-    q["Glass"].box(cu + 1.6, 1.92, zc + 1.75, 1.1, 0.06, 0.7)
-    for dx in (-0.3, 0.3):
-        q["Brass"].hcyl(cu + 1.6 + dx, 1.97, zc + 1.75, 0.22, 0.06, axis="y", seg=10)
-    for dz in (-1.8, 1.8):
-        q["Iron"].box(cu, 1.6, zc + dz, 2 * math.sqrt(max(0.5, 4.0 ** 2 - dz * dz)), 0.12, 0.4)
-    for k in range(16):
-        a = 2 * math.pi * (k + 0.5) / 16
-        if zc + 3.9 * math.sin(a) > 0.4:
-            q["Brass"].hcyl(cu + 3.9 * math.cos(a), 1.55, zc + 3.9 * math.sin(a), 0.12, 0.12, axis="y", seg=6)
-    for k in range(9):                                     # 가장자리 빗장(마개 둘레에서 바깥으로)
-        a = math.pi / 2 + 2 * math.pi * k / 9
-        zz = zc + 4.45 * math.sin(a)
-        if zz > 0.7:
-            q["Iron"].obox(cu + 4.45 * math.cos(a), 0.6, zz, 0.9, 0.5, 0.5, ry=-a)      # 짙은 쇠(2026-11-27 비평 사소 3: 밝은 강철 빗장이 홀에서 가장 밝은 점)
-            q["Brass"].obox(cu + 4.95 * math.cos(a), 0.6, zc + 4.95 * math.sin(a), 0.12, 0.56, 0.56, ry=-a)
-    q["Brass"].hcyl(cu, -1.15, zc, 3.6, 0.1, axis="y", seg=32)
-    q["Iron"].hcyl(cu, -1.2, zc, 3.3, 0.1, axis="y", seg=32)
-    for k in range(16):                                    # 리벳 고리(바깥 판)
-        a = 2 * math.pi * (k + 0.5) / 16
-        zz = zc + 4.0 * math.sin(a)
-        if zz > 0.35:
-            q["Brass"].hcyl(cu + 4.0 * math.cos(a), -1.16, zz, 0.13, 0.12, axis="y", seg=6)
-    q["Brass"].hcyl(cu, -1.55, zc, 0.5, 0.7, axis="y", seg=12)      # 바퀴 축
-    for k in range(3):
-        a = math.pi / 2 + k * 2 * math.pi / 3
-        q["Brass"].obox(cu + 0.85 * math.cos(a), -1.85, zc + 0.85 * math.sin(a), 1.7, 0.18, 0.22, ry=-a)
-        q["Brass"].hcyl(cu + 1.95 * math.cos(a), -2.05, zc + 1.95 * math.sin(a), 0.16, 0.45, axis="y", seg=8)
-    for k in range(12):
-        a = 2 * math.pi * (k + 0.5) / 12
-        q["Iron"].obox(cu + 1.7 * math.cos(a), -1.88, zc + 1.7 * math.sin(a), 0.24, 0.24, 0.95, ry=-a)
-    q["Brass"].hcyl(cu + 2.1, -1.3, zc + 2.2, 0.55, 0.2, axis="y", seg=14)       # 다이얼
-    q["Dial"].hcyl(cu + 2.1, -1.42, zc + 2.2, 0.42, 0.06, axis="y", seg=14)
-    q["Iron"].obox(cu + 2.15, -1.47, zc + 2.32, 0.06, 0.04, 0.3, ry=-0.5)
-    for zz in (1.0, 5.8):                                  # 경첩 팔 + 통
-        q["Iron"].obox(-0.95, -0.7, zz, 1.9, 0.5, 0.7)
-        q["Iron"].cyl(0.0, -0.7, zz - 0.8, 0.45, 0.45, 1.6, seg=10)
-        q["Brass"].cyl(0.0, -0.7, zz + 0.8, 0.2, 0.15, 0.3, seg=8)
-
-
-def vault_door(g):
-    """열린 둥근 금고 문짝: 오른 경첩(HINGE)에서 밖(직원 칸 쪽)으로 OPEN° — 길(구멍 앞 폭 8.8 · 오른 길 8.4)을 막지 않는 각"""
-    hx, hy = HINGE
-    th = math.radians(OPEN)
-    K.L.transformed(g, Matrix.Translation((hx, hy, FZ)) @ Matrix.Rotation(th, 4, "Z"), _leaf_local)
-    for zz in (1.0, 5.8):                                  # 경첩 받침(벽에 박은 쇠판)
-        bx(g, "Iron", hx - 0.3, hx + 0.9, hy - 1.2, hy, FZ + zz - 0.9, FZ + zz + 0.9)
-    c, s = math.cos(th), math.sin(th)
-    lx, ly = -HINGE[0], 0.2
-    K.I.C(hx + lx * c - ly * s, hy + lx * s + ly * c, FZ + VZC, 8.8, 2.6, 2 * 4.4 - 0.6, th)
-
-
-def vault_room(g):
-    """금고실 뒤 2.6: 뒷벽 대여 금고 서랍 벽 · 옆벽 금괴 선반 둘 · 가운데 장부 책상 · 사이 돈자루 · 돌 천장 매단 등 둘"""
-    P.deposit_wall(g, "x", YI1, -VX + 0.1, VX - 0.1, FZ, cols=6, rows=6, face=-1, depth=0.7)
-    yb0 = GATE[1] + 0.15
-    for s in (-1, 1):                                       # 금괴 선반(옆벽, 3 단)
-        xw = s * VX
-        tops = P.shelf(g, "y", xw, yb0, YI1 - 0.8, FZ, 5.0, depth=1.1, levels=3, face=-s, bay=1.6, back=False)
-        for k, z in enumerate(tops):
-            for yy in (yb0 + 0.35, yb0 + 0.88):            # 금괴(긴 쪽이 x — 선반 깊이 방향) 둘 + 위 하나
-                P.gold_bar(g, xw - s * 0.55, yy, z, rz=0.0)
-            P.gold_bar(g, xw - s * 0.55, yb0 + 0.62, z + 0.3, rz=0.0 if k % 2 else 0.12)
-    # 장부 책상(서서 쓰는 비탈 책상) + 펼친 장부 · 동전 기둥 · 천칭
-    zt = P.table(g, -1.9, 1.9, GATE[1] + 0.3, YI1 - 0.85, FZ, h=3.2)
-    g["Wood"].obox(0.0, (GATE[1] + YI1 - 0.55) / 2, zt + 0.3, 3.4, 1.1, 0.12, rx=-0.28)
-    bx(g, "Leather", -1.5, -0.1, GATE[1] + 0.6, GATE[1] + 1.2, zt + 0.25, zt + 0.45)
-    bx(g, "Paint", -1.42, -0.18, GATE[1] + 0.65, GATE[1] + 1.15, zt + 0.45, zt + 0.5)
-    P.coin_stack(g, 0.6, GATE[1] + 0.9, zt, n=6, r=0.2)
-    P.coin_stack(g, 1.1, GATE[1] + 0.8, zt, n=3, r=0.2)
-    g["Iron"].cyl(1.5, YI1 - 1.2, zt, 0.16, 0.12, 0.28, seg=8)
-    # 돈자루(책상과 선반 사이)
-    for s in (-1, 1):
-        for k, (dx, dy, sc, rz) in enumerate(((2.5, 23.3, 0.6, 0.3), (2.8, 23.85, 0.5, -0.5), (2.6, 23.5, 0.45, 1.2))):
-            P.sack(g, s * dx, dy, FZ if k < 2 else FZ + 0.6, s=sc, rz=rz * s, mark="SignGold")
-        cbox(*sorted((s * 2.0, s * 3.2)), 22.85, 24.25, FZ, FZ + 1.3)
-    for y in (16.8, 20.4):
-        K.lantern(g, 0.0, y, VCEIL - 0.45, FZ + 7.4)
-    for y in (16.8, 20.4):
-        for s in (-1, 1):
-            g["Glow"].box(s * (VX - 0.05), y, FZ + 8.6, 0.1, 0.5, 0.5)
-            g["LampPt"].box(s * (VX - 0.5), y, FZ + 8.0, 0.3, 0.3, 0.3)
-
-
-def corridors(g):
-    """회랑 둘: 붉은 융단 · 바깥 벽 벽등 셋 + 안쪽 벽 둘 · 그림 액자 둘 · 끝 벽 난방기(관 · 놋쇠 핀) · 끝 등받이 의자"""
-    for s in (-1, 1):
-        xa, xb = sorted((s * VXO, s * XI))
-        xm = (xa + xb) / 2
-        P.rug(g, xm - 2.0, xm + 2.0, VY0 + 0.4, YI1 - 0.5, FZ, "Banner", "SignGold", "SignGold")
-        for y in (14.6, 23.6):
-            P.sconce(g, "y", s * XI, y, FZ + 7.4, face=-s)
-        for y in (13.2, 24.0):
-            P.sconce(g, "y", s * VXO, y, FZ + 7.4, face=s)
-        for y, sky, hill in ((16.6, "SignBlue", "PaintGreen"), (21.4, "SignTeal", "Stone")):
-            xw = s * XI
-            bx(g, "Brass", *sorted((xw, xw - s * 0.18)), y - 1.3, y + 1.3, FZ + 4.2, FZ + 6.6)
-            bx(g, sky, *sorted((xw - s * 0.18, xw - s * 0.24)), y - 1.1, y + 1.1, FZ + 4.4, FZ + 6.4)
-            K.wall_prism(g, hill, "y", xw - s * 0.3, 0.06, [(y - 1.0, FZ + 4.75), (y + 1.0, FZ + 4.75), (y - 0.1, FZ + 5.9)])
-            bx(g, "Paint", *sorted((xw - s * 0.24, xw - s * 0.3)), y - 1.1, y + 1.1, FZ + 4.4, FZ + 4.75)
-        # 끝 벽 난방기(뒷벽 y = YI1): 돌 받침 · 놋쇠 핀 일곱 · 구리 관 둘(벽 속으로)
-        bx(g, "Stone", xm - 2.4, xm + 2.4, YI1 - 0.7, YI1, FZ, FZ + 0.4)
-        for k in range(7):
-            xx = xm - 1.8 + 0.6 * k
-            bx(g, "Brass", xx - 0.18, xx + 0.18, YI1 - 0.6, YI1 - 0.1, FZ + 0.4, FZ + 2.6)
-        for zz in (FZ + 0.8, FZ + 2.3):
-            g["Copper"].hcyl(xm, YI1 - 0.35, zz, 0.16, 4.4, axis="x", seg=8)
-        cbox(xm - 2.4, xm + 2.4, YI1 - 0.7, YI1, FZ, FZ + 2.6)
 
 
 def signs(g):
@@ -503,17 +335,10 @@ def build(g):
     roof(g)
     hall(g)
     staff(g)
-    vault_shell(g)
-    vault_door(g)
-    vault_room(g)
-    corridors(g)
     signs(g)
     steam(g)
     CLEAR(-4.7, 4.7, YI0 + 0.2, FREE[2], FZ + 0.15, FZ + 5.4)      # 안으로 연 문짝 띠가 0.1~0.3 들어와 ±4.7
     CLEAR(FREE[0], FREE[1], FREE[2], FREE[3] - 0.15, FZ + 0.15, FZ + 5.4)
-    CLEAR(-2.8, 2.8, VY0 + 0.2, VY1 + 1.0, FZ + 0.15, FZ + 5.4)    # 금고 문 구멍: 둥근 구멍은 발밑 폭 5.6(원) — 걷는 높이(바닥 + 2.5) 충돌 폭은 8.8
-    for s in (-1, 1):
-        CLEAR(*sorted((s * VX - s * 0.5, s * VXO + s * 0.5)), GATE[0] + 0.1, GATE[1] - 0.1, FZ + 0.15, FZ + 5.4)
 
 
 INFO = {
@@ -524,16 +349,7 @@ INFO = {
     "free": FREE,
     "walk": ((0.0, YF - 1.5), (0.0, -3.0)),
     "inside": (-XI, XI, YF - T / 2 - 1.5, YI1),
-    "forge_look": (0.0, VY0),
-    # 금고 문(2026-11-18 1팀): 열린 문짝. 퀘스트로 닫을 땐 문짝(경첩 축 hinge, 연 각 open_deg)을 0° 로 돌리면 구멍을 막는다(지금은 메시에 합쳐 있음)
-    "vault_door": {"hole_center": (0.0, VY0, FZ + VZC), "hole_radius": VR, "leaf_radius": 4.4, "hinge": (HINGE[0], HINGE[1], FZ),
-                   "open_deg": OPEN, "face": "-y"},
-    # holes.py 눈 자리(방에서 보이는 자리만 셀 때) — 금고실 가운데 · 회랑 둘 · 직원 칸
-    "hole_seeds": [(0.0, 18.6, FZ + 4.5), (-11.6, 18.6, FZ + 4.5), (11.6, 18.6, FZ + 4.5), (-8.0, 7.0, FZ + 4.5), (10.0, 7.0, FZ + 4.5)],
-    # 한 바퀴 통로(int1_render.py check — 폭 8 이상): (이름, 출발, 도착)
-    # 문(가운데 x, y, 반폭) — int1_render check 가 가장 좁은 자리가 문 안이면 문 기준 8, 아니면 길 10(비평 1차)
-    "doors_xy": [(0.0, (VY0 + VY1) / 2, VR), (-(VX + VXO) / 2, (GATE[0] + GATE[1]) / 2, 4.2), ((VX + VXO) / 2, (GATE[0] + GATE[1]) / 2, 4.2)],
-    "loops": [("홀 → 직원 칸(왼 길)", (-10.0, -2.5), (-6.0, 7.0)), ("직원 칸 → 금고실(금고 문)", (-6.0, 6.5), (0.0, 18.6)),
-              ("금고실 → 왼 회랑", (0.0, 18.6), (-10.8, 18.6)), ("금고실 → 오른 회랑", (0.0, 18.6), (10.8, 18.6)),
-              ("왼 회랑 → 직원 칸", (-10.8, 18.6), (-6.0, 7.0)), ("오른 회랑 → 홀(오른 길)", (10.8, 18.6), (2.0, -6.0))],
+    "forge_look": (0.0, 10.0),
+    # holes.py 눈 자리(방에서 보이는 자리만 셀 때) — 홀 · 직원 칸 셋
+    "hole_seeds": [(0.0, -4.0, FZ + 4.5), (0.0, 13.5, FZ + 4.5), (-11.0, 13.5, FZ + 4.5), (11.0, 13.5, FZ + 4.5)],
 }

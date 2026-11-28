@@ -343,12 +343,17 @@ def cloth_hang(g, ax, c, u0, u1, z0, z1, face=-1, mat="Banner", rod="Brass", ple
             g[mat].obox(u, off + face * (0.06 if i % 2 else 0.0), (z0 + z1) / 2, w / math.cos(t) + 0.04, 0.1, z1 - z0, rz=t)
         else:
             g[mat].obox(off + face * (0.06 if i % 2 else 0.0), u, (z0 + z1) / 2, 0.1, w / math.cos(t) + 0.04, z1 - z0, rz=t)
+    a0, a1 = sorted((c, off + face * 0.14))                       # 막대 받침 쇠 팔(벽 → 막대, 2026-11-28 playcheck: 막대가 벽에서 떠 있었다)
     if ax == "x":
-        g[rod].hcyl((u0 + u1) / 2, off, z1 + 0.1, 0.1, u1 - u0 + 0.6, axis="x", seg=8)
+        g[rod].hcyl((u0 + u1) / 2, off, z1 + 0.1, 0.12, u1 - u0 + 0.6, axis="x", seg=8)
         bx(g, "SignGold", u0, u1, off - 0.12, off + 0.12, z0, z0 + 0.15)
+        for u in (u0 - 0.15, u1 + 0.15):
+            bx(g, "Iron", u - 0.08, u + 0.08, a0, a1, z1 - 0.05, z1 + 0.25)
     else:
-        g[rod].hcyl(off, (u0 + u1) / 2, z1 + 0.1, 0.1, u1 - u0 + 0.6, axis="y", seg=8)
+        g[rod].hcyl(off, (u0 + u1) / 2, z1 + 0.1, 0.12, u1 - u0 + 0.6, axis="y", seg=8)
         bx(g, "SignGold", off - 0.12, off + 0.12, u0, u1, z0, z0 + 0.15)
+        for u in (u0 - 0.15, u1 + 0.15):
+            bx(g, "Iron", a0, a1, u - 0.08, u + 0.08, z1 - 0.05, z1 + 0.25)
 
 
 def rug(g, x0, x1, y0, y1, z0, mat="Banner", edge="SignGold", motif="SignGold"):
@@ -663,7 +668,7 @@ def sled(g, x, y, z, rz=0.0):
     A = At(g, x, y, z, rz)
     for sx in (-0.75, 0.75):
         A.box("Iron", sx - 0.07, sx + 0.07, -1.9, 1.6, 0, 0.12)
-        A.ob("Iron", sx, -2.15, 0.3, 0.14, 0.6, 0.12, rx=0.9)
+        A.ob("Iron", sx, -2.09, 0.29, 0.14, 0.6, 0.12, rx=-0.9)          # 앞 꺾임(날 끝에서 앞 위로 — 2026-11-28 playcheck: 떠 있었다)
         for yy in (-1.3, -0.2, 0.9):
             A.box("Timber", sx - 0.09, sx + 0.09, yy - 0.09, yy + 0.09, 0.12, 0.6)
     for yy in (-1.3, -0.2, 0.9, 1.4):
@@ -671,7 +676,7 @@ def sled(g, x, y, z, rz=0.0):
     for k in range(6):
         xx = -0.75 + 0.3 * k
         A.box("Wood", xx - 0.13, xx + 0.13, -1.6, 1.6, 0.75, 0.87)
-    A.ob("Leather", 0, -2.2, 0.75, 1.3, 0.08, 0.08)
+    A.ob("Leather", 0, -2.28, 0.52, 1.64, 0.14, 0.14)                  # 끈(꺾인 끝 둘을 잇는다)
 
 
 def wall_bench(g, xw, s, y0, y1, z0):
@@ -693,3 +698,194 @@ def wall_bench(g, xw, s, y0, y1, z0):
         yy = y0 + 0.25 + (y1 - y0 - 0.5) * (k + 0.5) / n
         bx(g, "Timber", *sorted((xw - s * 0.08, xw - s * 0.24)), yy - 0.12, yy + 0.12, z0 + 1.8, z0 + 4.1)
     K.cbox(xa, xb, y0, y1, z0, z0 + 1.8)
+
+
+# ------------------------------------------------------------------ 가까이 보기(2026-11-28 아트 — 사용자 4차: 무기 품질)
+# 무기는 제 좌표로 짓고 K.L.transformed(g, M, lambda q: sword(q)) 로 놓는다. 블록감·두툼(굵기 0.14 이상), 가늘고 뾰족한 것 금지.
+def prism_x(g, mat, pts, x0, x1):
+    """(y, z) 평면 볼록 다각형(반시계)을 x0..x1 로 민 기둥꼴(칼끝 쐐기·도끼 날)"""
+    n = len(pts)
+    v = [(x0, y, z) for y, z in pts] + [(x1, y, z) for y, z in pts]
+    f = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))] + [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
+    g[mat].add_mesh(v, f)
+
+
+def sword(q, L=2.6, w=0.56):
+    """칼(제 좌표: 칼끝 = 원점, 날이 +z, 넓이 = y, 두께 = x). 날 몸(Steel 0.12) · 가운데 등줄 두 단(양면 Iron 띠) · 각진 칼끝 쐐기 둘 ·
+    리카소(Iron) · 코등이(놋쇠 가운데 덩이 + 팔 + 끝 꼭지) · 손잡이(가죽 0.26 + 감은 띠 셋) · 폼멜(놋쇠 두 단). 길이 L + 2.0"""
+    tip = 0.55
+    bx(q, "Steel", -0.06, 0.06, -w / 2, w / 2, tip, L)
+    bx(q, "Steel", -0.1, 0.1, -0.13, 0.13, tip, L)                          # 등줄(두꺼운 가운데 — 마름모 단면을 블록으로)
+    for s in (-1, 1):
+        bx(q, "Iron", *sorted((s * 0.1, s * 0.13)), -0.045, 0.045, tip + 0.2, L - 0.15)   # 홈 띠(양면)
+    prism_x(q, "Steel", [(w / 2, tip), (-w / 2, tip), (0.0, 0.0)], -0.06, 0.06)        # 반시계(면이 바깥을 봄)
+    prism_x(q, "Steel", [(0.13, tip), (-0.13, tip), (0.0, 0.12)], -0.1, 0.1)
+    bx(q, "Iron", -0.12, 0.12, -w / 2 + 0.03, w / 2 - 0.03, L, L + 0.28)      # 리카소
+    bx(q, "Brass", -0.21, 0.21, -0.3, 0.3, L + 0.28, L + 0.6)                 # 코등이 가운데
+    bx(q, "Brass", -0.14, 0.14, -0.78, 0.78, L + 0.34, L + 0.54)              # 코등이 팔
+    for s in (-1, 1):
+        bx(q, "Brass", -0.18, 0.18, *sorted((s * 0.72, s * 0.95)), L + 0.3, L + 0.62)
+    bx(q, "Leather", -0.13, 0.13, -0.13, 0.13, L + 0.6, L + 1.55)
+    for zz in (L + 0.72, L + 1.05, L + 1.38):
+        bx(q, "Timber", -0.16, 0.16, -0.16, 0.16, zz, zz + 0.1)
+    bx(q, "Brass", -0.21, 0.21, -0.21, 0.21, L + 1.55, L + 1.88)
+    bx(q, "Brass", -0.13, 0.13, -0.13, 0.13, L + 1.88, L + 2.0)
+
+
+def axe(q, h=3.6):
+    """도끼(제 좌표: 자루 밑 = 원점, 자루 +z, 날 = -y 쪽, 두께 = x). 자루(Wood 0.24) + 밑 쇠고리 · 가죽 쥘 띠 · 쇠 머리(목 덩이) ·
+    날(Steel 쐐기 — 위아래로 벌어진 초승 꼴을 블록 다각형으로) · 등 망치 쪽 · 놋쇠 쐐기"""
+    bx(q, "Wood", -0.12, 0.12, -0.12, 0.12, 0.0, h)
+    bx(q, "Iron", -0.15, 0.15, -0.15, 0.15, 0.0, 0.18)
+    bx(q, "Leather", -0.15, 0.15, -0.15, 0.15, 0.35, 1.25)
+    zc = h - 0.45
+    bx(q, "Iron", -0.2, 0.2, -0.3, 0.3, zc - 0.4, zc + 0.4)                 # 목(자루를 감싼 눈)
+    prism_x(q, "Iron", [(-0.3, zc - 0.3), (-0.3, zc + 0.3), (-0.75, zc + 0.42), (-0.75, zc - 0.42)], -0.15, 0.15)
+    prism_x(q, "Steel", [(-0.75, zc - 0.42), (-0.75, zc + 0.42), (-1.25, zc + 0.78), (-1.38, zc + 0.3), (-1.38, zc - 0.3), (-1.25, zc - 0.78)], -0.1, 0.1)
+    bx(q, "Iron", -0.17, 0.17, 0.3, 0.62, zc - 0.22, zc + 0.22)              # 등(망치 쪽)
+    bx(q, "Brass", -0.08, 0.08, -0.08, 0.08, h, h + 0.08)
+
+
+def spear(q, h=5.6):
+    """창(제 좌표: 자루 밑 = 원점, +z). 자루(Wood 0.22) · 밑 쇠 물미 · 가죽 쥘 띠 · 놋쇠 고리 · 쇠 투겁 · 창날(두께 0.14 쐐기 둘 + 등줄)"""
+    bx(q, "Wood", -0.11, 0.11, -0.11, 0.11, 0.0, h)
+    bx(q, "Iron", -0.14, 0.14, -0.14, 0.14, 0.0, 0.3)
+    bx(q, "Leather", -0.14, 0.14, -0.14, 0.14, h * 0.42, h * 0.58)
+    bx(q, "Brass", -0.16, 0.16, -0.16, 0.16, h - 0.1, h + 0.05)
+    bx(q, "Iron", -0.14, 0.14, -0.14, 0.14, h + 0.05, h + 0.5)
+    prism_x(q, "Steel", [(-0.34, h + 0.5), (0.0, h + 0.38), (0.34, h + 0.5), (0.2, h + 1.0), (0.0, h + 1.5), (-0.2, h + 1.0)], -0.07, 0.07)
+    bx(q, "Steel", -0.11, 0.11, -0.08, 0.08, h + 0.5, h + 1.2)
+
+
+def shield(q, r=1.15, mat="Wood"):
+    """벽에 건 둥근 방패(제 좌표: 벽 면 = y 0, 방 쪽 = -y, 가운데 = 원점). 쇠못 둘(벽 → 방패 뒤) · 널 다섯(두 색, 원에 맞춘 높이) ·
+    쇠 테 조각 16 · 테 리벳 12 · 놋쇠 배꼽 두 단 + 둘레 리벳 6 · 뒤 손잡이(나무 쥘대 + 가죽 팔 끈)"""
+    yb, yf = -0.4, -0.62                                                     # 방패 판 뒤·앞
+    for sx in (-0.45, 0.45):
+        bx(q, "Iron", sx - 0.09, sx + 0.09, yb, 0.0, r * 0.55 - 0.09, r * 0.55 + 0.09)
+    n = 5
+    for i in range(n):
+        x0, x1 = -r + 2 * r * i / n, -r + 2 * r * (i + 1) / n
+        xm = max(abs(x0), abs(x1)) if x0 * x1 > 0 else 0.0
+        hz = math.sqrt(max(r * r - xm * xm, 0.0)) * 0.98 + (0.12 if xm > 0 else 0.0)
+        bx(q, mat if i % 2 else "Timber", x0 + 0.01, x1 - 0.01, yf, yb, -hz, hz)
+    m = 16
+    for k in range(m):
+        a = 2 * math.pi * (k + 0.5) / m
+        q["Iron"].obox(r * math.cos(a), (yf + yb) / 2 - 0.02, r * math.sin(a), 2 * math.pi * r / m * 1.12, 0.32, 0.24, ry=-a + math.pi / 2)
+    for k in range(12):
+        a = 2 * math.pi * k / 12
+        bx(q, "Brass", r * math.cos(a) - 0.08, r * math.cos(a) + 0.08, yf - 0.12, yf - 0.02, r * math.sin(a) - 0.08, r * math.sin(a) + 0.08)
+    q["Brass"].hcyl(0, yf - 0.1, 0, 0.42, 0.2, axis="y", seg=12)
+    q["Brass"].hcyl(0, yf - 0.28, 0, 0.26, 0.18, axis="y", seg=10)
+    for k in range(6):
+        a = 2 * math.pi * k / 6 + 0.5
+        bx(q, "Iron", 0.55 * math.cos(a) - 0.07, 0.55 * math.cos(a) + 0.07, yf - 0.08, yf, 0.55 * math.sin(a) - 0.07, 0.55 * math.sin(a) + 0.07)
+    bx(q, "Timber", -0.4, 0.4, yb + 0.02, yb + 0.2, -0.12, 0.12)             # 쥘대(뒤)
+    for sx in (-0.4, 0.4):
+        bx(q, "Timber", sx - 0.08, sx + 0.08, yb, yb + 0.2, -0.15, 0.15)
+    bx(q, "Leather", -0.75, 0.75, yb + 0.02, yb + 0.12, 0.35, 0.55)          # 팔 끈
+
+
+def wall_weapon(g, ax, c, u, z, face, fn, tilt=0.0, flat=False):
+    """벽(ax 축, 면 c, 방 쪽 = face 부호)에 제 좌표 물건 fn(q) 을 건다. 제 좌표: 벽 면 = y 0, 방 쪽 = -y(방패), 벽을 따라 = x.
+    tilt = 벽 면 안에서 기울임(라디안, 제 z 가 위 → tilt π 면 아래). flat = 칼·창·도끼처럼 제 x 가 두께인 물건(두께를 벽 법선으로)"""
+    from mathutils import Matrix
+    if ax == "x":                               # 벽이 x 로 뻗음 — 법선 = y
+        base = Matrix.Rotation(0.0 if face < 0 else math.pi, 4, "Z")
+        loc = (u, c, z)
+    else:
+        base = Matrix.Rotation(-math.pi / 2 if face < 0 else math.pi / 2, 4, "Z")
+        loc = (c, u, z)
+    M = Matrix.Translation(loc) @ base @ Matrix.Rotation(tilt, 4, "Y")
+    if flat:
+        M = M @ Matrix.Rotation(math.pi / 2, 4, "Z")
+    K.L.transformed(g, M, fn)
+
+
+def armor_stand(g, x, y, z0, rz=0.0):
+    """갑옷 진열대(2026-11-28): 열십자 나무 발 + 쇠 판 · 기둥 · 어깨 막대 · 흉갑(가운데 등줄 · 목·밑 테 · 리벳) · 허리 판 둘 ·
+    어깨 판 셋씩(층층) · 목가리개 · 통 투구(눈 틈 · 숨 구멍 · 놋쇠 볏). 앞 = -y. 충돌 2.4×1.6"""
+    A = At(g, x, y, z0, rz)
+    A.box("Timber", -1.0, 1.0, -0.2, 0.2, 0.0, 0.3)
+    A.box("Timber", -0.2, 0.2, -0.8, 0.8, 0.0, 0.3)
+    A.box("Iron", -0.35, 0.35, -0.35, 0.35, 0.3, 0.42)
+    A.box("Timber", -0.16, 0.16, -0.16, 0.16, 0.42, 4.6)
+    A.box("Timber", -1.0, 1.0, -0.14, 0.14, 4.2, 4.45)
+    A.box("Steel", -0.75, 0.75, -0.42, 0.3, 2.9, 4.4)                     # 흉갑
+    A.box("Steel", -0.12, 0.12, -0.54, -0.4, 3.0, 4.35)                   # 등줄
+    A.box("Iron", -0.78, 0.78, -0.46, 0.33, 2.85, 3.0)                    # 밑 테
+    A.box("Iron", -0.5, 0.5, -0.46, 0.33, 4.3, 4.45)                      # 목 테
+    for sx in (-0.55, 0.55):
+        for zz in (3.3, 3.9):
+            A.box("Brass", sx - 0.07, sx + 0.07, -0.5, -0.4, zz - 0.07, zz + 0.07)
+    for k, zz in enumerate((2.55, 2.2)):                                   # 허리 판 둘(아래로 넓게)
+        w = 0.72 + 0.06 * k
+        A.box("Steel", -w, w, -0.44 - 0.03 * k, 0.32, zz, zz + 0.32)
+        A.box("Iron", -w - 0.02, w + 0.02, -0.47 - 0.03 * k, 0.32, zz, zz + 0.08)
+    for s in (-1, 1):                                                      # 어깨 판(층층)
+        for k in range(3):
+            A.ob("Steel", s * (0.85 + 0.12 * k), -0.05, 4.35 - 0.28 * k, 0.75, 0.85, 0.24, ry=-s * (0.35 + 0.15 * k))
+    A.box("Iron", -0.42, 0.42, -0.36, 0.3, 4.45, 4.7)                     # 목가리개
+    A.box("Steel", -0.45, 0.45, -0.5, 0.4, 4.7, 5.75)                     # 통 투구
+    A.box("Iron", -0.38, 0.38, -0.56, -0.48, 5.25, 5.38)                  # 눈 틈
+    for sx in (-0.2, 0.0, 0.2):
+        A.box("Iron", sx - 0.05, sx + 0.05, -0.55, -0.49, 4.9, 5.1)       # 숨 구멍
+    A.box("Brass", -0.1, 0.1, -0.5, 0.45, 5.75, 6.0)                      # 볏
+    A.coll(-1.2, 1.2, -0.8, 0.8, 0.0, 6.0)
+
+
+def chandelier(g, x, y, ztop, z):
+    """놋쇠 샹들리에(2026-11-28 — 옛 SVC 것은 고리·등이 서로 안 닿아 떠 있었다): 굵은 사슬(ztop 까지) → 가운데 기둥 + 밑 방울 →
+    팔 여섯(기둥 → 바깥 고리) → 고리 위 초받침 + 흰 초 + 불꽃 · 안 고리. z = 바깥 고리 밑"""
+    g["Brass"].cyl(x, y, z - 0.6, 0.3, 0.2, 1.9, seg=8)
+    g["Brass"].cyl(x, y, z - 0.95, 0.1, 0.3, 0.35, seg=8)
+    zz, k = z + 1.3, 0
+    while zz < ztop:
+        top = min(zz + 0.55, ztop + 0.05)
+        bx(g, "Iron", x - (0.07 if k % 2 else 0.17), x + (0.07 if k % 2 else 0.17), y - (0.17 if k % 2 else 0.07), y + (0.17 if k % 2 else 0.07), zz - 0.05, top)
+        zz, k = zz + 0.5, k + 1
+    S.ring(g, "Brass", x, y, z, 1.7, 1.95, 0.18, n=20)
+    S.ring(g, "Brass", x, y, z + 0.7, 0.75, 0.95, 0.15, n=16)
+    for k in range(4):                                                       # 안 고리 살(기둥 → 안 고리)
+        a = k * math.pi / 2 + math.pi / 4
+        g["Brass"].obox(x + 0.55 * math.cos(a), y + 0.55 * math.sin(a), z + 0.77, 0.75, 0.14, 0.14, rz=a)
+    for k in range(6):
+        a = k * math.pi / 3
+        g["Iron"].obox(x + 0.95 * math.cos(a), y + 0.95 * math.sin(a), z + 0.09, 1.75, 0.14, 0.14, rz=a)
+        px, py = x + 1.82 * math.cos(a), y + 1.82 * math.sin(a)
+        g["Brass"].cyl(px, py, z + 0.18, 0.24, 0.2, 0.14, seg=8)
+        g["Paint"].cyl(px, py, z + 0.32, 0.11, 0.11, 0.45, seg=8)
+        g["Glow"].obox(px, py, z + 0.86, 0.14, 0.14, 0.18, rz=0.785)
+    g["LampPt"].box(x, y, z + 0.2, 0.3, 0.3, 0.3)
+
+
+def anvil_icon(g, x, y, z, s=1.0, face=-1, mat="Brass"):
+    """간판 모루 그림(SVC.anvil_icon 고친 판 — 2026-11-28 playcheck: 망치 머리가 자루 반대 끝에 떠 있었다). 두께 0.2 모루 + 판에 붙은 망치"""
+    y0, y1 = (y - 0.2, y) if face < 0 else (y, y + 0.2)
+    k = s
+    K.SVC.prism_xz(g, mat, [(x - 1.0 * k, z + 0.55 * k), (x + 0.75 * k, z + 0.55 * k), (x + 0.75 * k, z + 0.95 * k), (x - 1.15 * k, z + 0.95 * k)], y0, y1)
+    K.SVC.prism_xz(g, mat, [(x + 0.75 * k, z + 0.6 * k), (x + 1.75 * k, z + 0.88 * k), (x + 0.75 * k, z + 0.95 * k)], y0, y1)
+    K.SVC.prism_xz(g, mat, [(x - 0.35 * k, z + 0.1 * k), (x + 0.35 * k, z + 0.1 * k), (x + 0.3 * k, z + 0.55 * k), (x - 0.3 * k, z + 0.55 * k)], y0, y1)
+    K.SVC.prism_xz(g, mat, [(x - 0.9 * k, z - 0.35 * k), (x + 0.9 * k, z - 0.35 * k), (x + 0.6 * k, z + 0.1 * k), (x - 0.6 * k, z + 0.1 * k)], y0, y1)
+    yy = (y0 + y1) / 2 + face * 0.12
+    a = 0.6                                                                  # 자루: 모루 윗면 오른쪽에서 왼 위로
+    hx, hz = x + 0.45 * k, z + 1.0 * k
+    L = 1.8 * k
+    ex, ez = hx - math.sin(a) * L, hz + math.cos(a) * L
+    g["Wood"].obox((hx + ex) / 2, yy, (hz + ez) / 2, 0.2 * k, 0.16, L, ry=-a)
+    g["Steel"].obox(ex, yy, ez, 0.95 * k, 0.2, 0.45 * k, ry=-a)
+
+
+SEG = {"0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd", "6": "afgedc", "7": "abc", "8": "abcdefg", "9": "abcdfg"}
+
+
+def digit(g, ch, x, y, z, s=0.5, mat="DarkStone"):
+    """숫자 한 자(일곱 막대 블록 — 판 면 y 앞(-y)으로 0.06 도드라짐). 가운데 (x, z), 높이 s(폭 0.6 s, 막대 굵기 0.16 s)"""
+    w, t = 0.6 * s, 0.16 * s
+    h = s / 2
+    segs = {"a": (-w / 2, w / 2, h - t, h), "d": (-w / 2, w / 2, -h, -h + t), "g": (-w / 2, w / 2, -t / 2, t / 2),
+            "f": (-w / 2, -w / 2 + t, 0, h), "b": (w / 2 - t, w / 2, 0, h), "e": (-w / 2, -w / 2 + t, -h, 0), "c": (w / 2 - t, w / 2, -h, 0)}
+    for k in SEG.get(ch, ""):
+        a, b, c, d = segs[k]
+        bx(g, mat, x + a, x + b, y - 0.06, y, z + c, z + d)

@@ -21,6 +21,7 @@ import math
 
 import lib as K
 import lib_a as A
+import lib_int1 as P
 import lib_int2 as N
 from lib import LOG, bx, cbox, CLEAR
 
@@ -163,22 +164,19 @@ def armory(g):
     """오른 채 = 무기 걸이: 통로 쪽 벽에 창·미늘창 걸이(다섯) · 채 속(창 너머로 보이게) 둥근 방패 · 투구 · 창 걸이"""
     N.put(g, XP, 0.0, 0.12, -math.pi / 2, N.spear_rack, 5, 0.75, 6.4, 2,
           [("h", 0.0), ("s", 0.4), None, ("h", -0.4), ("s", 0.2)])                 # 손 표: 미늘창 2 · 창 2 · 빈 칸, 높이 ±0.4
-    sy_, sz_ = 2.1, 8.6                                                          # 통로 벽 둥근 방패(창 옆)
-    g["Wood"].hcyl(XP - 0.1, sy_, sz_, 0.95, 0.2, axis="x", seg=14)
-    g["Iron"].hcyl(XP - 0.12, sy_, sz_, 1.03, 0.12, axis="x", seg=14)
-    g["Brass"].hcyl(XP - 0.28, sy_, sz_, 0.3, 0.14, axis="x", seg=10)
+    P.wall_weapon(g, "y", XP, 2.1, 8.6, -1, lambda q: P.shield(q, r=1.0))       # 통로 벽 둥근 방패(쇠못 · 테 · 리벳 · 배꼽 · 뒤 손잡이)
     cbox(XP - 0.8, XP, -2.0, 2.0, 0.0, 5.0)
     z = PLINTH
     N.put(g, 11.8, -0.9, z, -math.pi / 2, N.spear_rack, 2, 0.8, 6.4)
     sx, sz = 11.75, z + 4.6                                                      # 둥근 방패(바깥 벽 안면, 창 정면)
-    g["Wood"].hcyl(sx - 0.1, 0.9, sz, 1.05, 0.2, axis="x", seg=14)
-    g["Iron"].hcyl(sx - 0.12, 0.9, sz, 1.12, 0.12, axis="x", seg=14)
-    g["Brass"].hcyl(sx - 0.25, 0.9, sz, 0.32, 0.12, axis="x", seg=10)
-    for a in (0.0, math.pi / 2):
-        g["Iron"].obox(sx - 0.22, 0.9, sz, 0.06, 1.9, 0.18, rx=a)
-    g["Iron"].cyl(9.0, 1.0, z, 0.5, 0.4, 0.8, seg=10)                          # 투구(받침 위)
-    g["Steel"].cyl(9.0, 1.0, z + 0.8, 0.42, 0.42, 0.55, seg=10)
-    g["Steel"].cyl(9.0, 1.0, z + 1.35, 0.42, 0.18, 0.35, seg=10)
+    P.wall_weapon(g, "y", sx + 0.05, 0.9, sz, -1, lambda q: P.shield(q, r=1.1, mat="Paint"))
+    bx(g, "Timber", 8.8, 9.2, 0.8, 1.2, z, z + 0.9)                               # 투구 받침(나무 기둥 + 발판) + 통 투구(눈 틈 · 숨 구멍 · 놋쇠 볏)
+    bx(g, "Timber", 8.5, 9.5, 0.5, 1.5, z, z + 0.15)
+    bx(g, "Steel", 8.55, 9.45, 0.5, 1.5, z + 0.9, z + 1.95)
+    bx(g, "Iron", 8.62, 9.38, 0.42, 0.5, z + 1.45, z + 1.58)
+    for xx in (8.8, 9.0, 9.2):
+        bx(g, "Iron", xx - 0.05, xx + 0.05, 0.43, 0.5, z + 1.1, z + 1.3)
+    bx(g, "Brass", 8.9, 9.1, 0.5, 1.5, z + 1.95, z + 2.2)
     cbox(7.5, 11.8, -1.8, 1.8, z, z + 0.2)
 
 
@@ -211,8 +209,9 @@ def build(g):
     # 마을 표지판(인방 안팎, 쇠 막대 둘로 매닮): 판 · 놋쇠 테 · 톱니 + 눈송이 문장 · 위 눈
     for yl, f in ((YF - 0.7, -1), (YB + 0.7, 1)):
         yb_ = yl + f * 0.2
-        for x in (-2.2, 2.2):
-            bx(g, "Iron", x - 0.06, x + 0.06, yb_ - 0.06, yb_ + 0.06, PASS_H - 0.1, PASS_H + 0.6)
+        for x in (-2.2, 2.2):                                                    # 매단 쇠 막대 + 인방에 박은 쇠 팔(2026-11-28: 뒤 표지판이 인방에서 떠 있었다)
+            bx(g, "Iron", x - 0.08, x + 0.08, yb_ - 0.08, yb_ + 0.08, PASS_H - 0.1, PASS_H + 0.6)
+            bx(g, "Iron", x - 0.1, x + 0.1, *sorted((yb_, yl - f * 0.6)), PASS_H + 0.45, PASS_H + 0.65)
         bx(g, "Timber", -3.0, 3.0, *sorted((yb_ - 0.15, yb_ + 0.15)), PASS_H - 1.7, PASS_H - 0.1)
         bx(g, "Brass", -3.15, 3.15, *sorted((yb_ - 0.2, yb_ + 0.2)), PASS_H - 0.18, PASS_H)
         bx(g, "Brass", -3.15, 3.15, *sorted((yb_ - 0.2, yb_ + 0.2)), PASS_H - 1.8, PASS_H - 1.62)
@@ -241,7 +240,8 @@ INFO = {
     "floor": 0.0,
     "free": (-5.0, 5.0, 0.0, 8.0),                  # 통로 안·뒤(지나가는 길)
     "walk": ((0.0, -6.5), (0.0, 3.0)),              # 문 앞 → 통로 지나 → 뒤
-    "inside": (-13.0, 13.0, -8.0, 12.0),
+    "inside": (-22.0, 22.0, -10.0, 18.0),
+    "outdoor": True,                                # 바깥 문 — playcheck 가 범위 끝을 벽으로 보지 않는다
     "extra_views": [
         ("fp_approach", (0.0, -16.0, 4.5), (0.0, 0.0, 8.0), 17, None),      # 1인칭 문 앞 16
         ("fp_under", (0.0, -4.5, 4.5), (0.0, 1.0, 22.0), 17, None),         # 1인칭 문 밑에서 올려다봄

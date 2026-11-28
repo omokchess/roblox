@@ -529,9 +529,9 @@ def kettle(q, x, y, z0, mat="Iron", s=1.0):
     q[mat].cyl(x, y, z0 + 0.45 * s, 0.5 * s, 0.25 * s, 0.25 * s, seg=10)
     q["Brass"].cyl(x, y, z0 + 0.7 * s, 0.1 * s, 0.08 * s, 0.12 * s, seg=6)
     q[mat].obox(x + 0.55 * s, y, z0 + 0.45 * s, 0.5 * s, 0.14 * s, 0.14 * s, ry=-0.7)
-    for sx in (-1, 1):
-        q[mat].obox(x + sx * 0.3 * s, y, z0 + 0.95 * s, 0.08, 0.08, 0.5 * s, ry=sx * 0.6)
-    q[mat].box(x, y, z0 + 1.15 * s, 0.4 * s, 0.08, 0.08)
+    for sx in (-1, 1):                    # 손잡이 고리: 뚜껑 가장자리 → 위 가로대(2026-11-28 playcheck: 밖으로 벌어져 가로대에 안 닿았다)
+        q[mat].obox(x + sx * 0.31 * s, y, z0 + 0.875 * s, 0.12, 0.12, 0.6 * s, ry=-sx * 0.38)
+    q[mat].box(x, y, z0 + 1.15 * s, 0.4 * s + 0.12, 0.12, 0.12)
 
 
 def washstand(q, frame="DarkLog", body="Wood"):
@@ -552,7 +552,7 @@ def washstand(q, frame="DarkLog", body="Wood"):
     q["Paint"].obox(0.75, -0.18, h + 0.85, 0.12, 0.3, 0.12, rx=0.6)
     bx(q, frame, w / 2 + 0.1, w / 2 + 0.25, -0.4, 0.4, h - 0.6, h - 0.45)
     q["Canvas"].obox(w / 2 + 0.24, 0.0, h - 1.2, 0.12, 0.7, 1.3, ry=0.05)
-    bx(q, frame, -0.95, 0.95, d / 2 - 0.15, d / 2, h + 1.2, h + 3.6)
+    bx(q, frame, -0.95, 0.95, d / 2 - 0.15, d / 2, h + 0.05, h + 3.6)          # 거울 틀(대리석 판 위에 선다 — 2026-11-28: 벽에서 0.1 떠 있었다)
     bx(q, "Glass", -0.75, 0.75, d / 2 - 0.2, d / 2 - 0.1, h + 1.4, h + 3.4)
 
 
@@ -654,6 +654,25 @@ def heart(q, x, y, z, s=1.0, mat="Core", depth=0.5):
     q[mat].obox(x, y, z - 0.12 * s, 0.78 * s, depth * s, 0.78 * s, ry=math.pi / 4)
 
 
+def green_cross(q, x, y, z, s=1.0, depth=0.25, plate=False, face=-1, centered=False, mat="PaintGreen"):
+    """녹십자(2026-11-28 사용자: "병원은 하트가 아니라 녹십자 모양으로"): 가운데 (x, z), 면 = face 쪽(±y). 두툼한 블록 십자(팔 폭 0.44 s · 길이 1.3 s).
+    plate = 뒤에 흰 판(놋쇠 테) 을 깔고 그 앞에 십자. centered = y 를 가운데로 양면(우리 속·고리 속처럼 떠 있는 기관용)"""
+    f = face
+    w, ln = 0.44 * s, 1.3 * s
+    y0 = y
+    if plate:
+        h = 0.82 * s
+        bx(q, "Paint", x - h, x + h, *sorted((y, y + f * 0.12)), z - h, z + h)
+        for a, b, c, d in ((-h - 0.1, h + 0.1, -h - 0.1, -h + 0.06), (-h - 0.1, h + 0.1, h - 0.06, h + 0.1),
+                           (-h - 0.1, -h + 0.06, -h + 0.06, h - 0.06), (h - 0.06, h + 0.1, -h + 0.06, h - 0.06)):
+            bx(q, "Brass", x + a, x + b, *sorted((y, y + f * 0.18)), z + c, z + d)
+        y0 = y + f * 0.12
+    ya, yb = sorted((y0 - depth / 2, y0 + depth / 2)) if centered else sorted((y0, y0 + f * depth))
+    bx(q, mat, x - w / 2, x + w / 2, ya, yb, z - ln / 2, z + ln / 2)
+    bx(q, mat, x - ln / 2, x - w / 2, ya, yb, z - w / 2, z + w / 2)
+    bx(q, mat, x + w / 2, x + ln / 2, ya, yb, z - w / 2, z + w / 2)
+
+
 def full_ring(q, mat, x, y, z, r0, r1, t, n=16):
     """선 고리(x-z 평면, 두께 t 는 y): 위 반원 + 180° 돌린 아래 반원"""
     I.half_ring(q, mat, x, y, z, r0, r1, t, n=n)
@@ -662,7 +681,7 @@ def full_ring(q, mat, x, y, z, r0, r1, t, n=16):
 
 
 def heart_engine(q):
-    """심장 톱니 기관(앞 = -y, 원점 바닥 가운데): 돌 받침 · 쇠 기둥 넷 + 위 덮개 · 놋쇠 고리 둘 사이 쇠살 우리 · 우리 속 붉은 심장(빛) ·
+    """녹십자 톱니 기관(2026-11-28 하트 → 녹십자. 앞 = -y, 원점 바닥 가운데): 돌 받침 · 쇠 기둥 넷 + 위 덮개 · 놋쇠 고리 둘 사이 쇠살 우리 · 우리 속 흰 원판 + 녹십자 ·
     양옆 큰 놋쇠 톱니 · 앞 압력계 · 아래 구리 통 · 위로 나가는 구리 관 자리(부르는 쪽이 관을 잇는다)"""
     bx(q, "DarkStone", -1.6, 1.6, -1.3, 1.3, 0, 0.6)
     bx(q, "Iron", -1.7, 1.7, -1.4, 1.4, 0.6, 0.8)
@@ -681,18 +700,20 @@ def heart_engine(q):
         a = 2 * math.pi * (k + 0.5) / 8
         q["Iron"].box(0.92 * math.cos(a), 0.92 * math.sin(a), 3.75, 0.14, 0.14, 3.1)
     q["Brass"].cyl(0, 0, 2.35, 0.12, 0.12, 0.7, seg=6)
-    heart(q, 0, 0, 3.75, s=1.15, mat="Core", depth=0.7)
+    q["Paint"].hcyl(0, 0, 3.75, 0.78, 0.36, axis="y", seg=16)                # 우리 속 흰 원판 + 두툼한 녹십자(양면) — 2026-11-28 하트 → 녹십자
+    green_cross(q, 0, 0, 3.75, s=1.15, depth=0.62, centered=True)
     q["LampPt"].box(0, -1.6, 3.8, 0.3, 0.3, 0.3)
     for sx in (-1, 1):
         S.gear(q, "Brass", sx * 1.62, 0, 3.75, 1.0, 14, 0.25, axis="x")
         q["Iron"].hcyl(sx * 1.5, 0, 3.75, 0.25, 0.3, axis="x", seg=8)
+    q["Brass"].hcyl(0, -1.2, 1.45, 0.13, 0.62, axis="y", seg=8)             # 압력계 목(구리 통 → 계기 — 2026-11-28: 계기가 떠 있었다)
     q["Iron"].hcyl(0, -1.5, 1.45, 0.5, 0.15, axis="y", seg=14)
     q["Dial"].hcyl(0, -1.58, 1.45, 0.4, 0.06, axis="y", seg=14)
     q["Iron"].obox(0.1, -1.63, 1.55, 0.06, 0.03, 0.34, ry=-0.7)
 
 
 def halo(q, x, y, z, r=2.6):
-    """되살아나는 고리(선 고리, 면 = ±y): 놋쇠 테 + 바깥 톱니 16 · 안쪽 붉은 빛 테 · 살 넷 → 가운데 놋쇠 톱니 + 붉은 심장"""
+    """되살아나는 고리(선 고리, 면 = ±y): 놋쇠 테 + 바깥 톱니 16 · 안쪽 붉은 빛 테 · 살 넷 → 가운데 놋쇠 톱니 + 흰 원판 + 녹십자(2026-11-28 하트 → 녹십자)"""
     full_ring(q, "Brass", x, y, z, r - 0.5, r, 0.45, n=16)
     full_ring(q, "Core", x, y, z, r - 0.68, r - 0.5, 0.2, n=16)
     for k in range(16):
@@ -703,8 +724,8 @@ def halo(q, x, y, z, r=2.6):
         rr = (r - 0.68 + 0.75) / 2
         q["Iron"].obox(x + rr * math.cos(a), y, z + rr * math.sin(a), r - 0.68 - 0.75, 0.16, 0.16, ry=-a)
     S.gear(q, "Brass", x, y, z, 0.85, 12, 0.3, axis="y")
-    heart(q, x, y - 0.3, z - 0.05, s=0.8, mat="Core", depth=0.35)
-    heart(q, x, y + 0.3, z - 0.05, s=0.8, mat="Core", depth=0.35)
+    q["Paint"].hcyl(x, y, z, 0.62, 0.42, axis="y", seg=14)                  # 톱니 가운데 흰 원판 + 녹십자 양면(2026-11-28 하트 → 녹십자)
+    green_cross(q, x, y, z, s=0.85, depth=0.66, centered=True)
 
 
 def folding_screen(q, panels=3, w=1.6, h=5.2, cloth="Canvas", frame="DarkLog"):
@@ -800,28 +821,50 @@ def drawer_chest(q, w=4.4, d=1.2, h=3.0, cols=3, rows=2, body="Timber", front="W
     bx(q, top, -w / 2 - 0.1, w / 2 + 0.1, -d / 2 - 0.1, d / 2, h - 0.2, h)
 
 
+def _rod(q, mat, p0, p1, w):
+    """두 점 사이 네모 막대(굵기 w)"""
+    dx, dy, dz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
+    ln = math.sqrt(dx * dx + dy * dy + dz * dz)
+    q[mat].obox((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2, w, w, ln,
+                ry=math.acos(max(-1.0, min(1.0, dz / ln))), rz=math.atan2(dy, dx))
+
+
 def cauldron(q, liquid="GlowTeal"):
-    """끓는 솥(바닥 가운데 원점): 돌 둘레 턱 · 재 · 장작불(불 자리는 부르는 쪽) · 쇠 다리 셋 · 배 부른 무쇠 솥 · 테 · 끓는 물약 면 + 거품 · 손잡이 고리 · 기댄 국자"""
-    q["StoneTrim"].cyl(0, 0, 0, 1.95, 1.95, 0.45, seg=14)
-    q["Soot"].cyl(0, 0, 0.45, 1.6, 1.6, 0.04, seg=14)
-    for k in range(3):
-        a = k * 2 * math.pi / 3 + 0.4
-        q["Iron"].obox(1.05 * math.cos(a), 1.05 * math.sin(a), 0.75, 0.22, 0.22, 0.75, rz=a, ry=0.35)
-    q["Iron"].cyl(0, 0, 1.0, 0.85, 1.35, 0.75, seg=14)
-    q["Iron"].cyl(0, 0, 1.75, 1.35, 1.2, 0.6, seg=14)
-    q["Iron"].cyl(0, 0, 2.35, 1.32, 1.32, 0.16, seg=14)
-    q[liquid].cyl(0, 0, 2.3, 1.14, 1.14, 0.18, seg=14)                       # 수면 = 테 바로 밑(2.48)
-    for bxx, byy, rr in ((0.35, 0.2, 0.24), (-0.4, -0.3, 0.2), (0.1, -0.55, 0.16), (-0.2, 0.5, 0.18), (0.62, -0.25, 0.14),
-                         (-0.65, 0.2, 0.16), (0.25, 0.7, 0.13), (-0.1, -0.05, 0.22), (0.7, 0.45, 0.12), (-0.55, -0.62, 0.12)):
-        q[liquid].cyl(bxx, byy, 2.46, rr, rr * 0.3, rr * 0.9, seg=6)
-    for bxx, byy, zz, rr in ((0.2, -0.2, 2.95, 0.13), (-0.3, 0.25, 3.25, 0.1), (0.05, 0.1, 3.55, 0.08)):    # 테 위로 솟는 기포
-        q[liquid].box(bxx, byy, zz, rr * 2, rr * 2, rr * 2)
-    for sx in (-1, 1):
-        q["Iron"].obox(sx * 1.1, 0, 2.95, 0.12, 0.12, 1.2, ry=-sx * 0.55)
-    q["Iron"].box(0, 0, 3.42, 0.9, 0.12, 0.12)
-    q["Wood"].obox(1.25, 0.0, 2.95, 0.16, 0.16, 1.4, ry=0.55)                 # 테에 건 국자(자루 + 갈고리 + 바가지)
-    q["Iron"].box(1.36, 0.0, 2.58, 0.14, 0.14, 0.14)
-    q["Wood"].cyl(0.95, 0.0, 2.05, 0.3, 0.33, 0.2, seg=8)
+    """끓는 솥(2026-11-28 다시 — 사용자 4차: '배 불룩 솥·두꺼운 테·다리 셋·끓는 액체 면(거품 덩이·김)·장작불·국자, 납작 뚜껑 위 청록 점 금지').
+    바닥 가운데 원점. 돌 화덕 고리(돌 여덟) + 재 바닥(장작불·불 자리는 부르는 쪽, z 0.48) · 굽은 쇠 다리 셋(발 + 무릎) ·
+    배 불룩 무쇠 솥(다섯 마디 — 가장 넓은 배 r 1.55) · 두꺼운 테(고리 판 0.32) · 끓는 물약 면(테 0.16 밑) + 부푼 거품 덩이 일곱(면에 박힘) + 터진 거품 고리 ·
+    김 기둥 둘(유리 덩이 셋씩 위로 갈수록 크게 — 면에서 이어짐) · 귀 둘 + 들 손잡이(아치) · 테에 걸쳐 물약에 담근 국자"""
+    for k in range(8):                                                   # 돌 화덕 고리
+        a = k * math.pi / 4 + 0.2
+        q["StoneTrim" if k % 2 else "Stone"].obox(1.75 * math.cos(a), 1.75 * math.sin(a), 0.24, 0.95, 0.75, 0.48 - 0.06 * (k % 2), rz=a + math.pi / 2)
+    q["Soot"].cyl(0, 0, 0.0, 1.45, 1.45, 0.48, seg=14)
+    for k in range(3):                                                   # 굽은 다리: 재 위 발 → 무릎 → 솥 배 밑
+        a = k * 2 * math.pi / 3 + 0.5
+        c, s = math.cos(a), math.sin(a)
+        q["Iron"].obox(1.25 * c, 1.25 * s, 0.6, 0.5, 0.4, 0.24, rz=a)
+        _rod(q, "Iron", (1.25 * c, 1.25 * s, 0.6), (1.2 * c, 1.2 * s, 1.35), 0.3)
+        _rod(q, "Iron", (1.2 * c, 1.2 * s, 1.35), (0.95 * c, 0.95 * s, 1.8), 0.3)
+    for z0, r0, r1, h in ((1.15, 0.7, 1.15, 0.35), (1.5, 1.15, 1.5, 0.45), (1.95, 1.5, 1.55, 0.3), (2.25, 1.55, 1.4, 0.4), (2.65, 1.4, 1.25, 0.25)):
+        q["Iron"].cyl(0, 0, z0, r0, r1, h, seg=18)
+    K.S.ring(q, "Iron", 0, 0, 2.85, 1.05, 1.5, 0.32, n=18)              # 두꺼운 테(2.85..3.17)
+    K.S.ring(q, "Brass", 0, 0, 3.17, 1.12, 1.42, 0.06, n=18)
+    q[liquid].cyl(0, 0, 2.75, 1.12, 1.12, 0.26, seg=18)                  # 물약 면(3.01 — 테 윗면 0.16 밑)
+    for x, y, r in ((0.35, 0.2, 0.42), (-0.45, -0.3, 0.36), (0.1, -0.6, 0.3), (-0.25, 0.55, 0.34), (0.68, -0.25, 0.26), (-0.7, 0.25, 0.28), (0.05, 0.0, 0.3)):
+        q[liquid].cyl(x, y, 2.9, r, r * 0.35, r * 1.1, seg=8)              # 부푼 거품(밑은 면 속)
+    for x, y in ((0.55, 0.65), (-0.55, -0.75)):                           # 터진 거품 고리
+        K.S.ring(q, "Verdigris", x, y, 3.01, 0.12, 0.24, 0.05, n=8)
+    for bxx, byy, kk in ((0.3, 0.15, 0), (-0.4, -0.3, 1)):                # 김 기둥(유리 덩이 셋 — 겹쳐 이어짐)
+        z = 3.2
+        for j, r in enumerate((0.32, 0.45, 0.58)):
+            q["Glass"].obox(bxx + 0.12 * j * (1 if kk else -1), byy + 0.1 * j, z + r * 0.6, r * 1.6, r * 1.5, r * 1.3, rz=0.4 * j + kk)
+            z += r * 1.05
+    for sx in (-1, 1):                                                   # 귀 + 들 손잡이(아치 셋)
+        q["Iron"].box(sx * 1.55, 0, 2.95, 0.36, 0.42, 0.42)
+        _rod(q, "Iron", (sx * 1.6, 0, 3.1), (sx * 1.05, 0, 4.05), 0.2)
+    q["Iron"].box(0, 0, 4.05, 2.3, 0.2, 0.2)
+    _rod(q, "Wood", (0.55, -0.45, 3.0), (1.85, -1.1, 4.25), 0.2)           # 국자 자루(테에 걸침) + 쇠 바가지(물약 속)
+    q["Iron"].cyl(0.5, -0.42, 2.8, 0.26, 0.34, 0.3, seg=8)
+    q["Brass"].box(1.85, -1.1, 4.3, 0.24, 0.24, 0.16)
 
 
 def ladder(q, h, w=1.4):
@@ -883,11 +926,10 @@ def rune_anvil(q):
     for sx in (-1, 1):
         q["Brass"].box(sx * 0.62, -0.42, z0 + 0.95, 0.2, 0.06, 0.2)
     S.ring(q, "GlowTeal", -0.15, 0, z0 + 1.25, 0.25, 0.36, 0.03, n=14)
-    q["Steel"].obox(-0.2, 0, z0 + 1.32, 1.9, 0.26, 0.08, rz=0.12)
-    q["Brass"].obox(0.88, 0.1, z0 + 1.35, 0.16, 0.75, 0.16, rz=0.12)
-    q["Leather"].obox(1.22, 0.14, z0 + 1.35, 0.55, 0.18, 0.18, rz=0.12)
-    q["Wood"].obox(0.85, -1.15, 0.75, 0.16, 0.16, 1.6, rx=-0.35)
-    q["Iron"].obox(0.85, -1.38, 1.5, 0.6, 0.32, 0.32, rx=-0.35)
+    import lib_int1 as P                                                     # 놓인 칼(날·등줄·코등이·손잡이·폼멜 — 2026-11-28 무기 품질)
+    L.transformed(q, Matrix.Translation((-1.0, 0.0, z0 + 1.35)) @ Matrix.Rotation(math.pi / 2, 4, "Y"), lambda qq: P.sword(qq, L=1.8, w=0.4))
+    q["Iron"].box(0.85, -2.0, 0.16, 0.6, 0.32, 0.32)                          # 망치: 쇠 머리는 바닥, 자루는 그루터기에 기댐(2026-11-28: 머리가 떠 있었다)
+    q["Wood"].obox(0.85, -1.585, 0.8, 0.18, 0.18, 1.26, rx=-0.63)
 
 
 def grindstone(q):
@@ -913,11 +955,16 @@ def spear(q, x, y, z0, h=6.4, head="Steel", shaft="Wood", halberd=False):
     q["Iron"].cyl(x, y, z0, 0.13, 0.13, 0.35, seg=6)
     q[shaft].cyl(x, y, z0 + 0.35, 0.12, 0.12, h - 1.45, seg=6)
     q["Brass"].cyl(x, y, z0 + h - 1.15, 0.16, 0.16, 0.18, seg=6)
-    q[head].obox(x, y, z0 + h - 0.6, 0.36, 0.12, 0.95, rx=0.0)
-    q[head].obox(x, y, z0 + h - 0.12, 0.2, 0.1, 0.3, ry=math.pi / 4)
-    if halberd:
-        SVC.frustum(q, head, x + 0.45, y, z0 + h - 1.0, 0.1, 0.12, 0.7, 0.12, 0.6)
-        q[head].obox(x - 0.3, y, z0 + h - 0.8, 0.45, 0.1, 0.14, ry=0.4)
+    import lib_int1 as P                     # 창날 두툼하게(2026-11-28 무기 품질): 쇠 투겁 · 잎 날(두께 0.16 쐐기) · 가운데 등줄 · 각진 끝
+    zb = z0 + h - 1.0
+    q["Iron"].box(x, y, zb + 0.2, 0.3, 0.3, 0.4)
+    L.transformed(q, Matrix.Translation((x, y, 0.0)), lambda qq: (
+        P.prism_x(qq, head, [(-0.36, zb + 0.4), (0.0, zb + 0.3), (0.36, zb + 0.4), (0.22, zb + 0.95), (0.0, zb + 1.35), (-0.22, zb + 0.95)], -0.08, 0.08),
+        bx(qq, head, -0.12, 0.12, -0.1, 0.1, zb + 0.4, zb + 1.1)) and None)
+    if halberd:                              # 도끼날(두께 0.16 · 위아래로 벌어짐) + 뒤 갈고리
+        L.transformed(q, Matrix.Translation((x, y, 0.0)) @ Matrix.Rotation(math.pi / 2, 4, "Z"), lambda qq: (
+            P.prism_x(qq, head, [(-0.15, zb + 0.1), (-0.15, zb + 0.7), (-0.55, zb + 0.9), (-0.62, zb + 0.4), (-0.55, zb - 0.1)], -0.08, 0.08),
+            P.prism_x(qq, head, [(0.15, zb + 0.55), (0.15, zb + 0.25), (0.5, zb + 0.75)], -0.08, 0.08)) and None)
 
 
 def spear_rack(q, n=4, gap=0.75, h=6.4, halberd_every=2, plan=None, shield=False):
@@ -1139,7 +1186,7 @@ def board_counter(g, x0, x1, y0, y1, z0, body="Paint", top="Marble", trim="Brass
     xc = (x0 + x1) / 2
     g[trim].hcyl(xc, y0 - 0.02, zt - 1.6, 0.62, 0.1, axis="y", seg=16)
     g[body].hcyl(xc, y0 - 0.06, zt - 1.6, 0.52, 0.06, axis="y", seg=16)
-    heart(g, xc, y0 - 0.12, zt - 1.62, s=0.55, mat="SignRed", depth=0.1)
+    green_cross(g, xc, y0 - 0.09, zt - 1.6, s=0.62, depth=0.12, face=-1)    # 앞 녹십자 판(2026-11-28 하트 → 녹십자)
     K.cbox(x0 - 0.15, x1 + 0.15, y0 - 0.15, y1 + 0.1, z0, zt)
     return zt
 

@@ -41,6 +41,8 @@ FORGE = (-XI, -9.4, 1.0, 8.0)            # 화덕 x0 x1 y0 y1(왼 벽에 붙음,
 STACK = (-17.0, -12.8, 2.6, 6.4)         # 굴뚝 x0 x1 y0 y1(왼 벽을 뚫고 밖으로 1.4)
 BX_ = -11.0                              # 풀무 x(2026-11-28 비평 1팀_내부_3차 2번: 왼 가장자리에서 2 당김 — 문에서 안 잘리게)
 WIN_L, WIN_R, WIN_F, WIN_B = (-6.0,), (-6.0, 6.0), (-12.2, 12.2), (8.0,)
+COUNTER = (5.3, 13.0, 4.0, 6.5)          # 2026-11-28: 모루와 10 띄움(옛 3.0 → 5.3)
+FREE = (4.0, 14.0, -6.0, 3.85)           # 카운터 앞 빈 바닥 10×10
 
 
 def walls(g, R):
@@ -89,10 +91,10 @@ def porch(g, R):
     bx(g, "Timber", -3.6, 3.6, TRUSS_Y - 0.15, TRUSS_Y + 0.15, FZ + 8.0, FZ + 10.2)
     bx(g, "Brass", -3.75, 3.75, TRUSS_Y - 0.2, TRUSS_Y + 0.2, FZ + 10.15, FZ + 10.35)
     bx(g, "SnowCap", -3.6, 3.6, TRUSS_Y - 0.18, TRUSS_Y + 0.18, FZ + 10.35, FZ + 10.47)
-    K.SVC.anvil_icon(g, -0.3, TRUSS_Y - 0.15, FZ + 8.55, s=1.05, face=-1)
-    K.SVC.anvil_icon(g, -0.3, TRUSS_Y + 0.15, FZ + 8.55, s=1.05, face=1)
+    P.anvil_icon(g, -0.3, TRUSS_Y - 0.15, FZ + 8.55, s=1.05, face=-1)
+    P.anvil_icon(g, -0.3, TRUSS_Y + 0.15, FZ + 8.55, s=1.05, face=1)
     # 오른 기둥 쇠 팔 간판(길에서 옆으로 읽힌다)
-    K.hang_sign(g, HALF, TRUSS_Y, FZ + 8.6, along="x", icon=lambda g_, x, y, z, f: K.SVC.anvil_icon(g_, x - 0.25, y, z, s=0.75, face=f))
+    K.hang_sign(g, HALF, TRUSS_Y, FZ + 8.6, along="x", icon=lambda g_, x, y, z, f: P.anvil_icon(g_, x - 0.25, y, z, s=0.75, face=f))
     # 마루 위 바깥 일감: 왼 = 쇠막대 꽂은 통
     barrel(g, -12.6, -14.2)
     for k in range(5):
@@ -124,9 +126,9 @@ def forge(g):
     # 숯 무더기(비평 1차 [심각]: 문에서 불이 안 보임) — 쇠 테보다 0.5~0.8 높게 손으로 쌓은 숯 덩이 열하나 + 사이로 드러난 불씨 여섯
     for k, (dx, dy, sz) in enumerate(((-0.9, -0.8, 0.7), (0.2, -1.0, 0.6), (1.0, -0.4, 0.75), (-0.3, 0.1, 0.8), (0.8, 0.7, 0.6), (-1.0, 0.6, 0.65),
                                       (0.1, 1.0, 0.7), (-0.5, -0.3, 0.55), (0.5, 0.0, 0.6), (1.1, 1.1, 0.5), (-1.1, -1.2, 0.5))):
-        g["Char"].obox(cx + dx, cy + dy, zt + 0.3 + sz * 0.4, sz, sz * 0.85, sz * 0.7, rz=k * 0.7)
+        g["Char"].obox(cx + dx, cy + dy, zt + 0.1 + sz * 0.45, sz, sz * 0.85, sz * 0.9, rz=k * 0.7)     # 재 바닥(zt+0.1) 위에 얹음(2026-11-28 playcheck 뜬 숯)
     for dx, dy, sz in ((-0.4, -0.6, 0.45), (0.5, -0.3, 0.5), (0.0, 0.5, 0.45), (-0.8, 0.2, 0.4), (0.7, 0.6, 0.4), (0.3, -1.0, 0.4)):
-        g["Core"].obox(cx + dx, cy + dy, zt + 0.75, sz, sz, sz * 0.8, rz=dx)
+        g["Core"].obox(cx + dx, cy + dy, zt + 0.62, sz, sz, sz * 0.8, rz=dx)
     bx(g, "Core", STACK[1] + 0.02, STACK[1] + 0.06, cy - 1.2, cy + 1.2, zt + 0.2, zt + 1.8)        # 불 아가리 뒤 굴뚝 몸 앞면 붉은 빛
     bx(g, "Copper", x1 + 0.05, x1 + 0.08, 3.5, 5.5, FZ + 0.7, FZ + 1.4)                          # 재 구멍 속 짙은 주황
     g["LampPt"].box(cx + 1.6, cy, zt + 1.6, 0.3, 0.3, 0.3)                                       # Studio 따뜻한 빛 자리
@@ -229,17 +231,15 @@ def smithy_extra(g):
     bx(g, "Mortar", -XI, XI, YI0, YI1, FZ + 0.01, FZ + 0.035)              # 줄눈 바탕(비평 2차 보통 2: 줄눈 없이 밝은 회색·검정이 맞붙어 얼룩처럼 읽혔다)
     P.slab_floor(g, -XI, XI, YI0, YI1, FZ, rows, ("Stone", "StoneB", "RockC", "StoneB", "Stone", "RockC"), gap=0.1)   # 세 톤 좁힘(85·75·74 — 검정·밝은 회색 뺌)
     bx(g, "Soot", FORGE[1], FORGE[1] + 2.6, FORGE[2] - 0.6, FORGE[3] + 0.4, FZ + 0.05, FZ + 0.07)
-    for k, a in enumerate((0.7, -0.7)):                                    # 엇갈린 큰 칼(뒷벽, 걸이 오른쪽 x 0 언저리)
-        g["Steel"].obox(0.2, YI1 - 0.15, FZ + 7.6, 0.4, 0.1, 4.2, ry=a)
-        g["Iron"].obox(0.2, YI1 - 0.22, FZ + 7.6, 0.08, 0.05, 3.9, ry=a)
-        hx, hz = 0.2 - math.sin(a) * 2.3, FZ + 7.6 - math.cos(a) * 2.3
-        g["Brass"].obox(hx, YI1 - 0.2, hz, 1.1, 0.16, 0.18, ry=a)
-        g["Leather"].obox(hx - math.sin(a) * 0.55, YI1 - 0.2, hz - math.cos(a) * 0.55, 0.22, 0.2, 0.9, ry=a)
+    for a in (0.7, -0.7):                                                   # 엇갈린 큰 칼(뒷벽, 칼끝 위·손잡이 아래, 코등이가 벽에 닿음) + 가운데 쇠 걸쇠
+        cx_, cz_ = 0.2 + math.sin(a) * 2.2, FZ + 7.6 + math.cos(a) * 2.2         # 칼끝 자리(가운데에서 위로 2.2)
+        P.wall_weapon(g, "x", YI1 - 0.22, cx_, cz_, -1, lambda q: P.sword(q, L=3.0, w=0.62), tilt=math.pi + a, flat=True)
+    bx(g, "Iron", -0.25, 0.65, YI1 - 0.5, YI1, FZ + 7.35, FZ + 7.85)
     bx(g, "Timber", -1.4, 1.8, YI1 - 0.2, YI1, FZ + 9.9, FZ + 11.4)
     bx(g, "Brass", -1.5, 1.9, YI1 - 0.25, YI1 - 0.05, FZ + 9.8, FZ + 9.9)
-    K.SVC.anvil_icon(g, 0.1, YI1 - 0.2, FZ + 10.1, s=0.75, face=-1)
+    P.anvil_icon(g, 0.1, YI1 - 0.2, FZ + 10.1, s=0.75, face=-1)
     for x, kind in ((4.5, "shoe"), (7.5, "chain"), (10.5, "shoe")):          # 평보(y 0)에 매단 것 — 바닥 위 7 이상
-        bx(g, "Iron", x - 0.04, x + 0.04, -0.04, 0.04, FZ + 9.0, Z_PLATE - 0.9)
+        bx(g, "Iron", x - 0.07, x + 0.07, -0.07, 0.07, FZ + 8.75, Z_PLATE - 0.9)
         if kind == "shoe":                                                  # 쇠고리 하나에 꿴 편자 넷(굵기 0.25 — 비평 2차 사소 5: 회색 점 잡음)
             g["Iron"].hcyl(x, 0.0, FZ + 8.85, 0.3, 0.12, axis="y", seg=10)
             for q, rzq in enumerate((0.0, 0.8, 1.6, 2.4)):
@@ -273,16 +273,18 @@ def anvil(g, x, y):
     bx(g, "Iron", x - 0.95, x - 0.55, y - 0.65, y - 0.25, zb + 1.25, zb + 1.6)
     cbox(x - 1.6, x + 2.6, y - 1.2, y + 1.2, z0, zb + 1.25)
     P.hammer(g, x + 0.4, y + 0.25, zb + 1.33, rz=0.5, ry=1.45, s=0.95)
-    P.tongs(g, x - 1.5, y - 1.05, zb + 1.2, rz=0.2, s=0.8)
+    P.tongs(g, x - 1.33, y - 0.35, zb + 1.18, rz=0.0, s=0.6)                    # 모루 꼬리 앞면에 건 집게(2026-11-28: 허공에 떠 있었다)
     # 사슬 도르래(평보 y 0): 쇠 고리판 · 도르래 통 · 사슬 · 갈고리
-    yt = 0.0
+    yt = 8.5                                     # 2026-11-28: 모루를 화덕 옆(y 6.8)으로 옮겨 도르래도 뒤 평보(y 8.5)로
     bx(g, "Iron", x - 0.3, x + 0.3, yt - 0.55, yt + 0.55, Z_PLATE - 1.2, Z_PLATE - 0.9)
+    for sx in (-0.26, 0.26):                                                # 도르래 볼(판에서 내려온 쇠 띠 둘 — 통 굴대를 잡음)
+        bx(g, "Iron", x + sx - 0.07, x + sx + 0.07, yt - 0.22, yt + 0.22, Z_PLATE - 1.95, Z_PLATE - 1.2)
     g["Iron"].hcyl(x, yt, Z_PLATE - 1.75, 0.45, 0.3, axis="x", seg=12)
-    g["Brass"].hcyl(x, yt, Z_PLATE - 1.75, 0.18, 0.4, axis="x", seg=8)
-    for k in range(6):
-        g["Iron"].obox(x, yt + 0.12, Z_PLATE - 2.4 - 0.5 * k, 0.1, 0.3 if k % 2 else 0.1, 0.45)
-    g["Iron"].obox(x, yt + 0.12, Z_PLATE - 5.6, 0.18, 0.18, 0.6)
-    g["Iron"].obox(x, yt + 0.35, Z_PLATE - 6.0, 0.16, 0.6, 0.16, rx=0.6)
+    g["Brass"].hcyl(x, yt, Z_PLATE - 1.75, 0.18, 0.66, axis="x", seg=8)
+    for k in range(6):                                                      # 사슬 마디(굵기 0.2 — 가는 선 금지)
+        g["Iron"].obox(x, yt + 0.12, Z_PLATE - 2.4 - 0.5 * k, 0.2, 0.42 if k % 2 else 0.2, 0.52)
+    g["Iron"].obox(x, yt + 0.12, Z_PLATE - 5.4, 0.26, 0.26, 0.6)
+    g["Iron"].obox(x, yt + 0.3, Z_PLATE - 5.75, 0.24, 0.6, 0.24, rx=0.6)
 
 
 def workbench(g):
@@ -311,20 +313,24 @@ def workbench(g):
 
 
 def grindstone(g, x, y):
-    """숫돌(앞 왼쪽): 나무 틀(다리 넷 · 가로대) · 돌 바퀴(StoneTrim, 굵은 원판) · 쇠 축 · 손잡이 굽은 막대 · 아래 물 받이"""
+    """숫돌(앞 왼쪽): 나무 틀(다리 넷 · 위 옆대 · 아래 가름대 둘) · 옆대 위 굴대 받침(나무 덩이 + 쇠 덮개) · 돌 바퀴 · 쇠 축 · 손잡이 굽은 막대 ·
+    가름대 위 물 받이(2026-11-28 playcheck: 축·물 받이·가름대가 떠 있었다)"""
     for dx in (-0.9, 0.9):
         for dy in (-0.7, 0.7):
-            g["Timber"].obox(x + dx, y + dy, FZ + 1.0, 0.22, 0.22, 2.1, rx=dy * 0.08)
-        bx(g, "Timber", x + dx - 0.12, x + dx + 0.12, y - 0.8, y + 0.8, FZ + 1.9, FZ + 2.15)
-    bx(g, "Timber", x - 1.0, x + 1.0, y - 0.1, y + 0.1, FZ + 0.6, FZ + 0.8)
+            bx(g, "Timber", x + dx - 0.13, x + dx + 0.13, y + dy - 0.13, y + dy + 0.13, FZ, FZ + 2.15)
+        bx(g, "Timber", x + dx - 0.14, x + dx + 0.14, y - 0.85, y + 0.85, FZ + 1.9, FZ + 2.15)
+        bx(g, "Wood", x + dx - 0.2, x + dx + 0.2, y - 0.3, y + 0.3, FZ + 2.15, FZ + 2.9)        # 굴대 받침
+        bx(g, "Iron", x + dx - 0.22, x + dx + 0.22, y - 0.32, y + 0.32, FZ + 2.9, FZ + 3.12)    # 받침 쇠 덮개(축이 지난다)
+    for dy in (-0.7, 0.7):
+        bx(g, "Timber", x - 0.9, x + 0.9, y + dy - 0.1, y + dy + 0.1, FZ + 0.6, FZ + 0.8)
     g["Stone"].hcyl(x, y, FZ + 3.0, 1.05, 0.45, axis="x", seg=16)          # 숫돌(짙은 돌 — 비평 1차: 거의 흰색)
     g["Iron"].hcyl(x, y, FZ + 3.0, 0.4, 0.5, axis="x", seg=10)
-    g["Iron"].hcyl(x, y, FZ + 3.0, 0.1, 2.4, axis="x", seg=6)
-    bx(g, "Iron", x + 1.15, x + 1.25, y - 0.05, y + 0.6, FZ + 2.95, FZ + 3.05)
-    g["Wood"].hcyl(x + 1.4, y + 0.6, FZ + 3.0, 0.1, 0.5, axis="x", seg=6)
-    bx(g, "Timber", x - 0.6, x + 0.6, y - 0.55, y + 0.55, FZ + 1.4, FZ + 1.8)
-    bx(g, "Glass", x - 0.5, x + 0.5, y - 0.45, y + 0.45, FZ + 1.8, FZ + 1.82)
-    cbox(x - 1.1, x + 1.5, y - 0.9, y + 0.9, FZ, FZ + 4.1)
+    g["Iron"].hcyl(x, y, FZ + 3.0, 0.12, 2.6, axis="x", seg=8)
+    bx(g, "Iron", x + 1.25, x + 1.4, y - 0.1, y + 0.65, FZ + 2.92, FZ + 3.08)
+    g["Wood"].hcyl(x + 1.55, y + 0.6, FZ + 3.0, 0.13, 0.45, axis="x", seg=8)
+    bx(g, "Timber", x - 0.6, x + 0.6, y - 0.8, y + 0.8, FZ + 0.8, FZ + 1.3)                     # 물 받이(가름대 위)
+    bx(g, "Glass", x - 0.5, x + 0.5, y - 0.7, y + 0.7, FZ + 1.3, FZ + 1.32)
+    cbox(x - 1.1, x + 1.8, y - 0.9, y + 0.9, FZ, FZ + 4.1)
 
 
 def _rack_local(g):
@@ -334,16 +340,16 @@ def _rack_local(g):
     for y in (-11.0, -6.5, -2.0):
         bx(g, "DarkLog", xw + 0.3, xw + 0.8, y - 0.25, y + 0.25, FZ, FZ + 6.6)
     bx(g, "Timber", xw + 0.3, xw + 1.4, -11.0, -2.0, FZ + 1.2, FZ + 1.45)
-    bx(g, "Iron", xw + 0.8, xw + 0.95, -11.0, -2.0, FZ + 4.6, FZ + 4.75)
-    for y in (-10.3, -9.3, -8.3, -7.3):
-        K.SVC.sword_hilt_up(g, xw + 0.9, y, FZ + 1.45, blade=3.0)
-    for y in (-5.6, -4.6):
-        K.SVC.axe_up(g, xw + 0.9, y, FZ + 1.45)
-    for y in (-3.4, -2.6):
-        K.SVC.spear_up(g, xw + 0.9, y, FZ + 1.45, h=5.6)
-    for y in (-8.8, -4.4):
-        g["Wood"].hcyl(xw + 0.45, y, FZ + 7.6, 1.1, 0.25, axis="x", seg=16)
-        g["Brass"].hcyl(xw + 0.6, y, FZ + 7.6, 0.4, 0.15, axis="x", seg=10)
+    bx(g, "Iron", xw + 0.3, xw + 1.05, -11.0, -6.3, FZ + 4.75, FZ + 4.9)        # 손잡이 받침 쇠대(칼 셋 손잡이를 가로질러 잡음)
+    for y in (-10.3, -8.8, -7.3):                                         # 칼 셋(2026-11-28 사용자: 납작한 흰 판 → 날·등줄·코등이·손잡이·폼멜)
+        K.L.transformed(g, Matrix.Translation((xw + 0.9, y, FZ + 1.45)), lambda q: P.sword(q, L=2.6))
+    for y in (-5.4, -4.2):
+        K.L.transformed(g, Matrix.Translation((xw + 0.9, y, FZ + 1.45)), lambda q: P.axe(q, h=3.6))
+    for y in (-3.2, -2.5):
+        K.L.transformed(g, Matrix.Translation((xw + 0.9, y, FZ + 1.45)), lambda q: P.spear(q, h=5.4))
+    bx(g, "Iron", xw + 0.3, xw + 1.05, -3.6, -2.1, FZ + 5.3, FZ + 5.45)        # 창 자루 받침 쇠대
+    for y in (-8.8, -4.4):                                                # 둥근 방패 둘(쇠못에 걸림 · 테·리벳·배꼽·뒤 손잡이)
+        K.L.transformed(g, Matrix.Translation((xw, y, FZ + 7.7)) @ Matrix.Rotation(math.pi / 2, 4, "Z"), lambda q: P.shield(q, r=1.15))
 
 
 def racks(g):
@@ -354,26 +360,32 @@ def racks(g):
 
 def shop(g):
     """카운터(오른) + 위 물건 + 뒷벽 완성품 선반 + NPC 자리 + 오른 앞 구석 쇠막대 통·상자"""
-    zt = smithy_counter(g, 3.0, 13.0, 4.0, 6.5)
-    for k, yy in enumerate((4.75, 5.55)):                             # 칼 받침(나무 받침 둘 + 칼 둘 비스듬히)
-        for xx in (8.6, 11.4):
-            bx(g, "Timber", xx - 0.15, xx + 0.15, yy - 0.2, yy + 0.2, zt, zt + 0.35 + 0.25 * k)
-            bx(g, "Wood", xx - 0.2, xx + 0.2, yy - 0.25, yy + 0.25, zt + 0.35 + 0.25 * k, zt + 0.42 + 0.25 * k)
-        za = zt + 0.5 + 0.25 * k
-        g["Steel"].obox(10.2, yy, za, 3.0, 0.08, 0.26)
-        g["Iron"].obox(10.2, yy, za + 0.02, 2.8, 0.1, 0.05)                 # 날 가운데 등줄
-        g["Brass"].obox(8.5, yy, za, 0.14, 1.0, 0.14)                       # 코등이 폭 1.0
-        g["Leather"].obox(8.0, yy, za, 0.85, 0.16, 0.16)
-        g["Brass"].obox(7.5, yy, za, 0.2, 0.22, 0.22)
-    bx(g, "Leather", 4.6, 6.2, 4.7, 5.8, zt, zt + 0.16)
-    bx(g, "Paint", 4.7, 6.1, 4.8, 5.7, zt + 0.16, zt + 0.2)
+    zt = smithy_counter(g, *COUNTER)
+    for k, (yy, xt) in enumerate(((4.75, 11.7), (5.55, 12.6))):     # 칼 받침(나무 받침 둘 — 홈 파인 머리) + 누운 칼 둘(엇갈려 코등이가 안 겹침)
+        top = zt + 0.42 + 0.25 * k
+        for xx in (xt - 2.1, xt - 0.5):
+            bx(g, "Timber", xx - 0.15, xx + 0.15, yy - 0.2, yy + 0.2, zt, top - 0.07)
+            bx(g, "Wood", xx - 0.2, xx + 0.2, yy - 0.32, yy + 0.32, top - 0.07, top)
+            for s in (-1, 1):
+                bx(g, "Wood", xx - 0.2, xx + 0.2, *sorted((yy + s * 0.32, yy + s * 0.2)), top, top + 0.15)
+        K.L.transformed(g, Matrix.Translation((xt, yy, top + 0.1)) @ Matrix.Rotation(-math.pi / 2, 4, "Y"), lambda q: P.sword(q, L=2.4, w=0.4))
+    P.ledger_open(g, 6.3, 5.4, zt, rz=0.0)                                # 주문 장부(펼친 장부 · 깃펜 · 잉크병)
     g["Brass"].cyl(12.6, 4.6, zt, 0.32, 0.18, 0.4, seg=12)
     g["Iron"].cyl(12.6, 4.6, zt + 0.4, 0.05, 0.05, 0.2, seg=6)
-    for q in range(3):
-        for a in range(5):
-            ang = math.pi * (a / 4.0)
-            g["Iron"].obox(6.9 + 0.3 * math.cos(ang), 5.1 + 0.3 * math.sin(ang) - 0.15, zt + 0.05 + q * 0.1, 0.18, 0.14, 0.08, rz=ang + math.pi / 2)
-    NPC(8.0, 8.6, FZ, 0.0)
+    NPC(9.2, 8.6, FZ, 0.0)
+    # 카운터 왼 끝 → 뒤 선반: 직원 칸을 막는 칸막이(2026-11-28 playcheck: 카운터 뒤 3.7 틈 — 3~9 틈 금지, 막음). 기둥 둘 · 세로 널 · 두꺼운 윗대 · 놋쇠 모서리
+    px0, px1 = COUNTER[0], COUNTER[0] + 0.45
+    for yy in (COUNTER[3] + 0.15, YI1 - 1.25):
+        bx(g, "DarkLog", px0 - 0.05, px1 + 0.05, yy - 0.2, yy + 0.2, FZ, FZ + K.COUNTER_H)
+    n = 6
+    for i in range(n):
+        a = COUNTER[3] + 0.35 + (YI1 - 1.45 - COUNTER[3] - 0.35) * i / n
+        b_ = COUNTER[3] + 0.35 + (YI1 - 1.45 - COUNTER[3] - 0.35) * (i + 1) / n
+        bx(g, "Timber" if i % 2 else "DarkLog", px0 + 0.05, px1 - 0.05, a + 0.02, b_ - 0.02, FZ, FZ + K.COUNTER_H - 0.3)
+    bx(g, "Wood", px0 - 0.12, px1 + 0.12, COUNTER[3] - 0.05, YI1 - 1.05, FZ + K.COUNTER_H - 0.3, FZ + K.COUNTER_H)
+    bx(g, "Iron", px0 - 0.02, px1 + 0.02, COUNTER[3] + 0.35, YI1 - 1.45, FZ + 1.0, FZ + 1.15)
+    cbox(px0 - 0.12, px1 + 0.12, COUNTER[3], YI1 - 1.05, FZ, FZ + K.COUNTER_H)
+    P.armor_stand(g, 0.35, YI1 - 1.0, FZ, rz=0.0)                          # 걸이와 선반 사이 갑옷 진열대(4.1 틈을 막음)
     yb0, yb1 = YI1 - 1.1, YI1
     for x in (2.6, 8.0, 13.4):
         bx(g, "Timber", x - 0.15, x + 0.15, yb0, yb0 + 0.3, FZ, FZ + 5.2)
@@ -405,14 +417,8 @@ def shop(g):
                 g["Iron"].obox(x, ym - 0.16, z + 0.55, 0.12, 0.05, 1.0, rx=-0.15)
                 g["Brass"].obox(x, ym - 0.1, z + 1.05, 1.25, 0.1, 0.12, rx=-0.15)
     cbox(2.4, 13.6, yb0, yb1, FZ, FZ + 5.2)
-    for xx, m in ((3.6, "Wood"), (12.2, "Wood")):                    # 선반 위 벽 둥근 방패 둘(뒷창 양옆)
-        g[m].hcyl(xx, YI1 - 0.15, FZ + 7.4, 1.1, 0.2, axis="y", seg=16)
-        g["Iron"].hcyl(xx, YI1 - 0.2, FZ + 7.4, 1.2, 0.12, axis="y", seg=16)
-        g["Wood"].hcyl(xx, YI1 - 0.25, FZ + 7.4, 1.05, 0.08, axis="y", seg=16)
-        g["Brass"].hcyl(xx, YI1 - 0.4, FZ + 7.4, 0.32, 0.3, axis="y", seg=10)
-        for k in range(8):
-            a = 2 * math.pi * k / 8
-            g["Iron"].hcyl(xx + 0.85 * math.cos(a), YI1 - 0.32, FZ + 7.4 + 0.85 * math.sin(a), 0.07, 0.08, axis="y", seg=6)
+    for xx, m in ((3.6, "Wood"), (12.2, "Paint")):                   # 선반 위 벽 둥근 방패 둘(뒷창 양옆) — 쇠못에 건 방패(테·리벳·배꼽·뒤 손잡이)
+        P.wall_weapon(g, "x", YI1, xx, FZ + 7.4, -1, lambda q, m=m: P.shield(q, r=1.1, mat=m))
     barrel(g, 12.6, -10.2)
     for k in range(4):
         g["Iron"].obox(12.6 + 0.3 * math.cos(k * 1.7), -10.2 + 0.3 * math.sin(k * 1.7), FZ + 2.8, 0.12, 0.12, 3.2, rx=0.07 * (k - 1.5))
@@ -447,7 +453,7 @@ def build(g):
     K.chimney(g, *STACK, R.top() + 1.0)
     # 6 안: 화덕·모루·걸이·카운터 · 등 · 바깥 증기
     forge(g)
-    anvil(g, -6.0, 4.0)
+    anvil(g, -7.4, 6.8)                          # 화덕 옆(틈 0.3)·걸이 앞(틈 1.9) — 2026-11-28 playcheck: 모루–걸이 4.7 · 모루–카운터 6.3 틈
     racks(g)
     shop(g)
     workbench(g)
@@ -463,7 +469,7 @@ def build(g):
     steam(g)
     # 비울 자리: 입구 완충 · 카운터 앞 빈 바닥 10×10
     CLEAR(-5.0, 5.0, YI0 + 0.2, -6.0, FZ + 0.15, FZ + 5.4)
-    CLEAR(3.0, 13.0, -6.0, 3.85, FZ + 0.15, FZ + 5.4)
+    CLEAR(FREE[0], FREE[1], FREE[2], FREE[3], FZ + 0.15, FZ + 5.4)
 
 
 # 완성품 선반 손 표(아래 → 위, 칸 6)
@@ -477,9 +483,9 @@ INFO = {
     "variant": VARIANT,
     "floor": FZ,
     "ceiling": CEIL,
-    "counter": (3.0, 13.0, 4.0, 6.5),           # x0 x1 y0 y1
-    "free": (3.0, 13.0, -6.0, 3.85),            # 카운터 앞 빈 바닥(상판 앞 끝 3.85 까지)
-    "walk": ((0.0, YF - 1.5), (8.0, -1.0)),     # 통로 재기: 문 밖 한 점 → 카운터 앞 빈 바닥(가장자리 2 안쪽, 카운터에서 4 떨어진 곳까지 들어서면 끝)
+    "counter": COUNTER,                         # x0 x1 y0 y1
+    "free": FREE,                               # 카운터 앞 빈 바닥(상판 앞 끝 3.85 까지)
+    "walk": ((0.0, YF - 1.5), (9.0, -1.0)),     # 통로 재기: 문 밖 한 점 → 카운터 앞 빈 바닥(가장자리 2 안쪽, 카운터에서 4 떨어진 곳까지 들어서면 끝)
     "inside": (-XI, XI, YF - T / 2 - 1.5, YI1),  # 통로 재는 범위(문 밖 1.5 포함)
     "forge_look": (-11.0, 4.5),                 # 1인칭 렌더가 바라볼 화덕 불
 }

@@ -686,8 +686,9 @@ def _leaf(g, cx, cy, rz, z0, w, h):
         O("Timber", 0, -0.3, zz, w - 0.1, 0.25, 0.6)
     dz, du = zb - za - 0.6, w - 0.7
     O("Timber", 0, -0.3, (za + zb) / 2, math.hypot(du, dz), 0.22, 0.5, ry=-math.atan2(dz, du))
-    O("Brass", w / 2 - 0.55, -0.48, z0 + h * 0.5, 0.9, 0.1, 0.2)
-    O("Brass", w / 2 - 0.25, -0.5, z0 + h * 0.5 + 0.18, 0.12, 0.12, 0.3)
+    O("Brass", w / 2 - 0.55, -0.23, z0 + h * 0.5, 0.9, 0.1, 0.24)              # 빗장(2026-11-28 playcheck: 문짝 뒷면에서 0.25 떠 있었다 → 면에 붙임)
+    O("Brass", w / 2 - 0.25, -0.33, z0 + h * 0.5 + 0.18, 0.14, 0.14, 0.32)
+    O("Iron", w / 2 - 0.95, -0.22, z0 + h * 0.5, 0.16, 0.12, 0.5)               # 빗장 걸쇠
 
 
 def window(g, ax, c, u, z0, w=WIN_W, h=WIN_H, face=-1, t=LOG, frame="Paint", shutters=True, sill_snow=True):
