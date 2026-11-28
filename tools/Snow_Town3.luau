@@ -269,11 +269,11 @@ local okRun, errRun = pcall(function()
 		local c = rockCol[1]
 		return { Color3.new(math.clamp(c.R * f, 0, 1), math.clamp(c.G * f, 0, 1), math.clamp(c.B * f, 0, 1)), rockCol[2] }
 	end
-	local function rockSnow(kind, name, x0, x1, z0, z1, top, parent, toned)
+	local function rockSnow(kind, name, x0, x1, z0, z1, top, parent, toned, bodyOverride)
 		if top - BOTTOM <= 1 then
 			return box(kind, name, x0 - jit(), x1 + jit(), BOTTOM - jit(), top, z0 - jit(), z1 + jit(), snowCol, parent)
 		end
-		local bodyCol = if toned then toneCol(x0, z0) else rockCol
+		local bodyCol = bodyOverride or (if toned then toneCol(x0, z0) else rockCol)
 		local body = box(kind, name .. "_바위", x0 - jit(), x1 + jit(), BOTTOM - jit(), top - 0.2 - jit() * 0.5, z0 - jit(), z1 + jit(), bodyCol, parent)
 		local e = function()
 			return 0.15 + jit()
@@ -293,8 +293,15 @@ local okRun, errRun = pcall(function()
 	for _, s in ipairs(D.STEPS) do
 		box("넓은단", s[1], s[2], s[3], BOTTOM, s[6], s[4], s[5], rockCol, fStep)
 	end
+	-- 표석(2026-11-28 지질 이야기): 빙하가 북서 화강암에서 옮겨 온 외톨이 돌 — 바탕 바위와 다른 셋째 톤(mapshot 과 같은 색)
+	local ERRATIC = {}
+	for _, k in ipairs(D.ERRATIC_T or {}) do
+		ERRATIC[k] = true
+	end
+	local erraticCol = { RGB(146, 122, 110), M.Granite }
 	for _, r in ipairs(D.ROCKS) do
-		rockSnow("바위", string.format("바위%s", r[6] and ("_" .. r[6]) or ""), r[1], r[2], r[3], r[4], r[5], fRock, true)
+		local er = ERRATIC[r[7]]
+		rockSnow("바위", string.format("%s%s", er and "표석" or "바위", r[6] and ("_" .. r[6]) or ""), r[1], r[2], r[3], r[4], r[5], fRock, true, er and erraticCol or nil)
 	end
 	for _, s in ipairs(D.SLABS) do
 		box("판", "눈판", s[1] - jit(), s[2] + jit(), BOTTOM - jit(), s[5], s[3] - jit(), s[4] + jit(), snowCol, fSlab)

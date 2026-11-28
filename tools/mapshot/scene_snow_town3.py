@@ -264,11 +264,13 @@ for nm, u0, u1, v0, v1, h, mat in P.TERRACES:
 S.boxes("path", plaza_r, PLAZA)
 S.boxes("terrace", terr_rock, ROCK)
 S.boxes("terrace", terr_snow, SNOW)
+erratic_b = []     # 표석(2026-11-28 지질 이야기) — 셋째 톤, Studio 빌더 erraticCol 과 같은 색
 for b in P.ALL_ROCKS:
     u0, u1, v0, v1, h = b[1]
     x0, z0 = W(u0, v0)
     x1, z1 = W(u1, v1)
-    rock_snow(rock_b, rock_s, x0, x1, z0, z1, BASE + h)
+    rock_snow(erratic_b if P.ROCKS[b[0]][0] in P.ERRATIC_T else rock_b, rock_s, x0, x1, z0, z1, BASE + h)
+S.boxes("rock", erratic_b, (146, 122, 110))
 # 바위 몸통 톤 규칙(Studio 빌더도 같게): fx = floor(x0), fz = floor(z0) (상자 서북 모서리 월드 스터드), t = (7*fx + 13*fz) % 3
 #   t 0 → 밝기 x0.94, 1 → x1.00, 2 → x1.06 (바위색 85,86,92 에 곱함). 바위 몸통만(윗면 눈·단·넓은 단은 그대로)
 TONE = (0.94, 1.0, 1.06)
