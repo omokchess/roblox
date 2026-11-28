@@ -660,6 +660,7 @@ end
 	fieldAt 이 오면(만남 몹) 그 자리에서, 아니면 설정의 전장(Sky/Field)에서.
 ]]
 -- enemyIds: 들판 보스 자리처럼 편성을 정해 여는 싸움(없으면 F2 편성)
+-- 솔로(옛): party 없이 부르는 길은 더는 쓰이지 않는다(필드·보스·디버그 모두 StartFieldBattle). 지울지는 사용자 판단
 -- party: 파티 전투 멤버(StartParty 가 검사해 만든 GridBattle.PartyMember 목록). 있으면 NewParty 로 세운다
 function BattleService:StartBattle(player: Player, fieldAt: CFrame?, enemyIds: { string }?, party: { GridBattle.PartyMember }?): (boolean, string?)
 	local session = self:_session(player)
@@ -976,7 +977,7 @@ end
 	구성(코스트 8 · 같은 직업 · 칸)을 PartyDefinitions.Validate 로 검사해 거절하면 BattleState.Message 로 까닭을 보낸다.
 	이미 전투 중이면 닫고 다시 연다(Restart 와 같다).
 ]]
-function BattleService:StartParty(player: Player, request: any): (boolean, string?)
+function BattleService:StartParty(player: Player, request: any, fieldAt: CFrame?, enemyIds: { string }?): (boolean, string?)
 	local session = self:_session(player)
 	if typeof(request.Config) == "table" then
 		self:_applyConfig(player, request.Config)
@@ -989,7 +990,13 @@ function BattleService:StartParty(player: Player, request: any): (boolean, strin
 		self:_closeBattle(player, 0)
 	end
 	session.LastParty = request.Party -- 재시작이 같은 편성으로 다시 연다
-	return self:StartBattle(player, nil, nil, members)
+	return self:StartBattle(player, fieldAt, enemyIds, members)
+end
+
+-- 필드 몹 접촉·보스 트리거·디버그 Start 가 쓰는 파티 전투: 마지막 편성(없으면 기본 편성)으로 연다
+function BattleService:StartFieldBattle(player: Player, fieldAt: CFrame?, enemyIds: { string }?): (boolean, string?)
+	local session = self:_session(player)
+	return self:StartParty(player, { Party = PartyDefinitions.FieldParty(session.LastParty) }, fieldAt, enemyIds)
 end
 
 -- 준비 화면 미리보기: 살아 있는 아군마다 이번에 쓸 스킬(고른 것 → 기본 공격)이 칠할 칸(유도 반영)
@@ -1256,7 +1263,7 @@ function BattleService:HandleAction(player: Player, request: any)
 	elseif kind == "SetConfig" then
 		message = self:_applyConfig(player, request.Config)
 	elseif kind == "Start" then
-		local ok, reason = self:StartBattle(player)
+		local ok, reason = self:StartFieldBattle(player) -- 솔로(옛): StartBattle(player)
 		if not ok then
 			message = reason
 		else
@@ -1278,7 +1285,7 @@ function BattleService:HandleAction(player: Player, request: any)
 		if lastParty then
 			ok, reason = self:StartParty(player, { Party = lastParty })
 		else
-			ok, reason = self:StartBattle(player)
+			ok, reason = self:StartFieldBattle(player) -- 솔로(옛): StartBattle(player)
 		end
 		if not ok then
 			message = reason
@@ -1658,7 +1665,7 @@ function BattleService:_checkEncounters()
 			toMob = if toMob.Magnitude > 0.01 then toMob.Unit else -marker.CFrame.LookVector
 			local at = CFrame.lookAt(marker.Position, marker.Position + toMob)
 			marker:Destroy()
-			local ok, reason = self:StartBattle(owner, at)
+			local ok, reason = self:StartFieldBattle(owner, at)
 			if not ok then
 				self:_publish(owner, reason)
 			end
@@ -1694,7 +1701,7 @@ function BattleService:_checkBossTriggers()
 			if inside and not was and not (session and session.Battle) then
 				local toCenter = if flat.Magnitude > 1 then -flat.Unit else Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
 				local front = root.Position + toCenter * 14
-				local ok, reason = self:StartBattle(player, CFrame.lookAt(front, front + toCenter), { enemyId })
+				local ok, reason = self:StartFieldBattle(player, CFrame.lookAt(front, front + toCenter), { enemyId })
 				if not ok then
 					self:_publish(player, reason)
 				end

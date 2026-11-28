@@ -36,6 +36,23 @@ function PartyDefinitions.Examples(): { PartyBalance.Preset }
 end
 
 --[[
+	필드 몹·보스 트리거처럼 편성 요청 없이 여는 전투가 쓸 파티(순수 함수).
+	마지막 편성(last = {Units = ...})이 있으면 그대로, 없으면 예시 프리셋 첫 번째(주인공 포함 4인)의 복사본.
+]]
+function PartyDefinitions.FieldParty(last: any?): { Units: { any } }
+	if type(last) == "table" and type(last.Units) == "table" and #last.Units > 0 then
+		return last
+	end
+	local units = {}
+	for _, unit in PartyBalance.EXAMPLES[1].Units do
+		local copy = table.clone(unit)
+		copy.Cards = table.clone(unit.Cards or {})
+		table.insert(units, copy)
+	end
+	return { Units = units }
+end
+
+--[[
 	행동 순서. X·Y 를 가진 표(유닛·멤버)의 목록을 받아 새 목록으로 돌려준다(원본은 그대로).
 	y 오름차순, 같은 y 에서는 x 내림차순. 칸이 같으면(있을 수 없지만) 원래 순서.
 ]]
